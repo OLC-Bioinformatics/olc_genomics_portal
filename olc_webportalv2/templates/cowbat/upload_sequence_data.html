@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Step 3 of 3: Upload Sequence Files and Begin Assembly</h2>
+  <br>
+  <div id="upload-div" class="center" style="width: 600px;"></div>
+  <br>
+  <form action={% url 'cowbat:upload_sequence_data'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+  {% csrf_token %}
+  </form>
+  <br>
+  <button id="submit" class="btn btn-success" disabled>Upload Sequence Files and Begin Assembly</button>
+  <button id="validate" class="btn btn-primary">Validate Sequence Files</button>
+  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#files-required-button">Required Files</button>
+  <div id="files-required-button" class="collapse show">
+    <br>
+    <div class="container">
+      <table id="files-required-table" class="table table-hover compact">
+        <thead>
+        <tr>
+          <td>File</td>
+          <td>Forward Reads</td>
+          <td>Reverse Reads</td>
+        </tr>
+        </thead>
+        <tbody>
+        {% for seqid in sequencing_run.seqids %}
+          <tr>
+            <td>{{ seqid }}</td>
+            <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+            <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <style>
+        caption{
+            display: table-caption;
+            text-align: center;
+            caption-side: top;
+            font-size: 20px;
+            color: black;
+            font-family: Impact, Charcoal, sans-serif;
+        }
+
+        .loader {
+            border: 12px solid rgba(243, 243, 243, 0.47); /* Light grey */
+            border-top: 12px solid #0e4164; /* Blue */
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 4s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .center {
+            margin: auto;
+        }
+  </style>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+  <script src={% static 'js/dropzone.js' %}></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+    function progressSpinner() {
+        var spinnerdiv = document.getElementById('upload-div');
+        var ele = document.getElementById('spindiv');
+        if (ele === null){
+            var div = document.createElement('div');
+            div.setAttribute('class', 'loader');
+            div.id = 'spindiv';
+            var text = document.createElement('H4');
+            var message = document.createTextNode('File upload in progress. Do not refresh this page!');
+            text.appendChild(message);
+            spinnerdiv.appendChild(text);
+            spinnerdiv.appendChild(div);
+        }
+    }
+  Dropzone.options.myDropzone = {
+
+    // Prevents Dropzone from uploading dropped files immediately
+    autoProcessQueue: false,
+    addRemoveLinks: true,
+    createImageThumbnails: false,
+    acceptedFiles: '.fastq.gz',
+    maxFilesize: 1024, // This is in MB. Shouldn't ever have files bigger than this.
+    parallelUploads: 1, // Number of files allowed to upload at once. Keep this number low in order to keep memory usage low
+    uploadMultiple: true,
+    maxFiles: 200,
+    timeout: 3600000,
+     init : function() {
+                var submitButton = document.querySelector("#submit");
+                var validateButton = document.querySelector("#validate");
+                var myDropzone = this;
+
+                // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
+                // has to keep getting pressed. This makes it so upload button only has to be pressed once.
+                this.on("complete", function () {
+                  myDropzone.options.autoProcessQueue = true;
+                  console.log(myDropzone.getQueuedFiles().length);
+                  if (myDropzone.getQueuedFiles().length === 0) {
+                    window.location.replace("{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}");
+                  }
+                });
+                validateButton.addEventListener("click", function(e) {
+                      var filesAccepted = myDropzone.getAcceptedFiles();
+                      var filesTable = document.getElementById('files-required-table');
+                      var filesAcceptedNames = [];
+                      // Get all the names put into array for validation.
+                      for(var i=0; i<filesAccepted.length; i++) {
+                        filesAcceptedNames.push(filesAccepted[i].name)
+                      }
+                      var validated = true;
+                      for(var i=1; i<filesTable.rows.length; i++) {
+                        var seqid = filesTable.rows[i].cells[0].innerHTML;
+                        // Check we have forward and reverse read files.
+                        // This is horrendously inefficient, should get replaced with regex at some point.
+                        var forward_read_found = false;
+                        var reverse_read_found = false;
+                        for(var j=0; j<filesAcceptedNames.length; j++) {
+                          if(filesAcceptedNames[j].includes(seqid) && filesAcceptedNames[j].includes('_R1')){
+                            forward_read_found = true;
+                          }
+                          if(filesAcceptedNames[j].includes(seqid) && filesAcceptedNames[j].includes('_R2')){
+                            reverse_read_found = true;
+                          }
+                        }
+                        if(forward_read_found === true) {
+                          filesTable.rows[i].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                          filesTable.rows[i].cells[1].classList.remove('table-danger');
+                          filesTable.rows[i].cells[1].classList.add('table-success')
+                        }
+                        if(reverse_read_found === true) {
+                          filesTable.rows[i].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                          filesTable.rows[i].cells[2].classList.remove('table-danger');
+                          filesTable.rows[i].cells[2].classList.add('table-success')
+                        }
+                        if(forward_read_found === false || reverse_read_found === false) {
+                          validated = false;
+                        }
+                      }
+                      if(validated === true) {
+                        console.log(myDropzone.getQueuedFiles().length);
+                        $('#submit').prop('disabled', false);
+                      }
+                });
+                submitButton.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    progressSpinner();
+                    $('html, body').animate({ scrollTop: 0 }, 'fast');
+                    $('#submit').prop('disabled', true);
+                    $('#validate').prop('disabled', true);
+                    myDropzone.processQueue();
+                    // Tell Dropzone to process all queued files.
+                });
+      }
+  };
+  </script>
+{% endblock %}

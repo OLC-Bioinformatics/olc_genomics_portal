@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+<h2>Step 1 of 3: Upload Metadata Files and Name Run</h2>
+  <p>Please enter a run name and drag and drop the files found in the following table to be uploaded. Once all files have been uploaded,
+  you will be able to proceed to the next page.</p>
+  <br>
+  <table id="files-required-table" class="table table-hover compact">
+    <thead>
+        <tr>
+          <td>File</td>
+          <td>Status</td>
+        <tr></tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>config.xml</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>CompletedJobInfo.xml</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>GenerateFASTQRunStatistics.xml</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>RunInfo.xml</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>runParameters.xml</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>SampleSheet.csv</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+    </tbody>
+  </table>
+  <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+    {{ form }}
+  {% csrf_token %}
+  </form>
+  <br>
+  <button id="submit" class="btn btn-success" disabled>Upload Metadata Files</button>
+  <button id="validate" class="btn btn-primary">Validate Metadata Files</button>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+  <script src={% static 'js/dropzone.js' %}></script>
+  <script src={% static 'js/papaparse.min.js' %}></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  function validateForm() {
+      var x = document.forms["file-form"]["run_name"].value;
+      var external_regex = /\d{6}_[A-Z]+$/;
+      var olc_regex = /\d{6}_M\d+$/;
+      if (x === "") {
+        alert("Must enter a run name");
+        return false
+      }
+      var found_external = x.match(external_regex);
+      var found_olc = x.match(olc_regex);
+      if (found_external === null && found_olc === null) {
+        alert("Invalid Run Name. Correct format is YYMMDD_LAB");
+        return false
+      }
+      return true
+    }
+  Dropzone.options.myDropzone = {
+
+    // Prevents Dropzone from uploading dropped files immediately
+    autoProcessQueue: false,
+    addRemoveLinks: true,
+    acceptedFiles: '.xml, .csv',
+    maxFilesize: 1024, // This is in MB. Shouldn't ever have files bigger than this.
+    parallelUploads: 200, // Number of files allowed to upload at one. Shouldn't ever be bigger than this
+    uploadMultiple: true,
+    maxFiles: 200,
+    timeout: 3600000,
+
+    init : function() {
+                var submitButton = document.querySelector("#submit");
+                var validateButton = document.querySelector("#validate");
+                var myDropzone = this;
+
+                this.on("queuecomplete", function () {
+                  $("#myDropzone").submit();
+                });
+
+                validateButton.addEventListener("click", function(e) {
+                      var filesAccepted = myDropzone.getAcceptedFiles();
+                      var filesTable = document.getElementById('files-required-table');
+                      // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
+                      // if those files have been uploaded.
+                      var filesAcceptedNames = [];
+                     // Get all the names put into array for validation.
+                      for(var i=0; i<filesAccepted.length; i++) {
+                        filesAcceptedNames.push(filesAccepted[i].name)
+                      }
+                      for(var i = 1; i < filesTable.rows.length;)
+                      {
+                          filesTable.deleteRow(i);
+                      }
+                      var validationSuccess = true;
+                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml', 'runParameters.xml', 'SampleSheet.csv'];
+                      for(var i=0; i<requiredFiles.length; i++ ) {
+                        if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
+                          var row = filesTable.insertRow();
+                          var cell1 = row.insertCell();
+                          var cell2 = row.insertCell();
+                          cell1.innerHTML=requiredFiles[i];
+                          cell2.classList.add('table-success');
+                          cell2.align = 'center';
+                          cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                        }
+                        else {
+                          var row = filesTable.insertRow();
+                          var cell1 = row.insertCell();
+                          var cell2 = row.insertCell();
+                          cell1.innerHTML=requiredFiles[i];
+                          cell2.classList.add('table-danger');
+                          cell2.align = 'center';
+                          cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                          validationSuccess = false;
+                        }
+                      }
+                      // Also check that all SEQIDs submitted are valid.
+                      // in this list.
+                      var seqid_validated = true;
+                      for(var i=0; i < filesAccepted.length; i++) {
+                        if (filesAccepted[i].name.includes('SampleSheet.csv')) {
+                          var reader = new FileReader();
+                          reader.readAsText(filesAccepted[i]);
+                          reader.onload = function (event) {
+                            var csv = event.target.result;
+                            var csvdata = Papa.parse(csv);
+                            // at this point we should try to get a list of SEQIDs out of the SampleSheet - Make sure
+                            // that they're in the correct format, and raise an error if not.
+                            var sampleSheetData = csvdata['data'];
+                            var seqidstart = false;
+                            var seqidregex = /\d{4}-[A-Z]+-\d{4}$/;
+                            var seqidlist = []; // Keep things that are supposed to be SEQIDs but not properly formatted
+                            // Make a regex to tell of SEQID matches.
+                            for (var i = 0; i < sampleSheetData.length; i++) {
+                              // Check that we are on the SEQIDs but not blank (sometimes get a blank row at EOF)
+                              if (seqidstart === true && sampleSheetData[i][0] !== '') {
+                                if (sampleSheetData[i][0].search(seqidregex) === -1) {
+                                  seqidlist.push(sampleSheetData[i][0]);
+                                }
+                              }
+                              if (sampleSheetData[i][0] === 'Sample_ID') {
+                                seqidstart = true;
+                              }
+                            }
+                            if(seqidlist.length > 0) {
+                              seqid_validated = false;
+                              $('#submit').prop('disabled', true);
+                              alert('One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.\n' +
+                                'Correct format is YYYY-LAB-####.\nIncorrectly formatted SEQIDs: ' + seqidlist.toString());
+                            }
+                          }
+                        }
+                      }
+                      var form_is_valid = validateForm();
+                      if (validationSuccess === true && form_is_valid === true && seqid_validated === true) {
+                        $('#submit').prop('disabled', false);
+                      }
+                });
+                submitButton.addEventListener("click", function(e) {
+                    {#e.preventDefault();#}
+                    {#e.stopPropagation();#}
+                    myDropzone.processQueue();
+                    // Tell Dropzone to process all queued files.
+                });
+      }
+    };
+</script>
+{% endblock %}

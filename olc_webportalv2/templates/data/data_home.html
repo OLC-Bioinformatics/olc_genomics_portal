@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Welcome to the data section of the web portal!</h2>
+  <p>This table shows any data requests you have made in the last 7 days. Requests expire after 7 days and will have
+  to be re-run if you want to reacquire the files.</p>
+  <br>
+  <table id="data-request-table" class="table table-hover">
+  <thead>
+    <tr>
+       <th>SEQIDs</th>
+       <th>Status</th>
+       <th>Download</th>
+       <th>Request Date</th>
+       <th>Type</th>
+    </tr>
+  </thead>
+    <tbody>
+    {% for data_request in data_requests %}
+      <tr>
+        <td>
+          {% for seqid in data_request.seqids|slice:":3" %}
+            <p style="font-size:14px">{{ seqid }}</p>
+          {% endfor %}
+          {% if data_request.seqids|length > 3 %}
+              <p style="font-size:14px">...and {{ data_request.seqids|length|add:'-3' }} more</p>
+          {% endif %}
+        </td>
+
+         {% if data_request.status == 'Complete' %}
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-success" role="button">{{ data_request.status }}</a></td>
+         {% elif data_request.status == 'Warning' %}
+          <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning" role="button">{{ data_request.status }}</a></td>
+          {% elif data_request.status == 'Processing' %}
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ data_request.status }}</a></td>
+          {% elif data_request.status == 'Error' %}
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-danger" role="button">{{ data_request.status }}</a></td>
+          {% elif data_request.status == 'Unprocessed' %}
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-secondary" role="button">{{ data_request.status }}</a></td>
+          {% endif %}
+
+          {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}
+            <td><a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button">Download</a></td>
+          {% else %}
+            <td><button class="btn-dark" disabled>Not Available</button></td>
+          {% endif %}
+
+        <td>{{ data_request.created_at }}</td>
+        {% if data_request.request_type == 'FASTA' %}
+          <td><button class="btn btn-secondary" disabled>FASTA</button></td>
+        {% elif data_request.request_type == 'FASTQ' %}
+          <td><button class="btn btn-dark" disabled>FASTQ</button></td>
+        {% endif %}
+      </tr>
+
+    {% endfor %}
+    </tbody>
+  </table>
+  <br>
+  <a href="{% url 'data:raw_data' %}" class="btn btn-outline-dark btn-block" role="button" aria-pressed="true">Get Raw (FASTQ) Data</a>
+  <a href="{% url 'data:assembled_data' %}" class="btn btn-outline-primary btn-block" role="button" aria-pressed="true">Get Processed (FASTA) Data</a>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+    $(document).ready(function () {
+        $('#data-request-table').dataTable()
+    });
+    setInterval(function () {
+      {% for data_request in data_requests %}
+          {% if data_request.status == 'Processing' %}
+              window.location = window.location.href;
+          {% endif %}
+      {% endfor %}
+    }, 60000) // This should refresh the page every 60 seconds as long as data request status is processing.
+  </script>
+{% endblock %}

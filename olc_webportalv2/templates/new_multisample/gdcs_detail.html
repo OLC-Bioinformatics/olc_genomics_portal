@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load render_table from django_tables2 %}
+{% load i18n widget_tweaks %}
+{% block content %}
+    <h4>GDCS Detail for Sample {{ sample.title }}</h4>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/custom_bootstrap_vars.css' %}"/>
+    <div id="container" style="height: 1000px"></div>
+    <hr>
+    <button type="button" class="btn btn-info btn-block" data-toggle="collapse" data-target="#gdcs-results"><strong>View Table</strong></button>
+    <br>
+    <div id="gdcs-results" class="collapse">
+    <table id="datatable" class="display compact">
+    <thead>
+        <tr>
+            <th>Gene</th>
+            <th>Coverage</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    {% for gdcs_project in sample.gdcs_results.all %}
+        {% for item, value in gdcs_project.allele_dict.items|dictsort:0 %}
+            <tr>
+            {% if 'BACT' in item %}
+                <td>{{ item }}</td>
+                <td>{{ value }}</td>
+            {% endif %}
+            </tr>
+        {% endfor %}
+    {% endfor %}
+    </tbody>
+    </table>
+    </div>
+    <a href="{% url 'new_multisample:display_genesippr_results' project_id=sample.project.pk %}" class="btn btn-sample" role="button" aria-pressed="true">Return to GeneSippr Results</a>
+  <br>
+    <script src="{% static 'js/highcharts.js' %}"></script>
+    <script src="{% static 'js/modules/data.js' %}"></script>
+    <script src="{% static 'js/modules/exporting.js' %}"></script>
+    <script>
+    Highcharts.chart('container', {
+        chart: {
+            type: 'bar'
+        },
+        title: {
+            text: 'GDCS Coverage By Gene'
+        },
+        xAxis: {
+            title: {
+                text: 'Gene'
+            }
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'Coverage'
+            }
+        },
+        legend: {
+            enabled: false
+        },
+        plotOptions: {
+            bar: {
+                dataLabels: {
+                    enabled: false
+                },
+                zones: [{
+                    value: 10,
+                    color: '#ED561B'
+                    },
+                    {
+                        value: 20,
+                        color: '#DDDF00'
+                    },
+                    {
+                        color: '#50B432'
+                    }]
+            }
+        },
+        data: {
+            table: 'datatable'
+        }
+    });
+    </script>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/datatables.min.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#datatable').dataTable();
+        });
+    </script>
+{% endblock %}

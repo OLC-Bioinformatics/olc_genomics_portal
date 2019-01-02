@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Assembled Data Request</h2>
+  <p>Enter the SEQIDs you want to retrieve FASTA files for below, one per line.</p>
+  <br>
+  <form action='' method="post">
+    {{ form }}
+  {% csrf_token %}
+    <br>
+  <button type="submit" class="btn btn-primary btn">Get Files</button>
+  </form>
+{% endblock %}

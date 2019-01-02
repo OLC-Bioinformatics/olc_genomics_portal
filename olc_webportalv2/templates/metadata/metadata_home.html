@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Metadata</h2>
+  <br>
+  <form action='' method="post">
+     {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+    <p>Enter your genus of interest: {{ form.genus }}</p>
+    <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
+    <p>Choose your desired assembly quality: {{ form.quality }}</p>
+  {% csrf_token %}
+    <br>
+  <button type="submit" class="btn btn-primary btn">Get SEQIDs</button>
+  </form>
+{% endblock %}

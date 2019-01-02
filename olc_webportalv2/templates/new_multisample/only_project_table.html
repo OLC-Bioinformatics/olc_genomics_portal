@@ -1,0 +1,153 @@
+{% load staticfiles %}
+{% block content %}
+
+    <table class="display compact" id="sample_table">
+    <thead>
+        <tr>
+            <th style="text-align: left; white-space: nowrap">Sample<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">GeneSippr<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">SendSketch<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">ConFindr<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">GenomeQAML<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">AMR Detection<i class="fa fa-fw fa-sort"></i></th>
+            <th style="text-align: center; white-space: nowrap">Data Type<i class="fa fa-fw fa-sort"></i></th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for sample in project.samples.all %}
+            <tr align="center">
+                <td style="white-space: nowrap"><small>{{ sample.title }}</small></td>
+
+                {# GENESIPPR #}
+                {% if sample.genesippr_status == 'Processing' %}
+                    <td>
+                        <div class="progress">
+                            <button class="btn progress-bar progress-bar-striped progress-bar-animated bg-warning btn-sm" role="progressbar" style="width:100%" >
+                                <span class="justify-content-center d-flex position-absolute w-100" style="font-size: 12pt">
+                                    {{ sample.genesippr_status }}
+                                </span>
+                            </button>
+                        </div>
+                    </td>
+
+                {% elif sample.genesippr_status == 'Unprocessed' %}
+                    <td><button class="btn btn-primary btn-sm" disabled>{{ sample.genesippr_status }}</button></td>
+                {% elif sample.genesippr_status == 'Complete' %}
+                    <td><a href="{% url 'new_multisample:display_genesippr_results' project_id=project.pk %}" class="btn btn-primary bg-success border-success btn-sm" role="button" aria-pressed="true">{{ sample.genesippr_status }}</a></td>
+                {% elif sample.genesippr_status == 'In Queue'%}
+                  <td><a href="{% url 'new_multisample:task_queue' %}" class="btn btn-info btn-sm" role="button">{{ sample.genesippr_status }}</a></td>
+                {% else %}
+                    <td><button class="btn btn-primary bg-danger border-danger btn-sm" disabled>{{ sample.genesippr_status }}</button></td>
+                {% endif %}
+
+                {# SENDSKETCH #}
+                {% if sample.sendsketch_status == 'Processing' %}
+                    <td>
+                        <div class="progress">
+                            <button class="btn progress-bar progress-bar-striped progress-bar-animated bg-warning btn-sm" role="progressbar" style="width:100%" >
+                                <span class="justify-content-center d-flex position-absolute w-100">
+                                    {{ sample.sendsketch_status }}
+                                </span>
+                            </button>
+                        </div>
+                    </td>
+
+                {% elif sample.sendsketch_status == 'Unprocessed' %}
+                    <td><button class="btn btn-primary btn-sm" disabled>{{ sample.sendsketch_status }}</button></td>
+                {% elif sample.sendsketch_status == 'Complete' %}
+                    <td><a href="{% url 'new_multisample:sendsketch_results_table' sample_id=sample.pk %}" class="btn btn-primary bg-success border-success btn-sm" role="button" aria-pressed="true">{{ sample.sendsketch_status }}</a></td>
+                {% elif sample.sendsketch_status == 'In Queue'%}
+                  <td><a href="{% url 'new_multisample:task_queue' %}" class="btn btn-info btn-sm" role="button">{{ sample.sendsketch_status }}</a></td>
+                {% else %}
+                    <td><button class="btn btn-primary bg-danger border-danger btn-sm" disabled>{{ sample.sendsketch_status }}</button></td>
+                {% endif %}
+
+                {# CONFINDR #}
+                {% if sample.file_fasta %}
+                    <td>Unavailable</td>
+                {% elif sample.confindr_status == 'Processing' %}
+                    <td>
+                        <div class="progress">
+                            <button class="btn progress-bar progress-bar-striped progress-bar-animated bg-warning btn-sm" role="progressbar" style="width:100%" >
+                                <span class="justify-content-center d-flex position-absolute w-100" style="font-size: 12pt">
+                                    {{ sample.confindr_status }}
+                                </span>
+                            </button>
+                        </div>
+                    </td>
+
+                {% elif sample.confindr_status == 'Unprocessed' %}
+                    <td><button class="btn btn-primary btn-sm" disabled>{{ sample.confindr_status }}</button></td>
+                {% elif sample.confindr_status == 'In Queue'%}
+                  <td><a href="{% url 'new_multisample:task_queue' %}" class="btn btn-info btn-sm" role="button">{{ sample.confindr_status }}</a></td>
+                {% elif sample.confindr_status == 'Complete' %}
+                    <td><a href="{% url 'new_multisample:confindr_results_table' project_id=project.pk %}" class="btn btn-primary bg-success border-success btn-sm" role="button" aria-pressed="true">{{ sample.confindr_status }}</a></td>
+                {% else %}
+                    <td><button class="btn btn-primary bg-danger border-danger btn-sm" disabled>{{ sample.confindr_status }}</button></td>
+                {% endif %}
+
+                {# GenomeQAML #}
+                {% if sample.file_fasta %}
+                    {% if sample.genomeqaml_status == 'Unprocessed' %}
+                        <td><button class="btn btn-primary btn-sm" disabled>{{ sample.genomeqaml_status }}</button></td>
+                    {% elif sample.genomeqaml_status == 'Processing' %}
+                        <td>
+                            <div class="progress">
+                                <button class="btn progress-bar progress-bar-striped progress-bar-animated bg-warning btn-sm" role="progressbar" style="width:100%" >
+                                <span class="justify-content-center d-flex position-absolute w-100" style="font-size: 12pt">
+                                    {{ sample.genomeqaml_status }}
+                                </span>
+                                </button>
+                            </div>
+                        </td>
+                    {% elif sample.genomeqaml_status == 'Complete' %}
+                        <td><a href="{% url 'new_multisample:genomeqaml_results' project_id=project.pk %}" class="btn btn-success btn-sm">{{ sample.genomeqaml_status }}</a></td>
+                    {% elif sample.genomeqaml_status == 'In Queue'%}
+                      <td><a href="{% url 'new_multisample:task_queue' %}" class="btn btn-info btn-sm" role="button">{{ sample.genomeqaml_status }}</a></td>
+                    {% else %}
+                        <td><button class="btn btn-danger btn-sm" disabled>{{ sample.genomeqaml_status }}</button></td>
+                    {% endif %}
+                {% else %}
+                    <td><small>Unavailable</small></td>
+                {% endif %}
+
+                {# AMR Detection #}
+                {% if sample.amr_status == 'Processing' %}
+                    <td>
+                        <div class="progress">
+                            <button class="btn progress-bar progress-bar-striped progress-bar-animated bg-warning btn-sm" role="progressbar" style="width:100%" >
+                                <span class="justify-content-center d-flex position-absolute w-100" style="font-size: 12pt">
+                                    {{ sample.amr_status }}
+                                </span>
+                            </button>
+                        </div>
+                    </td>
+
+                {% elif sample.amr_status == 'Unprocessed' %}
+                    <td><button class="btn btn-primary btn-sm" disabled>{{ sample.amr_status }}</button></td>
+                {% elif sample.amr_status == 'Complete' %}
+                    <td><a href="{% url 'new_multisample:amr_detail' sample_id=sample.pk %}" class="btn btn-primary bg-success border-success btn-sm" role="button" aria-pressed="true">{{ sample.amr_status }}</a></td>
+                {% elif sample.amr_status == 'In Queue'%}
+                  <td><a href="{% url 'new_multisample:task_queue' %}" class="btn btn-info btn-sm" role="button">{{ sample.amr_status }}</a></td>
+                {% else %}
+                    <td><button class="btn btn-primary bg-danger border-danger btn-sm" disabled>{{ sample.amr_status }}</button></td>
+                {% endif %}
+                {# Data type #}
+                {% if sample.file_fasta %}
+                    <td><button class="btn btn-secondary btn-sm" disabled>FASTA</button></td>
+                {% else %}
+                    <td><button class="btn btn-dark btn-sm" disabled>FASTQ</button></td>
+                {% endif %}
+                {#  Sample delete #}
+                <td><a href="{% url 'new_multisample:sample_remove_confirm' sample_id=sample.pk %}" class="btn btn-danger btn-sm" role="button" aria-pressed="true">Delete</a></td>
+            </tr>
+
+        {% endfor %}
+    </tbody>
+    </table>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+{% endblock content %}

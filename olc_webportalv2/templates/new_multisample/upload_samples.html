@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load render_table from django_tables2 %}
+{% block content %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/custom_bootstrap_vars.css' %}"/>
+    <h4>{{ project.project_title }}</h4>
+
+    <h6>You can add more files to your project here.</h6>
+    <form enctype="multipart/form-data" action="" method="post">
+        {% csrf_token %}
+        <input type="file" name="files" multiple id="files">
+        <br>
+        <br>
+        <label for="Forward_ID">Forward ID</label>
+        <input type="text" name="Forward_ID" value="_R1" id="Forward_ID" onkeyup="simulateEvent()" onchange="simulateEvent()">
+        <br>
+        <label for="Reverse_ID">Reverse ID</label>
+        <input type="text" name="Reverse_ID" value="_R2" id="Reverse_ID" onkeyup="simulateEvent()" onchange="simulateEvent()">
+        <br>
+        <br>
+        <button onclick="progressSpinner()" type="submit" class="btn btn-outline-primary" name="upload" value="Upload">Upload</button>
+         <a href="{% url 'new_multisample:project_detail' project_id=project.pk %}" class="btn btn-sample" role="button" aria-pressed="true">Return to Project {{ project.project_title }}</a>
+    </form>
+    <div id="upload-div" class="center" style="width: 300px;"></div>
+    <br>
+    <table class="table table-hover table-sm table-responsive table-bordered" id="read-pairing-table">
+        <caption>Read Pairings</caption>
+        <thead>
+        <tr>
+            <th>Forward Read File</th>
+            <th>Reverse Read File</th>
+            <th>Will Be Uploaded?</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <table class="table table-hover table-sm table-responsive table-bordered" id="read-unpaired-table">
+        <caption>Unpaired Reads</caption>
+        <thead>
+        <tr>
+            <th>Read File</th>
+            <th>Will Be Uploaded?</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <table class="table table-hover table-sm table-responsive table-bordered" id="fasta-table">
+        <caption>FASTA Files</caption>
+        <thead>
+        <tr>
+            <th>FASTA File</th>
+            <th>Will Be Uploaded?</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <br>
+    <br>
+    <style>
+        caption{
+            display: table-caption;
+            text-align: center;
+            caption-side: top;
+            font-size: 20px;
+            color: black;
+            font-family: Impact, Charcoal, sans-serif;
+        }
+
+        .loader {
+            border: 12px solid rgba(243, 243, 243, 0.47); /* Light grey */
+            border-top: 12px solid #0e4164; /* Blue */
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 4s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .center {
+            margin: auto;
+        }
+    </style>
+     {# Javascript to display the files you're going to upload, as shown at #}
+     {# https://www.raymondcamden.com/2013/09/10/Adding-a-file-display-list-to-a-multifile-upload-HTML-control/ #}
+    <script type="text/javascript">
+         var selDiv = "Read Pairings <br/>";
+
+    document.addEventListener("DOMContentLoaded", init, false);
+
+
+    function init() {
+        document.querySelector('#files').addEventListener('onkeyup', handleFileSelect, false);
+        document.querySelector('#files').addEventListener('change', handleFileSelect, false);
+        document.getElementById('read-pairing-table').style.visibility = "hidden";
+        document.getElementById('read-unpaired-table').style.visibility = "hidden";
+        document.getElementById('fasta-table').style.visibility = "hidden";
+        selDiv = document.querySelector("#selectedFiles");
+    }
+
+    function simulateEvent(){
+        var event_keypress = new Event('onkeyup');
+        var event_change = new Event('change');
+        var handle = document.querySelector('#files');
+        handle.dispatchEvent(event_keypress);
+        handle.dispatchEvent(event_change);
+    }
+
+    function progressSpinner() {
+        var spinnerdiv = document.getElementById('upload-div');
+        var ele = document.getElementById('spindiv');
+        if (ele === null){
+            var div = document.createElement('div');
+            div.setAttribute('class', 'loader');
+            div.id = 'spindiv';
+            var text = document.createElement('H4');
+            var message = document.createTextNode('File upload in progress...');
+            text.appendChild(message);
+            spinnerdiv.appendChild(text);
+            spinnerdiv.appendChild(div);
+        }
+    }
+
+    function handleFileSelect(e) {
+        document.getElementById('read-pairing-table').style.visibility = "hidden";
+        document.getElementById('read-unpaired-table').style.visibility = "hidden";
+        document.getElementById('fasta-table').style.visibility = "hidden";
+        var forward_id = document.getElementsByName('Forward_ID')[0].value;
+        var reverse_id = document.getElementsByName('Reverse_ID')[0].value;
+        if(!e.target.files) return;
+
+        var filenames = [];
+        var paired_files = [];
+        var files = e.target.files;
+
+        for(var i = 0; i<files.length; i++) {
+            filenames.push(files[i].name);
+        }
+
+        var readPairingTable = document.getElementById("read-pairing-table");
+
+        for(var i = 1; i < readPairingTable.rows.length;)
+            {
+               readPairingTable.deleteRow(i);
+            }
+
+        for(var j=0; j<filenames.length;j++){
+            var f = filenames[j];
+            if(f.includes(forward_id)){
+                var potential_reverse = f.replace(forward_id, reverse_id);
+                var index = filenames.indexOf(potential_reverse);
+                if(index > -1 && f != potential_reverse){
+                    paired_files.push(f);
+                    paired_files.push(potential_reverse);
+                    var row = readPairingTable.insertRow();
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+                    var cell3 = row.insertCell(2);
+                    readPairingTable.style.visibility = "visible";
+                    cell3.align = 'center';
+                    cell1.innerHTML = filenames[j];
+                    cell2.innerHTML = potential_reverse;
+                    if(files[j].size < 5000000 || files[index].size < 5000000) {
+                        cell3.classList.add('table-danger');
+                        cell3.innerHTML =  '<i class=\"fa fa-ban fa-1x\"></i>';
+                    }
+                    else{
+                        cell3.classList.add('table-success');
+                        cell3.innerHTML =  '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                    }
+                }
+            }
+        }
+{#        selDiv.innerHTML += "</br> <h4>Unpaired Reads:</h4>";#}
+        var unpairedReadTable = document.getElementById("read-unpaired-table");
+        for(var i = 1; i < unpairedReadTable.rows.length;)
+        {
+            unpairedReadTable.deleteRow(i);
+        }
+        for(var k=0; k<filenames.length;k++) {
+            var a = filenames[k];
+            var in_array = paired_files.indexOf(a);
+            if(in_array < 0 && !filenames[k].includes('.fasta')) {
+                var row = unpairedReadTable.insertRow();
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                unpairedReadTable.style.visibility = "visible";
+                cell1.innerHTML = filenames[k];
+                cell2.classList.add('table-danger');
+                cell2.align = 'center';
+                cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+            }
+        }
+
+{#        selDiv.innerHTML += "</br> <h4>FASTA Files:</h4>";#}
+        var FastaTable = document.getElementById("fasta-table");
+        for(var i = 1; i < FastaTable.rows.length;)
+        {
+            FastaTable.deleteRow(i);
+        }
+        for(var k=0; k<filenames.length;k++){
+            if(filenames[k].endsWith('.fasta') || filenames[k].endsWith('.fa')){
+                FastaTable.style.visibility = "visible";
+                var row = FastaTable.insertRow();
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                cell1.innerHTML = filenames[k];
+                cell2.classList.add('table-success');
+                cell2.align = 'center';
+                cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+            }
+        }
+    }
+    </script>
+{% endblock %}

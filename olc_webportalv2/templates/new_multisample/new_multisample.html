@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load render_table from django_tables2 %}
+{% block content %}
+
+{#Head container#}
+<div class="container">
+
+{#    Create new project form#}
+    <button type="button" class="btn btn-success btn-block" data-toggle="collapse" data-target="#create-project-button"><strong>Create New Project</strong></button>
+     <div id="create-project-button" class="collapse">
+        <br>
+        <div class="panel border rounded" style="padding: 25px">
+            <form method="post" enctype="multipart/form-data" class="form-horizontal">
+                {% csrf_token %}
+                    <div class="form-group has-success has-feedback">
+                        <label class="h5">Title</label>
+                        {{ form.project_title }}
+                    </div>
+
+                    <div class="form-group has-success has-feedback">
+                        <label class="h5">Description</label>
+                        {{ form.description }}
+                    </div>
+
+                <div class="form-group">
+                    <button class="btn btn-primary btn-block">Submit project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+    <div class="page-header">
+    <br>
+    <h4><strong>{{ user.name }}'s</strong> Projects</h4>
+</div>
+
+<div class="border rounded" style="padding: 25px">
+    <table class="display compact" id="project_table">
+    <thead>
+        <tr>
+            <th>Project Title<i class="fa fa-fw fa-sort"></i></th>
+            <th>Date Created<i class="fa fa-fw fa-sort"></i></th>
+            <th>Description<i class="fa fa-fw fa-sort"></i></th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for id in project_list %}
+            <tr>
+                <td>{{ id.project_title }}</td>
+                <td>{{ id.date }}</td>
+                <td>{{ id.description }}</td>
+                <td align="center"><a href="{% url 'new_multisample:project_detail' project_id=id.pk %}" class="btn btn-primary active" role="button" aria-pressed="true">Details</a></td>
+                <td align="center"><a href="{% url 'new_multisample:project_remove_confirm' project_id=id.pk %}" class="btn btn-danger active" role="button" aria-pressed="true">Delete Project</a></td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+</div>
+
+
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/datatables.min.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+
+    <script type="text/javascript">
+    $(document).ready(function () {
+        $('#project_table').dataTable();
+    });
+</script>
+
+{% endblock %}

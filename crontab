@@ -1,0 +1,1 @@
+0 0 * * * /usr/bin/python3 /data/web/manage.py clean_old_containers

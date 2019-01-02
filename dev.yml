@@ -1,0 +1,87 @@
+version: '2'
+
+volumes:
+  postgres_data_local: {}
+  postgres_backup_local: {}
+
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+      - /usr/bin:/usr/bin # mount bin to access docker exec
+    environment:
+      - POSTGRES_USER=olc_webportalv2
+      - USE_DOCKER=yes
+      - DOCKER_SOCKET=/var/run/docker.sock
+      - DOCKER_GROUP=dockerhost
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - "8000:8000"
+    command: /start.sh
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+      - postgres_backup_local:/backups
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+    environment:
+      - POSTGRES_USER=olc_webportalv2
+
+  redis:
+    image: redis:3.0
+
+  genesippr:
+    ports:
+      - "8001:8001"
+    image: "sipprverse:v0.2"
+    container_name: olcwebportalv2_genesipprv2
+#    tty: true
+    stdin_open: true
+    volumes:
+      - ./olc_webportalv2/media/:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+
+  bbmap:
+    ports:
+      - "8002:8002"
+    image: "dussaultf/bbmap:v1"
+    container_name: olcwebportalv2_bbmap
+#    tty: true
+    stdin_open: true
+    volumes:
+      - ./olc_webportalv2/media/:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+
+  confindr:
+    ports:
+      - "8003:8003"
+    image: "confindr:v0.2"
+    container_name: olcwebportalv2_confindr
+#    tty: true
+    stdin_open: true
+    volumes:
+      - ./olc_webportalv2/media/:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+
+  geneseekr:
+    ports:
+      - "8004:8004"
+    image: "olcwebportalv2_geneseekr:v0.1"
+    container_name: olcwebportalv2_geneseekr
+#    tty: true
+    stdin_open: true
+    volumes:
+      - ./olc_webportalv2/media/:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+
+
+

@@ -1,0 +1,65 @@
+# Wheel 0.25+ needed to install certain packages on CPython 3.5+
+# like Pillow and psycopg2
+# See http://bitly.com/wheel-building-fails-CPython-35
+# Verified bug on Python 3.5.1
+wheel==0.30.0
+
+# Bleeding edge Django
+django==1.10.8 # pyup: >=1.10,<1.11
+
+# Configuration
+django-environ==0.4.4
+
+# Forms
+django-crispy-forms==1.6.1
+
+# Models
+django-model-utils==3.0.0
+
+# Images
+Pillow==4.2.1
+
+# Password storage
+argon2-cffi==16.3.0
+
+# For user registration, either via email or social
+# Well-built with regular release cycles!
+django-allauth==0.33.0
+
+# Python-PostgreSQL Database Adapter
+psycopg2==2.7.3.1
+
+# Unicode slugification
+awesome-slugify==1.6.5
+
+# Time zones support
+pytz==2017.2
+
+# Redis support
+django-redis==4.8.0
+redis>=2.10.5
+
+# Don't need this since I'm using django-background-taks
+celery==3.1.25
+
+# Custom requirements beyond cookiecutter-django
+django-multiselectfield==0.1.8
+django-bootstrap-form
+django-tables2
+django-background-tasks
+pandas
+numpy
+django-pandas
+pandas-highcharts
+django-highcharts
+django-widget-tweaks
+gunicorn==19.7.1
+uwsgi
+django-extensions
+django-debug-toolbar
+#django-test-plus  # This is breaking the build? Also, not sure that it actually gets used.
+azure-storage
+azure-batch
+KubeJobSub>=0.1.15
+biopython
+geneseekr>=0.2.6

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Step 2 of 3: Upload InterOp Files for Run {{ sequencing_run.run_name }}</h2>
+  <br>
+  <p>The <strong>ErrorMetricsOut.bin</strong> file is not required, but is recommended. All other files are
+  required.</p>
+  <table id="files-required-table" class="table table-hover compact">
+    <thead>
+        <tr>
+          <td>File</td>
+          <td>Status</td>
+        <tr></tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>ControlMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>CorrectedIntMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>ErrorMetricsOut.bin</td>
+          <td class="table-warning" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>ExtractionMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>IndexMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>QMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+        <tr>
+          <td>TileMetricsOut.bin</td>
+          <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+        </tr>
+    </tbody>
+  </table>
+  <br>
+  <form action={% url 'cowbat:upload_interop'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+  {% csrf_token %}
+  </form>
+  <br>
+  <button id="submit" class="btn btn-success" disabled>Upload InterOp Files</button>
+  <button id="validate" class="btn btn-primary">Validate InterOp Files</button>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+  <script src={% static 'js/dropzone.js' %}></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  Dropzone.options.myDropzone = {
+
+    // Prevents Dropzone from uploading dropped files immediately
+    autoProcessQueue: false,
+    addRemoveLinks: true,
+    acceptedFiles: '.bin',
+    maxFilesize: 1024, // This is in MB. Shouldn't ever have files bigger than this.
+    parallelUploads: 200, // Number of files allowed to upload at one. Shouldn't ever be bigger than this
+    uploadMultiple: true,
+    maxFiles: 200,
+    timeout: 3600000,
+     init : function() {
+                var submitButton = document.querySelector("#submit");
+                var validateButton = document.querySelector("#validate");
+                var myDropzone = this;
+
+                this.on("queuecomplete", function () {
+                  $("#myDropzone").submit();
+                });
+                validateButton.addEventListener("click", function(e) {
+                      // Todo: Actually make this validation do something.
+                      var filesAccepted = myDropzone.getAcceptedFiles();
+                      var filesTable = document.getElementById('files-required-table');
+                      // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
+                      // if those files have been uploaded.
+                      var filesAcceptedNames = [];
+                     // Get all the names put into array for validation.
+                      for(var i=0; i<filesAccepted.length; i++) {
+                        filesAcceptedNames.push(filesAccepted[i].name)
+                      }
+                      for(var i = 1; i < filesTable.rows.length;)
+                      {
+                          filesTable.deleteRow(i);
+                      }
+                      var validationSuccess = true;
+                      var requiredFiles = ['ControlMetricsOut.bin', 'CorrectedIntMetricsOut.bin', 'ErrorMetricsOut.bin', 'ExtractionMetricsOut.bin', 'IndexMetricsOut.bin', 'QMetricsOut.bin', 'TileMetricsOut.bin'];
+                      for(var i=0; i<requiredFiles.length; i++ ) {
+                        if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
+                          var row = filesTable.insertRow();
+                          var cell1 = row.insertCell();
+                          var cell2 = row.insertCell();
+                          cell1.innerHTML=requiredFiles[i];
+                          cell2.classList.add('table-success');
+                          cell2.align = 'center';
+                          cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                        }
+                        else {
+                          var row = filesTable.insertRow();
+                          var cell1 = row.insertCell();
+                          var cell2 = row.insertCell();
+                          cell1.innerHTML=requiredFiles[i];
+                          // Sometimes, for reasons unknown, the MiSeq doesn't manage to produce an ErrorMetricsOut.bin
+                          // Since that's the case, make it an optional file.
+                          if (requiredFiles[i] !== 'ErrorMetricsOut.bin'){
+                          cell2.classList.add('table-danger');
+                          cell2.align = 'center';
+                          cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                            validationSuccess = false;
+                          }
+                          else {
+                            cell2.classList.add('table-warning');
+                            cell2.align = 'center';
+                            cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+
+                          }
+                        }
+                      }
+                      if (validationSuccess === true) {
+                        $('#submit').prop('disabled', false);
+                      }
+                });
+                submitButton.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    myDropzone.processQueue();
+                    // Tell Dropzone to process all queued files.
+                });
+      }
+  };
+  </script>
+{% endblock %}

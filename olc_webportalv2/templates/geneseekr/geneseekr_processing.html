@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>GeneSeekr Results</h2>
+  <br>
+  {% if geneseekr_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ geneseekr_request.status }}</button>
+      <br>
+      <p>This page will automatically refresh. Your GeneSeekr request should be complete in a minute or two.</p>
+      <p>You don't have to remain on this page - this GeneSeekr request will be visible on the <a href="{% url 'geneseekr:geneseekr_home' %}">GeneSeekr homepage</a> </p>
+  {% elif geneseekr_request.status == 'Unprocessed' %}
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ geneseekr_request.status }}</button>
+    <br>
+  {% elif geneseekr_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{{ geneseekr_request.status }}</button>
+    <br>
+  {% elif geneseekr_request.status == 'Complete' %}
+    <button class="btn btn-success btn-block" disabled>{{ geneseekr_request.status }}</button>
+    <br>
+    <p>These results will be available for 7 days.</p>
+    <br>
+    <div style="text-align: center">
+        <a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download Raw BLAST Report</a>
+        <br><br>
+        <a href="{% url 'geneseekr:geneseekr_results' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-primary" role="button">View Results</a>
+        <br>
+        <br>
+    <div class="alert alert-primary" role="alert" align="center">
+        <p>Shareable link: {{ geneseekr_request.download_link }}</p>
+    </div>
+    </div>
+  {% endif %}
+  <script type="text/javascript">
+    setInterval(function () {
+      {% if geneseekr_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    }, 15000) // This should refresh the page every 15 seconds as long as run status is processing
+   </script>
+{% endblock %}

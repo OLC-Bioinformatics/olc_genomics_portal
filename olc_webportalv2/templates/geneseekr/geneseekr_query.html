@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>GeneSeekr Query</h2>
+  <form action='' enctype="multipart/form-data" method="post">
+   {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+    {% csrf_token %}
+    <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
+    {{ form.query_sequence }}
+    <br>
+    {{ form.query_file }}
+    <br>
+    <br>
+  <div id="button-group">
+      <div class="accordion-group">
+      <button type="button" class="btn btn-dark btn-block" data-parent='#button-group' data-toggle="collapse" data-target="#genus-button">Choose Genus to Search</button>
+        <div id="genus-button" class="collapse show">
+          <br>
+          <p>Enter the genus you want to search. If you want to search all sequences, leave this blank.</p>
+          <p>Enter your genus of interest: {{ form.genus }}</p>
+          <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
+        </div>
+      <br>
+      <button type="button" class="btn btn-secondary btn-block" data-parent='#button-group' data-toggle="collapse" data-target="#seqids-button">Choose SeqIDs to Search</button>
+      <br>
+          <div id="seqids-button" class="collapse">
+            <p>Search the following SeqIDs:</p>
+            {{ form.seqids }}
+            <br>
+          </div>
+      <br>
+      </div>
+  </div>
+  <button type="submit" class="btn btn-outline-primary btn-block">Run Query</button>
+  </form>
+{% endblock %}

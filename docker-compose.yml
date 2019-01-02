@@ -1,0 +1,55 @@
+version: '2'
+
+services:
+  web:
+    restart: always
+    build: .
+    expose:
+      - "8000"
+    links:
+      - postgres:postgres
+      - redis:redis
+    env_file: env
+    volumes:
+      - ./:/data/web
+      - ./sequences:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+    environment:
+      - POSTGRES_USER=myproject_web
+      - USE_DOCKER=yes
+      - DOCKER_SOCKET=/var/run/docker.sock
+      - DOCKER_GROUP=dockerhost
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - "8000:8000"
+    command: /bin/bash -c "service cron start && /usr/bin/supervisord -c /data/web/supervisord.conf && gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
+
+  nginx:
+    restart: always
+    build: ./nginx/
+    ports:
+      - "80:80"
+    volumes_from:
+      - web
+    links:
+      - web:web
+
+  postgres:
+    restart: always
+    image: postgres:9.6
+    volumes:
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./backups/postgresql:/backup
+      - ./postgres-data:/var/lib/postgresql/data
+    env_file:
+      - env
+    expose:
+      - "5432"
+
+  redis:
+    restart: always
+    image: redis:latest
+    expose:
+      - "6379"
+
+

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Metadata Results</h2>
+  <br>
+  <p id="insertbefore">Your search returned <strong>{{ metadata_result.seqids|length }}</strong> results.</p>
+  <button class="btn btn-primary" style="float: right" onclick=copyText()>Copy SeqIDs to clipboard</button>
+  <br>
+  <br>
+  <table class="table table-hover compact" id="seqid-table">
+  <thead>
+    <tr>
+      <th>SeqID</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for seqid in metadata_result.seqids %}
+      <tr>
+        <td>{{ seqid }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+  <script type="text/javascript">
+  function copyText() {
+      // First, iterate through table and grab all SeqIDs, put them into a string.
+      var seqid_string = '';
+      var table = document.getElementById('seqid-table');
+      for (var i=1; i<table.rows.length; i++) {
+        seqid_string += table.rows[i].cells[0].innerHTML + '\n'
+      }
+  // Then, use the handy code found at:  https://hackernoon.com/copying-text-to-clipboard-with-javascript-df4d4988697f
+  var el = document.createElement('textarea');  // Create a <textarea> element
+  el.value = seqid_string;                                 // Set its value to the string that you want copied
+  el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
+  el.style.position = 'absolute';
+  el.style.left = '-9999px';                      // Move outside the screen to make it invisible
+  document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
+  el.select();                                    // Select the <textarea> content
+  document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
+  document.body.removeChild(el);                  // Remove the <textarea> element
+  // Also create an alert to let people know that SeqIDs have been successfully copied.
+  // Also make it so that user can't create more than one of the notifications, as much fun as it would be.
+  var div = document.createElement('div');
+  div.id = 'alert-div';
+  div.classList.add('alert');
+  div.classList.add('alert-info');
+  div.innerHTML = 'SeqIDs copied to clipboard!';
+  var insertbefore = document.getElementById('insertbefore');
+  if (document.getElementById('alert-div') === null) {
+    document.getElementById('insertbefore').insertBefore(div, insertbefore.firstChild)
+  }
+  }
+
+  </script>
+{% endblock %}

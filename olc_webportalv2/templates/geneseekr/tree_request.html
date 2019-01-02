@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Tree Query</h2>
+  <form action='' enctype="multipart/form-data" method="post">
+   {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+    {% csrf_token %}
+  <p>Enter SeqIDs you want to create a tree from here.</p>
+  <br>
+    {{ form.seqids }}
+  <button type="submit" class="btn btn-outline-primary btn-block">Create Tree</button>
+  </form>
+{% endblock %}

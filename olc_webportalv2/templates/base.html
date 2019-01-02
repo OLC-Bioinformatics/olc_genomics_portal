@@ -1,0 +1,186 @@
+{% load static i18n %}<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>{% block title %}OLC Webportal{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="Forest Dussault">
+
+    {% block css %}
+    <!-- Compiled and minified Bootstrap 4 beta CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+
+    <!-- Project-specific CSS -->
+    <link rel="stylesheet" href="{% static '/css/project.css' %}">
+
+    <!-- Third-party CSS libraries go here -->
+    <link rel="stylesheet" href="{% static 'django_tables2/themes/paleblue/css/screen.css' %}" />
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
+
+    {% endblock %}
+
+  </head>
+
+  <body>
+
+    <div class="m-b-1" id="main-navbar">
+      <nav class="navbar navbar-expand-md">
+        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <img class="img-responsive" style="width: 2%" src="{% static 'images/600px-Canada_Maple_Leaf.svg.png' %}">
+
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <strong>OLC Webportal</strong>
+        </a>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+
+            <li class="nav-item active">
+              <a class="nav-link" href="{% url 'home' %}">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item active">
+              <a class="nav-link" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
+            </li>
+
+            <li class="nav-item active">
+              <a class="nav-link" href="{% url 'data:data_home' %}">Get Data</a>
+             </li>
+
+            <li class="nav-item active">
+              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly</a>
+            </li>
+              <div class="dropdown">
+                <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze Data</button>
+                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes</a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree</a>
+                </div>
+            </div>
+
+
+            {% if request.user.is_authenticated %}
+              <li class="nav-item active">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "My Profile" %}</a>
+              </li>
+
+              <li class="nav-item active">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %}</a>
+              </li>
+
+            {% else %}
+              <li class="nav-item">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Login" %}</a>
+              </li>
+
+              <li class="nav-item">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %}</a>
+              </li>
+
+            {% endif %}
+          </ul>
+        </div>
+      </nav>
+
+    </div>
+
+    <div class="container">
+    {#This is where alert messages will appear (i.e. successful signin)#}
+      <br>
+      {% if messages %}
+          {% for message in messages %}
+              <div class="container">
+              <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
+              </div>
+          {% endfor %}
+      {% endif %}
+
+      {% block content %}
+        <div class="alert alert-warning" role="alert" align="center">
+          <p>Please note that this portal is in early development. Bugs may be present. If you run into any issues,
+            email andrew.low@canada.ca and we'll get them sorted out as soon as possible.</p>
+        </div>
+        <br>
+                <div class="jumbotron">
+                    <p class="lead h6">
+                        <span class="h2">Welcome to the <b>OLC Webportal</b></span><br>
+                      A variety of tools are available. Click on a tool to see its description.
+                    </p>
+                    <br>
+                  <button type="button" class="btn btn-primary btn-lg" data-toggle="collapse" data-target="#sendsketch-button">Explore Data</button>
+                  <div id="sendsketch-button" class="collapse">
+                    <br>
+                    <div class="container">
+                      <p>This is used to figure out what SeqIDs you want to use for analysis. Search for your genus of
+                       interest at differing levels of assembly quality and get back a list of SeqIDs. More search options
+                      coming soon - email andrew.low@canada.ca with any requests.</p>
+                    </div>
+                  </div>
+                  <br><br>
+
+                    <button type="button" class="btn btn-success btn-lg" data-toggle="collapse" data-target="#genesippr-button">Get Data</button>
+                        <div id="genesippr-button" class="collapse">
+                            <br>
+                            <div class="container">
+                                <p>Used to get copies of files stored at OLC for you to analyze locally. Enter the SeqIDs
+                                 you want either assemblies (FASTA) or raw data (FASTQ) for, and a link to those files
+                                 will be created. A shareable link for distribution to collaborators is also created.
+                                 Files created with this tool are available for seven (7) days.</p>
+                            </div>
+                        </div>
+
+                    <br><br>
+                    <button type="button" class="btn btn-info btn-lg" data-toggle="collapse" data-target="#confindr-button">Assembly</button>
+                    <div id="confindr-button" class="collapse">
+                        <br>
+                        <div class="container">
+                          <p>Use this tool to submit your raw sequence data for assembly. You can also use this to get reports
+                          and assemblies from previous runs.</p>
+                        </div>
+                    </div>
+                    <br><br>
+                    <button type="button" class="btn btn-secondary btn-lg" data-toggle="collapse" data-target="#genomeqaml-button">Find Genes</button>
+                    <div id="genomeqaml-button" class="collapse">
+                        <br>
+                        <div class="container">
+                          <p>Uses OLC's GeneSeekr tool to search for any gene of interest in our collection. You specify which
+                          sequences you want to search using SeqIDs, and also provide a gene (or genes) you want to search
+                          for in FASTA format.</p>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+      {% endblock content %}
+
+    </div>
+
+    {% block modal %}{% endblock modal %}
+
+    <!-- JavaScript
+    ================================================== -->
+    {% block javascript %}
+      <!-- Required by Bootstrap v4 beta -->
+      <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+
+      <!-- Third-party javascript libraries go here -->
+      <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.16/js/jquery.dataTables.js"></script>
+      <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+
+      <!-- Project specific Javascript goes in this file -->
+      <script src="{% static 'js/project.js' %}"></script>
+
+    {% endblock javascript %}
+  </body>
+</html>
+

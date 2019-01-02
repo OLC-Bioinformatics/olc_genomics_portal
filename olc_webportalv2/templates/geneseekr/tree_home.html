@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>GeneSeekr</h2>
+  <br>
+  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A New Tree</a>
+  <br>
+  <table id="tree-request-table" class="table table-hover">
+  <thead>
+    <tr>
+       <th>SEQIDs</th>
+       <th>Status</th>
+       <th>Download</th>
+       <th>Request Date</th>
+{#       <th>Type</th>#}
+    </tr>
+  </thead>
+
+  <tbody>
+     {% for tree_request in tree_requests %}
+     <tr>
+       <td>
+          {% for seqid in tree_request.seqids|slice:":3" %}
+            <p style="font-size:14px">{{ seqid }}</p>
+          {% endfor %}
+         {% if tree_request.seqids|length > 3 %}
+           <p style="font-size:14px">...and {{ tree_request.seqids|length|add:'-3' }} more</p>
+         {% endif %}
+       </td>
+          {% if tree_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=tree_request.pk %}" class="btn btn-success" role="button">{{ tree_request.status }}</a></td>
+          {% elif tree_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ tree_request.status }}</a></td>
+          {% elif tree_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn btn-danger" role="button">{{ tree_request.status }}</a></td>
+          {% elif tree_request.status == 'Unprocessed' %}
+             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn btn-secondary" role="button">{{ tree_request.status }}</a></td>
+          {% endif %}
+
+          {% if tree_request.status == 'Complete' %}
+            <td><a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button">Download</a></td>
+          {% else %}
+            <td><button class="btn-dark" disabled>Not Available</button></td>
+          {% endif %}
+
+        <td>{{ tree_request.created_at }}</td>
+     </tr>
+     {% endfor %}
+  </tbody>
+
+  </table>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+    $(document).ready(function () {
+        $('#tree-request-table').dataTable()
+    });
+    setInterval(function () {
+      {% for tree_request in tree_requests %}
+        {% if tree_request.status == 'Processing' %}
+          window.location = window.location.href;
+        {% endif %}
+      {% endfor %}
+    }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
+  </script>
+{% endblock %}

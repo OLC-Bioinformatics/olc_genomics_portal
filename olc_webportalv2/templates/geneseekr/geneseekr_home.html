@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>GeneSeekr</h2>
+  <br>
+  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A GeneSeekr Query</a>
+  <br>
+  <table id="geneseekr-request-table" class="table table-hover">
+  <thead>
+    <tr>
+       <th>SEQIDs</th>
+       <th>Status</th>
+       <th>Download</th>
+       <th>Request Date</th>
+{#       <th>Type</th>#}
+    </tr>
+  </thead>
+
+  <tbody>
+     {% for geneseekr_request in geneseekr_requests %}
+     <tr>
+       <td>
+          {% for seqid in geneseekr_request.seqids|slice:":3" %}
+            <p style="font-size:14px">{{ seqid }}</p>
+          {% endfor %}
+         {% if geneseekr_request.seqids|length > 3 %}
+           <p style="font-size:14px">...and {{ geneseekr_request.seqids|length|add:'-3' }} more</p>
+         {% endif %}
+       </td>
+          {% if geneseekr_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success" role="button">{{ geneseekr_request.status }}</a></td>
+          {% elif geneseekr_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ geneseekr_request.status }}</a></td>
+          {% elif geneseekr_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-danger" role="button">{{ geneseekr_request.status }}</a></td>
+          {% elif geneseekr_request.status == 'Unprocessed' %}
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-secondary" role="button">{{ geneseekr_request.status }}</a></td>
+          {% endif %}
+
+          {% if geneseekr_request.status == 'Complete' %}
+            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download</a></td>
+          {% else %}
+            <td><button class="btn-dark" disabled>Not Available</button></td>
+          {% endif %}
+
+        <td>{{ geneseekr_request.created_at }}</td>
+{#        {% if geneseekr_request.request_type == 'BLASTN' %}#}
+{#          <td><button class="btn btn-secondary" disabled>BLASTN</button></td>#}
+{#          TODO: Add other geneseekr blast options once they're implemented.#}
+{#        {% else %}#}
+{#          <td><button class="btn btn-dark" disabled>Other</button></td>#}
+{#        {% endif %}#}
+     </tr>
+     {% endfor %}
+  </tbody>
+
+  </table>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+    $(document).ready(function () {
+        $('#geneseekr-request-table').dataTable()
+    });
+    setInterval(function () {
+      {% for geneseekr_request in geneseekr_requests %}
+        {% if geneseekr_request.status == 'Processing' %}
+          window.location = window.location.href;
+        {% endif %}
+      {% endfor %}
+    }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
+  </script>
+{% endblock %}

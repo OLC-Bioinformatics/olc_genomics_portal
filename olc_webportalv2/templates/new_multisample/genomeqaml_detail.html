@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load render_table from django_tables2 %}
+{% load i18n widget_tweaks %}
+{% block content %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/custom_bootstrap_vars.css' %}"/>
+    <h4>GenomeQAML Detail for {{ sample.title }}</h4>
+    <br>
+    <div id="container"></div>
+    <br>
+    <button type="button" class="btn btn-info btn-block" data-toggle="collapse" data-target="#genomeqaml-results"><strong>View Table</strong></button>
+    <div id="genomeqaml-results" class="collapse">
+    <table id="datatable" class="table table-hover">
+    <thead>
+        <tr>
+            <th>Class</th>
+            <th>Percent Chance</th>
+        </tr>
+    </thead>
+    <tbody>
+         {% for genomeqaml_result in sample.genomeqaml_result.all %}
+             <tr>
+                 <td>Reference</td>
+                 <td>{{ genomeqaml_result.percent_reference }}</td>
+             </tr>
+             <tr>
+                 <td>Pass</td>
+                 <td>{{ genomeqaml_result.percent_pass }}</td>
+             </tr>
+             <tr>
+                 <td>Fail</td>
+                 <td>{{ genomeqaml_result.percent_fail }}</td>
+             </tr>
+         {% endfor %}
+    </tbody>
+    </table>
+    </div>
+    <br>
+    <a href="{% url 'new_multisample:genomeqaml_results' project_id=sample.project.pk %}" class="btn btn-sample" role="button" aria-pressed="true">Return to GenomeQAML Results</a>
+    {# Add in a nice pie chart with highcharts. #}
+    <script src="{% static 'js/highcharts.js' %}"></script>
+    <script src="{% static 'js/modules/data.js' %}"></script>
+    <script src="{% static 'js/modules/exporting.js' %}"></script>
+    <script>
+    Highcharts.chart('container', {
+        chart: {
+            plotBackgroundColor: null,
+            plotBorderWidth: null,
+            plotShadow: false,
+            type: 'pie'
+        },
+        title: {
+            text: 'GenomeQAML Class Breakdown'
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                },
+                colors: ['#50B432', '#DDDF00', '#ED561B']
+            }
+        },
+        data: {
+            table: 'datatable'
+        }
+    })
+    </script>
+{% endblock %}

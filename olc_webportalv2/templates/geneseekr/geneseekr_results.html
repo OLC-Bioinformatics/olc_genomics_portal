@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  {# Mostly done - need to: Not show the highchart if there's nothing there, and change size of chart based on number of blast hits#}
+  <h2>GeneSeekr Results</h2>
+  <br>
+  {% if geneseekr_request.status == 'Complete' %}
+    <ul class="nav nav-tabs nav-justified">
+      <li><a data-toggle="tab" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
+      <li><a data-toggle="tab" class="btn btn-outline-secondary" href="#sequence-by-sequence">Sequence By Sequence</a></li>
+      <li class="active"><a data-toggle="tab" class="btn btn-outline-dark" href="#top-hits">Top Blast Hits</a></li>
+    </ul>
+    <div class="tab-content">
+        <div id="overall" class="tab-pane fade">
+            <br>
+            <p>This graph shows the percentage of sequences in which each query gene was found.</p>
+            <div id="container" style="height: 500px"></div>
+            <button type="button" class="btn btn-outline-primary btn-block" data-toggle="collapse" data-target="#geneseekr-results"><strong>View Table</strong></button>
+            <div id="geneseekr-results" class="collapse">
+            <table id="datatable" class="table table-hover compact">
+              <thead>
+                <tr>
+                  <th>Gene</th>
+                  <th>% sequences where gene was found</th>
+                </tr>
+              </thead>
+              <tbody>
+                  {% for key, value in geneseekr_request.geneseekr_results.items %}
+                    <tr>
+                       <td>{{ key }}</td>
+                       <td>{{ value }}</td>
+                    </tr>
+                  {% endfor %}
+              </tbody>
+            </table>
+            </div>
+        </div>
+        <div id="sequence-by-sequence" class="tab-pane fade">
+           <br>
+           <p>This table shows the percent identity for each sequence for each query gene.</p>
+           <table id="sequence-by-sequence-table" class="table table-hover compact display">
+            <thead>
+              <tr>
+                <th>SeqID</th>
+                {% for key, value in geneseekr_request.geneseekr_results.items %}
+                  <td>{{ key }}</td>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+            {% for geneseekr_detail in geneseekr_details %}
+              <tr>
+              <td>{{ geneseekr_detail.seqid }}</td>
+              {% for gene, percent_id in geneseekr_detail.geneseekr_results.items %}
+                {% if percent_id == 0.0 %}
+                  <td style="color: #800f16">{{ percent_id }}</td>
+                {% elif percent_id == 100.0 %}
+                  <td><strong>{{ percent_id }}</strong></td>
+                {% else %}
+                  <td>{{ percent_id }}</td>
+                {% endif %}
+              {% endfor %}
+              </tr>
+            {% endfor %}
+
+            </tbody>
+           </table>
+          </div>
+         <div id="top-hits" class="tab-pane fade show active">
+           <br>
+           <ul class="nav nav-tabs nav-justified">
+
+             {% for gene in geneseekr_request.gene_targets %}
+                 <li><a data-toggle="tab" class="btn btn-outline-info" href="#{{ gene|slugify }}">{{ gene }}</a></li>
+             {% endfor %}
+           </ul>
+         <div class="tab-content">
+           {% for gene in geneseekr_request.gene_targets %}
+           <div id="{{ gene|slugify }}" class="tab-pane fade">
+             <div id="{{ gene|slugify }}-chart" style="height: 500px"></div>
+             <table id="{{ gene|slugify }}-table" class="table table-hover compact display">
+             <thead>
+                <tr>
+                  <th>Contig</th>
+                  <th>Query Coverage</th>
+                  <th>Percent Identity</th>
+                  <th>Subject Start Position</th>
+                  <th>Subject End Position</th>
+                  <th>E Value</th>
+                </tr>
+             </thead>
+             <tbody>
+             {% for target, top_blast_hits in gene_top_hits.items %}
+                 {% if target == gene %}  {# This seems like a very clumsy way to get dictionary accessed by key, but it works #}
+                     {% if top_blast_hits %}
+                         {% for top_blast_hit in top_blast_hits %}
+                           <tr>
+                             <td>{{ top_blast_hit.contig_name }}</td>
+                             <td>{{ top_blast_hit.query_coverage|floatformat:"-2" }}</td>
+                             <td>{{ top_blast_hit.percent_identity }}</td>
+                             <td>{{ top_blast_hit.start_position }}</td>
+                             <td>{{ top_blast_hit.end_position }}</td>
+                             <td>{{ top_blast_hit.e_value }}</td>
+                           </tr>
+                         {% endfor %}
+                     {% else %}
+                       <h5>This gene had no BLAST hits.</h5>
+                     {% endif %}
+                 {% endif %}
+             {% endfor %}
+
+             </tbody>
+           </table>
+           </div>
+        {% endfor %}
+         </div>
+         </div>
+    </div>
+  {% else %}
+    <h2>GeneSeekr request not completed.</h2>
+  {% endif %}
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <script src="{% static 'js/highcharts.js' %}"></script>
+  <script src="{% static 'js/highcharts-more.js' %}"></script>
+  <script src="{% static 'js/modules/data.js' %}"></script>
+  <script src="{% static 'js/modules/exporting.js' %}"></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+    <script>
+    Highcharts.chart('container', {
+        chart: {
+            type: 'column'
+        },
+        title: {
+            text: ''
+        },
+        xAxis: {
+            title: {
+                text: 'Gene'
+            }
+        },
+        yAxis: {
+            min: 0,
+            max: 100,
+            title: {
+                text: '% sequences where gene was found'
+            }
+        },
+        colors: ['#191b80'],
+        legend: {
+            enabled: false
+        },
+        data: {
+            table: 'datatable'
+        }
+    });
+    {% for gene in geneseekr_request.gene_targets %}
+          var query_sequence_length = 100;  // Default value
+          var blast_hit_names = [];
+          var query_start_stops = [];
+          {% for gene_target, top_blast_hits in gene_top_hits.items %}
+            {% if top_blast_hits %}
+              {% if gene_target == gene %}
+                  {% for top_blast_hit in top_blast_hits %}
+                      var color_position = {};
+                      var positions = [{{ top_blast_hit.query_start_position }}, {{ top_blast_hit.query_end_position }}];
+                      blast_hit_names.push("{{ top_blast_hit.contig_name }}");
+                      {% if top_blast_hit.percent_identity > 99 %}
+                        color_position = {low: positions[0], high: positions[1], color: '#0f6b2a'};
+                      {% elif top_blast_hit.percent_identity > 96 %}
+                        color_position = {low: positions[0], high: positions[1], color: '#bab932'};
+                      {% elif top_blast_hit.percent_identity > 90 %}
+                        color_position = {low: positions[0], high: positions[1], color: '#ff9127'};
+                      {% else %}
+                        color_position = {low: positions[0], high: positions[1], color: '#ff171a'};
+                      {% endif %}
+                      query_start_stops.push(color_position);
+                      query_sequence_length = {{ top_blast_hit.query_sequence_length }};
+                  {% endfor %}
+                {% endif %}
+            {% endif %}
+          {% endfor %}
+        Highcharts.chart("{{ gene|slugify }}-chart", {
+          chart: {
+            type: 'columnrange',
+            inverted: true
+          },
+
+          title: {
+            text: 'BLAST Hits for {{ gene }}: Query Length ' + query_sequence_length
+          },
+
+          yAxis: {
+            floor: 1,
+            ceiling: query_sequence_length
+          },
+
+          xAxis: {
+            categories: blast_hit_names
+          },
+
+          legend: {
+            enabled: false
+          },
+
+          series: [{
+            name: 'Query Coverage',
+            data: query_start_stops
+          }]
+
+        });
+    {% endfor %}
+    </script>
+  <script type="text/javascript">
+  $(document).ready(function () {
+    {% for gene, top_blast_hits in gene_top_hits.items %}
+      var table = $('#{{ gene|slugify }}-table').DataTable({
+        "pageLength": 50
+      });
+      table.order([5, 'asc'], [2, 'desc'], [1, 'desc']).draw();
+    {% endfor %}
+  });
+  </script>
+{% endblock %}

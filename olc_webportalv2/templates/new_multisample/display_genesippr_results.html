@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load bootstrap %}
+{% load render_table from django_tables2 %}
+{% load staticfiles %}
+{% block content %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/custom_bootstrap_vars.css' %}"/>
+    <h4>GeneSippr Results For Project {{ project.project_title }}</h4>
+    <br>
+        {#Genesippr Table#}
+    <button type="button" class="btn btn-info btn-block" data-toggle="collapse" data-target="#genesippr-results"><strong>View GeneSippr Results</strong></button>
+    <div id="genesippr-results" class="collapse">
+        {% for sample in project.samples.all %}
+            {% for genesippr_project in sample.genesippr_results.all %}
+        <table class="table table-hover table-sm table-responsive table-bordered">
+            {#Table headers#}
+            <tr>
+                <th>Strain</th>
+                <th>Genus</th>
+                {% if genesippr_project.genus == 'Salmonella' %}
+                    <th>invA</th>
+                    <th>stn</th>
+                    <th>Serotype</th>
+                {% elif genesippr_project.genus == 'Listeria' %}
+                    <th>IGS</th>
+                    <th>hlyA</th>
+                    <th>inlJ</th>
+                {% elif genesippr_project.genus == 'Escherichia' %}
+                    <th>VT1</th>
+                    <th>VT2</th>
+                    <th>VT2f</th>
+                    <th>uidA</th>
+                    <th>eae</th>
+                {% endif %}
+            </tr>
+            <tr>
+                {#Genesippr table results#}
+                <td>{{ genesippr_project.strain }}</td>
+
+                {% if genesippr_project.genus == 'Salmonella' %}
+                    <td>{{ genesippr_project.genus }}</td>
+                    {% if genesippr_project.inva_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% elif genesippr_project.inva_number < 90 %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+                    {% if genesippr_project.stn != '' %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% else %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+                    <td>{{ genesippr_project.serotype }}</td>
+
+                {% elif genesippr_project.genus == 'Listeria' %}
+                    <td>{{ genesippr_project.genus }}</td>
+                    {% if genesippr_project.igs_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% elif genesippr_project.igs_number < 90 %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+
+                    {% if genesippr_project.hlya_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% elif genesippr_project.hlya_number < 90 %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+
+                    {% if genesippr_project.inlj_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% elif genesippr_project.inlj_number < 90 %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+
+                {% elif genesippr_project.genus == 'Escherichia' %}
+                    <td>{{ genesippr_project.genus }}</td>
+                    {# VT1 #}
+                    {% if genesippr_project.vt1_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% else  %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x" ></i>
+                        </td>
+                    {% endif %}
+
+                    {# VT2 #}
+                    {% if genesippr_project.vt2_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% else %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+
+                    {# VT2f #}
+                    {% if genesippr_project.vt2f_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"></i>
+                        </td>
+                    {% else %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x"></i>
+                        </td>
+                    {% endif %}
+
+                    {# Uida #}
+                    {% if genesippr_project.uida_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"  ></i>
+                        </td>
+                    {% else %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x" ></i>
+                        </td>
+                    {% endif %}
+
+                    {# eae #}
+                    {% if genesippr_project.eae_number >= 90 or genesippr_project.eae_1_number >= 90 %}
+                        <td align="center" class="table-success">
+                            <i class="fa fa-check-circle fa-1x"  ></i>
+                        </td>
+                    {% else %}
+                        <td align="center" class="table-warning">
+                            <i class="fa fa-ban fa-1x" ></i>
+                        </td>
+                    {% endif %}
+
+                {% else %}
+                    <td align="center" class="table-warning">
+                        <i class="fa fa-question-circle fa-1x" ></i>
+                    </td>
+                {% endif %}
+            </tr>
+        </table>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    <br>
+    <button type="button" class="btn btn-info btn-block" data-toggle="collapse" data-target="#gdcs-results"><strong>View GDCS Results</strong></button>
+    <div id="gdcs-results" class="collapse">
+        {#GDCS Table#}
+        <table class="table table-hover table-sm table-responsive table-bordered">
+            <tr>
+                <th>Strain</th>
+                <th>Genus</th>
+                <th>Matches</th>
+                <th>Mean Coverage</th>
+                <th>Pass/Fail</th>
+                <th></th>
+            </tr>
+            <tr>
+                {% for sample in project.samples.all %}
+                    {% for gdcs_project in sample.gdcs_results.all %}
+                <td>{{ gdcs_project.strain }}</td>
+                <td>{{ gdcs_project.genus }}</td>
+                <td>{{ gdcs_project.matches }}</td>
+                <td>{{ gdcs_project.meancoverage }}</td>
+                {% if gdcs_project.passfail == '+' %}
+                    <td class="table-success" align="center" style="vertical-align: middle">
+                        <i class="fa fa-check-circle fa-1x" ></i>
+                    </td>
+                {% elif gdcs_project.passfail == '-' %}
+                    <td class="table-danger" align="center" style="vertical-align: middle">
+                        <i class="fa fa-ban fa-1x" ></i>
+                    </td>
+                {% elif gdcs_project.passfail == '?' %}
+                    <td class="table-warning" align="center" style="vertical-align: middle">
+                        <i class="fa fa-question-circle fa-1x" ></i>
+                    </td>
+                {% else %}
+                    <td>{{ gdcs_project.passfail }}</td>
+                {% endif %}
+                    <td align="center"><a href={% url 'new_multisample:gdcs_detail' sample_id=sample.pk %} class="btn btn-primary" role="button" aria-pressed="true">Details</a></td>
+            </tr>
+                    {% endfor %}
+                {% endfor %}
+        </table>
+    </div>
+        {#16S Table#}
+    <br>
+    <button type="button" class="btn btn-info btn-block" data-toggle="collapse" data-target="#sixteens-results"><strong>View SixteenS Results</strong></button>
+    <div id="sixteens-results" class="collapse">
+        <table class="table table-hover table-sm table-responsive table-bordered">
+            <tr>
+                <th>Strain</th>
+                <th>Genus</th>
+{#                <th>Gene</th>#}
+{#                <th>Percent Identity</th>#}
+{#                <th>Fold Coverage</th>#}
+            </tr>
+            {% for sample in project.samples.all %}
+                {% for sixteens_project in sample.sixteens_results.all %}
+            <tr>
+                <td>{{ sixteens_project.strain }}</td>
+                <td>{{ sixteens_project.genus }}</td>
+{#                <td><a href="https://www.ncbi.nlm.nih.gov/nuccore/{{ sixteens_project.gi_accession }}">{{ sixteens_project.gene }}</a></td>#}
+{#                <td>{{ sixteens_project.percentidentity }}</td>#}
+{#                <td>{{ sixteens_project.foldcoverage }}</td>#}
+            </tr>
+                {% endfor %}
+            {% endfor %}
+        </table>
+    </div>
+
+
+        <div class="alert alert-info" align="center">
+            <p>
+                <i class="fa fa-check-circle fa-1x" >: Pass     </i>
+                <i class="fa fa-question-circle fa-1x" >: Indeterminate value     </i>
+                <i class="fa fa-ban fa-1x" >: Fail     </i>
+            </p>
+        </div>
+
+    <br><br>
+    <a href="{% url 'new_multisample:project_detail' project_id=project.pk %}" class="btn btn-sample" role="button" aria-pressed="true">Return to Project {{ project.project_title }}</a>
+{% endblock %}
