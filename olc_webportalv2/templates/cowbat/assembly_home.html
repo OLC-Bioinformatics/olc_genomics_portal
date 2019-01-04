@@ -26,13 +26,15 @@
              <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-danger" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'UploadError' %}
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>
+          {% elif sequencing_run.status == 'Unprocessed' %}
+          <td><button class="btn-secondary" disabled>Unprocessed</button></td>
           {% endif %}
           <td>
           {% if sequencing_run.status == 'Complete' %}
             <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
        role="button">Download {{ sequencing_run.run_name }}</a>
           {% else %}
-            <button class="btn-dark" disabled>Not Available</button>
+          <button class="btn-dark" disabled>Unavailable</button>
           {% endif %}
           </td>
         </tr>
