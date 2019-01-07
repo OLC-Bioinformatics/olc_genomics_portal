@@ -26,13 +26,15 @@
              <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-danger" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'UploadError' %}
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>
+          {% elif sequencing_run.status == 'Unprocessed' %}
+          <td><button class="btn-secondary" disabled>Unprocessed</button></td>
           {% endif %}
           <td>
           {% if sequencing_run.status == 'Complete' %}
             <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
        role="button">Download {{ sequencing_run.run_name }}</a>
           {% else %}
-            <button class="btn-dark" disabled>Not Available</button>
+          <button class="btn-dark" disabled>Unavailable</button>
           {% endif %}
           </td>
         </tr>
@@ -45,9 +47,13 @@
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
   <script type="text/javascript">
+    //Sorting of page based on first column descending.
     $(document).ready(function () {
         var table = $('#assembly-table').DataTable();
-        table.order([0, 'desc'])
+        table
+        .column( '0:visible' )
+        .order( 'desc' )
+        .draw();
     });
     setInterval(function () {
       {% for sequenceing_run in sequencing_runs %}

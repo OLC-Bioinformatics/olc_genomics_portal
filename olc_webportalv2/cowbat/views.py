@@ -83,7 +83,7 @@ def cowbat_processing(request, sequencing_run_pk):
 
 @login_required
 def assembly_home(request):
-    sequencing_runs = SequencingRun.objects.filter()
+    sequencing_runs = SequencingRun.objects.order_by('-run_name')
     return render(request,
                   'cowbat/assembly_home.html',
                   {
