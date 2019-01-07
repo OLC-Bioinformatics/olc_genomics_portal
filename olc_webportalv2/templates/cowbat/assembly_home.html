@@ -47,9 +47,13 @@
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
   <script type="text/javascript">
+    //Sorting of page based on first column descending.
     $(document).ready(function () {
         var table = $('#assembly-table').DataTable();
-        table.order([0, 'desc'])
+        table
+        .column( '0:visible' )
+        .order( 'desc' )
+        .draw();
     });
     setInterval(function () {
       {% for sequenceing_run in sequencing_runs %}
