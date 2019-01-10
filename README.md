@@ -85,7 +85,7 @@ Open new terminal in root portal folder,
 Return to the docker container terminal window and input
 -`python3 manage.py upload_metadata Metadata_csv.csv` this populates the database with sequences.
 
-Use nano or vim to edit make_metadata_csv.py 
+If "encoding error", use nano or vim to edit make_metadata_csv.py 
 -`nano make_metadata_csv.py` or
 -`vi make_metadata_csv.py`
 and remove `, encoding='ISO-8859-1'` and save
