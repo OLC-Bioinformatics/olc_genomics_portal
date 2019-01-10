@@ -66,3 +66,26 @@ of the directory you cloned):
 
 At this point the portal should be up and fully functional, and will restart automatically if it fails for any reason.
 
+
+### Troubleshooting
+Once container is running, open a new terminal window and type
+-`docker ps`. This will give you a list of all the containers.
+Type
+-`docker exec -it TAB` the tab will populate with olc. From there, add a 'w' and TAB again to complete the path. Add `/bin/bash` to the end of the line. It should look something like this.
+-`docker exec -it olc_genomics_portal_web_1_e276278d1742 /bin/bash`
+
+This attaches into the container. 
+-`python3 manage.py migrate` will migrate changes to the models.
+-`python3 manage.py createsuperuser` to create user for portal
+-`exit` to leave the container
+
+Once in the root of portal folder,
+-` cp /mnt/nas2/users/(youruser)/SeqTracking.csv make_metadata.csv.py` will have to metadata.
+
+Use nano or vim to edit make_metadata_csv.py 
+-`nano make_metadata_csv.py` or
+-`vi make_metadata_csv.py`
+and remove `, encoding='ISO-8859-1'` and save
+
+For sequences, copy folder into root directory of app
+-`cp -r /mnt/nas2/users/(youruser)/sequences .`
