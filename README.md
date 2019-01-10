@@ -80,7 +80,7 @@ This attaches into the container.
 -`exit` to leave the container
 
 Once in the root of portal folder,
--` cp /mnt/nas2/users/brenna/SeqTracking.csv make_metadata.csv.py` will have to metadata.
+-` cp /mnt/nas2/users/(youruser)/SeqTracking.csv make_metadata.csv.py` will have to metadata.
 
 Use nano or vim to edit make_metadata_csv.py 
 -`nano make_metadata_csv.py` or
@@ -88,4 +88,4 @@ Use nano or vim to edit make_metadata_csv.py
 and remove `, encoding='ISO-8859-1'` and save
 
 For sequences, copy folder into root directory of app
--`cp -r /mnt/nas2/users/brenna/sequences .`
+-`cp -r /mnt/nas2/users/(youruser)/sequences .`
