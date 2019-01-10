@@ -77,12 +77,15 @@ Type
 This attaches into the container. 
 -`python3 manage.py migrate` will migrate changes to the models.
 -`python3 manage.py createsuperuser` to create user for portal
--`exit` to leave the container
 
-Once in the root of portal folder,
--` cp /mnt/nas2/users/(youruser)/SeqTracking.csv make_metadata.csv.py` will have to metadata.
+Open new terminal in root portal folder,
+-` cp /mnt/nas2/users/(youruser)/SeqTracking.csv .` then run to populate metadata
+-`python make_metadata_csv.py`
 
-Use nano or vim to edit make_metadata_csv.py 
+Return to the docker container terminal window and input
+-`python3 manage.py upload_metadata Metadata_csv.csv` this populates the database with sequences.
+
+If "encoding error", use nano or vim to edit make_metadata_csv.py 
 -`nano make_metadata_csv.py` or
 -`vi make_metadata_csv.py`
 and remove `, encoding='ISO-8859-1'` and save
