@@ -12,6 +12,9 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
 
+import csv
+from django.shortcuts import render, redirect, get_object_or_404
+
 
 @background(schedule=1)
 def run_parsnp(parsnp_request_pk):
@@ -66,11 +69,12 @@ def run_parsnp(parsnp_request_pk):
         tree_request.save()
 
 
+#media file not made until GeneSeekr has run
 @background(schedule=1)
 def run_geneseekr(geneseekr_request_pk):
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
     try:
-        # Step 1: Make a directory for our things.
+    # Step 1: Make a directory for our things.
         geneseekr_dir = 'olc_webportalv2/media/geneseekr-{}'.format(geneseekr_request_pk)
         if not os.path.isdir(geneseekr_dir):
             os.makedirs(geneseekr_dir)
@@ -97,55 +101,83 @@ def run_geneseekr(geneseekr_request_pk):
             threads_to_use = 1
         # New way to do things: BLAST the entire database of stuff.
         cmd = 'blastn -query {query_file} -db {mega_fasta} -out {blast_report} ' \
-              '-outfmt "6 qseqid sseqid pident length qlen qstart qend sstart send evalue" ' \
-              '-num_alignments 50000 ' \
-              '-num_threads {threads}'.format(query_file=os.path.join(geneseekr_query_dir, 'query.tfa'),
-                                              mega_fasta=os.path.join(sequence_dir, 'mega_fasta.fasta'),
-                                              blast_report=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                                              threads=threads_to_use)
+                '-outfmt "6 qseqid sseqid pident length qlen qstart qend sstart send evalue" ' \
+                '-num_alignments 50000 ' \
+                '-num_threads {threads}'.format(query_file=os.path.join(geneseekr_query_dir, 'query.tfa'),
+                                                mega_fasta=os.path.join(sequence_dir, 'mega_fasta.fasta'),
+                                                blast_report=os.path.join(geneseekr_dir, 'blast_report.tsv'),
+                                                threads=threads_to_use)
 
         subprocess.call(cmd, shell=True)
 
         print('Reading geneseekr results')
         get_blast_results(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                          geneseekr_task=geneseekr_request)
+                            geneseekr_task=geneseekr_request)
         get_blast_detail(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                         geneseekr_task=geneseekr_request)
+                            geneseekr_task=geneseekr_request)
         get_blast_top_hits(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                           geneseekr_task=geneseekr_request)
+                            geneseekr_task=geneseekr_request)
 
 
         # Get the blast report set up for download. Need to add a header first:
         with open(os.path.join(geneseekr_dir, 'blast_results.tsv'), 'w') as outfile:
             outfile.write('QuerySequence\tSubjectSequence\tPercentIdentity\tAlignmentLength\tQuerySequenceLength'
-                          '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
+                            '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
             with open(os.path.join(geneseekr_dir, 'blast_report.tsv')) as infile:
                 for line in infile:
                     outfile.write(line)
+
+       # Get sequence report 
+        geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+        geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
+        #opens document, consolidates info from geneseekr_request and geneseekr_details dictionaries into csv
+        with open(os.path.join(geneseekr_dir, 'seq_results.csv'), 'w') as seq:
+            writer = csv.writer(seq)
+            header = ['SeqID']
+            for key, value in geneseekr_request.geneseekr_results.items():
+                header.append(key)
+            writer.writerow(header)
+            csv_line = []
+            for geneseekr_detail in geneseekr_details:
+                csv_line.append(geneseekr_detail.seqid)
+                for key,value in geneseekr_detail.geneseekr_results.items():
+                    csv_line.append(value)
+                writer.writerow(csv_line)
+                csv_line = []
+
         print('Uploading result files')
         blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                       account_name=settings.AZURE_ACCOUNT_NAME)
+                                        account_name=settings.AZURE_ACCOUNT_NAME)
         geneseekr_result_container = 'geneseekr-{}'.format(geneseekr_request.pk)
         blob_client.create_container(geneseekr_result_container)
         blob_name = os.path.split('olc_webportalv2/media/geneseekr-{}/blast_results.tsv'.format(geneseekr_request.pk))[1]
+        blob_name_seq = os.path.split('olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))[1]
         blob_client.create_blob_from_path(container_name=geneseekr_result_container,
-                                          blob_name=blob_name,
-                                          file_path='olc_webportalv2/media/geneseekr-{}/blast_results.tsv'.format(geneseekr_request.pk))
+                                            blob_name=blob_name,
+                                            file_path='olc_webportalv2/media/geneseekr-{}/blast_results.tsv'.format(geneseekr_request.pk))
+        blob_client.create_blob_from_path(container_name=geneseekr_result_container,
+                                            blob_name=blob_name_seq,
+                                            file_path='olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))        
         # Generate an SAS url with read access that users will be able to use to download their sequences.
         print('Creating Download Link')
         sas_token = blob_client.generate_container_shared_access_signature(container_name=geneseekr_result_container,
-                                                                           permission=BlobPermissions.READ,
-                                                                           expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
+                                                                            permission=BlobPermissions.READ,
+                                                                            expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
         sas_url = blob_client.make_blob_url(container_name=geneseekr_result_container,
                                             blob_name=blob_name,
                                             sas_token=sas_token)
+        sas_url_sequence = blob_client.make_blob_url(container_name=geneseekr_result_container,
+                                            blob_name=blob_name_seq,
+                                            sas_token=sas_token)
+
         geneseekr_request.download_link = sas_url
+        geneseekr_request.download_link_sequence = sas_url_sequence
         shutil.rmtree('olc_webportalv2/media/geneseekr-{}/'.format(geneseekr_request.pk))
         geneseekr_request.status = 'Complete'
         geneseekr_request.save()
     except:
-        geneseekr_request.status = 'Error'
-        geneseekr_request.save()
+            geneseekr_request.status = 'Error'
+            geneseekr_request.save()
 
 
 class BlastResult:
