@@ -25,6 +25,8 @@
     <div style="text-align: center">
         <a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download Raw BLAST Report</a>
         <br><br>
+        <a href="{{ geneseekr_request.download_link_sequence }}" class="btn btn-outline-dark" role="button">Download Sequence-By-Sequence Report</a>
+        <br><br>
         <a href="{% url 'geneseekr:geneseekr_results' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-primary" role="button">View Results</a>
         <br>
         <br>

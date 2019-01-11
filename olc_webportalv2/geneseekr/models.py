@@ -12,6 +12,7 @@ class GeneSeekrRequest(models.Model):
     query_sequence = models.CharField(max_length=10000, blank=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     download_link = models.CharField(max_length=256, blank=True)
+    download_link_sequence = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     geneseekr_type = models.CharField(max_length=48, default='BLASTN')
     # This will hold a dictionary of percent of isolates where gene/sequence was found for each gene:
