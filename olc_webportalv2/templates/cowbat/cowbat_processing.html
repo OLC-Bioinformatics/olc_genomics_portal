@@ -33,6 +33,24 @@
   <br>
   <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
   <p>You don't have to remain on this page - this assembly request will be visible on the <a href="{% url 'cowbat:assembly_home' %}">Assembly homepage.</a> </p>
+
+<form method="post">
+{% csrf_token %}
+<p>Would you like an email upon completion?</p>
+<input id="emails" type="text">
+<input type="submit" value="Save email">
+<br>
+<br>
+<p>
+Once run has completed, the following emails will be sent a notification: 
+{% comment %} {{sequencing_run.emails}} {% endcomment %}
+{% for email in sequencing_run.emails%}
+  {{email}}
+{% endfor%}
+
+</p>
+</form>
+
 {% elif sequencing_run.status == 'Complete' %}
   <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }}</button>
   <br>

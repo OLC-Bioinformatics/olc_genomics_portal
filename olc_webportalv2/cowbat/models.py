@@ -20,6 +20,7 @@ class SequencingRun(models.Model):
     status = models.CharField(max_length=64, default='Unprocessed')
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
     download_link = models.CharField(max_length=256, blank=True, default='')
+    emails_array = ArrayField(models.EmailField(max_length=50), blank=True, default=[])
 
     def __str__(self):
         return self.run_name

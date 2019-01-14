@@ -8,7 +8,7 @@ import fnmatch
 import os
 # Portal-specific things.
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm
+from olc_webportalv2.cowbat.forms import RunNameForm, emailForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 # Azure!
 from azure.storage.blob import BlockBlobService
@@ -185,3 +185,13 @@ def retry_sequence_data_upload(request, sequencing_run_pk):
     sequencing_run.status = 'Unprocessed'
     sequencing_run.save()
     return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
+
+
+@login_required
+def get_email(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    if request.method =="POST":
+        form = emailForm(request.POST)
+        if form.is_valid():
+            sequencing_run.emails.append(form.emails)
+            sequencing_run.save()
