@@ -133,7 +133,7 @@
                       // in this list.
                       var seqid_validated = true;
                       for(var i=0; i < filesAccepted.length; i++) {
-                        if (filesAccepted[i].name.includes('SampleSheet.csv')) {
+                        if (filesAccepted[i].name.indexOf('SampleSheet.csv') !== -1) {
                           var reader = new FileReader();
                           reader.readAsText(filesAccepted[i]);
                           reader.onload = function (event) {
@@ -167,6 +167,9 @@
                         }
                       }
                       var form_is_valid = validateForm();
+                      console.log(validationSuccess);
+                      console.log(form_is_valid);
+                      console.log(seqid_validated);
                       if (validationSuccess === true && form_is_valid === true && seqid_validated === true) {
                         $('#submit').prop('disabled', false);
                       }
