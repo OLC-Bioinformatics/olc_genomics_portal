@@ -74,7 +74,7 @@ def run_parsnp(parsnp_request_pk):
 def run_geneseekr(geneseekr_request_pk):
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
     try:
-    # Step 1: Make a directory for our things.
+        # Step 1: Make a directory for our things.
         geneseekr_dir = 'olc_webportalv2/media/geneseekr-{}'.format(geneseekr_request_pk)
         if not os.path.isdir(geneseekr_dir):
             os.makedirs(geneseekr_dir)
@@ -120,14 +120,10 @@ def run_geneseekr(geneseekr_request_pk):
 
 
         # Get the blast report set up for download. Need to add a header first:
-        with open(os.path.join(geneseekr_dir, 'blast_results.tsv'), 'w') as outfile:
-            outfile.write('QuerySequence\tSubjectSequence\tPercentIdentity\tAlignmentLength\tQuerySequenceLength'
-                            '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
-            with open(os.path.join(geneseekr_dir, 'blast_report.tsv')) as infile:
-                for line in infile:
-                    outfile.write(line)
+        rewrite_blast_report(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
+                             geneseekr_task=geneseekr_request)
 
-       # Get sequence report 
+       # Get sequence report
         geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
         geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
         #opens document, consolidates info from geneseekr_request and geneseekr_details dictionaries into csv
@@ -150,14 +146,14 @@ def run_geneseekr(geneseekr_request_pk):
                                         account_name=settings.AZURE_ACCOUNT_NAME)
         geneseekr_result_container = 'geneseekr-{}'.format(geneseekr_request.pk)
         blob_client.create_container(geneseekr_result_container)
-        blob_name = os.path.split('olc_webportalv2/media/geneseekr-{}/blast_results.tsv'.format(geneseekr_request.pk))[1]
+        blob_name = os.path.split('olc_webportalv2/media/geneseekr-{}/blast_report.tsv'.format(geneseekr_request.pk))[1]
         blob_name_seq = os.path.split('olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))[1]
         blob_client.create_blob_from_path(container_name=geneseekr_result_container,
                                             blob_name=blob_name,
-                                            file_path='olc_webportalv2/media/geneseekr-{}/blast_results.tsv'.format(geneseekr_request.pk))
+                                            file_path='olc_webportalv2/media/geneseekr-{}/blast_report.tsv'.format(geneseekr_request.pk))
         blob_client.create_blob_from_path(container_name=geneseekr_result_container,
                                             blob_name=blob_name_seq,
-                                            file_path='olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))        
+                                            file_path='olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))
         # Generate an SAS url with read access that users will be able to use to download their sequences.
         print('Creating Download Link')
         sas_token = blob_client.generate_container_shared_access_signature(container_name=geneseekr_result_container,
@@ -176,8 +172,8 @@ def run_geneseekr(geneseekr_request_pk):
         geneseekr_request.status = 'Complete'
         geneseekr_request.save()
     except:
-            geneseekr_request.status = 'Error'
-            geneseekr_request.save()
+        geneseekr_request.status = 'Error'
+        geneseekr_request.save()
 
 
 class BlastResult:
@@ -274,6 +270,44 @@ def get_blast_detail(blast_result_file, geneseekr_task):
             results[query] = gene_hits[query][seqid]
         geneseekr_detail.geneseekr_results = results
         geneseekr_detail.save()
+
+
+def rewrite_blast_report(blast_result_file, geneseekr_task):
+    # The Raw blast report that is given to users kind of sucks - this function will re-write it so that:
+    # Only results that are actually part of the request get shown, and SEQIDs that were part of the request
+    # but didn't have any hits get that noted.
+
+    # First, create a copy of the blast_result_file in case anything gets real messed up.
+    blast_backup_file = blast_result_file + '.bak'
+    shutil.copy(blast_result_file, blast_backup_file)
+
+    # Need to keep track of what SEQIDs have what genes. To do this, populate a dictionary where keys are SEQIDs and
+    # values are a list of the target genes. Whenever we find a hit, remove the target gene from the list. Once done
+    # iterating through the blast result file, write the things that are still there as missing.
+    genes_not_present = dict()
+    for seqid in geneseekr_task.seqids:
+        genes_not_present[seqid] = list()
+        for query_gene in geneseekr_task.gene_targets:
+            genes_not_present[seqid].append(query_gene)
+
+    # Now iterate through the backup file, writing to the new file as we go.
+    with open(blast_backup_file) as infile:
+        with open(blast_result_file, 'w') as outfile:
+            outfile.write('QuerySequence\tSubjectSequence\tPercentIdentity\tAlignmentLength\tQuerySequenceLength'
+                          '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
+            for result_line in infile:
+                blast_result = BlastResult(result_line)
+                if blast_result.seqid in geneseekr_task.seqids:
+                    outfile.write(result_line)
+                    try:  # Remove the gene found from the genes_not_present since we found it.
+                        genes_not_present[blast_result.seqid].remove(blast_result.query_name)
+                    except ValueError:
+                        # Possible to get multiple hits for one gene, and then we're trying to remove something
+                        # that's already gone, raising a ValueError. In that case, just don't do anything.
+                        pass
+            for seqid in genes_not_present:
+                for query_gene in genes_not_present[seqid]:
+                    outfile.write('{}\t{}\t0\t0\t0\t0\t0\t0\t0\tNA\n'.format(query_gene, seqid))
 
 
 def get_blast_top_hits(blast_result_file, geneseekr_task, num_hits=50):
