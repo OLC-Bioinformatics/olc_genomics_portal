@@ -1,6 +1,8 @@
 from django import forms
 import re
 
+from olc_webportalv2.cowbat.models import SequencingRun
+from django.forms.widgets import EmailInput
 
 class RunNameForm(forms.Form):
     run_name = forms.CharField(max_length=64)
@@ -13,4 +15,4 @@ class RunNameForm(forms.Form):
         return run_name
 
 class emailForm(forms.Form):
-    emails = forms.EmailField(required=True)
+    email = forms.EmailField(max_length=50,label= "Email ")

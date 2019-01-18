@@ -172,3 +172,9 @@ def cowbat_cleanup(sequencing_run_pk):
                         'are available at the following link: {}'.format(sas_url),
                    recipient=recipient)
     """
+
+    # email_list = sequencing_run.emails_array
+    # for email in email_list:
+    #     send_email(subject='Run {} has finished assembly.'.format(str(sequencing_run)),
+    #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(sequencing_run),sas_url),
+    #                recipient=email)

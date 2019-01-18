@@ -18,7 +18,6 @@ import azure.batch.models as batchmodels
 
 log = logging.getLogger(__name__)
 
-
 def find_percent_complete(sequencing_run):
     try:
         job_id = str(sequencing_run).lower().replace('_', '-')
@@ -73,10 +72,20 @@ def cowbat_processing(request, sequencing_run_pk):
         progress = find_percent_complete(sequencing_run)
     else:
         progress = 1
+
+    form = emailForm()
+    if request.method == 'POST':
+        form = emailForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data.get('email')
+            sequencing_run.emails_array.append(email)
+            sequencing_run.save()
+            form = emailForm()
+
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {
-                      'sequencing_run': sequencing_run,
+                      'sequencing_run': sequencing_run, 'form':form,
                       'progress': str(progress)
                   })
 
@@ -185,13 +194,3 @@ def retry_sequence_data_upload(request, sequencing_run_pk):
     sequencing_run.status = 'Unprocessed'
     sequencing_run.save()
     return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
-
-
-@login_required
-def get_email(request, sequencing_run_pk):
-    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
-    if request.method =="POST":
-        form = emailForm(request.POST)
-        if form.is_valid():
-            sequencing_run.emails.append(form.emails)
-            sequencing_run.save()
