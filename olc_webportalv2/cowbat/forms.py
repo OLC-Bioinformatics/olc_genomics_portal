@@ -1,6 +1,8 @@
 from django import forms
 import re
 
+from olc_webportalv2.cowbat.models import SequencingRun
+from django.forms.widgets import EmailInput
 
 class RunNameForm(forms.Form):
     run_name = forms.CharField(max_length=64)
@@ -11,3 +13,6 @@ class RunNameForm(forms.Form):
         if not (re.match('\d{6}_[A-Z]+', run_name) or re.match('\d{6}_M\d+', run_name)):
             raise forms.ValidationError('Invalid run name. Format must be YYMMDD_LAB')
         return run_name
+
+class emailForm(forms.Form):
+    email = forms.EmailField(max_length=50,label= "Email ")

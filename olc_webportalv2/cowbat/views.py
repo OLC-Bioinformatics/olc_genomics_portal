@@ -8,7 +8,7 @@ import fnmatch
 import os
 # Portal-specific things.
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm
+from olc_webportalv2.cowbat.forms import RunNameForm, emailForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 # Azure!
 from azure.storage.blob import BlockBlobService
@@ -17,7 +17,6 @@ import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
 
 log = logging.getLogger(__name__)
-
 
 def find_percent_complete(sequencing_run):
     try:
@@ -73,10 +72,20 @@ def cowbat_processing(request, sequencing_run_pk):
         progress = find_percent_complete(sequencing_run)
     else:
         progress = 1
+
+    form = emailForm()
+    if request.method == 'POST':
+        form = emailForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data.get('email')
+            sequencing_run.emails_array.append(email)
+            sequencing_run.save()
+            form = emailForm()
+
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {
-                      'sequencing_run': sequencing_run,
+                      'sequencing_run': sequencing_run, 'form':form,
                       'progress': str(progress)
                   })
 

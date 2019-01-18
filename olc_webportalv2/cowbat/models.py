@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.postgres.fields import ArrayField
 import os
 
+from django.forms.widgets import EmailInput
+
 # Create your models here.
 # TODO: InterOp file doesn't (I don't think) get used at all any more.
 # Actually delete it once verified that deleting it doesn't break everything.
@@ -20,6 +22,7 @@ class SequencingRun(models.Model):
     status = models.CharField(max_length=64, default='Unprocessed')
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
     download_link = models.CharField(max_length=256, blank=True, default='')
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=[])
 
     def __str__(self):
         return self.run_name
