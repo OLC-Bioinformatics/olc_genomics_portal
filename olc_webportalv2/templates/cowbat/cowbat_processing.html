@@ -33,7 +33,39 @@
   <br>
   <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
   <p>You don't have to remain on this page - this assembly request will be visible on the <a href="{% url 'cowbat:assembly_home' %}">Assembly homepage.</a> </p>
+  
+  {% if request.user.email in sequencing_run.emails_array %}
+    <p>Your email is already on the list to be notified. </p>
+    Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
 
+    <form method="Post" id='addEmail'>
+      {% csrf_token %}
+      {{form}}
+      <button type="submit">Save Email</button>
+      <br>
+      <br>
+      Once the run has completed, the following email(s) will be sent a notification: 
+      {{sequencing_run.emails_array}}
+    </form> 
+
+  <script>
+    var checkbox = document.getElementById('cbx').checked;
+    var form = document.getElementById('addEmail');
+    if (checkbox != true){
+      form.style.visibility ="hidden";}
+    else {
+        form.style.visibility ="visible";}
+    function cbxCheck(){
+      var checkbox = document.getElementById('cbx').checked;
+      var form = document.getElementById('addEmail');
+      if (checkbox == true){
+        form.style.visibility ="visible";}
+      else{
+        form.style.visibility ="hidden";} 
+        }
+  </script>
+
+  {% else %}
   <p>Would you like an email upon completion?</p>
   <form method="Post">
   {% csrf_token %}
@@ -43,8 +75,9 @@
   <br>
   Once the run has completed, the following email(s) will be sent a notification: 
   {{sequencing_run.emails_array}}
-  </form>
-
+  </form> 
+  {% endif %}
+  
 {% elif sequencing_run.status == 'Complete' %}
   <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }}</button>
   <br>
