@@ -127,10 +127,10 @@
                         var forward_read_found = false;
                         var reverse_read_found = false;
                         for(var j=0; j<filesAcceptedNames.length; j++) {
-                          if(filesAcceptedNames[j].includes(seqid) && filesAcceptedNames[j].includes('_R1')){
+                          if(filesAcceptedNames[j].indexOf(seqid) !== -1 && filesAcceptedNames[j].indexOf('_R1') !== -1){
                             forward_read_found = true;
                           }
-                          if(filesAcceptedNames[j].includes(seqid) && filesAcceptedNames[j].includes('_R2')){
+                          if(filesAcceptedNames[j].indexOf(seqid) !== -1 && filesAcceptedNames[j].indexOf('_R2') !== -1){
                             reverse_read_found = true;
                           }
                         }
