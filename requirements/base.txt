@@ -60,6 +60,6 @@ django-debug-toolbar
 #django-test-plus  # This is breaking the build? Also, not sure that it actually gets used.
 azure-storage
 azure-batch==5.1
-KubeJobSub>=0.1.15
+KubeJobSub>=0.1.18
 biopython
 geneseekr>=0.2.6

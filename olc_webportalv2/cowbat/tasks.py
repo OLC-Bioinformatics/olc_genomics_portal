@@ -72,8 +72,8 @@ def run_cowbat_batch(sequencing_run_pk):
 
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.Popen('AzureBatch -k -d -e {run_folder}/exit_codes.txt -c {run_folder}/batch_config.txt '
-                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
         AzureTask.objects.create(sequencing_run=sequencing_run,
                                  exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
     except:

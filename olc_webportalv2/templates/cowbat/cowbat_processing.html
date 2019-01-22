@@ -44,9 +44,7 @@
       <button type="submit">Save Email</button>
       <br>
       <br>
-      Once the run has completed, the following email(s) will be sent a notification: 
-      {{sequencing_run.emails_array}}
-    </form> 
+    </form>
 
   <script>
     var checkbox = document.getElementById('cbx').checked;
@@ -73,11 +71,21 @@
   <button type="submit">Save Email</button>
   <br>
   <br>
-  Once the run has completed, the following email(s) will be sent a notification: 
-  {{sequencing_run.emails_array}}
-  </form> 
+  </form>
   {% endif %}
-  
+
+  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+  <div id="emails-button" class="collapse">
+    <br>
+    {% if sequencing_run.emails_array|length == 0 %}
+      <p>No users have signed up to receive an email for this run.</p>
+    {% else %}
+        {% for email in sequencing_run.emails_array %}
+          <p>{{ email }}</p>
+        {% endfor %}
+    {% endif %}
+  </div>
+
 {% elif sequencing_run.status == 'Complete' %}
   <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }}</button>
   <br>
