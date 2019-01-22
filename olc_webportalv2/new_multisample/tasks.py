@@ -1,6 +1,5 @@
 import pandas as pd
 import csv
-import pandas_highcharts
 import zipfile
 import glob
 import os
@@ -52,7 +51,7 @@ def run_amr_fasta(sample_pk):
                     closest_species = x[1].split('/')[-2]
 
         # Now run GeneSeekr to find AMR genes. This will create a virulence.csv in our output folder,
-        # since that report is easier to parse than the standard one.
+        #  since that report is easier to parse than the standard one.
         cmd = 'docker exec ' \
               'olcwebportalv2_geneseekr ' \
               'python -m spadespipeline.GeneSeekr ' \

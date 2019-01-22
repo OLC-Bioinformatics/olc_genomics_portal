@@ -62,7 +62,7 @@ def geneseekr_query(request):
                 input_sequence_file = request.FILES['query_file']
                 # Pointer is at end of file in request, so move back to beginning before doing the read.
                 input_sequence_file.seek(0)
-                input_sequence = input_sequence_file.read()
+                input_sequence = input_sequence_file.read().decode('utf-8')
                 geneseekr_request.query_sequence = input_sequence
             geneseekr_request.status = 'Processing'
             geneseekr_request.save()

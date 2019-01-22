@@ -13,15 +13,15 @@ urlpatterns = [
     url(settings.ADMIN_URL, admin.site.urls),
 
     # User management
-    url(r'^users/', include('olc_webportalv2.users.urls', namespace='users')),
+    url(r'^users/', include(('olc_webportalv2.users.urls', 'users'), namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
 
     # Your stuff: custom urls includes go here
-    url(r'^newmultiprojects/', include('olc_webportalv2.new_multisample.urls', namespace='new_multisample')),
-    url(r'^cowbat/', include('olc_webportalv2.cowbat.urls', namespace='cowbat')),
-    url(r'^data/', include('olc_webportalv2.data.urls', namespace='data')),
-    url(r'^geneseekr/', include('olc_webportalv2.geneseekr.urls', namespace='geneseekr')),
-    url(r'^metadata/', include('olc_webportalv2.metadata.urls', namespace='metadata')),
+    url(r'^newmultiprojects/', include(('olc_webportalv2.new_multisample.urls', 'new_multisample'), namespace='new_multisample')),
+    url(r'^cowbat/', include(('olc_webportalv2.cowbat.urls', 'cowbat'), namespace='cowbat')),
+    url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
+    url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
+    url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

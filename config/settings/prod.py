@@ -79,7 +79,7 @@ LOCAL_APPS = [
     'background_task',
 
     # Highcharts
-    'highcharts',
+    #'highcharts',
 
     # django-widget-tweaks
     'widget_tweaks',
