@@ -27,7 +27,9 @@ def geneseekr_home(request):
 @login_required
 def geneseekr_name(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
-    
+    if geneseekr_request.name != False :
+        geneseekr_request.name = "Undefined"
+
     if request.method =="POST":  
         if request.POST.get('newName'): 
             geneseekr_request.name = request.POST.get('newName')

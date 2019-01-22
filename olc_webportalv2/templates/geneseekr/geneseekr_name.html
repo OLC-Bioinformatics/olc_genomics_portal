@@ -11,7 +11,7 @@
 
   <form method='post'>
   {% csrf_token %}
-  Old Name: {{geneseekr_request.name}}</br></br>
+  Previous Name: {{geneseekr_request.name}}</br></br>
   New Name: <input type='text' name='newName'></br></br></br>
   <button onclick='this.form.reset()' class='btn btn-outline-secondary'>Clear</button>  <button type='submit' class='btn btn-success'>Save Changes</button>
   </form>
