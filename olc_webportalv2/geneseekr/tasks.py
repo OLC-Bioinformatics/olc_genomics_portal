@@ -60,8 +60,8 @@ def run_parsnp(parsnp_request_pk):
 
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.Popen('AzureBatch -k -e {run_folder}/exit_codes.txt -c {run_folder}/batch_config.txt '
-                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
         ParsnpAzureRequest.objects.create(tree_request=tree_request,
                                           exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
     except:
