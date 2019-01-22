@@ -9,13 +9,15 @@
   <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A GeneSeekr Query</a>
   <br>
   <table id="geneseekr-request-table" class="table table-hover">
-  <thead>
+    <thead>
     <tr>
        <th>SEQIDs</th>
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
-{#       <th>Type</th>#}
+       <th>       </th>
+       <th>Name</th>
+       {#       <th>Type</th>#}
     </tr>
   </thead>
 
@@ -53,11 +55,20 @@
 {#        {% else %}#}
 {#          <td><button class="btn btn-dark" disabled>Other</button></td>#}
 {#        {% endif %}#}
+        <form method="post">
+        {% csrf_token %}
+        {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
+          <td><button onclick="return confirm('Are you sure you want to delete this item?');" class="btn btn-danger" type="submit" name="delete" value={{geneseekr_request.pk}}> Delete</button></td>
+        {% else %}
+          <td></td>
+        {% endif %}
+        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}} (Edit)</a></td>
+        </form>
      </tr>
      {% endfor %}
   </tbody>
-
   </table>
+
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>

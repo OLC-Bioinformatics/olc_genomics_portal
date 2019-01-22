@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^geneseekr_query/', views.geneseekr_query, name='geneseekr_query'),
     url(r'^geneseekr_processing/(?P<geneseekr_request_pk>\d+)/$', views.geneseekr_processing, name='geneseekr_processing'),
     url(r'^geneseekr_results/(?P<geneseekr_request_pk>\d+)/$', views.geneseekr_results, name='geneseekr_results'),
+    url(r'^geneseekr_name/(?P<geneseekr_request_pk>\d+)/$', views.geneseekr_name, name='geneseekr_name'),
 
     # Tree stuff
     url(r'^tree_home/', views.tree_home, name='tree_home'),
