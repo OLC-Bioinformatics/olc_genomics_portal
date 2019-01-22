@@ -13,6 +13,7 @@
    {% endif %}
     {% csrf_token %}
     <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
+    {{formName}} </br>
     {{ form.query_sequence }}
     <br>
     {{ form.query_file }}

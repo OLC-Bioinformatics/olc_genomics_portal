@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 
@@ -26,28 +26,29 @@ def geneseekr_home(request):
 
 @login_required
 def geneseekr_name(request, geneseekr_request_pk):
+    form = GeneSeekrNameForm()
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
-    if geneseekr_request.name != False :
-        geneseekr_request.name = "Undefined"
-
-    if request.method =="POST":  
-        if request.POST.get('newName'): 
-            geneseekr_request.name = request.POST.get('newName')
+    if request.method == "POST":  
+        form = GeneSeekrNameForm(request.POST)
+        if form.is_valid():
+            geneseekr_request.name = form.cleaned_data['name']
             geneseekr_request.save()
-            return redirect('geneseekr:geneseekr_home')
+        return redirect('geneseekr:geneseekr_home')
         
     return render(request,
                   'geneseekr/geneseekr_name.html',
                   {
-                      'geneseekr_request': geneseekr_request
+                      'geneseekr_request': geneseekr_request,  'form': form
                   })
                   
 
 @login_required
 def geneseekr_query(request):
     form = GeneSeekrForm()
+    formName = GeneSeekrNameForm()
     if request.method == 'POST':
         form = GeneSeekrForm(request.POST, request.FILES)
+        formName = GeneSeekrNameForm(request.POST)
         if form.is_valid():
             # seqid_input = form.cleaned_data.get('seqids')
             # seqids = seqid_input.split()
@@ -66,11 +67,15 @@ def geneseekr_query(request):
             geneseekr_request.status = 'Processing'
             geneseekr_request.save()
             run_geneseekr(geneseekr_request_pk=geneseekr_request.pk)
+            if formName.is_valid():
+                geneseekr_request.name = formName.cleaned_data['name']
+                geneseekr_request.save()
             return redirect('geneseekr:geneseekr_processing', geneseekr_request_pk=geneseekr_request.pk)
+
     return render(request,
                   'geneseekr/geneseekr_query.html',
                   {
-                     'form': form
+                     'form': form, 'formName':formName
                   })
 
 

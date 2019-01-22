@@ -3,6 +3,7 @@ from Bio import SeqIO
 from io import StringIO
 import re
 from olc_webportalv2.metadata.models import SequenceData
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 
 class GeneSeekrForm(forms.Form):
@@ -141,3 +142,6 @@ class ParsnpForm(forms.Form):
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
         return seqid_list
+
+class GeneSeekrNameForm(forms.Form):
+    name = forms.CharField(label='Name ', required=False)
