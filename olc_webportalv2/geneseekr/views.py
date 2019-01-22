@@ -12,12 +12,34 @@ import datetime
 def geneseekr_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     geneseekr_requests = GeneSeekrRequest.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+
+    if request.method =="POST":  
+        if request.POST.get('delete'): 
+            query = GeneSeekrRequest.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+        
     return render(request,
                   'geneseekr/geneseekr_home.html',
                   {
                       'geneseekr_requests': geneseekr_requests
                   })
 
+@login_required
+def geneseekr_name(request, geneseekr_request_pk):
+    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+    
+    if request.method =="POST":  
+        if request.POST.get('newName'): 
+            geneseekr_request.name = request.POST.get('newName')
+            geneseekr_request.save()
+            return redirect('geneseekr:geneseekr_home')
+        
+    return render(request,
+                  'geneseekr/geneseekr_name.html',
+                  {
+                      'geneseekr_request': geneseekr_request
+                  })
+                  
 
 @login_required
 def geneseekr_query(request):
@@ -117,4 +139,3 @@ def tree_home(request):
                   {
                       'tree_requests': tree_requests
                   })
-

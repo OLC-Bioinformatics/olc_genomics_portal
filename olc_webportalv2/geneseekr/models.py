@@ -20,6 +20,8 @@ class GeneSeekrRequest(models.Model):
     geneseekr_results = JSONField(default={}, blank=True, null=True)
     gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=[])
 
+    name = models.CharField(max_length=50, blank=True)
+    
     def __str__(self):
         return self.pk
 
