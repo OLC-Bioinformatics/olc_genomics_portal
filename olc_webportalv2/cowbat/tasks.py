@@ -13,10 +13,19 @@ from email.mime.text import MIMEText
 import smtplib
 import fnmatch
 import shutil
+import time
 import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
+from celery import shared_task
 
+
+@shared_task
+def hello():
+    with open('hello_there.txt', 'a+') as f:
+        f.write('Hello there!\n')
+        time.sleep(2)
+        f.write('General Kenobi.\n')
 
 @background(schedule=1)
 def run_cowbat_batch(sequencing_run_pk):

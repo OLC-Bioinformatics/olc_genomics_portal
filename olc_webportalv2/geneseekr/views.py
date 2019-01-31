@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
+from django.conf import settings
 
 import datetime
 

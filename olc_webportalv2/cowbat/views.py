@@ -9,7 +9,7 @@ import os
 # Portal-specific things.
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
 from olc_webportalv2.cowbat.forms import RunNameForm, emailForm
-from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.cowbat.tasks import run_cowbat_batch, hello
 # Azure!
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_service_client as batch
@@ -92,6 +92,7 @@ def cowbat_processing(request, sequencing_run_pk):
 
 @login_required
 def assembly_home(request):
+    hello.delay()
     sequencing_runs = SequencingRun.objects.order_by('-run_name')
     return render(request,
                   'cowbat/assembly_home.html',

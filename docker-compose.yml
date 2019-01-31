@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  web:
+  web: &web
     restart: always
     build: .
     expose:
@@ -47,9 +47,22 @@ services:
       - "5432"
 
   redis:
-    restart: always
-    image: redis:latest
-    expose:
-      - "6379"
+    image: redis:3.0
 
+  celeryworker:
+    # https://github.com/docker/compose/issues/3220
+    <<: *web
+    depends_on:
+      - redis
+      - postgres
+    ports: []
+    command: celery -A olc_webportalv2.taskapp worker -l info
 
+  celerybeat:
+    # https://github.com/docker/compose/issues/3220
+    <<: *web
+    depends_on:
+      - redis
+      - postgres
+    ports: []
+#    command: /start-celerybeat.sh
