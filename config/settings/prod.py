@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 """
 import environ
 import os
+from kombu import Queue
 
 ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
@@ -319,6 +320,13 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+CELERY_QUEUES = (
+   Queue('default', Exchange='default', routing_key='default'),
+   Queue('geneseekr', Exchange='geneseekr', routing_key='geneseekr'),
+   Queue('cowbat', Exchange='cowbat', routing_key='cowbat'),
+)
+
 ########## END CELERY
 
 

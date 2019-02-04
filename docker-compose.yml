@@ -56,7 +56,10 @@ services:
       - redis
       - postgres
     ports: []
-    command: celery -A olc_webportalv2.taskapp worker -l info
+    command: bash -c 
+      "celery worker -E -l info -A olc_webportalv2.taskapp -n workerD -Q default -c 2 &&
+      celery worker -E -l info -A olc_webportalv2.taskapp -n workerC -Q cowbat -c 2 &&
+      celery worker -E -l info -A olc_webportalv2.taskapp -n workerG -Q geneseekr -c 2"
 
   celerybeat:
     # https://github.com/docker/compose/issues/3220
@@ -66,3 +69,11 @@ services:
       - postgres
     ports: []
 #    command: /start-celerybeat.sh
+
+  flower:  
+    image: mher/flower
+    command: ["flower", "--broker=redis://redis:6379/0", "--port=8888"]  
+    ports:  
+     - 8888:8888  
+
+

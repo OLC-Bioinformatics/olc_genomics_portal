@@ -17,7 +17,7 @@ import time
 import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
-from celery import shared_task
+from celery import shared_task, task
 
 
 @shared_task
