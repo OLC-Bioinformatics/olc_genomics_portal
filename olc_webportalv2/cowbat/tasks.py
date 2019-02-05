@@ -27,6 +27,7 @@ def hello():
         time.sleep(2)
         f.write('General Kenobi.\n')
 
+
 @background(schedule=1)
 def run_cowbat_batch(sequencing_run_pk):
     try:
