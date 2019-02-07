@@ -55,6 +55,21 @@ VM_SECRET=vm_secret_key
 VM_TENANT=vm_tenant_id
 ```
 
+#### Task monitoring
+
+Tasks run on the portal are executed via celery. You can use the nice interface provided
+by [flower](https://flower.readthedocs.io/en/latest/index.html) to monitor tasks.
+
+Flower is set up to use some basic authentication - you can either a username/password in your `docker-compose.yml` by 
+changing `$FLOWER_USER` and `$FLOWER_PASSWORD`, or you can just set the environmental variables 
+before booting the portal.
+
+```
+export FLOWER_USER=a_flower_username
+export FLOWER_PASSWORD=a_flower_password
+```
+
+
 #### Booting up the portal
 
 Add your IP address to ALLOWED_HOSTS in `prod.yml`, and make a directory called
