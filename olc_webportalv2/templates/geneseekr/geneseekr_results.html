@@ -84,12 +84,13 @@
              <table id="{{ gene|slugify }}-table" class="table table-hover compact display">
              <thead>
                 <tr>
-                  <th>Contig</th>
-                  <th>Query Coverage</th>
-                  <th>Percent Identity</th>
-                  <th>Subject Start Position</th>
-                  <th>Subject End Position</th>
-                  <th>E Value</th>
+                  <th data-toggle="tooltip" title="Name of the contig that the target sequence was found on.">Contig</th>
+                  <th data-toggle="tooltip" title="Percentage of the query sequence that was found.">Query Coverage</th>
+                  <th data-toggle="tooltip" title="How similar the query and target sequence were. 100 means completely identical, 0 means not at all.">Percent Identity</th>
+                  <th data-toggle="tooltip" title="Where on the contig the target gene was found.">Subject Start Position</th>
+                  <th data-toggle="tooltip" title="Where on the contig the target gene was found.">Subject End Position</th>
+                  <th data-toggle="tooltip" title="Measure of significance of the query target match. Lower means more significant.
+For more info, check out https://www.researchgate.net/post/What_does_E_value_in_BLAST_actually_indicates">E Value</th>
                 </tr>
              </thead>
              <tbody>
