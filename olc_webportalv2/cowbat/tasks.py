@@ -17,7 +17,7 @@ import time
 import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
-from celery import shared_task
+from celery import shared_task, task
 
 
 @shared_task
@@ -26,6 +26,7 @@ def hello():
         f.write('Hello there!\n')
         time.sleep(2)
         f.write('General Kenobi.\n')
+
 
 @background(schedule=1)
 def run_cowbat_batch(sequencing_run_pk):

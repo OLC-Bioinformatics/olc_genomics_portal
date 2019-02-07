@@ -16,6 +16,8 @@ import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
 
+from kombu import Queue
+
 log = logging.getLogger(__name__)
 
 def find_percent_complete(sequencing_run):
@@ -64,7 +66,7 @@ def cowbat_processing(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     if sequencing_run.status == 'Unprocessed':
         SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Processing')
-        run_cowbat_batch(sequencing_run_pk=sequencing_run.pk)
+        run_cowbat_batch(sequencing_run_pk=sequencing_run.pk).apply_async(queue='cowbat')
 
     # Find percent complete (approximately). Not sure that having calls to azure batch API in views is a good thing.
     # Will have to see if performance is terrible because of it.
@@ -92,7 +94,7 @@ def cowbat_processing(request, sequencing_run_pk):
 
 @login_required
 def assembly_home(request):
-    hello.delay()
+    hello.apply_async(queue='cowbat')
     sequencing_runs = SequencingRun.objects.order_by('-run_name')
     return render(request,
                   'cowbat/assembly_home.html',
