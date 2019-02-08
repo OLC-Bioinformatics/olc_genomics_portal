@@ -1,3 +1,5 @@
+[![Build status](https://travis-ci.org/OLC-Bioinformatics/olc_genomics_portal.svg?master)](https://travis-ci.org/olc-bioinformatics)
+
 OLC Webportal V2
 ================
 
