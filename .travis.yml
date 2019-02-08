@@ -4,6 +4,7 @@ services:
 
 before_script:
   - mkdir postgres-data
+  - sudo service postgresql stop
 
 script:
   - docker-compose -f docker-compose-test.yml build
