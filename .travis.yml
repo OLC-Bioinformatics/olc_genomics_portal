@@ -3,5 +3,5 @@ services:
   - docker
 
 script:
-  - docker-compose build
-  - docker-compose run web python3 manage.py test
+  - docker-compose -f docker-compose-test.yml build
+  - docker-compose -f docker-compose-test.yml run web python3 manage.py test
