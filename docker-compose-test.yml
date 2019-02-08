@@ -53,6 +53,12 @@ services:
   postgres:
     restart: always
     image: postgres:9.6
+    environment:
+      - DB_NAME=project_db
+      - DB_USER=project_user
+      - DB_PASS=fakepassword
+      - DB_SERVICE=postgres
+      - DB_PORT=5432
     volumes:
       - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./backups/postgresql:/backup
