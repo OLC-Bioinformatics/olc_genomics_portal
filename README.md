@@ -82,6 +82,14 @@ of the directory you cloned):
 At this point the portal should be up and fully functional, and will restart automatically if it fails for any reason.
 
 
+#### Running tests
+
+To run unit tests, run the following command:
+
+`docker-compose run web python3 manage.py test`
+
+If anything fails, you definitely don't want to deploy.
+
 ### Troubleshooting
 Once container is running, open a new terminal window and type
 -`docker ps`. This will give you a list of all the containers.
