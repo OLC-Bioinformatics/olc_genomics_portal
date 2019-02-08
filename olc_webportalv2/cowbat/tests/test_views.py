@@ -34,14 +34,4 @@ class SampleTestCase(TestCase):
         resp = self.client.get(reverse('cowbat:cowbat_processing', kwargs={'sequencing_run_pk': 123}))
         self.assertEqual(resp.status_code, 404)
 
-    def test_cowbat_processing_while_processing(self):
-        SequencingRun.objects.filter(pk=1).update(status='Processing')
-        self.client.login(username='TestUser', password='password')
-        resp = self.client.get(reverse('cowbat:cowbat_processing', kwargs={'sequencing_run_pk': 1}))
-        self.assertEqual(resp.status_code, 200)
 
-    def test_cowbat_processing_while_complete(self):
-        SequencingRun.objects.filter(pk=1).update(status='Complete')
-        self.client.login(username='TestUser', password='password')
-        resp = self.client.get(reverse('cowbat:cowbat_processing', kwargs={'sequencing_run_pk': 1}))
-        self.assertEqual(resp.status_code, 200)
