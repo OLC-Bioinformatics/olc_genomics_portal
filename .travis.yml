@@ -2,10 +2,9 @@ sudo: required
 services:
   - docker
 
-before_script:
-  - mkdir postgres-data
-  - sudo service postgresql stop
-
 script:
   - docker-compose -f docker-compose-test.yml build
-  - docker-compose -f docker-compose-test.yml run web python3 manage.py test
+  # Run the postgres entrypoint script so that the DB can get created
+  - docker-compose -f docker-compose-test.yml run -d postgres
+  - sleep 10  # Make sure the postgres run has enough time to complete.
+  - docker-compose -f docker-compose-test.yml run web python3 manage.py test  # Actually run tests
