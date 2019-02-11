@@ -5,7 +5,6 @@ from olc_webportalv2.metadata.models import SequenceData, MetaDataRequest
 
 
 class MetadataTest(TestCase):
-    @classmethod
     def setUp(self):
         user = User.objects.create(username='TestUser')
         user.set_password('password')
