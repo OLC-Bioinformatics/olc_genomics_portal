@@ -92,6 +92,16 @@ To run unit tests, run the following command:
 
 If anything fails, you definitely don't want to deploy.
 
+To make tests that run via selenium work:
+
+Download gecko driver to root of repository:
+
+`wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz && tar xf geckodriver-v0.24.0-linux64.tar.gz`
+
+Actually run tests:
+
+`docker-compose run web /bin/bash -c "(Xvfb :99 &) && export DISPLAY=:99 && python3 manage.py test"`
+
 ### Troubleshooting
 Once container is running, open a new terminal window and type
 -`docker ps`. This will give you a list of all the containers.

@@ -19,7 +19,7 @@ RUN apt-get update
 RUN apt-get install -y supervisor
 COPY crontab /etc/cron.d/clean-old-containers
 RUN chmod 0755 /etc/cron.d/clean-old-containers
-RUN apt-get install -y samtools
+RUN apt-get install -y samtools firefox xvfb
 # Need this for GeneSeekr to work.
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8

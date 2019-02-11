@@ -2,9 +2,12 @@ sudo: required
 services:
   - docker
 
+before_script:
+  - wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz && tar xf geckodriver-v0.24.0-linux64.tar.gz
+
 script:
   - docker-compose -f docker-compose-test.yml build
   # Run the postgres entrypoint script so that the DB can get created
   - docker-compose -f docker-compose-test.yml run -d postgres
   - sleep 10  # Make sure the postgres run has enough time to complete.
-  - docker-compose -f docker-compose-test.yml run web python3 manage.py test  # Actually run tests
+  - docker-compose run web /bin/bash -c "(Xvfb :99 &) && export DISPLAY=:99 && python3 manage.py test"
