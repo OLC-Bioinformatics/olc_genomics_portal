@@ -14,7 +14,7 @@ def geneseekr_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     geneseekr_requests = GeneSeekrRequest.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
 
-    if request.method =="POST":  
+    if request.method == "POST":
         if request.POST.get('delete'): 
             query = GeneSeekrRequest.objects.filter(pk=request.POST.get('delete'))
             query.delete()
