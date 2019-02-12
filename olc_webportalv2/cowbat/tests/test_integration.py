@@ -1,5 +1,6 @@
 import os
 import time
+import selenium
 from selenium import webdriver
 from django.test import LiveServerTestCase
 from django.urls import reverse_lazy
@@ -30,8 +31,16 @@ class CowbatIntegrationTest(LiveServerTestCase):
         # upload
         test_file_dir = '/data/web/olc_webportalv2/test_files'
         self.driver.find_element_by_id('id_run_name').send_keys('123456_TEST')
-        # Give dropzone time to load - this should be way more than enough
-        time.sleep(5)
+        # Dropzone isn't loading for travis? Give up to a minute to find input
+        start_time = time.time()
+        max_time = 60
+        element_found = False
+        while time.time() - start_time < max_time and element_found is False:
+            try:
+                self.driver.find_element_by_css_selector('.dz-hidden-input')
+                element_found = True
+            except selenium.common.exceptions.NoSuchElementException:
+                time.sleep(1)
         self.driver.find_element_by_css_selector('.dz-hidden-input').send_keys(os.path.join(test_file_dir, 'SampleSheet.csv'))
         self.driver.find_element_by_css_selector('.dz-hidden-input').send_keys(os.path.join(test_file_dir, 'config.xml'))
         self.driver.find_element_by_css_selector('.dz-hidden-input').send_keys(os.path.join(test_file_dir, 'CompletedJobInfo.xml'))
