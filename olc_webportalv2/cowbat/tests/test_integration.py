@@ -30,6 +30,8 @@ class CowbatIntegrationTest(LiveServerTestCase):
         # upload
         test_file_dir = '/data/web/olc_webportalv2/test_files'
         self.driver.find_element_by_id('id_run_name').send_keys('123456_TEST')
+        # Give dropzone time to load - this should be way more than enough
+        time.sleep(5)
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'SampleSheet.csv'))
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'config.xml'))
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'CompletedJobInfo.xml'))
@@ -41,7 +43,6 @@ class CowbatIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_xpath('//button[text()="Upload Metadata Files"]').click()
         # Now we should be on the upload interop page.
         time.sleep(10)  # Give time for upload to finish.
-        self.driver.get_screenshot_as_file('asdf.png')
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'InterOp/ControlMetricsOut.bin'))
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'InterOp/CorrectedIntMetricsOut.bin'))
         self.driver.find_element_by_xpath('//input[@type=\'file\']').send_keys(os.path.join(test_file_dir, 'InterOp/ErrorMetricsOut.bin'))
