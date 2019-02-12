@@ -66,7 +66,7 @@ def cowbat_processing(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     if sequencing_run.status == 'Unprocessed':
         SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Processing')
-        run_cowbat_batch(sequencing_run_pk=sequencing_run.pk).apply_async(queue='cowbat')
+        run_cowbat_batch.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
 
     # Find percent complete (approximately). Not sure that having calls to azure batch API in views is a good thing.
     # Will have to see if performance is terrible because of it.

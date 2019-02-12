@@ -7,6 +7,7 @@ from django.conf import settings
 
 import datetime
 
+from kombu import Queue
 
 # Create your views here.
 @login_required
@@ -67,7 +68,7 @@ def geneseekr_query(request):
                 geneseekr_request.query_sequence = input_sequence
             geneseekr_request.status = 'Processing'
             geneseekr_request.save()
-            run_geneseekr(geneseekr_request_pk=geneseekr_request.pk)
+            run_geneseekr.apply_async(queue='geneseekr', args=(geneseekr_request.pk, ), countdown=10)
             if formName.is_valid():
                 geneseekr_request.name = formName.cleaned_data['name']
                 geneseekr_request.save()
@@ -129,7 +130,7 @@ def tree_request(request):
                                                      seqids=seqids)
             tree_request.status = 'Processing'
             tree_request.save()
-            run_parsnp(tree_request.pk)
+            run_parsnp.apply_async(queue='geneseekr', args=(tree_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=tree_request.pk)
     return render(request,
                   'geneseekr/tree_request.html',

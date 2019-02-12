@@ -28,7 +28,7 @@ def hello():
         f.write('General Kenobi.\n')
 
 
-@background(schedule=1)
+@shared_task
 def run_cowbat_batch(sequencing_run_pk):
     try:
         blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
@@ -111,7 +111,7 @@ def send_email(subject, body, recipient):
     server.sendmail(fromaddr, toaddr, text)
 
 
-@background(schedule=1)
+@shared_task
 def cowbat_cleanup(sequencing_run_pk):
     sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
     print('Cleaning up run {}'.format(sequencing_run.run_name))

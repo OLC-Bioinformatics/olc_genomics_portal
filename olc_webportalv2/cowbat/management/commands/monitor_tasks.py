@@ -43,7 +43,7 @@ def monitor_tasks():
                 batch_client.pool.delete(pool_id=batch_job_name)  # Set up in tasks.py so that pool and job have same ID
                 if exit_codes_good:
                     # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
-                    cowbat_cleanup(sequencing_run_pk=sequencing_run.pk)  # This also sets task to complete
+                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))  # This also sets task to complete
                 else:
                     # Something went wrong - update status to error so user knows.
                     SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
