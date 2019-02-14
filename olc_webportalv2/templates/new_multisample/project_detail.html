@@ -18,8 +18,7 @@
     <hr>
 
     <td>
-        <a href="{% url 'new_multisample:upload_samples' project_id=project.pk %}" class="btn btn-primary" role="button" aria-pressed="true">
-            Upload samples
+        <a>Upload samples
         </a>
     </td>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
@@ -28,7 +27,6 @@
     <script type="text/javascript">
         $(document).ready(function () {
            $.ajax({
-              url: "{% url 'new_multisample:only_project_table' project_id=project.pk %}",
               success: function(data){
                 $('#table-div').html(data);
                 $('#sample_table').dataTable({
@@ -41,7 +39,6 @@
         //Periodically reload the page if a job status == 'Processing'
         setInterval(function() {
             $.ajax({
-              url: "{% url 'new_multisample:only_project_table' project_id=project.pk %}",
               success: function(data){
                 $('#table-div').html(data);
                 $('#sample_table').dataTable({

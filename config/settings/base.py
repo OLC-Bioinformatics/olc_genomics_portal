@@ -60,7 +60,6 @@ LOCAL_APPS = [
     # custom users app
     'olc_webportalv2.users.apps.UsersConfig',
     # Your stuff: custom apps go here
-    'olc_webportalv2.new_multisample.apps.NewMultisampleConfig',
     'olc_webportalv2.cowbat.apps.CowbatConfig',
     'olc_webportalv2.data.apps.DataConfig',
     'olc_webportalv2.geneseekr.apps.GeneseekrConfig',

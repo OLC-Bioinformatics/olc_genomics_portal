@@ -55,9 +55,7 @@
                 <td>{{ id.project_title }}</td>
                 <td>{{ id.date }}</td>
                 <td>{{ id.description }}</td>
-                <td align="center"><a href="{% url 'new_multisample:project_detail' project_id=id.pk %}" class="btn btn-primary active" role="button" aria-pressed="true">Details</a></td>
-                <td align="center"><a href="{% url 'new_multisample:project_remove_confirm' project_id=id.pk %}" class="btn btn-danger active" role="button" aria-pressed="true">Delete Project</a></td>
-            </tr>
+                </tr>
         {% endfor %}
     </tbody>
     </table>
