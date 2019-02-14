@@ -5,7 +5,9 @@ import datetime
 from datetime import timezone
 from azure.storage.blob import BlockBlobService
 
+from celery import shared_task, task
 
+@shared_task
 def clean_old_containers():
     blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                    account_key=settings.AZURE_ACCOUNT_KEY)

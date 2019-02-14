@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 import environ
 import os
 from kombu import Queue
+from celery.schedules import crontab
 
 ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
@@ -321,12 +322,25 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
+#Main Queues
 CELERY_QUEUES = (
    Queue('default', Exchange='default', routing_key='default'),
    Queue('geneseekr', Exchange='geneseekr', routing_key='geneseekr'),
    Queue('cowbat', Exchange='cowbat', routing_key='cowbat'),
 )
 
+#Periodic Tasks
+CELERYBEAT_SCHEDULE = {
+    'monitor_tasks' : {
+        'task' : 'monitor_tasks',
+        'schedule': 30.0,
+        },
+
+    'clean_old_containers' : {
+        'task':'clean_old_containers',
+        'schedule': crontab(hour=2),
+        },
+}
 ########## END CELERY
 
 

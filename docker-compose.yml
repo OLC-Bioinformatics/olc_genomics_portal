@@ -65,7 +65,7 @@ services:
       - redis
       - postgres
     ports: []
-#    command: /start-celerybeat.sh
+    command: celery -A olc_webportalv2.taskapp beat -l info
 
   flower:
      <<: *web

@@ -1,4 +1,3 @@
-
 import os
 from celery import Celery
 from django.apps import apps, AppConfig
@@ -23,7 +22,6 @@ class CeleryConfig(AppConfig):
         app.config_from_object('config.settings.prod')
         installed_apps = [app_config.name for app_config in apps.get_app_configs()]
         app.autodiscover_tasks(lambda: installed_apps, force=True)
-
 
 @app.task(bind=True)
 def debug_task(self):
