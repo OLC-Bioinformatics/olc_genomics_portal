@@ -1,11 +1,15 @@
 # Django-related imports
 from background_task import background
+from django.core.management.base import BaseCommand
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
+from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
+from django.core.mail import send_mail  # To be used eventually, only works in cloud
 # Standard python stuff
 import subprocess
 import datetime
+from datetime import timezone
 # For whatever reason tasks.py doesn't get django settings properly, so send_mail from django doesn't work.
 # Use SMTPlib combined with os.environ.get to get around this.
 from email.mime.multipart import MIMEMultipart
@@ -17,36 +21,13 @@ import time
 import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
-from celery import shared_task, task
-
-from django.core.management.base import BaseCommand
-from olc_webportalv2.cowbat.models import AzureTask, SequencingRun
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree
-from django.core.mail import send_mail  # To be used eventually, only works in cloud
-from django.conf import settings
-import datetime
-import shutil
-import time
-import os
-
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
 import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
-
-from django.conf import settings
 import re
-from datetime import timezone
-from azure.storage.blob import BlockBlobService
 
-@shared_task
-def hello():
-    with open('hello_there.txt', 'a+') as f:
-        f.write('Hello there!\n')
-        time.sleep(2)
-        f.write('General Kenobi.\n')
-
+#Celery Task Management
+from celery import shared_task, task
 
 @shared_task
 def run_cowbat_batch(sequencing_run_pk):
