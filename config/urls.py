@@ -17,7 +17,6 @@ urlpatterns = [
     url(r'^accounts/', include('allauth.urls')),
 
     # Your stuff: custom urls includes go here
-    url(r'^newmultiprojects/', include(('olc_webportalv2.new_multisample.urls', 'new_multisample'), namespace='new_multisample')),
     url(r'^cowbat/', include(('olc_webportalv2.cowbat.urls', 'cowbat'), namespace='cowbat')),
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),

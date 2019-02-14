@@ -33,7 +33,6 @@
                                   <i class="fa fa-ban fa-2x"></i>
                               </td>
                           {% endif %}
-                          <td align="center"><a href={% url 'new_multisample:genomeqaml_detail' sample_id=sample.pk %} class="btn btn-primary" role="button" aria-pressed="true">Details</a></td>
                       </tr>
                 {% endfor %}
             {% endfor %}
@@ -44,7 +43,6 @@
             <i class="fa fa-ban fa-1x" >: Fail</i>
     </div>
     <br><br>
-    <a href="{% url 'new_multisample:project_detail' project_id=project.pk %}" class="btn btn-sample" role="button" aria-pressed="true">Return to Project {{ project.project_title }}</a>
         <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
         <script src="{% static 'js/datatables.min.js' %}"></script>
         <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
