@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BaseCallAnalysis xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Run Name="BaseCalls">
+    <BaseCallParameters>
+      <ChastityThreshold>0.6</ChastityThreshold>
+      <Matrix Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>1</Cycle>
+        <CycleOffset>0</CycleOffset>
+        <FirstCycle>1</FirstCycle>
+        <LastCycle>301</LastCycle>
+        <Read>1</Read>
+      </Matrix>
+      <Matrix Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>302</Cycle>
+        <CycleOffset>0</CycleOffset>
+        <FirstCycle>302</FirstCycle>
+        <LastCycle>309</LastCycle>
+        <Read>2</Read>
+      </Matrix>
+      <Matrix Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>310</Cycle>
+        <CycleOffset>0</CycleOffset>
+        <FirstCycle>310</FirstCycle>
+        <LastCycle>317</LastCycle>
+        <Read>3</Read>
+      </Matrix>
+      <Matrix Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>318</Cycle>
+        <CycleOffset>0</CycleOffset>
+        <FirstCycle>318</FirstCycle>
+        <LastCycle>618</LastCycle>
+        <Read>4</Read>
+      </Matrix>
+      <Phasing Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>2</Cycle>
+        <CycleOffset>1</CycleOffset>
+        <FirstCycle>1</FirstCycle>
+        <LastCycle>301</LastCycle>
+        <Read>1</Read>
+        <PhasingRate>0</PhasingRate>
+        <PrephasingRate>0</PrephasingRate>
+      </Phasing>
+      <Phasing Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>303</Cycle>
+        <CycleOffset>1</CycleOffset>
+        <FirstCycle>302</FirstCycle>
+        <LastCycle>309</LastCycle>
+        <Read>2</Read>
+        <PhasingRate>0</PhasingRate>
+        <PrephasingRate>0</PrephasingRate>
+      </Phasing>
+      <Phasing Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>311</Cycle>
+        <CycleOffset>1</CycleOffset>
+        <FirstCycle>310</FirstCycle>
+        <LastCycle>317</LastCycle>
+        <Read>3</Read>
+        <PhasingRate>0</PhasingRate>
+        <PrephasingRate>0</PrephasingRate>
+      </Phasing>
+      <Phasing Path="">
+        <AutoFlag>2</AutoFlag>
+        <AutoLane>0</AutoLane>
+        <Cycle>319</Cycle>
+        <CycleOffset>1</CycleOffset>
+        <FirstCycle>318</FirstCycle>
+        <LastCycle>618</LastCycle>
+        <Read>4</Read>
+        <PhasingRate>0</PhasingRate>
+        <PrephasingRate>0</PrephasingRate>
+      </Phasing>
+      <PureBases>0</PureBases>
+      <SmtFilter>failed-chastity</SmtFilter>
+      <SmtRelation>le</SmtRelation>
+      <SmtThreshold>1.0</SmtThreshold>
+    </BaseCallParameters>
+    <Cycles First="1" Last="618" Number="618" />
+    <Input />
+    <RunParameters>
+      <AutoCycleFlag>0</AutoCycleFlag>
+      <BasecallFlag>0</BasecallFlag>
+      <Deblocked>0</Deblocked>
+      <DebugFlag>0</DebugFlag>
+      <FirstRunOnlyFlag>0</FirstRunOnlyFlag>
+      <ImagingReads Index="1">
+        <FirstCycle>1</FirstCycle>
+        <LastCycle>301</LastCycle>
+      </ImagingReads>
+      <ImagingReads Index="2">
+        <FirstCycle>302</FirstCycle>
+        <LastCycle>309</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </ImagingReads>
+      <ImagingReads Index="3">
+        <FirstCycle>310</FirstCycle>
+        <LastCycle>317</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </ImagingReads>
+      <ImagingReads Index="4">
+        <FirstCycle>318</FirstCycle>
+        <LastCycle>618</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </ImagingReads>
+      <Instrument>HWI-M05722</Instrument>
+      <IterativeMatrixFlag>0</IterativeMatrixFlag>
+      <MakeFlag>0</MakeFlag>
+      <MaxCycle>0</MaxCycle>
+      <MinCycle>0</MinCycle>
+      <Reads Index="1">
+        <FirstCycle>1</FirstCycle>
+        <LastCycle>301</LastCycle>
+      </Reads>
+      <Reads Index="2">
+        <FirstCycle>302</FirstCycle>
+        <LastCycle>309</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </Reads>
+      <Reads Index="3">
+        <FirstCycle>310</FirstCycle>
+        <LastCycle>317</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </Reads>
+      <Reads Index="4">
+        <FirstCycle>318</FirstCycle>
+        <LastCycle>618</LastCycle>
+        <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      </Reads>
+      <RunFolder>190208_M05722_0078_000000000-C72YB</RunFolder>
+      <RunFolderDate>190208</RunFolderDate>
+      <RunFolderId>0078</RunFolderId>
+      <RunFlowcellId>000000000-C72YB</RunFlowcellId>
+      <Barcode>
+        <Cycle Use="true">302</Cycle>
+        <Cycle Use="true">303</Cycle>
+        <Cycle Use="true">304</Cycle>
+        <Cycle Use="true">305</Cycle>
+        <Cycle Use="true">306</Cycle>
+        <Cycle Use="true">307</Cycle>
+        <Cycle Use="true">308</Cycle>
+        <Cycle Use="true">309</Cycle>
+        <Cycle Use="true">310</Cycle>
+        <Cycle Use="true">311</Cycle>
+        <Cycle Use="true">312</Cycle>
+        <Cycle Use="true">313</Cycle>
+        <Cycle Use="true">314</Cycle>
+        <Cycle Use="true">315</Cycle>
+        <Cycle Use="true">316</Cycle>
+        <Cycle Use="true">317</Cycle>
+      </Barcode>
+      <QTableVersion>V8</QTableVersion>
+    </RunParameters>
+    <Software Name="RTA" Version="1.18.54.0" />
+    <TileSelection>
+      <Lane Index="1">
+        <Sample>s</Sample>
+        <Tile>1102</Tile>
+        <Tile>1101</Tile>
+        <Tile>2115</Tile>
+        <Tile>2114</Tile>
+        <Tile>2113</Tile>
+        <Tile>2112</Tile>
+        <Tile>2111</Tile>
+        <Tile>2110</Tile>
+        <Tile>2109</Tile>
+        <Tile>2108</Tile>
+        <Tile>2107</Tile>
+        <Tile>2106</Tile>
+        <Tile>2105</Tile>
+        <Tile>2104</Tile>
+        <Tile>2103</Tile>
+        <Tile>2102</Tile>
+        <Tile>2117</Tile>
+        <Tile>2116</Tile>
+        <Tile>2101</Tile>
+        <Tile>1119</Tile>
+        <Tile>1116</Tile>
+        <Tile>1115</Tile>
+        <Tile>1114</Tile>
+        <Tile>1113</Tile>
+        <Tile>1112</Tile>
+        <Tile>1111</Tile>
+        <Tile>1110</Tile>
+        <Tile>1109</Tile>
+        <Tile>1108</Tile>
+        <Tile>1107</Tile>
+        <Tile>1106</Tile>
+        <Tile>1105</Tile>
+        <Tile>1104</Tile>
+        <Tile>1103</Tile>
+        <Tile>1118</Tile>
+        <Tile>1117</Tile>
+        <Tile>2119</Tile>
+        <Tile>2118</Tile>
+      </Lane>
+    </TileSelection>
+    <Time />
+    <User />
+  </Run>
+</BaseCallAnalysis>
