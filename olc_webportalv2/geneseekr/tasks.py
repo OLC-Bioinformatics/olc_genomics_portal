@@ -15,8 +15,9 @@ from azure.storage.blob import BlobPermissions
 import csv
 from django.shortcuts import render, redirect, get_object_or_404
 
+from celery import task, shared_task
 
-@background(schedule=1)
+@shared_task
 def run_parsnp(parsnp_request_pk):
     tree_request = ParsnpTree.objects.get(pk=parsnp_request_pk)
     try:
@@ -70,7 +71,7 @@ def run_parsnp(parsnp_request_pk):
 
 
 #media file not made until GeneSeekr has run
-@background(schedule=1)
+@shared_task
 def run_geneseekr(geneseekr_request_pk):
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
     try:
