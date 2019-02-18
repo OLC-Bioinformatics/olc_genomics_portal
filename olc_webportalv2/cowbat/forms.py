@@ -16,5 +16,5 @@ class RunNameForm(forms.Form):
         return run_name
 
 
-class emailForm(forms.Form):
+class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")

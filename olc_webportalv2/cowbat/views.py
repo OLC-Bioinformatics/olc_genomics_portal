@@ -8,7 +8,7 @@ import fnmatch
 import os
 # Portal-specific things.
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, emailForm
+from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 # Azure!
 from azure.storage.blob import BlockBlobService
@@ -75,14 +75,14 @@ def cowbat_processing(request, sequencing_run_pk):
     else:
         progress = 1
 
-    form = emailForm()
+    form = EmailForm()
     if request.method == 'POST':
-        form = emailForm(request.POST)
+        form = EmailForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data.get('email')
-            sequencing_run.emails_array.append(email)
+            Email = form.cleaned_data.get('email')
+            sequencing_run.emails_array.append(Email)
             sequencing_run.save()
-            form = emailForm()
+            form = EmailForm()
 
     return render(request,
                   'cowbat/cowbat_processing.html',
