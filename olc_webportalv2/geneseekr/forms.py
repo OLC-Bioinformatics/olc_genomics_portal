@@ -5,6 +5,8 @@ import re
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
+from django.forms.widgets import EmailInput
+
 
 class GeneSeekrForm(forms.Form):
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
@@ -145,3 +147,6 @@ class ParsnpForm(forms.Form):
 
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)
+
+class EmailForm(forms.Form):
+    email = forms.EmailField(max_length=50,label= "Email ")

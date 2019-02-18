@@ -21,6 +21,7 @@ class GeneSeekrRequest(models.Model):
     gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=[])
 
     name = models.CharField(max_length=50, blank=True, null=True)
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
    
 
 # This model doesn't actually get used any more - to be deleted.
