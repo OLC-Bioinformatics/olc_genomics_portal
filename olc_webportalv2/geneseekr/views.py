@@ -1,12 +1,15 @@
+# Django-related imports
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
+from django.contrib import messages
+# Standard libraries
+import datetime
+# Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
-from django.conf import settings
-
-import datetime
-
+# Task Management
 from kombu import Queue
 
 # Create your views here.
@@ -91,10 +94,13 @@ def geneseekr_processing(request, geneseekr_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            geneseekr_request.emails_array.append(Email)
-            geneseekr_request.save()
-            form = EmailForm()
-
+            if Email not in geneseekr_request.emails_array:
+                geneseekr_request.emails_array.append(Email)
+                geneseekr_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
@@ -128,9 +134,14 @@ def tree_result(request, parsnp_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            tree_request.emails_array.append(Email)
-            tree_request.save()
-            form = EmailForm()
+            if Email not in tree_request.emails_array:
+                tree_request.emails_array.append(Email)
+                tree_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+            
     return render(request,
                   'geneseekr/tree_result.html',
                   {

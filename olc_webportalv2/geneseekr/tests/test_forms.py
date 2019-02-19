@@ -127,3 +127,9 @@ class ParsnpFormTest(TestCase):
             'seqids': '2222-SEQ-0711 2015-SEQ-0712'
         })
         self.assertFalse(form.is_valid())
+
+    def test_invalid_form_blank(self):
+        form = ParsnpForm({
+            'seqids': ''
+        })
+        self.assertFalse(form.is_valid())
