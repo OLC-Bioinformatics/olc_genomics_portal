@@ -280,6 +280,13 @@ def monitor_tasks():
                 tree_task.status = 'Complete'
                 tree_task.save()
 
+                # email_list = tree_task.emails_array
+                # for email in email_list:
+                #     send_email(subject='Tree {} has finished.'.format(str(tree_task)),
+                #     body='This email is to inform you that the tree query {} has completed and is available at the following link {}'.format(str(tree_task),sas_url),
+                #     recipient=email)
+
+
             else:
                 ParsnpTree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.

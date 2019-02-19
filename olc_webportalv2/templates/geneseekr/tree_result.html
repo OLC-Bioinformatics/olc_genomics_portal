@@ -11,6 +11,59 @@
       <br>
       <p>This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs).</p>
       <p>You don't have to remain on this page - this Tree request will be visible on the <a href="{% url 'geneseekr:tree_home' %}">Tree homepage</a> </p>
+      {% if request.user.email in tree_request.emails_array %}
+    <p>Your email is already on the list to be notified. </p>
+    Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+
+    <form method="Post" id='addEmail'>
+      {% csrf_token %}
+      {{form}}
+      <button type="submit">Save Email</button>
+      <br>
+      <br>
+    </form>
+
+  <script>
+    var checkbox = document.getElementById('cbx').checked;
+    var form = document.getElementById('addEmail');
+    if (checkbox != true){
+      form.style.visibility ="hidden";}
+    else {
+        form.style.visibility ="visible";}
+    function cbxCheck(){
+      var checkbox = document.getElementById('cbx').checked;
+      var form = document.getElementById('addEmail');
+      if (checkbox == true){
+        form.style.visibility ="visible";}
+      else{
+        form.style.visibility ="hidden";} 
+        }
+  </script>
+
+  {% else %}
+  <p>Would you like an email upon completion?</p>
+  <form method="Post">
+  {% csrf_token %}
+  {{form}}
+  <button type="submit">Save Email</button>
+  <br>
+  <br>
+  </form>
+  {% endif %}
+
+  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+  <div id="emails-button" class="collapse">
+    <br>
+    {% if tree_request.emails_array|length == 0 %}
+      <p>No users have signed up to receive an email for this run.</p>
+    {% else %}
+        {% for email in tree_request.emails_array %}
+          <p>{{ email }}</p>
+        {% endfor %}
+    {% endif %}
+  </div>
+
+
   {% elif tree_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ tree_request.status }}</button>
     <br>

@@ -123,10 +123,18 @@ def geneseekr_results(request, geneseekr_request_pk):
 @login_required
 def tree_result(request, parsnp_request_pk):
     tree_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            tree_request.emails_array.append(Email)
+            tree_request.save()
+            form = EmailForm()
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'tree_request': tree_request
+                      'tree_request': tree_request, 'form': form,
                   })
 
 
