@@ -115,7 +115,7 @@ class GeneSeekrForm(forms.Form):
 
 
 class ParsnpForm(forms.Form):
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
 
     def clean(self):
         super().clean()
