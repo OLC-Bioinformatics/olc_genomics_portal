@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 from django.conf import settings
@@ -48,6 +48,7 @@ def geneseekr_name(request, geneseekr_request_pk):
 def geneseekr_query(request):
     form = GeneSeekrForm()
     formName = GeneSeekrNameForm()
+    formEmail = EmailForm()
     if request.method == 'POST':
         form = GeneSeekrForm(request.POST, request.FILES)
         formName = GeneSeekrNameForm(request.POST)
@@ -77,17 +78,27 @@ def geneseekr_query(request):
     return render(request,
                   'geneseekr/geneseekr_query.html',
                   {
-                     'form': form, 'formName':formName
+                     'form': form, 'formName':formName,
                   })
 
 
 @login_required
 def geneseekr_processing(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            geneseekr_request.emails_array.append(Email)
+            geneseekr_request.save()
+            form = EmailForm()
+
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
-                     'geneseekr_request': geneseekr_request
+                     'geneseekr_request': geneseekr_request, "form": form
                   })
 
 

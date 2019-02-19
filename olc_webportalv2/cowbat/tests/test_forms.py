@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django import forms
 
-from olc_webportalv2.cowbat.forms import RunNameForm, emailForm
+from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm
 
 
 class FormTest(TestCase):
@@ -62,13 +62,13 @@ class FormTest(TestCase):
 
     # These pretty much just test that we actually remembered to use an email form
     def test_email_form_good(self):
-        form = emailForm({
+        form = EmailForm({
             'email': 'good_email@email.good'
         })
         self.assertTrue(form.is_valid())
 
     def test_email_form_bad(self):
-        form = emailForm({
+        form = EmailForm({
             'email': 'not_an_email_at_all'
         })
         self.assertFalse(form.is_valid())

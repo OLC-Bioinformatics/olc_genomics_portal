@@ -17,6 +17,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from celery import task, shared_task
 
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
+
 @shared_task
 def run_parsnp(parsnp_request_pk):
     tree_request = ParsnpTree.objects.get(pk=parsnp_request_pk)
@@ -69,6 +73,20 @@ def run_parsnp(parsnp_request_pk):
         tree_request.status = 'Error'
         tree_request.save()
 
+def send_email(subject, body, recipient):
+    fromaddr = os.environ.get('EMAIL_HOST_USER')
+    toaddr = recipient
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(user=os.environ.get('EMAIL_HOST_USER'), password=os.environ.get('EMAIL_HOST_PASSWORD'))
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
 
 #media file not made until GeneSeekr has run
 @shared_task
@@ -172,6 +190,12 @@ def run_geneseekr(geneseekr_request_pk):
         shutil.rmtree('olc_webportalv2/media/geneseekr-{}/'.format(geneseekr_request.pk))
         geneseekr_request.status = 'Complete'
         geneseekr_request.save()
+        
+        # email_list = geneseekr_request.emails_array
+        # for email in email_list:
+        #     send_email(subject='Run {} has finished assembly.'.format(str(geneseekr_request)),
+        #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
+        #                recipient=email)    
     except:
         geneseekr_request.status = 'Error'
         geneseekr_request.save()
