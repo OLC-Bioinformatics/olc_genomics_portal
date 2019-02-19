@@ -69,6 +69,9 @@ class ParsnpTree(models.Model):
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
 
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+
+
 
 class ParsnpAzureRequest(models.Model):
     tree_request = models.ForeignKey(ParsnpTree, on_delete=models.CASCADE, related_name='azuretask')

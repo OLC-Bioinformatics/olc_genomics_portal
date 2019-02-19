@@ -193,8 +193,8 @@ def run_geneseekr(geneseekr_request_pk):
         
         # email_list = geneseekr_request.emails_array
         # for email in email_list:
-        #     send_email(subject='Run {} has finished assembly.'.format(str(geneseekr_request)),
-        #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
+        #     send_email(subject='Geneseekr Query {} has finished.'.format(str(geneseekr_request)),
+        #                body='This email is to inform you that the Geneseekr Query {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
         #                recipient=email)    
     except:
         geneseekr_request.status = 'Error'
