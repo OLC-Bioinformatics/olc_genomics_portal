@@ -2,11 +2,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.contrib import messages
 # Standard libraries
 import logging
 import fnmatch
 import os
-# Portal-specific things.
+# Portal-specific things
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
 from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
@@ -15,8 +16,9 @@ from azure.storage.blob import BlockBlobService
 import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
-
+# Task Management
 from kombu import Queue
+
 
 log = logging.getLogger(__name__)
 
@@ -80,9 +82,14 @@ def cowbat_processing(request, sequencing_run_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            sequencing_run.emails_array.append(Email)
-            sequencing_run.save()
-            form = EmailForm()
+            if Email not in sequencing_run.emails_array:
+                sequencing_run.emails_array.append(Email)
+                sequencing_run.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+            
 
     return render(request,
                   'cowbat/cowbat_processing.html',

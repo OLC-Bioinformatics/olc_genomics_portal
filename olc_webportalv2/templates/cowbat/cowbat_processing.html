@@ -4,8 +4,10 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
+
 <h2>COWBAT Status for {{ sequencing_run.run_name }}</h2>
 <br>
+
 {% if sequencing_run.status == 'Unprocessed' %}
     <button class="btn btn-primary btn-block" disabled>{{ sequencing_run.status }}</button>
 {% elif sequencing_run.status == 'Error' %}
@@ -34,6 +36,14 @@
   <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
   <p>You don't have to remain on this page - this assembly request will be visible on the <a href="{% url 'cowbat:assembly_home' %}">Assembly homepage.</a> </p>
   
+  {% comment %} Email Block {% endcomment %}
+  {% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   {% if request.user.email in sequencing_run.emails_array %}
     <p>Your email is already on the list to be notified. </p>
     Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
@@ -85,6 +95,7 @@
         {% endfor %}
     {% endif %}
   </div>
+  {% comment %} End Email Block {% endcomment %}
 
 {% elif sequencing_run.status == 'Complete' %}
   <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }}</button>
@@ -106,6 +117,7 @@
         <p>Shareable link: {{ sequencing_run.download_link }}</p>
     </div>
 {% endif %}
+
   <script type="text/javascript">
     setInterval(function () {
       {% if sequencing_run.status == 'Processing' or sequencing_run.status == 'Unprocessed' %}

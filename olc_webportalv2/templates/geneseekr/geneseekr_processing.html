@@ -4,64 +4,77 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
+
   <h2>GeneSeekr Results</h2>
   <br>
+
   {% if geneseekr_request.status == 'Processing' %}
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ geneseekr_request.status }}</button>
       <br>
       <p>This page will automatically refresh. Your GeneSeekr request should be complete in a minute or two.</p>
       <p>You don't have to remain on this page - this GeneSeekr request will be visible on the <a href="{% url 'geneseekr:geneseekr_home' %}">GeneSeekr homepage</a> </p>
-    {% if request.user.email in geneseekr_request.emails_array %}
-    <p>Your email is already on the list to be notified. </p>
-    Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+   
+      {% comment %} Email Block {% endcomment %}
+      {% if messages %}
+        <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
 
-    <form method="Post" id='addEmail'>
+      {% if request.user.email in geneseekr_request.emails_array %}
+      <p>Your email is already on the list to be notified. </p>
+      Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+
+      <form method="Post" id='addEmail'>
+        {% csrf_token %}
+        {{form}}
+        <button type="submit">Save Email</button>
+        <br>
+        <br>
+      </form>
+
+      <script>
+        var checkbox = document.getElementById('cbx').checked;
+        var form = document.getElementById('addEmail');
+        if (checkbox != true){
+          form.style.visibility ="hidden";}
+        else {
+            form.style.visibility ="visible";}
+        function cbxCheck(){
+          var checkbox = document.getElementById('cbx').checked;
+          var form = document.getElementById('addEmail');
+          if (checkbox == true){
+            form.style.visibility ="visible";}
+          else{
+            form.style.visibility ="hidden";} 
+            }
+      </script>
+
+      {% else %}
+      <p>Would you like an email upon completion?</p>
+      <form method="Post">
       {% csrf_token %}
       {{form}}
       <button type="submit">Save Email</button>
       <br>
       <br>
-    </form>
+      </form>
+      {% endif %}
 
-  <script>
-    var checkbox = document.getElementById('cbx').checked;
-    var form = document.getElementById('addEmail');
-    if (checkbox != true){
-      form.style.visibility ="hidden";}
-    else {
-        form.style.visibility ="visible";}
-    function cbxCheck(){
-      var checkbox = document.getElementById('cbx').checked;
-      var form = document.getElementById('addEmail');
-      if (checkbox == true){
-        form.style.visibility ="visible";}
-      else{
-        form.style.visibility ="hidden";} 
-        }
-  </script>
-
-  {% else %}
-  <p>Would you like an email upon completion?</p>
-  <form method="Post">
-  {% csrf_token %}
-  {{form}}
-  <button type="submit">Save Email</button>
-  <br>
-  <br>
-  </form>
-  {% endif %}
-
-  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
-  <div id="emails-button" class="collapse">
-    <br>
-    {% if geneseekr_request.emails_array|length == 0 %}
-      <p>No users have signed up to receive an email for this run.</p>
-    {% else %}
-        {% for email in geneseekr_request.emails_array %}
-          <p>{{ email }}</p>
-        {% endfor %}
-    {% endif %}
-  </div>
+    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+    <div id="emails-button" class="collapse">
+      <br>
+      {% if geneseekr_request.emails_array|length == 0 %}
+        <p>No users have signed up to receive an email for this run.</p>
+      {% else %}
+          {% for email in geneseekr_request.emails_array %}
+            <p>{{ email }}</p>
+          {% endfor %}
+      {% endif %}
+    </div>
+    {% comment %} End Email Block {% endcomment %}
   
   {% elif geneseekr_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ geneseekr_request.status }}</button>
