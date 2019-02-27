@@ -331,13 +331,15 @@ CELERY_QUEUES = (
 #Periodic Tasks
 CELERYBEAT_SCHEDULE = {
     'monitor_tasks' : {
-        'task' : 'monitor_tasks',
+        'task' : 'olc_webportalv2.cowbat.tasks.monitor_tasks',
         'schedule': 30.0,
+        'options': {'queue':'default'},
         },
 
     'clean_old_containers' : {
-        'task':'clean_old_containers',
+        'task':'olc_webportalv2.cowbat.tasks.clean_old_containers',
         'schedule': crontab(hour=2),
+        'options': {'queue':'default'},
         },
 }
 ########## END CELERY
