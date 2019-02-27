@@ -132,9 +132,12 @@
                       // Also check that all SEQIDs submitted are valid.
                       // in this list.
                       var seqid_validated = true;
+                      var checked_samplesheet = false;
                       for(var i=0; i < filesAccepted.length; i++) {
                         if (filesAccepted[i].name.indexOf('SampleSheet.csv') !== -1) {
                           var reader = new FileReader();
+                          var good_seqid_list = [];
+                          checked_samplesheet = true;
                           reader.readAsText(filesAccepted[i]);
                           reader.onload = function (event) {
                             var csv = event.target.result;
@@ -152,6 +155,9 @@
                                 if (sampleSheetData[i][0].search(seqidregex) === -1) {
                                   seqidlist.push(sampleSheetData[i][0]);
                                 }
+                                else {
+                                  good_seqid_list.push(sampleSheetData[i][0].toString())
+                                }
                               }
                               if (sampleSheetData[i][0] === 'Sample_ID') {
                                 seqidstart = true;
@@ -160,17 +166,56 @@
                             if(seqidlist.length > 0) {
                               seqid_validated = false;
                               $('#submit').prop('disabled', true);
+                              filesTable.rows[6].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                              filesTable.rows[6].cells[1].classList.add('table-danger');
                               alert('One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.\n' +
                                 'Correct format is YYYY-LAB-####.\nIncorrectly formatted SEQIDs: ' + seqidlist.toString());
                             }
                           }
                         }
                       }
+                      // Also need to parse GenerateFASTQRunStatistics.xml and make sure names there are the same
+                      // as SeqIDs - have run into issues with this before where people give the wrong file or
+                      // mess with names in SampleSheet.  TODO: Not working yet.
+                      var fastq_run_stats_validated = true;
+                      for(var i=0; i < filesAccepted.length; i++) {
+                        if (filesAccepted[i].name.indexOf('GenerateFASTQRunStatistics.xml') !== -1 && checked_samplesheet === true) {
+                          var reader = new FileReader();
+                          reader.readAsText(filesAccepted[i]);
+                          reader.onload = function (event) {
+                            var bad_seqids_in_run_stats = [];
+                             var txt = event.target.result;
+                             if (window.DOMParser) {
+                                parser = new DOMParser();
+                                xmlDoc = parser.parseFromString(txt, "text/xml");
+                              }
+                              else {  // This is for Explorer support.
+                                xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+                                xmlDoc.async = false;
+                                xmlDoc.loadXML(txt);
+                              }
+                              x = xmlDoc.getElementsByTagName('SampleName');
+                              console.log(bad_seqids_in_run_stats);
+                              for (i = 0; i < x.length; i++) {
+                                // Check element is in our list of good SeqIDs.
+                                var seqid_in_run_stats = x[i].childNodes[0].nodeValue.toString();
+                                if (good_seqid_list.indexOf(seqid_in_run_stats) === -1) {
+                                  bad_seqids_in_run_stats.push(seqid_in_run_stats);
+                                }
+                              }
+                            if (bad_seqids_in_run_stats.length > 0) {
+                              fastq_run_stats_validated = false;
+                              $('#submit').prop('disabled', true);
+                              filesTable.rows[3].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                              filesTable.rows[3].cells[1].classList.add('table-danger');
+                              alert('One or more SEQIDs specified in GenerateFASTQRunStatistics.xml was not found in your SampleSheet.\n' +
+                                'You\'ll need to remove your xml file, modify it, and reupload. IDs that were not found in SampleSheet are: ' + bad_seqids_in_run_stats.toString());
+                            }
+                          }
+                        }
+                      }
                       var form_is_valid = validateForm();
-                      console.log(validationSuccess);
-                      console.log(form_is_valid);
-                      console.log(seqid_validated);
-                      if (validationSuccess === true && form_is_valid === true && seqid_validated === true) {
+                      if (validationSuccess === true && form_is_valid === true && seqid_validated === true && fastq_run_stats_validated === true) {
                         $('#submit').prop('disabled', false);
                       }
                 });
