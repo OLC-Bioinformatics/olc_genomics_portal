@@ -5,7 +5,7 @@
 wheel==0.30.0
 
 # Bleeding edge Django
-# django==1.10.8 # pyup: >=1.10,<1.11
+# pyup: >=1.10,<1.11
 django==2.1.5
 
 # Configuration
@@ -38,32 +38,92 @@ pytz==2017.2
 
 # Redis support
 django-redis==4.8.0
-redis==2.10.6
+redis==3.2.0
 
-celery>=4.2.0
-flower>=0.9.0
+# Task Management and Monitoring
+celery==4.2.1
+flower==0.9.2
+
+# Testing
+selenium==3.141.0
 django-test-plus==1.0.22
 
 # Custom requirements beyond cookiecutter-django
+adal==1.2.1
+amqp==2.4.2
+asn1crypto==0.24.0
+atomicwrites==1.3.0
+attrs==19.1.0
+azure-batch==5.1.0
+azure-common==1.1.18
+azure-nspkg==3.0.2
+azure-storage==0.36.0
+azure-storage-common==1.4.0
+azure-storage-file==1.4.0
+Babel==2.6.0
+billiard==3.5.0.5
+biopython==1.73
+certifi==2018.11.29
+cffi==1.12.2
+chardet==3.0.4
+Click==7.0
+confindr==0.5.1
+cryptography==2.6.1
+cycler==0.10.0
+defusedxml==0.5.0
+django-background-tasks==1.2.0
+django-bootstrap-form==3.4
+django-compat==1.0.15
+django-debug-toolbar==1.11
+django-extensions==2.1.6
 django-multiselectfield==0.1.8
-django-bootstrap-form
-django-tables2
-django-background-tasks
-pandas
-numpy
-django-pandas
-#pandas-highcharts
-#django-highcharts
-django-widget-tweaks
+django-pandas==0.6.0
+django-tables2==2.0.5
+django-widget-tweaks==1.4.3
+geneseekr==0.3.3
 gunicorn==19.7.1
-uwsgi
-django-extensions
-django-debug-toolbar
-azure-storage
-azure-batch==5.1
-KubeJobSub>=0.1.18
-biopython
-geneseekr>=0.2.6
-tornado == 5.1.1
-# For super fun actual browser testing
-selenium
+idna==2.8
+interop==1.1.8
+isodate==0.6.0
+kiwisolver==1.0.1
+kombu==4.4.0
+KubeJobSub==0.1.18
+matplotlib==3.0.3
+more-itertools==6.0.0
+msrest==0.6.4
+msrestazure==0.6.0
+numpy==1.16.2
+oauthlib==3.0.1
+OLCTools==0.8.3
+olefile==0.46
+pandas==0.24.1
+pathlib2==2.3.3
+pipdeptree==0.13.2
+pluggy==0.9.0
+psutil==5.5.1
+py==1.8.0
+pycparser==2.19
+PyJWT==1.7.1
+pyparsing==2.3.1
+pysam==0.15.2
+pytest==4.3.0
+python-dateutil==2.8.0
+python3-openid==3.1.0
+PyYAML==3.13
+rauth==0.7.3
+regex==2019.2.21
+requests==2.21.0
+requests-oauthlib==1.2.0
+scipy==1.2.1
+seaborn==0.9.0
+sipprverse==0.2.22
+six==1.12.0
+sqlparse==0.2.4
+termcolor==1.1.0
+tornado==5.1.1
+Unidecode==0.4.21
+urllib3==1.24.1
+uWSGI==2.0.18
+validator-helper==0.0.6
+vine==1.2.0
+XlsxWriter==1.1.5
