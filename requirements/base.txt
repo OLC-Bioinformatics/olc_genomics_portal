@@ -64,5 +64,6 @@ azure-batch==5.1
 KubeJobSub>=0.1.18
 biopython
 geneseekr>=0.2.6
+tornado == 5.1.1
 # For super fun actual browser testing
 selenium

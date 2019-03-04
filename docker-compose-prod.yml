@@ -3,7 +3,9 @@ version: '2'
 services:
   web: &web
     restart: always
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.prod
     expose:
       - "8000"
     links:

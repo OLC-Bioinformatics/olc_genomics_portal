@@ -78,8 +78,8 @@ Add your IP address to ALLOWED_HOSTS in `prod.yml`, and make a directory called
 `postgres-data` in the root of your cloned dir. You should now be able to boot up the portal. You'll need the following commands (in this order, run in the root
 of the directory you cloned):
 
-- `docker-compose build`
-- `docker-compose up`
+- `docker-compose -f docker-compose-prod.yml build`
+- `docker-compose -f docker-compose-prod.yml up`
 
 At this point the portal should be up and fully functional, and will restart automatically if it fails for any reason.
 
