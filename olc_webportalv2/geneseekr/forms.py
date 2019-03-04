@@ -119,7 +119,11 @@ class ParsnpForm(forms.Form):
 
     def clean(self):
         super().clean()
-        seqid_input = self.cleaned_data['seqids']
+        #KeyError raises when only whitespace is submitted
+        try:
+            seqid_input = self.cleaned_data['seqids']
+        except KeyError:
+            raise forms.ValidationError('Input cannot be only whitespace')
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
