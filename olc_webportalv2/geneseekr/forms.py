@@ -115,6 +115,7 @@ class GeneSeekrForm(forms.Form):
 
 
 class ParsnpForm(forms.Form):
+    name = forms.CharField(label='Name: ', required=False)
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
 
     def clean(self):
@@ -124,6 +125,10 @@ class ParsnpForm(forms.Form):
             seqid_input = self.cleaned_data['seqids']
         except KeyError:
             raise forms.ValidationError('Input cannot be only whitespace')
+        try:
+            name = self.cleaned_data['name']
+        except KeyError:
+            name = None
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
@@ -147,7 +152,7 @@ class ParsnpForm(forms.Form):
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
-        return seqid_list
+        return seqid_list, name
 
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)

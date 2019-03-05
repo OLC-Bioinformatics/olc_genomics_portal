@@ -155,10 +155,14 @@ def tree_request(request):
     if request.method == 'POST':
         form = ParsnpForm(request.POST)
         if form.is_valid():
-            seqids = form.cleaned_data
+            seqids, name = form.cleaned_data
             tree_request = ParsnpTree.objects.create(user=request.user,
                                                      seqids=seqids)
             tree_request.status = 'Processing'
+            if name == None:
+                tree_request.name = name
+            else:
+                 tree_request.name = tree_request.pk
             tree_request.save()
             run_parsnp.apply_async(queue='geneseekr', args=(tree_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=tree_request.pk)

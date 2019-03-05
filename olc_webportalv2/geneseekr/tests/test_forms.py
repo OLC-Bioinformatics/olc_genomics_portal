@@ -113,7 +113,7 @@ class ParsnpFormTest(TestCase):
             'seqids': '2015-SEQ-0711 2015-SEQ-0712'
         })
         self.assertTrue(form.is_valid())
-        seqids = form.cleaned_data
+        seqids,name = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):

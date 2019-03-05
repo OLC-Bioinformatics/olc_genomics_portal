@@ -12,5 +12,5 @@ urlpatterns = [
     # Tree stuff
     url(r'^tree_home/', views.tree_home, name='tree_home'),
     url(r'^tree_request/', views.tree_request, name='tree_request'),
-    url(r'^tree_result/(?P<parsnp_request_pk>\d+)/$', views.tree_result, name='tree_result'),
+    url(r'^tree_result/(?P<parsnp_request_pk>\d+)/$', views.tree_result, name='tree_result'),    
 ]
