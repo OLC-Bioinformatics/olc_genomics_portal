@@ -5,15 +5,15 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-  <h2>GeneSeekr Run Rename </h2>
+  <h2>Tree Rename</h2>
   <br>
-  <h4>{{geneseekr_request.pk}} - {{geneseekr_request.created_at}}</h4>
+  <h4>{{tree_request.pk}} - {{tree_request.created_at}}</h4>
 
   <form method='post'>
   {% csrf_token %}
-  Previous Name: {{geneseekr_request.name}} </br></br>
+  Previous Name: {{tree_request.name}} </br></br>
   {{form}} </br></br>
-  <button type='submit' class='btn btn-success'>Save Changes</button>
+ <button type='submit' class='btn btn-success'>Save Changes</button>
   </form>
 
 {% endblock %}

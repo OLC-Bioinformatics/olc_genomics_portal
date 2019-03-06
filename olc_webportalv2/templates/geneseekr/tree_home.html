@@ -48,7 +48,7 @@
           {% endif %}
 
         <td>{{ tree_request.created_at }}</td>
-        <td>{{tree_request.name}} (Edit)</a></td>
+        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} (Edit)</a></td>
 
      </tr>
      {% endfor %}

@@ -157,5 +157,8 @@ class ParsnpForm(forms.Form):
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)
 
+class TreeNameForm(forms.Form):
+    name = forms.CharField(label='Name ', required=False)
+
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")

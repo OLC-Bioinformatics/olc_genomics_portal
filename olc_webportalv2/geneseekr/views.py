@@ -6,7 +6,7 @@ from django.contrib import messages
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm, EmailForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm, TreeNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 # Task Management
@@ -160,9 +160,9 @@ def tree_request(request):
                                                      seqids=seqids)
             tree_request.status = 'Processing'
             if name == None:
-                tree_request.name = name
+                tree_request.name = tree_request.pk
             else:
-                 tree_request.name = tree_request.pk
+                tree_request.name = name
             tree_request.save()
             run_parsnp.apply_async(queue='geneseekr', args=(tree_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=tree_request.pk)
@@ -181,4 +181,21 @@ def tree_home(request):
                   'geneseekr/tree_home.html',
                   {
                       'tree_requests': tree_requests
+                  })
+
+@login_required
+def tree_name(request, parsnp_request_pk):
+    form = TreeNameForm()
+    tree_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    if request.method == "POST":  
+        form = TreeNameForm(request.POST)
+        if form.is_valid():
+            tree_request.name = form.cleaned_data['name']
+            tree_request.save()
+        return redirect('geneseekr:tree_home')
+        
+    return render(request,
+                  'geneseekr/tree_name.html',
+                  {
+                      'tree_request': tree_request,  'form': form
                   })
