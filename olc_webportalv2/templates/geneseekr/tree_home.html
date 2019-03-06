@@ -4,7 +4,7 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>GeneSeekr</h2>
+  <h2>Tree Home</h2>
   <br>
   <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A New Tree</a>
   <br>
@@ -15,6 +15,7 @@
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
+       <th>Name</th>
 {#       <th>Type</th>#}
     </tr>
   </thead>
@@ -47,6 +48,8 @@
           {% endif %}
 
         <td>{{ tree_request.created_at }}</td>
+        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} (Edit)</a></td>
+
      </tr>
      {% endfor %}
   </tbody>
