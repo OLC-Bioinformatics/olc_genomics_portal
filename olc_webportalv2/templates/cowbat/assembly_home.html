@@ -4,9 +4,10 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Assembly Home</h2>
   <br>
   <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Upload a New Run</a>
+  <br>
+  <h2>Assembly Home</h2>
   <br>
   <table id="assembly-table" class="table table-hover">
       <thead>
@@ -21,10 +22,14 @@
         <tr>
           <td>{{ sequencing_run.run_name }}</td>
           {% if sequencing_run.status == 'Complete' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success" role="button">{{ sequencing_run.status }}</a></td>
-          {% elif sequencing_run.status == 'Processing' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ sequencing_run.status }}</a></td>
-          {% elif sequencing_run.status == 'Error' %}
+             <td><a href="{% url 'cowbat:
+  <table id="geneseekr-reqcowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success" role="button">{{ sequencing_run.status }}</a></td>
+          {% elif sequencing_run.status =
+  <table id="geneseekr-req= 'Processing' %}
+             <td><a href="{% url 'cowbat:
+  <table id="geneseekr-reqcowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ sequencing_run.status }}</a></td>
+          {% elif sequencing_run.status =
+  <table id="geneseekr-req= 'Error' %}
              <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-danger" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'UploadError' %}
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>

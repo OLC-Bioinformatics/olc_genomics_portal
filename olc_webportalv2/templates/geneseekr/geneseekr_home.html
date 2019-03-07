@@ -4,9 +4,10 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>GeneSeekr Home</h2>
-  <br>
+<br>
   <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A GeneSeekr Query</a>
+  <br>
+  <h2>GeneSeekr Home</h2>
   <br>
   <table id="geneseekr-request-table" class="table table-hover">
     <thead>
