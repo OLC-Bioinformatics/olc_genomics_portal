@@ -63,7 +63,7 @@
         {% else %}
           <td></td>
         {% endif %}
-        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}} (Edit)</a></td>
+        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}}<span class="fas fa-pen" aria-hidden="true"></span></a></td>
         </form>
      </tr>
      {% endfor %}

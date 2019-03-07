@@ -12,7 +12,7 @@
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ tree_request.status }}</button>
       <br>
       <p>This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs).</p>
-      <p>You don't have to remain on this page - this Tree request will be visible on the <a href="{% url 'geneseekr:tree_home' %}">Tree homepage</a> </p>
+      <p>You don't have to remain on this page - this Tree request will be visible on <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
 
       {% comment %} Email Block {% endcomment %}
       {% if messages %}

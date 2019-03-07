@@ -49,7 +49,7 @@
           {% endif %}
 
         <td>{{ tree_request.created_at }}</td>
-        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} (Edit)</a></td>
+        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <span class="fas fa-pen" aria-hidden="true"></span></a></td>
 
      </tr>
      {% endfor %}

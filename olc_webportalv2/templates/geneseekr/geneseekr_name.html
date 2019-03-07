@@ -13,7 +13,7 @@
   {% csrf_token %}
   Previous Name: {{geneseekr_request.name}} </br></br>
   {{form}} </br></br>
-  <button type='submit' class='btn btn-success'>Save Changes</button>
+  <button class='btn btn-outline-dark'> <a class="bkwd" href="{{request.META.HTTP_REFERER}}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
   </form>
 
 {% endblock %}
