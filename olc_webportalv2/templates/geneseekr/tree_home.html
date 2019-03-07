@@ -5,7 +5,7 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A New Tree</a>
+  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> Create A New Tree</a>
 <br>
 <h2>Tree Home</h2>
  <br>
@@ -43,13 +43,13 @@
           {% endif %}
 
           {% if tree_request.status == 'Complete' %}
-            <td><a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button">Download</a></td>
+            <td><a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
 
         <td>{{ tree_request.created_at }}</td>
-        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <span class="fas fa-pen" aria-hidden="true"></span></a></td>
+        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
 
      </tr>
      {% endfor %}

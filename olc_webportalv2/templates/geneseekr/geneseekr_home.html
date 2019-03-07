@@ -5,7 +5,7 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Create A GeneSeekr Query</a>
+  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> Create A GeneSeekr Query</a>
   <br>
   <h2>GeneSeekr Home</h2>
   <br>
@@ -44,7 +44,7 @@
           {% endif %}
 
           {% if geneseekr_request.status == 'Complete' %}
-            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download</a></td>
+            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
@@ -59,11 +59,11 @@
         <form method="post">
         {% csrf_token %}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
-          <td><button onclick="return confirm('Are you sure you want to delete this item?');" class="btn btn-danger" type="submit" name="delete" value={{geneseekr_request.pk}}> Delete</button></td>
+          <td><button onclick="return confirm('Are you sure you want to delete this item?');" class="btn btn-danger" type="submit" name="delete" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
         {% else %}
           <td></td>
         {% endif %}
-        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}}<span class="fas fa-pen" aria-hidden="true"></span></a></td>
+        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}}<i class="fas fa-pen" aria-hidden="true"></i></a></td>
         </form>
      </tr>
      {% endfor %}
