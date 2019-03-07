@@ -8,6 +8,20 @@ label.col-sm-2.control-label {
   white-space: nowrap;
   overflow: hidden; }
 
+.navbar .btn-outline-light{
+  border:none;
+}
+
+.navbar .btn-outline-light:hover{
+  color: black !important;
+}
+
+.navbar .navbar-nav .nav-link:hover {
+  background-color:white !important;
+  color: black !important;
+}
+  
+
 .navbar {
   background-color: #0e4164; }
   .navbar .navbar-brand {
@@ -20,14 +34,15 @@ label.col-sm-2.control-label {
     color: #fbfcff;
     border-radius: .25rem;
     margin: 0 0.25em; }
-    .navbar .navbar-nav .nav-link:not(.disabled):hover, .navbar .navbar-nav .nav-link:not(.disabled):focus {
+  .navbar .navbar-nav .nav-link:not(.disabled):hover, .navbar .navbar-nav .nav-link:not(.disabled):focus {
       color: #ffffff; }
   .navbar .navbar-nav .nav-item.active .nav-link, .navbar .navbar-nav .nav-item.active .nav-link:hover, .navbar .navbar-nav .nav-item.active .nav-link:focus, .navbar .navbar-nav .nav-item.show .nav-link, .navbar .navbar-nav .nav-item.show .nav-link:hover, .navbar .navbar-nav .nav-item.show .nav-link:focus {
     color: #ffffff;
-    background-color: #193451; }
+  }
   .navbar .navbar-toggle {
     border-color: #193451; }
     .navbar .navbar-toggle:hover, .navbar .navbar-toggle:focus {
+
       background-color: #193451; }
     .navbar .navbar-toggle .navbar-toggler-icon {
       color: #fbfcff; }
@@ -38,7 +53,7 @@ label.col-sm-2.control-label {
     color: #fbfcff; }
     .navbar .navbar-link:hover {
       color: #ffffff; }
-
+      
 @media (max-width: 575px) {
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }

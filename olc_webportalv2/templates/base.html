@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon-16x16.png'%}"/>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
     <title> {% block title %}OLC Webportal{% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
@@ -62,8 +62,9 @@
                   <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree</a>
                 </div>
             </div>
+            </ul>
 
-
+            <ul class="navbar-nav ml-auto">
             {% if request.user.is_authenticated %}
               <li class="nav-item active">
                 {# URL provided by django-allauth/account/urls.py #}
