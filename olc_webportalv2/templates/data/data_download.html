@@ -16,16 +16,16 @@
       <br>
       <p>This page will automatically refresh.</p>
   {% elif data_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ data_request.status }}</button>
+    <button class="btn btn-success btn-block" disabled>{{ data_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
     <p>These files will be available for 7 days.</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button">Download Assemblies</a>
+        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Assemblies</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p>Shareable link: {{ data_request.download_link }}</p>
+        <p><i class="fas fa-share-alt"></i> Shareable link: {{ data_request.download_link }} </p>
     </div>
   {% elif data_request.status == 'Warning' %}
     <button class="btn btn-warning btn-block" disabled>{{ data_request.status }}</button>

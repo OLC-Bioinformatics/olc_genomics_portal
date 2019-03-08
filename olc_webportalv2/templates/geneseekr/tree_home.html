@@ -33,7 +33,7 @@
          {% endif %}
        </td>
           {% if tree_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=tree_request.pk %}" class="btn btn-success" role="button">{{ tree_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=tree_request.pk %}" class="btn btn-success" role="button">{{ tree_request.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif tree_request.status == 'Processing' %}
              <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ tree_request.status }}</a></td>
           {% elif tree_request.status == 'Error' %}

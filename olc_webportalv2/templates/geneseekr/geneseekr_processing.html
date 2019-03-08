@@ -83,20 +83,20 @@
     <button class="btn btn-danger btn-block" disabled>{{ geneseekr_request.status }}</button>
     <br>
   {% elif geneseekr_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ geneseekr_request.status }}</button>
+    <button class="btn btn-success btn-block" disabled>{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
     <p>These results will be available for 7 days.</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download BLAST Report</a>
+        <a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download BLAST Report</a>
         <br><br>
-        <a href="{{ geneseekr_request.download_link_sequence }}" class="btn btn-outline-dark" role="button">Download Sequence-By-Sequence Report</a>
+        <a href="{{ geneseekr_request.download_link_sequence }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Sequence-By-Sequence Report</a>
         <br><br>
-        <a href="{% url 'geneseekr:geneseekr_results' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-primary" role="button">View Results</a>
+        <a href="{% url 'geneseekr:geneseekr_results' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-primary" role="button"><i class="fas fa-eye"></i> View Results</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p>Shareable link: {{ geneseekr_request.download_link }}</p>
+        <p><i class="fas fa-share-alt"></i> Shareable link: {{ geneseekr_request.download_link }}</p>
     </div>
     </div>
   {% endif %}

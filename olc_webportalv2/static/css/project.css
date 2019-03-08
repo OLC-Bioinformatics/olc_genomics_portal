@@ -6,11 +6,8 @@ label.col-sm-2.control-label {
   font-size: 0;
   text-indent: 100%;
   white-space: nowrap;
-  overflow: hidden; }
-  
-  .tog {
-  background:white !important;
-}
+  overflow: hidden; 
+}  
   
 .btn:hover{
  background: rgb(7, 23, 58);
@@ -20,6 +17,10 @@ label.col-sm-2.control-label {
 .btn:hover .bkwd{
   color: white;
  }
+
+.tog:focus {
+  outline-color: white;
+} 
 
 .navbar .btn-outline{
   border:none;
