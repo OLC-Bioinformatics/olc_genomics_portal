@@ -57,13 +57,13 @@
       <form method="Post">
       {% csrf_token %}
       {{form}}
-      <button type="submit">Save Email</button>
+      <button type="submit">Save</button>
       <br>
       <br>
       </form>
       {% endif %}
 
-      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
       <div id="emails-button" class="collapse">
         <br>
         {% if tree_request.emails_array|length == 0 %}
