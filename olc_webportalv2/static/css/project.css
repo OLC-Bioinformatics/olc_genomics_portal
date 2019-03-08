@@ -7,12 +7,34 @@ label.col-sm-2.control-label {
   text-indent: 100%;
   white-space: nowrap;
   overflow: hidden; }
-
-.navbar .btn-outline-light{
-  border:none;
+  
+  .tog {
+  background:white !important;
+}
+  
+.btn:hover{
+ background: rgb(7, 23, 58);
+ color: white;
 }
 
-.navbar .btn-outline-light:hover{
+.btn:hover .bkwd{
+  color: white;
+ }
+
+.navbar .btn-outline{
+  border:none;
+  background-color: transparent;
+  color: #fbfcff;
+}
+.navbar .btn-outline:hover {
+  color: black !important;
+  background-color: #fbfcff !important;
+  color: black !important;
+}
+
+.navbar .btn-outline:focus{
+  color: black !important;
+  background-color: #fbfcff !important;
   color: black !important;
 }
 
@@ -20,7 +42,16 @@ label.col-sm-2.control-label {
   background-color:white !important;
   color: black !important;
 }
-  
+
+.dropdown-item:hover {
+  color: #fbfcff ;
+  background-color: rgb(184, 185, 184);
+}
+
+
+.btn-outline-dark > .bkwd  {
+  color: black;
+}
 
 .navbar {
   background-color: #0e4164; }

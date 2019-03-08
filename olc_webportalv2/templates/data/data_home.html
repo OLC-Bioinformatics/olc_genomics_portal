@@ -4,12 +4,14 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Data Collection</h2>
-  <p>Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data will need to be re-run.</p>
   <br>
-  <a href="{% url 'data:raw_data' %}" class="btn btn-outline-dark btn-block" role="button" aria-pressed="true">Get Raw (FASTQ) Data</a>
-  <a href="{% url 'data:assembled_data' %}" class="btn btn-outline-primary btn-block" role="button" aria-pressed="true">Get Processed (FASTA) Data</a>
+  <a href="{% url 'data:raw_data' %}" class="btn btn-outline-dark btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Get Raw (FASTQ) Data</a>
+  <a href="{% url 'data:assembled_data' %}" class="btn btn-outline-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Get Processed (FASTA) Data</a>
 <br>
+  <h2>Data Collection</h2>
+  <br>
+  <p>Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data will need to be re-run.</p>
+
   <table id="data-request-table" class="table table-hover">
   <thead>
     <tr>

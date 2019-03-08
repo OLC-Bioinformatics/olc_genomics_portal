@@ -4,9 +4,10 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
+  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Upload a New Run</a>
+  <br>
   <h2>Assembly Home</h2>
   <br>
-  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true">Upload a New Run</a>
   <br>
   <table id="assembly-table" class="table table-hover">
       <thead>
@@ -34,7 +35,7 @@
           <td>
           {% if sequencing_run.status == 'Complete' %}
             <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
-       role="button">Download {{ sequencing_run.run_name }}</a>
+       role="button">Download <i class="fas fa-download"></i></a>
           {% else %}
           <button class="btn-dark" disabled>Unavailable</button>
           {% endif %}
