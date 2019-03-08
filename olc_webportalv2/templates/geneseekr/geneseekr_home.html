@@ -34,7 +34,7 @@
          {% endif %}
        </td>
           {% if geneseekr_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success" role="button">{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif geneseekr_request.status == 'Processing' %}
              <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Error' %}
@@ -63,7 +63,7 @@
         {% else %}
           <td></td>
         {% endif %}
-        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}}<i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
         </form>
      </tr>
      {% endfor %}

@@ -57,13 +57,13 @@
       <form method="Post">
       {% csrf_token %}
       {{form}}
-      <button type="submit">Save Email</button>
+      <button type="submit">Save</button>
       <br>
       <br>
       </form>
       {% endif %}
 
-      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
       <div id="emails-button" class="collapse">
         <br>
         {% if tree_request.emails_array|length == 0 %}
@@ -83,7 +83,7 @@
     <button class="btn btn-danger btn-block" disabled>{{ tree_request.status }}</button>
     <br>
   {% elif tree_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ tree_request.status }}</button>
+    <button class="btn btn-success btn-block" disabled>{{ tree_request.status }} <i class="fas fa-check-circle"></i></button>
     <br><br>
     <svg id="tree_display" />
     <br>
@@ -91,11 +91,11 @@
     <p>These results will be available for 7 days.</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button">Download Tree (.nwk format)</a>
+        <a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Tree (.nwk format)</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p>Shareable link: {{ tree_request.download_link }}</p>
+        <p><i class="fas fa-share-alt"></i> Shareable link: {{ tree_request.download_link }}</p>
     </div>
     </div>
   {% endif %}

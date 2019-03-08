@@ -34,7 +34,7 @@
   </div>
   <br>
   <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
-  <p>You don't have to remain on this page - this assembly request will be visible on the <a href="{% url 'cowbat:assembly_home' %}">Assembly homepage.</a> </p>
+  <p>You don't have to remain on this page - this assembly request will be visible on <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
   
   {% comment %} Email Block {% endcomment %}
   {% if messages %}
@@ -78,13 +78,13 @@
   <form method="Post">
   {% csrf_token %}
   {{form}}
-  <button type="submit">Save Email</button>
+  <button type="submit">Save</button>
   <br>
   <br>
   </form>
   {% endif %}
 
-  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button">View Email Recipients</button>
+  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
   <div id="emails-button" class="collapse">
     <br>
     {% if sequencing_run.emails_array|length == 0 %}
@@ -98,7 +98,7 @@
   {% comment %} End Email Block {% endcomment %}
 
 {% elif sequencing_run.status == 'Complete' %}
-  <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }}</button>
+  <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></button>
   <br>
   <div style="text-align: center">
     <h4>Run Progress</h4>
@@ -110,11 +110,11 @@
     <br>
   <div align="center">
     <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
-       role="button" >Download Reports and Assemblies for {{ sequencing_run.run_name }}</a>
+       role="button" ><i class="fas fa-download"></i> Download Reports and Assemblies for {{ sequencing_run.run_name }} </a>
   </div>
   <br>
      <div class="alert alert-primary" role="alert" align="center">
-        <p>Shareable link: {{ sequencing_run.download_link }}</p>
+        <p><i class="fas fa-share-alt"></i> Shareable link: {{ sequencing_run.download_link }}</p>
     </div>
 {% endif %}
 
