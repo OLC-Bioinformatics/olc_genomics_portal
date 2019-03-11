@@ -12,6 +12,8 @@ label.col-sm-2.control-label {
 /* Fixes padding from Bootstrap to be consisstent */
 #dropdownMenuButton {
   padding-top:.68rem !important;
+  padding-bottom:.6rem !important;
+  text-align: center;
 }
 
 /* Hover change on all buttons, regardless of outline */
