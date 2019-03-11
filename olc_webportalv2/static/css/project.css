@@ -8,20 +8,33 @@ label.col-sm-2.control-label {
   white-space: nowrap;
   overflow: hidden; 
 }  
-  
+
+/* Fixes padding from Bootstrap to be consisstent */
+#dropdownMenuButton {
+  padding-top:.68rem !important;
+}
+
+/* Hover change on all buttons, regardless of outline */
 .btn:hover{
  background: rgb(7, 23, 58);
  color: white;
 }
 
+/* Back Button styling for editing Geneseekr/Tree names */
 .btn:hover .bkwd{
   color: white;
- }
+  text-decoration: none;  
+}
+.btn-outline-dark > .bkwd  {
+  color: black;
+}
 
+/* Hamburger outline on select */
 .tog:focus {
   outline-color: white;
 } 
 
+/* Navbar styling */
 .navbar .btn-outline{
   border:none;
   background-color: transparent;
@@ -32,26 +45,20 @@ label.col-sm-2.control-label {
   background-color: #fbfcff !important;
   color: black !important;
 }
-
 .navbar .btn-outline:focus{
   color: black !important;
   background-color: #fbfcff !important;
   color: black !important;
 }
-
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
   color: black !important;
 }
 
+/* Dropdown selection styling */
 .dropdown-item:hover {
   color: #fbfcff ;
   background-color: rgb(184, 185, 184);
-}
-
-
-.btn-outline-dark > .bkwd  {
-  color: black;
 }
 
 .navbar {
@@ -93,7 +100,12 @@ label.col-sm-2.control-label {
       color: #ffffff; }
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
-    background-color: #193451; } }
+    background-color: #193451; } 
+  .dropdown-toggle {
+    padding-left: 0rem;
+    padding-right: 100%;
+    margin-left: 4px;}
+    }
 @media (max-width: 767px) {
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -109,8 +121,14 @@ label.col-sm-2.control-label {
       color: #ffffff; }
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
-    background-color: #193451; } }
-@media (max-width: 1199px) {
+    background-color: #193451; }
+  .dropdown-toggle {
+    padding-left: 0rem;
+    padding-right: 100%;
+    margin-left: 4px;}  
+  
+  }
+  @media (max-width: 1199px) {
   .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
     .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item:hover, .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item:focus {
