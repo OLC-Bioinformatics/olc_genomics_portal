@@ -14,10 +14,10 @@
 
       {% if object.name %}
           <ul class="list-group">
-            <li class="list-group-item"><strong>Username:</strong> {{ object.username }}</li>
-            <li class="list-group-item"><strong>Name:</strong> {{ object.name }}</li>
-            <li class="list-group-item"><strong>Lab:</strong> {{ object.lab }}</li>
-            <li class="list-group-item"><strong>Rank:</strong> {{ object.rank }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-user"></i> Username:</strong> {{ object.username }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-signature"></i> Name:</strong> {{ object.name }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-flask"></i> Lab:</strong> {{ object.lab }}</li>
+            <li class="list-group-item"><strong> Rank:</strong> {{ object.rank }}</li>
           </ul>
           <br>
       {% endif %}
@@ -32,7 +32,7 @@
 <div class="row">
   <div class="col-sm-12">
     <ul class="list-group">
-      <li class="list-group-item"><strong>Email:</strong> {{user.email }}</li>
+      <li class="list-group-item"><strong><i class="far fa-envelope"></i> Email:</strong> {{user.email }}</li>
     </ul>
   </div>
 </div>

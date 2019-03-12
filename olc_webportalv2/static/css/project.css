@@ -92,6 +92,15 @@ label.col-sm-2.control-label {
 margin-left: -5%;
 }
 
+/* select styling on Metadata */
+.form-control{
+  border-color: black;
+  color:black;
+}
+.form-control > .option{
+  color:black;
+}
+
 .navbar {
   background-color: #0e4164; }
   .navbar .navbar-brand {
