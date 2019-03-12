@@ -151,6 +151,12 @@ def cowbat_cleanup(sequencing_run_pk):
             blob_client.get_blob_to_path(container_name=container_name,
                                          blob_name=blob.name,
                                          file_path=os.path.join(reports_folder, os.path.split(blob.name)[1]))
+        # Also get the SampleSheet put into the reports folder.
+        elif fnmatch.fnmatch(blob.name, os.path.join(sequencing_run.run_name, 'SampleSheet.csv')):
+            blob_client.get_blob_to_path(container_name=container_name,
+                                         blob_name=blob.name,
+                                         file_path=os.path.join(reports_folder, os.path.split(blob.name)[1]))
+
 
     # With that done, create a zipfile.
     blob_name = sequencing_run.run_name.lower().replace('_', '-') + '.zip'
