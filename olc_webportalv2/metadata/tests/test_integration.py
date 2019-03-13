@@ -35,7 +35,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_link_text('Explore Data').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
-        self.driver.find_element_by_xpath('//button[text()="Get SEQIDs"]').click()
+        self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
 
         # Make sure we got two results (3 including table header)
         table = self.driver.find_element_by_id('seqid-table')
@@ -54,7 +54,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         # Select low quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail
         self.driver.find_element_by_xpath('//*[@id="id_quality"]/option[3]').click()
         # Make sure we got three results (4 including table header)
-        self.driver.find_element_by_xpath('//button[text()="Get SEQIDs"]').click()
+        self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
         table = self.driver.find_element_by_id('seqid-table')
         table_rows = table.find_elements_by_tag_name('tr')
         self.assertEqual(4, len(table_rows))
@@ -71,7 +71,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
         # Select ref quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail
         self.driver.find_element_by_xpath('//*[@id="id_quality"]/option[2]').click()
-        self.driver.find_element_by_xpath('//button[text()="Get SEQIDs"]').click()
+        self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
         # Make sure we got one result (2 including table header)
         table = self.driver.find_element_by_id('seqid-table')
         table_rows = table.find_elements_by_tag_name('tr')

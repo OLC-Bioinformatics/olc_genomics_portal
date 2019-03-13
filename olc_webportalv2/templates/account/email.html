@@ -7,8 +7,9 @@
 {% block head_title %}{% trans "Account" %}{% endblock %}
 
 {% block inner %}
-    <br>
-<h2>{% trans "E-mail Addresses" %}</h2>
+<h2><a class="back" href="{% url 'users:detail' user.username %}"><i class="fas fa-chevron-left" style="color:black"></i></a></h2>
+<br>
+<h2><i class="fas fa-envelope"></i> {% trans "E-mail Addresses" %}</h2>
 
 {% if user.emailaddress_set.all %}
 <p>{% trans 'The following e-mail addresses are associated with your account:' %}</p>
@@ -37,7 +38,7 @@
 <div class="form-group">
       <button class="secondaryAction btn btn-primary" type="submit" name="action_primary" >{% trans 'Make Primary' %}</button>
       <button class="secondaryAction btn btn-primary" type="submit" name="action_send" >{% trans 'Re-send Verification' %}</button>
-      <button class="primaryAction btn btn-primary" type="submit" name="action_remove" >{% trans 'Remove' %}</button>
+      <button class="primaryAction btn btn-primary" type="submit" name="action_remove" >{% trans 'Remove' %} <i class="fas fa-trash-alt"></i></button>
 </div>
 
 </fieldset>

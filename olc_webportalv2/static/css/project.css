@@ -8,20 +8,33 @@ label.col-sm-2.control-label {
   white-space: nowrap;
   overflow: hidden; 
 }  
-  
+
+/* Navbar Analyze height */
+#dropdownMenuButton {
+  line-height: 1.51rem;
+}
+
+/* Hover change on all buttons, regardless of outline */
 .btn:hover{
  background: rgb(7, 23, 58);
  color: white;
 }
 
+/* Back Button styling for editing Geneseekr/Tree names */
 .btn:hover .bkwd{
   color: white;
- }
+  text-decoration: none;  
+}
+.btn-outline-dark > .bkwd  {
+  color: black;
+}
 
+/* Hamburger outline on select */
 .tog:focus {
   outline-color: white;
 } 
 
+/* Navbar styling */
 .navbar .btn-outline{
   border:none;
   background-color: transparent;
@@ -32,26 +45,58 @@ label.col-sm-2.control-label {
   background-color: #fbfcff !important;
   color: black !important;
 }
-
 .navbar .btn-outline:focus{
   color: black !important;
   background-color: #fbfcff !important;
   color: black !important;
 }
-
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
   color: black !important;
 }
 
+/* Dropdown selection styling */
 .dropdown-item:hover {
   color: #fbfcff ;
   background-color: rgb(184, 185, 184);
 }
 
+/*Home Page Cards*/
+.card-deck { 
+  display: flex;
 
-.btn-outline-dark > .bkwd  {
-  color: black;
+  }
+.card-deck > article {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+  margin: 15px;
+  width: 320px;
+  height: 315px;
+}
+.card-deck > article:hover {
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+}
+
+/* Styling on Profile */
+.list-group{
+  border-radius: 4px;
+  border: 1px solid rgb(167, 165, 165);
+  width: 600px;
+}
+
+/* Back Buttons on Profile pages */
+.back {
+margin-left: -5%;
+}
+
+/* select styling on Metadata */
+.form-control{
+  border-color: black;
+  color:black;
+}
+.form-control > .option{
+  color:black;
 }
 
 .navbar {
@@ -74,7 +119,6 @@ label.col-sm-2.control-label {
   .navbar .navbar-toggle {
     border-color: #193451; }
     .navbar .navbar-toggle:hover, .navbar .navbar-toggle:focus {
-
       background-color: #193451; }
     .navbar .navbar-toggle .navbar-toggler-icon {
       color: #fbfcff; }
@@ -93,7 +137,9 @@ label.col-sm-2.control-label {
       color: #ffffff; }
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
-    background-color: #193451; } }
+    background-color: #193451; } 
+  }
+
 @media (max-width: 767px) {
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -101,16 +147,23 @@ label.col-sm-2.control-label {
       color: #ffffff; }
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
-    background-color: #193451; } }
+    background-color: #193451; }
+    .dropdown-toggle {
+      padding-left: 0px;
+      margin-left: 4px;
+      padding-right:100%
+    }
+  }
 @media (max-width: 991px) {
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
-    .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item:hover, .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item:focus {
-      color: #ffffff; }
+  .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item:hover, .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item:focus {
+    color: #ffffff; }
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
-    background-color: #193451; } }
-@media (max-width: 1199px) {
+    background-color: #193451; }
+  }
+  @media (max-width: 1199px) {
   .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
     .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item:hover, .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item:focus {

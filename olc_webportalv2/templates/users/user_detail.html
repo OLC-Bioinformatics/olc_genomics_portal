@@ -7,32 +7,37 @@
     <br>
 <div class="container">
 
+<h1><i class="fas fa-user-circle"></i> Personal Info</h1>
+<br>
   <div class="row">
     <div class="col-sm-12">
 
       {% if object.name %}
           <ul class="list-group">
-            <li class="list-group-item active"><strong>Username:</strong> {{ object.username }}</li>
-            <li class="list-group-item"><strong>Name:</strong> {{ object.name }}</li>
-            <li class="list-group-item"><strong>Lab:</strong> {{ object.lab }}</li>
-            <li class="list-group-item"><strong>Rank:</strong> {{ object.rank }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-user"></i> Username:</strong> {{ object.username }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-signature"></i> Name:</strong> {{ object.name }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-flask"></i> Lab:</strong> {{ object.lab }}</li>
+            <li class="list-group-item"><strong><i class="fas fa-layer-group"></i> Rank:</strong> {{ object.rank }}</li>
           </ul>
           <br>
       {% endif %}
     </div>
   </div>
+  <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">Update Info <i class="fas fa-angle-right"></i></a>
+  <br>
+  <br>
 
 {% if object == request.user %}
 <!-- Action buttons -->
 <div class="row">
-
   <div class="col-sm-12">
-    <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">Update Info</a>
-    <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">Update Email</a>
-    <!-- Your Stuff: Custom user template urls -->
+    <ul class="list-group">
+      <li class="list-group-item"><strong><i class="far fa-envelope"></i> Email:</strong> {{user.email }}</li>
+    </ul>
   </div>
-
 </div>
+<br> 
+<a class="btn btn-primary" href="{% url 'account_email' %}" role="button">Update Email <i class="fas fa-angle-right"></i></a>
 <!-- End Action buttons -->
 {% endif %}
 

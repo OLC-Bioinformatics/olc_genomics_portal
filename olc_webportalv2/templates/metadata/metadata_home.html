@@ -2,7 +2,7 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
-{% load i18n widget_tweaks %}
+{% load widget_tweaks %}
 {% block content %}
   <h2>Metadata</h2>
   <br>
@@ -14,9 +14,9 @@
    {% endif %}
     <p>Enter your genus of interest: {{ form.genus }}</p>
     <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
-    <p>Choose your desired assembly quality: {{ form.quality }}</p>
+    <p>Choose your desired assembly quality: {{ form.quality|add_class:"form-control" }}</p>
   {% csrf_token %}
     <br>
-  <button type="submit" class="btn btn-primary btn">Get SEQIDs</button>
+  <button type="submit" class="btn btn-primary btn">Get SeqIDs</button>
   </form>
 {% endblock %}

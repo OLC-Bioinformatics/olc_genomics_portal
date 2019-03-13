@@ -17,13 +17,10 @@
 
     <!-- Third-party CSS libraries go here -->
     <link rel="stylesheet" href="{% static 'django_tables2/themes/paleblue/css/screen.css' %}" />
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-    
-
+    <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
     {% endblock %}
 
   </head>
-
   <body>
 
     <div class="m-b-1" id="main-navbar">
@@ -32,10 +29,9 @@
         <i class="fas fa-bars" style="color:white"></i>
         </button>
 
-        <img class="img-responsive" style="width: 3%" src="{% static 'images/Leaf.svg' %}">
 
         <a class="navbar-brand" href="{% url 'home' %}">
-            <strong>OLC Webportal <i class="fas fa-dna"></i></strong>
+                    <img class="img-responsive" style="width: 40px" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal <i class="fas fa-dna"></i></strong>
         </a>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -68,7 +64,7 @@
             {% if request.user.is_authenticated %}
               <li class="nav-item active">
                 {# URL provided by django-allauth/account/urls.py #}
-                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "My Profile" %}</a>
+                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "Profile" %} <i class="fas fa-user-circle"></i></a>
               </li>
 
               <li class="nav-item active">
@@ -84,7 +80,7 @@
 
               <li class="nav-item">
                 {# URL provided by django-allauth/account/urls.py #}
-                <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %}</a>
+                <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %} <i class="fas fa-user-plus"></i></a>
               </li>
 
             {% endif %}
@@ -106,61 +102,63 @@
       {% endif %}
 
       {% block content %}
-        <div class="alert alert-warning" role="alert" align="center">
+        <div class="alert alert-info" role="alert" align="center">
           <p>Please note that this portal is in early development. Bugs may be present. If you run into any issues,
             email andrew.low@canada.ca and we'll get them sorted out as soon as possible.</p>
         </div>
         <br>
-                <div class="jumbotron">
-                    <p class="lead h6">
-                        <span class="h2">Welcome to the <b>OLC Webportal</b></span><br>
-                      A variety of tools are available. Click on a tool to see its description.
-                    </p>
-                    <br>
-                  <button type="button" class="btn btn-primary btn-lg" data-toggle="collapse" data-target="#sendsketch-button">Explore Data</button>
-                  <div id="sendsketch-button" class="collapse">
-                    <br>
-                    <div class="container">
-                      <p>This is used to figure out what SeqIDs you want to use for analysis. Search for your genus of
-                       interest at differing levels of assembly quality and get back a list of SeqIDs. More search options
-                      coming soon - email andrew.low@canada.ca with any requests.</p>
-                    </div>
-                  </div>
-                  <br><br>
-
-                    <button type="button" class="btn btn-success btn-lg" data-toggle="collapse" data-target="#genesippr-button">Get Data</button>
-                        <div id="genesippr-button" class="collapse">
-                            <br>
-                            <div class="container">
-                                <p>Used to get copies of files stored at OLC for you to analyze locally. Enter the SeqIDs
-                                 you want either assemblies (FASTA) or raw data (FASTQ) for, and a link to those files
-                                 will be created. A shareable link for distribution to collaborators is also created.
-                                 Files created with this tool are available for seven (7) days.</p>
-                            </div>
-                        </div>
-
-                    <br><br>
-                    <button type="button" class="btn btn-info btn-lg" data-toggle="collapse" data-target="#confindr-button">Assembly</button>
-                    <div id="confindr-button" class="collapse">
-                        <br>
-                        <div class="container">
-                          <p>Use this tool to submit your raw sequence data for assembly. You can also use this to get reports
-                          and assemblies from previous runs.</p>
-                        </div>
-                    </div>
-                    <br><br>
-                    <button type="button" class="btn btn-secondary btn-lg" data-toggle="collapse" data-target="#genomeqaml-button">Find Genes</button>
-                    <div id="genomeqaml-button" class="collapse">
-                        <br>
-                        <div class="container">
-                          <p>Uses OLC's GeneSeekr tool to search for any gene of interest in our collection. You specify which
-                          sequences you want to search using SeqIDs, and also provide a gene (or genes) you want to search
-                          for in FASTA format.</p>
-                        </div>
-                    </div>
-                </div>
+        <p class="lead h6">
+            <span class="h1"><b>Welcome to the OLC Webportal</b></span><br>
+        </p>
+        <br>
+        <div class="card-deck d-flex">
+          
+          <article>
+            <div class="text">
+              <h3>Explore Data</h3>
+              <p id="article1">Identify SeqIDs for analysis. Search for your genus of interest at differing levels of assembly quality and receive list of SeqIDs.<br> <small>More search options coming soon - email andrew.low@canada.ca with any requests.</small></p>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
+              </div>
+          </article>
+          
+          <article >
+            <div class="text">
+              <h3>Get Data</h3>
+              <p id="article2">Retrive copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA) or raw data (FASTQ), a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
+              <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">Get Data</a>
+            </div>
+          </article>
+          <article>
+            <div class="text">
+              <h3>Assembly</h3>
+              <p id="article3" >For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs.</p>
+              <br>
+              <br>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'cowbat:assembly_home' %}">Assembly</a>
+            </div>
+          </article>
+          <article>
+            <div class="text">
+              <h3>Find Genes</h3>
+              <p id="article4" >Implements OLC's GeneSeekr tool to search for any gene of interest in our collection. Specify which sequences you want to search using SeqIDs, and also provide a gene (or genes) you want to search for in FASTA format.</p>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes</a>
+            </div>
+          </article>
+          <article>
+            <div class="text">
+              <h3>Create a Tree</h3>
+              <p id="article5">everything is awesome when you're part of tree</p>
+              <br>
+              <br>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree</a>
+            </div>
+          </article>
         </div>
-
+      
       {% endblock content %}
 
     </div>
@@ -181,6 +179,8 @@
 
       <!-- Project specific Javascript goes in this file -->
       <script src="{% static 'js/project.js' %}"></script>
+      <script src="{% static 'js/js/all.js' %}"></script>
+
 
     {% endblock javascript %}
   </body>
