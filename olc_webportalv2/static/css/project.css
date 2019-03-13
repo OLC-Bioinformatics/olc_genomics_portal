@@ -9,11 +9,9 @@ label.col-sm-2.control-label {
   overflow: hidden; 
 }  
 
-/* Fixes padding from Bootstrap to be consisstent */
+/* Navbar Analyze height */
 #dropdownMenuButton {
-  padding-top:.68rem !important;
-  padding-bottom:.61rem !important;
-  line-height: 1rem;
+  line-height: 1.51rem;
 }
 
 /* Hover change on all buttons, regardless of outline */
@@ -140,8 +138,8 @@ margin-left: -5%;
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
     background-color: #193451; } 
-  .dropdown-toggle {
   }
+
 @media (max-width: 767px) {
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -150,10 +148,12 @@ margin-left: -5%;
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
     background-color: #193451; }
-  .dropdown-toggle {
-
+    .dropdown-toggle {
+      padding-left: 0px;
+      margin-left: 4px;
+      padding-right:100%
     }
-  
+  }
 @media (max-width: 991px) {
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -162,10 +162,7 @@ margin-left: -5%;
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
     background-color: #193451; }
-  .dropdown-toggle {
-    }
   }
-
   @media (max-width: 1199px) {
   .navbar-expend-xl .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -191,10 +188,6 @@ margin-left: -5%;
   background-color: #f2dede;
   border-color: #eed3d7;
   color: #b94a48; }
-  
-.dropdown-toggle {
-  padding-right:100%
-  }
 
 [hidden][style="display: block;"] {
   display: block !important; }
