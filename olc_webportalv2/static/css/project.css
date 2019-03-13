@@ -12,8 +12,8 @@ label.col-sm-2.control-label {
 /* Fixes padding from Bootstrap to be consisstent */
 #dropdownMenuButton {
   padding-top:.68rem !important;
-  padding-bottom:.6rem !important;
-  text-align: center;
+  padding-bottom:.61rem !important;
+  line-height: 1rem;
 }
 
 /* Hover change on all buttons, regardless of outline */
@@ -87,7 +87,7 @@ label.col-sm-2.control-label {
   width: 600px;
 }
 
-/* Back Buttons on Profile pgs */
+/* Back Buttons on Profile pages */
 .back {
 margin-left: -5%;
 }
@@ -141,10 +141,7 @@ margin-left: -5%;
     color: #ffffff;
     background-color: #193451; } 
   .dropdown-toggle {
-    padding-left: 0rem;
-    margin-left: 4px;
-    padding-right: 100%;}
-    }
+  }
 @media (max-width: 767px) {
   .navbar-expend-md .navbar-nav .show .dropdown-menu .dropdown-item {
     color: #fbfcff; }
@@ -154,9 +151,7 @@ margin-left: -5%;
     color: #ffffff;
     background-color: #193451; }
   .dropdown-toggle {
-    padding-left: 0rem;
-    margin-left: 4px;
-    padding-right: 100%;}
+
     }
   
 @media (max-width: 991px) {
@@ -168,8 +163,6 @@ margin-left: -5%;
     color: #ffffff;
     background-color: #193451; }
   .dropdown-toggle {
-    padding-left: 0rem;
-    margin-left: 4px;
     }
   }
 
@@ -200,7 +193,7 @@ margin-left: -5%;
   color: #b94a48; }
   
 .dropdown-toggle {
-  margin-left: 4px;
+  padding-right:100%
   }
 
 [hidden][style="display: block;"] {
