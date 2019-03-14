@@ -173,6 +173,7 @@
 .dropzone, .dropzone * {
   box-sizing: border-box; }
 
+  /* outline and background of dz window */
 .dropzone {
   min-height: 150px;
   border: 2px dashed rgba(0, 0, 0, 0.3);
@@ -194,15 +195,16 @@
   .dropzone .dz-message {
     text-align: center;
     margin: 2em 0; }
+    /*size of preview changed by zoom */
   .dropzone .dz-preview {
-    zoom:65% !important;
+    zoom:65% !important; 
     position: relative;
     display: inline-block;
     vertical-align: top;
     margin: 16px;
     min-height: 100px;
   }
-
+/* upload_metadata input */
   #id_run_name {
     border: 1px solid rgb(104, 103, 103);
     border-radius: 0.25em;
@@ -211,6 +213,7 @@
       z-index: 1000; }
       .dropzone .dz-preview:hover .dz-details {
         opacity: 1; }
+        /* preview image background colour */
     .dropzone .dz-preview.dz-file-preview .dz-image {
       border-radius: 20px;
       background: rgb(255, 255, 255);
