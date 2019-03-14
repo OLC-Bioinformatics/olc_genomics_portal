@@ -175,8 +175,9 @@
 
 .dropzone {
   min-height: 150px;
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  background: white;
+  border: 2px dashed rgba(0, 0, 0, 0.3);
+  background:rgb(245, 245, 245);
+  border-radius: 5px;
   padding: 20px 20px; }
   .dropzone.dz-clickable {
     cursor: pointer; }
@@ -194,19 +195,26 @@
     text-align: center;
     margin: 2em 0; }
   .dropzone .dz-preview {
+    zoom:65% !important;
     position: relative;
     display: inline-block;
     vertical-align: top;
     margin: 16px;
-    min-height: 100px; }
+    min-height: 100px;
+  }
+
+  #id_run_name {
+    border: 1px solid rgb(104, 103, 103);
+    border-radius: 0.25em;
+  }
     .dropzone .dz-preview:hover {
       z-index: 1000; }
       .dropzone .dz-preview:hover .dz-details {
         opacity: 1; }
     .dropzone .dz-preview.dz-file-preview .dz-image {
       border-radius: 20px;
-      background: #999;
-      background: linear-gradient(to bottom, #eee, #ddd); }
+      background: rgb(255, 255, 255);
+      }
     .dropzone .dz-preview.dz-file-preview .dz-details {
       opacity: 1; }
     .dropzone .dz-preview.dz-image-preview {
@@ -244,17 +252,18 @@
         margin-bottom: 1em;
         font-size: 16px; }
       .dropzone .dz-preview .dz-details .dz-filename {
+        padding-top:25px;
+        align-items: center;
         white-space: nowrap; }
         .dropzone .dz-preview .dz-details .dz-filename:hover span {
-          border: 1px solid rgba(200, 200, 200, 0.8);
-          background-color: rgba(255, 255, 255, 0.8); }
+          background-color:transparent; }
         .dropzone .dz-preview .dz-details .dz-filename:not(:hover) {
           overflow: hidden;
           text-overflow: ellipsis; }
           .dropzone .dz-preview .dz-details .dz-filename:not(:hover) span {
             border: 1px solid transparent; }
       .dropzone .dz-preview .dz-details .dz-filename span, .dropzone .dz-preview .dz-details .dz-size span {
-        background-color: rgba(255, 255, 255, 0.4);
+        background-color:transparent;
         padding: 0 0.4em;
         border-radius: 3px; }
     .dropzone .dz-preview:hover .dz-image img {
