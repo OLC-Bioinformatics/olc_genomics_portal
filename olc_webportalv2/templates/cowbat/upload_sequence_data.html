@@ -9,21 +9,27 @@
   <div id="upload-div" class="center" style="width: 600px;"></div>
   <br>
   <form action={% url 'cowbat:upload_sequence_data'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+   <div class="dz-message needsclick">
+        Drop files to upload or click here<br>
+        <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
   {% csrf_token %}
   </form>
   <br>
-  <button id="submit" class="btn btn-success" disabled>Upload Sequence Files and Begin Assembly</button>
   <button id="validate" class="btn btn-primary">Validate Sequence Files</button>
   <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#files-required-button">Required Files</button>
+  <br>
+  <br>
+  <button id="submit" class="btn btn-lg btn-success" disabled>Upload Sequence Files and Begin Assembly</button>
   <div id="files-required-button" class="collapse show">
     <br>
     <div class="container">
-      <table id="files-required-table" class="table table-hover compact">
+      <table id="files-required-table" class="table table-striped small compact">
         <thead>
         <tr>
-          <td>File</td>
-          <td style="text-align:center">Forward Reads</td>
-          <td style="text-align:center">Reverse Reads</td>
+          <td> <strong>File</td> </strong>
+          <td style="text-align:center"> <strong>Forward Reads </strong></td>
+          <td style="text-align:center"> <strong>Reverse Reads </strong></td>
         </tr>
         </thead>
         <tbody>

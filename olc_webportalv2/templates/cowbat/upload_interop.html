@@ -6,53 +6,55 @@
 {% block content %}
   <h2>Step 2 of 3: Upload InterOp Files for Run {{ sequencing_run.run_name }}</h2>
   <br>
-  <p>The <strong>ErrorMetricsOut.bin</strong> file is not required, but is recommended. All other files are
-  required.</p>
-  <table id="files-required-table" class="table table-hover compact">
+  <form action={% url 'cowbat:upload_interop'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+   <div class="dz-message needsclick">
+        Drop files to upload or click here<br>
+        <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+  {% csrf_token %}
+  </form>
+  <table id="files-required-table" class="table table-striped compact small">
     <thead>
-        <tr>
-          <td>File</td>
-          <td style="text-align:center">Status</td>
-        <tr></tr>
+        <tr style="font-size: 1.25rem">
+          <td><strong>File</strong</td>
+          <td style="text-align:center"><strong>Status<strong></td>
+          </tr>
     </thead>
     <tbody>
         <tr>
-          <td>ControlMetricsOut.bin</td>
+          <td>ControlMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>CorrectedIntMetricsOut.bin</td>
+          <td>CorrectedIntMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>ErrorMetricsOut.bin</td>
+          <td>ErrorMetricsOut.bin  <strong>Not required, but recommended.</strong></td>
           <td class="table-warning" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>ExtractionMetricsOut.bin</td>
+          <td>ExtractionMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>IndexMetricsOut.bin</td>
+          <td>IndexMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>QMetricsOut.bin</td>
+          <td>QMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
         <tr>
-          <td>TileMetricsOut.bin</td>
+          <td>TileMetricsOut.bin  <i class="fas fa-asterisk fa-xs" style="color:red"></i></td>
           <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
         </tr>
     </tbody>
   </table>
   <br>
-  <form action={% url 'cowbat:upload_interop'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
-  {% csrf_token %}
-  </form>
-  <br>
-  <button id="submit" class="btn btn-success" disabled>Upload InterOp Files</button>
-  <button id="validate" class="btn btn-primary">Validate InterOp Files</button>
+
+  <button id="validate" class="btn btn-primary">Validate InterOp Files</button><br><br>
+  <button id="submit" class="btn btn-lg btn-success" disabled>Upload InterOp Files</button>
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
   <script src={% static 'js/dropzone.js' %}></script>
