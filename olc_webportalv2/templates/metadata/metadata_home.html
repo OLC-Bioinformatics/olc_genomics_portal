@@ -2,6 +2,7 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
+{% load crispy_forms_tags %}
 {% load widget_tweaks %}
 {% block content %}
   <h2>Metadata</h2>
@@ -12,7 +13,7 @@
      {{ form.non_field_errors|escape }}
     </div>
    {% endif %}
-    <p>Enter your genus of interest: {{ form.genus }}</p>
+    <p>Enter your genus of interest: {{ form.genus|as_crispy_field }}</p>
     <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
     <p>Choose your desired assembly quality: {{ form.quality|add_class:"form-control" }}</p>
   {% csrf_token %}

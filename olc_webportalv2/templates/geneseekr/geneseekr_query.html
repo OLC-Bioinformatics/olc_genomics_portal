@@ -2,6 +2,7 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
+{% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
   <h2>GeneSeekr Query</h2>
@@ -13,9 +14,8 @@
    {% endif %}
     {% csrf_token %}
     <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
-    {{formName}} </br>
-    {{ form.query_sequence }}
-    <br>
+    {{formName|crispy}}
+    {{ form.query_sequence|as_crispy_field }}
     {{ form.query_file }}
     <br>
     <br>
