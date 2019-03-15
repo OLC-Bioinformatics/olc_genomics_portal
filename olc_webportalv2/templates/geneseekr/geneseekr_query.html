@@ -21,7 +21,7 @@
     <br>
   <div id="button-group">
       <div class="accordion-group">
-      <button type="button" class="btn btn-secondary btn-block" data-parent='#button-group' data-toggle="collapse" data-target="#genus-button">Choose Genus to Search</button>
+      <button type="button" class="btn btn-secondary" data-parent='#button-group' data-toggle="collapse" data-target="#genus-button">Choose Genus to Search</button>
         <div id="genus-button" class="collapse show">
           <br>
           <p>Enter the genus you want to search. If you want to search all sequences, leave this blank.</p>
@@ -29,7 +29,9 @@
           <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
         </div>
       <br>
-      <button type="button" class="btn btn-secondary btn-block" data-parent='#button-group' data-toggle="collapse" data-target="#seqids-button">Choose SeqIDs to Search</button>
+      <br>
+      <button type="button" class="btn btn-secondary" data-parent='#button-group' data-toggle="collapse" data-target="#seqids-button">Choose SeqIDs to Search</button>
+      <br>
       <br>
           <div id="seqids-button" class="collapse">
             <p>Search the following SeqIDs:</p>
@@ -39,6 +41,6 @@
       <br>
       </div>
   </div>
-  <button type="submit" class="btn btn-primary btn-block">Run Query</button>
+  <button type="submit" class="btn btn-primary btn-lg">Run Query</button>
   </form>
 {% endblock %}
