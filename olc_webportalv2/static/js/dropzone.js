@@ -247,12 +247,12 @@ var Dropzone = function (_Emitter) {
         /**
          * If `null`, the ratio of the image will be used to calculate it.
          */
-        thumbnailWidth: 120,
+        thumbnailWidth: null,
 
         /**
          * The same as `thumbnailWidth`. If both are null, images will not be resized.
          */
-        thumbnailHeight: 120,
+        thumbnailHeight: null,
 
         /**
          * How the images should be scaled down in case both, `thumbnailWidth` and `thumbnailHeight` are provided.
@@ -419,7 +419,7 @@ var Dropzone = function (_Emitter) {
         /**
          * The text used before any files are dropped.
          */
-        dictDefaultMessage: "Drop files to upload",
+        dictDefaultMessage: "Drop files to upload or click",
 
         /**
          * The text that replaces the default message text it the browser is not supported.
@@ -468,7 +468,7 @@ var Dropzone = function (_Emitter) {
         /**
          * If `addRemoveLinks` is true, the text to be used to remove a file.
          */
-        dictRemoveFile: "Remove file",
+        dictRemoveFile: '<i class="fas fa-minus-circle"></i>  Remove',
 
         /**
          * If this is not null, then the user will be prompted before removing a file.
@@ -495,7 +495,7 @@ var Dropzone = function (_Emitter) {
 
         /**
          * Can be an **object** of additional parameters to transfer to the server, **or** a `Function`
-         * that gets invoked with the `files`, `xhr` and, if it's a chunked upload, `chunk` arguments. In case
+         * that gets invoked with the `files`, `xhr` 120pxand, if it's a chunked upload, `chunk` arguments. In case
          * of a function, this needs to return a map.
          *
          * The default implementation does nothing for normal uploads, but adds relevant information for

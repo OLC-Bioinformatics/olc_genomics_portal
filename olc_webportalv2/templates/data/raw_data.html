@@ -2,15 +2,16 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
+{% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
   <h2>Raw Data Request</h2>
   <p>Enter the SEQIDs you want to retrieve FASTQ files for below, one per line.</p>
   <br>
   <form action='' method="post">
-    {{ form }}
+    {{ form|crispy }}
   {% csrf_token %}
     <br>
-  <button type="submit" class="btn btn-primary btn">Get Files</button>
+  <button type="submit" class="btn btn-primary btn-lg">Get Files</button>
   </form>
 {% endblock %}
