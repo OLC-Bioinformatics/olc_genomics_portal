@@ -59,7 +59,7 @@
         <form method="post">
         {% csrf_token %}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
-          <td><button onclick="return confirm('Are you sure you want to delete this item?');" class="btn btn-danger" type="submit" name="delete" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td><button class="btn btn-danger" type="submit" id="btn-submit" name="delete" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
         {% else %}
           <td></td>
         {% endif %}
@@ -84,5 +84,34 @@
         {% endif %}
       {% endfor %}
     }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
+
+$("#btn-submit").click(function(e) {
+      var form = $(this).closest('form');
+      event.preventDefault();
+      swal({
+        title: "Are you sure?",
+        icon: "warning",
+        buttons: {
+          cancel: "Cancel",
+          confirm: "Delete",
+        },
+        dangerMode: true,
+      },
+       function() {
+    $.ajax({
+        type: "post",
+        url: "http://0.0.0.0/geneseekr/geneseekr_home/",
+        data: {delete:this.value} ,
+        success: function(data) {}
+      })
+      .done(function(data) {
+        swal("Deleted!", "Data successfully Deleted!", "success");
+      })
+      .error(function(data) {
+        swal("Oops", "We couldn't connect to the server!", "error");
+      });
+  }
+);
+});
   </script>
 {% endblock %}
