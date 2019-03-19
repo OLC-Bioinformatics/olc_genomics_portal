@@ -86,32 +86,28 @@
     }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
 
 $("#btn-submit").click(function(e) {
-      var form = $(this).closest('form');
-      event.preventDefault();
-      swal({
-        title: "Are you sure?",
-        icon: "warning",
-        buttons: {
-          cancel: "Cancel",
-          confirm: "Delete",
-        },
-        dangerMode: true,
-      },
-       function() {
-    $.ajax({
-        type: "post",
-        url: "http://0.0.0.0/geneseekr/geneseekr_home/",
-        data: {delete:this.value} ,
-        success: function(data) {}
+  e.preventDefault();
+  var csrftoken = Cookies.get('csrftoken');
+    swal({
+    title: "Are you sure?",
+    icon: "warning",
+    buttons: { cancel: "Cancel", confirm: "Delete"},
+    dangerMode: true
+    })
+    .then((willDelete) => {
+    if (willDelete) {
+      swal("Delete Sussessful", { icon: "success",})
+      .then(function() {
+        $.ajax({
+          type:"POST",
+          data: {csrfmiddlewaretoken:csrftoken,"delete":"hi"},
+          success: function(data) {swal("Deleted!", "Data successfully Deleted!", "success");}
+        })
       })
-      .done(function(data) {
-        swal("Deleted!", "Data successfully Deleted!", "success");
-      })
-      .error(function(data) {
-        swal("Oops", "We couldn't connect to the server!", "error");
-      });
-  }
-);
+    } else {
+      swal("Delete Cancelled",{ icon: "error"});
+    }
+});
 });
   </script>
 {% endblock %}
