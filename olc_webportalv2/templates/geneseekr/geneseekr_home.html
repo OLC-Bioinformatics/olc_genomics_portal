@@ -96,18 +96,24 @@ $("#btn-submit").click(function(e) {
     })
     .then((willDelete) => {
     if (willDelete) {
-      swal("Delete Sussessful", { icon: "success",})
-      .then(function() {
         $.ajax({
           type:"POST",
-          data: {csrfmiddlewaretoken:csrftoken,"delete":"hi"},
-          success: function(data) {swal("Deleted!", "Data successfully Deleted!", "success");}
-        })
-      })
-    } else {
+          data: {csrfmiddlewaretoken:csrftoken,"delete":this.value},
+          success: function(data) {
+            swal({
+            button: false,
+            title:"Deleted!", 
+            text:"Data successfully Deleted!", 
+            icon:"success",
+            timer:3000});
+          }
+        });}
+     else {
       swal("Delete Cancelled",{ icon: "error"});
     }
 });
 });
   </script>
 {% endblock %}
+
+after ajax have value with no buttons
