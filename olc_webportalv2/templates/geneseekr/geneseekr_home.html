@@ -56,7 +56,7 @@
 {#        {% else %}#}
 {#          <td><button class="btn btn-dark" disabled>Other</button></td>#}
 {#        {% endif %}#}
-        <form id="form"method="post">
+        <form id="form{{geneseekr_request.pk}}"method="post">
         {% csrf_token %}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
           <td><button class="btn btn-danger" type="submit" id="btn-submit" name="delete" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
@@ -86,30 +86,32 @@
     }, 15000) // This should refresh the page every 60 seconds as long as run status is processing
 
     $(".btn-danger").click(function(e) {
-      e.preventDefault();
-      swal.fire({
-      title: "Are you sure?",
-      type: "warning",
-      buttons: { cancel: "Cancel", confirm: "Delete"},
-      dangerMode: true
-      })
-      ,function(willDelete) {
-        if (willDelete) {
-          swal.fire({
-                button: false,
-                title:"Deleted!", 
-                text:"Data successfully Deleted!", 
-                type:"success",
-                timer:3000});
-          this.closest("form").submit();
-        }
-        else {
-        swal.fire({
-              button: false,
-              text:"Delete Cancelled",
-              type: "error"});
+     e.preventDefault();
+     var form = document.getElementById("form"+this.value);
+     Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true
+     }).then((result) => {
+      if (result.value==true) {
+       Swal.fire(
+        'Deleted!',
+        'Your file has been deleted.',
+        'success'
+       )
+       
       }
-    };
+      else {
+        Swal.fire(
+      'Cancelled!',
+      'Your file is safe.',
+      'error')
+      }
+     })
     });
   </script>
 {% endblock %}
