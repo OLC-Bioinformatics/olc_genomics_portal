@@ -105,15 +105,28 @@ $("#btn-submit").click(function(e) {
             title:"Deleted!", 
             text:"Data successfully Deleted!", 
             icon:"success",
-            timer:3000});
+            timer:3000})
+            .then((value) =>{
+            if (value == null)
+            {
+              location.reload();
+            }
+          })
           }
-        });}
+        })}
      else {
-      swal("Delete Cancelled",{ icon: "error"});
+      swal({
+            button: false,
+            text:"Delete Cancelled",
+             icon: "error"})
+      .then((value) =>{
+            if (value == null)
+            {
+              location.reload();
+            }
+          });
     }
 });
 });
   </script>
 {% endblock %}
-
-after ajax have value with no buttons
