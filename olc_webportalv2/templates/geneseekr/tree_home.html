@@ -16,7 +16,7 @@
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
-       <th>       </th>
+       <th data-orderable="false">       </th>
        <th>Name</th>
 {#       <th>Type</th>#}
     </tr>
@@ -25,7 +25,7 @@
   <tbody>
      {% for tree_request in tree_requests %}
      <tr>
-       <td>
+       <td style="text-indent: 7px">
           {% for seqid in tree_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
@@ -49,18 +49,18 @@
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
       
-          <td>{{ tree_request.created_at }}</td>
+          <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
           <form id="form{{tree_request.pk}}"method="post">
         {% csrf_token %}
         {% if tree_request.status != 'Processing' and 'Unprocessed' %}
-          <td><button class="btn btn-danger" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' name="delete" value={{tree_request.pk}}>
         {% else %}
           <td></td>
         {% endif %}
 
-        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
 
      </tr>
      {% endfor %}
