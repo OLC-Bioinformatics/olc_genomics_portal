@@ -177,6 +177,13 @@ def tree_request(request):
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     tree_requests = ParsnpTree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+
+    if request.method == "POST":
+        if request.POST.get('delete'): 
+            query = ParsnpTree.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+        
+
     return render(request,
                   'geneseekr/tree_home.html',
                   {
