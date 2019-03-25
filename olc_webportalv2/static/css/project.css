@@ -43,12 +43,10 @@ label.col-sm-2.control-label {
 .navbar .btn-outline:hover {
   color: black !important;
   background-color: #fbfcff !important;
-  color: black !important;
 }
 .navbar .btn-outline:focus{
   color: black !important;
   background-color: #fbfcff !important;
-  color: black !important;
 }
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
@@ -99,6 +97,11 @@ margin-left: -5%;
   color:black;
 }
 
+
+/*  */
+.card-header{
+background-color:blue;
+}
 .navbar {
   background-color: #0e4164; }
   .navbar .navbar-brand {
