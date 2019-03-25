@@ -5,42 +5,55 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>GeneSeekr Query</h2>
-  <form action='' enctype="multipart/form-data" method="post">
-   {% if form.errors %}
-     <div class="alert alert-danger" role="alert" align="center">
-     {{ form.non_field_errors|escape }}
-    </div>
-   {% endif %}
-    {% csrf_token %}
-    <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
-    {{formName|crispy}}
-    {{ form.query_sequence|as_crispy_field }}
-    {{ form.query_file }}
-    <br>
-    <br>
-  <div id="button-group">
-      <div class="accordion-group">
-      <button type="button" class="btn btn-secondary" data-parent='#button-group' data-toggle="collapse" data-target="#genus-button">Choose Genus to Search</button>
-        <div id="genus-button" class="collapse show">
-          <br>
+<h2>GeneSeekr Query</h2>
+<form action='' enctype="multipart/form-data" method="post">
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+    {{ form.non_field_errors|escape }}
+  </div>
+  {% endif %}
+  {% csrf_token %}
+  <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
+  {{formName|crispy}}
+  {{ form.query_sequence|as_crispy_field }}
+  {{ form.query_file }}
+  <br>
+  <br>
+  <div class="accordion" id="accordionExample">
+    <div class="card z-depth-0 bordered">
+      <div class="card-header" id="headingOne" style="padding: 0px">
+        <button class="btn btn-block btn-light" type="button" data-toggle="collapse"
+          data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+          Choose Genus to Search
+        </button>
+      </div>
+      <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+        <div class="card-body">
           <p>Enter the genus you want to search. If you want to search all sequences, leave this blank.</p>
           <p>Enter your genus of interest: {{ form.genus }}</p>
           <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
         </div>
-      <br>
-      <br>
-      <button type="button" class="btn btn-secondary" data-parent='#button-group' data-toggle="collapse" data-target="#seqids-button">Choose SeqIDs to Search</button>
-      <br>
-      <br>
-          <div id="seqids-button" class="collapse">
-            <p>Search the following SeqIDs:</p>
-            {{ form.seqids }}
-            <br>
-          </div>
-      <br>
       </div>
+    </div>
+    <br>
+    <div class="card z-depth-0 bordered">
+      <div class="card-header" id="headingTwo" style="padding:0;">
+        <button class="btn collapsed btn-block btn-secondary" type="button"
+          data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+          Choose SeqIDs to Search
+        </button>
+      </div>
+      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+        <div class="card-body">
+          <p>Search the following SeqIDs:</p>
+          {{ form.seqids }}
+          <br>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <br>
   <button type="submit" class="btn btn-primary btn-lg">Run Query</button>
-  </form>
+</form>
 {% endblock %}
