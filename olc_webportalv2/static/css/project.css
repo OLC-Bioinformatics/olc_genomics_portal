@@ -11,13 +11,13 @@ label.col-sm-2.control-label {
 
 /* Navbar Analyze height */
 #dropdownMenuButton {
-  line-height: 1.51rem;
+  line-height: 1.80rem;
 }
 
 /* Hover change on all buttons, regardless of outline */
 .btn:hover{
- background: rgb(7, 23, 58);
- color: white;
+  background-color: transparent;
+  color: black;
 }
 
 /* Back Button styling for editing Geneseekr/Tree names */
@@ -50,6 +50,7 @@ label.col-sm-2.control-label {
 }
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
+  font-weight: 500 !important;
   color: black !important;
 }
 

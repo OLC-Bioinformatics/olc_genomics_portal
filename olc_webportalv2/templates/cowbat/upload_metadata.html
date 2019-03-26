@@ -65,13 +65,23 @@
       var external_regex = /\d{6}_[A-Z]+$/;
       var olc_regex = /\d{6}_M\d+$/;
       if (x === "") {
-        alert("Must enter a run name");
+        Swal.fire({
+        title: 'Invalid',
+        text: "Run name cannot be blank!",
+        type: 'warning',
+        showConfirmButton: false
+      });
         return false
       }
       var found_external = x.match(external_regex);
       var found_olc = x.match(olc_regex);
       if (found_external === null && found_olc === null) {
-        alert("Invalid Run Name. Correct format is YYMMDD_LAB");
+        Swal.fire({
+        title: 'Invalid',
+        text: "Run name must be in YYMMDD_LAB format!",
+        type: 'warning',
+        showConfirmButton: false
+      });
         return false
       }
       return true

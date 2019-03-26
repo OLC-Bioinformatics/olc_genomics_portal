@@ -5,7 +5,7 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> Create A GeneSeekr Query</a>
+  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> Create A GeneSeekr Query</strong></a>
   <br>
   <h2>GeneSeekr Home</h2>
   <br>
@@ -40,7 +40,7 @@
           {% elif geneseekr_request.status == 'Error' %}
              <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-danger" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Unprocessed' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-secondary" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><button class="btn-secondary" disabled>{{ geneseekr_request.status }}</button></td>
           {% endif %}
 
           {% if geneseekr_request.status == 'Complete' %}
