@@ -5,7 +5,7 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> Create A New Tree</a>
+  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>Create A New Tree</strong></a>
 <br>
 <h2>Tree Home</h2>
  <br>
@@ -16,6 +16,7 @@
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
+       <th data-orderable="false">       </th>
        <th>Name</th>
 {#       <th>Type</th>#}
     </tr>
@@ -24,7 +25,7 @@
   <tbody>
      {% for tree_request in tree_requests %}
      <tr>
-       <td>
+       <td style="text-indent: 7px">
           {% for seqid in tree_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
@@ -39,7 +40,7 @@
           {% elif tree_request.status == 'Error' %}
              <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn btn-danger" role="button">{{ tree_request.status }}</a></td>
           {% elif tree_request.status == 'Unprocessed' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=tree_request.pk %}" class="btn btn-secondary" role="button">{{ tree_request.status }}</a></td>
+             <td><button class="btn-secondary" disabled>{{ tree_request.status }}</button></td>
           {% endif %}
 
           {% if tree_request.status == 'Complete' %}
@@ -47,9 +48,19 @@
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
+      
+          <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
-        <td>{{ tree_request.created_at }}</td>
-        <td><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+          <form id="form{{tree_request.pk}}"method="post">
+        {% csrf_token %}
+        {% if tree_request.status != 'Processing' and 'Unprocessed' %}
+          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' name="delete" value={{tree_request.pk}}>
+        {% else %}
+          <td></td>
+        {% endif %}
+
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
 
      </tr>
      {% endfor %}
@@ -70,5 +81,40 @@
         {% endif %}
       {% endfor %}
     }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
+
+
+        $(".btn-danger").click(function(e) {
+ e.preventDefault();
+ var form = document.getElementById("form" + this.value);
+ Swal.fire({
+  title: 'Are you sure?',
+  text: "You won't be able to revert this!",
+  type: 'warning',
+  showCancelButton: true,
+  confirmButtonColor: '#d33',
+  confirmButtonText: 'Yes, delete it!',
+  reverseButtons: true
+ }).then((result) => {
+  if (result.value == true) {
+   Swal.fire({
+    title: 'Deleted!',
+    text: 'Your file has been deleted.',
+    type: 'success',
+    showConfirmButton: false
+   }).then((cont) => {
+    if (cont.value == null) {
+     form.submit();
+    }
+   })
+  } else {
+   Swal.fire({
+    title: 'Cancelled!',
+    text: 'Your file is safe.',
+    type: 'error',
+    showConfirmButton: false
+   })
+  }
+ })
+});
   </script>
 {% endblock %}

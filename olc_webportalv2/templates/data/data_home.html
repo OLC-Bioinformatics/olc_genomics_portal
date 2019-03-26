@@ -5,8 +5,8 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-  <a href="{% url 'data:raw_data' %}" class="btn btn-secondary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Get Raw (FASTQ) Data</a>
-  <a href="{% url 'data:assembled_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Get Processed (FASTA) Data</a>
+  <a href="{% url 'data:raw_data' %}" class="btn btn-secondary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>Get Raw (FASTQ) Data </strong></a>
+  <a href="{% url 'data:assembled_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>Get Processed (FASTA) Data</strong></a>
 <br>
   <h2>Data Collection</h2>
   <br>
@@ -43,7 +43,7 @@
           {% elif data_request.status == 'Error' %}
              <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-danger" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Unprocessed' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-secondary" role="button">{{ data_request.status }}</a></td>
+             <td><button class="btn-secondary" disabled>{{ data_request.status }}</button</td>
           {% endif %}
 
           {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}

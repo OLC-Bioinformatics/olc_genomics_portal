@@ -5,7 +5,7 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> Upload a New Run</a>
+  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i><strong> Upload a New Run</strong></a>
   <br>
   <h2>Assembly Home</h2>
   <br>
@@ -21,7 +21,7 @@
       <tbody>
       {% for sequencing_run in sequencing_runs %}
         <tr>
-          <td>{{ sequencing_run.run_name }}</td>
+          <td style="text-indent: 7px">{{ sequencing_run.run_name }}</td>
           {% if sequencing_run.status == 'Complete' %}
              <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success" role="button">{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif sequencing_run.status == 'Processing' %}
@@ -31,9 +31,9 @@
           {% elif sequencing_run.status == 'UploadError' %}
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}
-          <td><button class="btn-secondary" disabled>Unprocessed</button></td>
+          <td style="text-indent: 7px"><button class="btn-secondary" disabled>Unprocessed</button></td>
           {% endif %}
-          <td>
+          <td style="text-indent: 8px">
           {% if sequencing_run.status == 'Complete' %}
             <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
        role="button">Download <i class="fas fa-download"></i></a>
