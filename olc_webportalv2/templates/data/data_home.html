@@ -47,7 +47,7 @@
           {% endif %}
 
           {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}
-            <td><a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ data_request.download_link }}" class="btn btn-dark" role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}

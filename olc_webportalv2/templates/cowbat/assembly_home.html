@@ -35,7 +35,7 @@
           {% endif %}
           <td style="text-indent: 8px">
           {% if sequencing_run.status == 'Complete' %}
-            <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark" style="padding-left:3px;" role="button">Download <i class="fas fa-download"></i></a>
+            <a href="{{ sequencing_run.download_link }}" class="btn btn-dark" style="padding-left:3px;" role="button">Download <i class="fas fa-download"></i></a>
           {% else %}
           <button class="btn-dark" disabled>Unavailable</button>
           {% endif %}

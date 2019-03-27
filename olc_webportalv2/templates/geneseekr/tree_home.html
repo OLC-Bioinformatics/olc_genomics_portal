@@ -44,14 +44,14 @@
           {% endif %}
 
           {% if tree_request.status == 'Complete' %}
-            <td><a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ tree_request.download_link }}" class="btn btn-dark"  role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
       
           <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
-          <form id="form{{tree_request.pk}}"method="post">
+          <form id="form{{tree_request.pk}}" method="post">
         {% csrf_token %}
         {% if tree_request.status != 'Processing' and 'Unprocessed' %}
           <td align="center"><button class="btn btn-danger" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
