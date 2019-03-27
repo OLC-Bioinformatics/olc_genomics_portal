@@ -57,15 +57,15 @@
 {#          <td><button class="btn btn-dark" disabled>Other</button></td>#}
 {#        {% endif %}#}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
-          <form id="form{{geneseekr_request.pk}}" method="post" >
+          <form id="form{{geneseekr_request.pk}}" method="post">
           <td align="center"><button class="btn btn-danger" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{geneseekr_request.pk}}" name="delete" value={{geneseekr_request.pk}}>
-          
+          </form>
         {% else %}
           <td></td>
         {% endif %}
         <td style="text-indent: 5px"><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
-     </form></tr>
+     </tr>
      {% endfor %}
   </tbody>
   </table>
@@ -90,7 +90,6 @@
     $(".btn-danger").click(function(e) {
     e.preventDefault();
     var btn = this.value;
-    var row = document.getElementById("row" + this.value);
     var form = document.getElementById("form" + this.value);
       Swal.fire({
       title: 'Are you sure?',

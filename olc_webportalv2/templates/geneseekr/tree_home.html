@@ -51,24 +51,23 @@
       
           <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
-          <form id="form{{tree_request.pk}}" method="post">
-        {% csrf_token %}
         {% if tree_request.status != 'Processing' and 'Unprocessed' %}
+          <form id="form{{tree_request.pk}}" method="post">
           <td align="center"><button class="btn btn-danger" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' name="delete" value={{tree_request.pk}}>
+          <input type='hidden' id="delete{{tree_request.pk}}" name="delete" value={{tree_request.pk}}>
+          </form>
         {% else %}
           <td></td>
         {% endif %}
-
         <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name'  parsnp_request_pk=tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
-
      </tr>
      {% endfor %}
   </tbody>
-
   </table>
+
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bowser/1.9.3/bowser.min.js"></script>
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {
@@ -82,39 +81,47 @@
       {% endfor %}
     }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
 
-
-        $(".btn-danger").click(function(e) {
- e.preventDefault();
- var form = document.getElementById("form" + this.value);
- Swal.fire({
-  title: 'Are you sure?',
-  text: "You won't be able to revert this!",
-  type: 'warning',
-  showCancelButton: true,
-  confirmButtonColor: '#d33',
-  confirmButtonText: 'Yes, delete it!',
-  reverseButtons: true
- }).then((result) => {
-  if (result.value == true) {
-   Swal.fire({
-    title: 'Deleted!',
-    text: 'Your file has been deleted.',
-    type: 'success',
-    showConfirmButton: false
-   }).then((cont) => {
-    if (cont.value == null) {
-     form.submit();
-    }
-   })
-  } else {
-   Swal.fire({
-    title: 'Cancelled!',
-    text: 'Your file is safe.',
-    type: 'error',
-    showConfirmButton: false
-   })
-  }
- })
-});
+    $(".btn-danger").click(function(e) {
+    e.preventDefault();
+    var btn = this.value;
+    var form = document.getElementById("form" + this.value);
+      Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true
+     }).then(function(result) {
+      if (result.value == true) {
+       Swal.fire({
+        title: 'Deleted!',
+        text: 'Your file has been deleted.',
+        type: 'success',
+        showConfirmButton: false
+       }).then(function(cont) {
+        if (cont.value == null) {
+          if (bowser.name =="Internet Explorer") {
+            $.ajax({
+            type:"POST",
+            data: {"delete":btn}}).done(function(data) {
+              location.reload();
+            });
+            
+          }else{
+          form.submit();}
+       }
+       })
+      } else {
+       Swal.fire({
+        title: 'Cancelled!',
+        text: 'Your file is safe.',
+        type: 'error',
+        showConfirmButton: false
+       })
+      }
+     })
+   });
   </script>
 {% endblock %}
