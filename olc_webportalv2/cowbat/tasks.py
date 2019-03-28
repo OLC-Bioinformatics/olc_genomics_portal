@@ -1,6 +1,4 @@
 # Django-related imports
-from background_task import background
-from django.core.management.base import BaseCommand
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
 from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
@@ -17,7 +15,6 @@ from email.mime.text import MIMEText
 import smtplib
 import fnmatch
 import shutil
-import time
 import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
@@ -162,17 +159,10 @@ def cowbat_cleanup(sequencing_run_pk):
     blob_name = sequencing_run.run_name.lower().replace('_', '-') + '.zip'
     shutil.make_archive(os.path.join(run_folder, sequencing_run.run_name.lower().replace('_', '-')), 'zip', reports_and_assemblies_folder)
     report_assembly_container = 'reports-and-assemblies'
-    blob_client.create_container(report_assembly_container)
-    blob_client.create_blob_from_path(container_name=report_assembly_container,
-                                      blob_name=blob_name,
-                                      file_path=os.path.join(run_folder, blob_name))
-    # Upload zipfile to cloud, and create an SAS link that lasts a long time (a year?)
-    sas_token = blob_client.generate_container_shared_access_signature(container_name=report_assembly_container,
-                                                                       permission=BlobPermissions.READ,
-                                                                       expiry=datetime.datetime.utcnow() + datetime.timedelta(days=365))
-    sas_url = blob_client.make_blob_url(container_name=report_assembly_container,
-                                        blob_name=blob_name,
-                                        sas_token=sas_token)
+    sas_url = generate_download_link(blob_client=blob_client,
+                                     container_name=report_assembly_container,
+                                     output_zipfile=os.path.join(run_folder, blob_name),
+                                     expiry=730)
     SequencingRun.objects.filter(pk=sequencing_run_pk).update(download_link=sas_url)
     shutil.rmtree(os.path.join('olc_webportalv2/media/{run_name}'.format(run_name=str(sequencing_run))))
     # Run is now considered complete! Update to let user know and send email to people that need to know.
@@ -269,18 +259,10 @@ def monitor_tasks():
                 # Need to zip this folder and then upload the zipped folder to cloud
                 shutil.make_archive(parsnp_output_folder, 'zip', parsnp_output_folder)
                 tree_result_container = 'tree-{}'.format(tree_task.pk)
-                blob_client.create_container(tree_result_container)
-                blob_name = os.path.split(parsnp_output_folder + '.zip')[1]
-                blob_client.create_blob_from_path(container_name=tree_result_container,
-                                                  blob_name=blob_name,
-                                                  file_path=parsnp_output_folder + '.zip')
-                # Generate an SAS url with read access that users will be able to use to download their sequences.
-                sas_token = blob_client.generate_container_shared_access_signature(container_name=tree_result_container,
-                                                                                    permission=BlobPermissions.READ,
-                                                                                    expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
-                sas_url = blob_client.make_blob_url(container_name=tree_result_container,
-                                                    blob_name=blob_name,
-                                                    sas_token=sas_token)
+                sas_url = generate_download_link(blob_client=blob_client,
+                                                 container_name=tree_result_container,
+                                                 output_zipfile=parsnp_output_folder + '.zip',
+                                                 expiry=8)
                 shutil.rmtree(parsnp_output_folder)
                 zip_folder = 'olc_webportalv2/media/{}.zip'.format(batch_job_name)
                 if os.path.isfile(zip_folder):
@@ -295,11 +277,33 @@ def monitor_tasks():
                 #     body='This email is to inform you that the tree query {} has completed and is available at the following link {}'.format(str(tree_task),sas_url),
                 #     recipient=email)
 
-
             else:
                 ParsnpTree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
+
+
+def generate_download_link(blob_client, container_name, output_zipfile, expiry=8):
+    """
+    Make a download link for a file that will be put into Azure blob storage, good for up to expiry days
+    :param blob_client: Instance of azure.storage.blob.BlockBlobService
+    :param container_name: Name of container you want to create.
+    :param output_zipfile: Zipfile you want to upload and create a link for.
+    :param expiry: Number of days link should be valid for.
+    :return: String of a link that allows people to download container.
+    """
+    blob_client.create_container(container_name)
+    blob_name = os.path.split(output_zipfile)[1]
+    blob_client.create_blob_from_path(container_name=container_name,
+                                      blob_name=blob_name,
+                                      file_path=output_zipfile)
+    sas_token = blob_client.generate_container_shared_access_signature(container_name=container_name,
+                                                                       permission=BlobPermissions.READ,
+                                                                       expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry))
+    sas_url = blob_client.make_blob_url(container_name=container_name,
+                                        blob_name=blob_name,
+                                        sas_token=sas_token)
+    return sas_url
 
 
 def download_container(blob_service, container_name, output_dir):
