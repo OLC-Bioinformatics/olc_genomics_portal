@@ -254,11 +254,11 @@ def monitor_tasks():
             if exit_codes_good:
                 # Now need to generate an SAS URL and give access to it/update the download link.
                 blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                                account_name=settings.AZURE_ACCOUNT_NAME)
+                                               account_name=settings.AZURE_ACCOUNT_NAME)
                 # Download the output container so we can zip it.
                 download_container(blob_service=blob_client,
-                                    container_name=batch_job_name + '-output',
-                                    output_dir='olc_webportalv2/media')
+                                   container_name=batch_job_name + '-output',
+                                   output_dir='olc_webportalv2/media')
                 with open('olc_webportalv2/media/parsnp-{}/parsnp.tree'.format(tree_task.pk)) as f:
                     tree_string = f.readline()
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
@@ -272,8 +272,8 @@ def monitor_tasks():
                 blob_client.create_container(tree_result_container)
                 blob_name = os.path.split(parsnp_output_folder + '.zip')[1]
                 blob_client.create_blob_from_path(container_name=tree_result_container,
-                                                    blob_name=blob_name,
-                                                    file_path=parsnp_output_folder + '.zip')
+                                                  blob_name=blob_name,
+                                                  file_path=parsnp_output_folder + '.zip')
                 # Generate an SAS url with read access that users will be able to use to download their sequences.
                 sas_token = blob_client.generate_container_shared_access_signature(container_name=tree_result_container,
                                                                                     permission=BlobPermissions.READ,
@@ -282,6 +282,9 @@ def monitor_tasks():
                                                     blob_name=blob_name,
                                                     sas_token=sas_token)
                 shutil.rmtree(parsnp_output_folder)
+                zip_folder = 'olc_webportalv2/media/{}.zip'.format(batch_job_name)
+                if os.path.isfile(zip_folder):
+                    os.remove(zip_folder)
                 tree_task.download_link = sas_url
                 tree_task.status = 'Complete'
                 tree_task.save()
@@ -297,6 +300,7 @@ def monitor_tasks():
                 ParsnpTree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
+
 
 def download_container(blob_service, container_name, output_dir):
     # Modified from https://blogs.msdn.microsoft.com/brijrajsingh/2017/05/27/downloading-a-azure-blob-storage-container-python/
