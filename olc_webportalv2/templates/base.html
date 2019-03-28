@@ -27,15 +27,11 @@
         <button class="navbar-toggler navbar-toggler-right tog" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <i class="fas fa-bars" style="color:white"></i>
         </button>
-
-
         <a class="navbar-brand" href="{% url 'home' %}">
-                    <img style="width: 12%" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal <i class="fas fa-dna"></i></strong>
+                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal <i class="fas fa-dna"></i></strong>
         </a>
-
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav mr-auto">
-
             <li class="nav-item active">
               <a class="nav-link" href="{% url 'home' %}">Home <i class="fas fa-home"></i></a>
             </li>
@@ -158,6 +154,7 @@
           </article>
         </div>
       
+
       {% endblock content %}
 
     </div>
@@ -181,7 +178,16 @@
       <!-- Project specific Javascript goes in this file -->
       <script src="{% static 'js/project.js' %}"></script>
       <script src="{% static 'js/js/all.js' %}"></script>
+      <script src="{% static 'js/bowser.min.js'%}"></script>
 
+
+      <script type="text/javascript">
+      if (bowser.name =="Internet Explorer") {
+      document.getElementById("leafy").style.width = "50px";
+      document.getElementById("leafy").style.height = "50px";
+      }
+
+      </script>
     {% endblock javascript %}
   </body>
 </html>
