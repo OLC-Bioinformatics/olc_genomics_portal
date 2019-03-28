@@ -165,19 +165,18 @@
     {% block javascript %}
       <!-- Required by Bootstrap 4 -->
       <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+      <script src="{% static 'js/popper.min.js' %}"></script>
       <script src="{% static 'js/bootstrap.min.js' %}"></script>
       <!-- Third-party javascript libraries go here -->
       <script src="{% static 'js/sweetalerts.js'%}"></script>
       <script src="{% static 'js/core.js' %}"></script>
       <script src="{% static 'js/cookie.min.js' %}"></script>      
       <script src="{% static 'js/bowser.min.js'%}"></script>
-      
-      <!-- Project specific Javascript goes in this file -->
-      <script src="{% static 'js/project.js' %}"></script>
       <script src="{% static 'js/js/all.js' %}"></script>
       <script src="{% static 'js/datatables.min.js' %}"></script>
 
+      <!-- Project specific Javascript goes in this file -->
+      <script src="{% static 'js/project.js' %}"></script>
       <script type="text/javascript">
       if (bowser.name =="Internet Explorer") {
       document.getElementById("leafy").style.width = "50px";
