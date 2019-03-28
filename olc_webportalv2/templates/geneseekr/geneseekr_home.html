@@ -2,7 +2,7 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
-{% load i18n widget_tweaks %}
+{% load widget_tweaks %}
 {% block content %}
 <br>
   <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> Create A GeneSeekr Query</strong></a>
@@ -24,7 +24,7 @@
 
   <tbody>
      {% for geneseekr_request in geneseekr_requests %}
-     <tr>
+     <tr id="row{{geneseekr_request.pk}}">
        <td style="text-indent: 7px">
           {% for seqid in geneseekr_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
@@ -36,7 +36,7 @@
           {% if geneseekr_request.status == 'Complete' %}
              <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success" role="button">{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif geneseekr_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Error' %}
              <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-danger" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Unprocessed' %}
@@ -44,7 +44,7 @@
           {% endif %}
 
           {% if geneseekr_request.status == 'Complete' %}
-            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-outline-dark" role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-dark"  role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn-dark" disabled>Not Available</button></td>
           {% endif %}
@@ -56,16 +56,15 @@
 {#        {% else %}#}
 {#          <td><button class="btn btn-dark" disabled>Other</button></td>#}
 {#        {% endif %}#}
-        <form id="form{{geneseekr_request.pk}}"method="post">
-        {% csrf_token %}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
-          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{geneseekr_request.pk}}" name="delete" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' name="delete" value={{geneseekr_request.pk}}>
+          <form id="form{{geneseekr_request.pk}}" method="post">
+          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' id="delete{{geneseekr_request.pk}}" name="delete" value={{geneseekr_request.pk}}>
+          </form>
         {% else %}
           <td></td>
         {% endif %}
         <td style="text-indent: 5px"><a href="{% url 'geneseekr:geneseekr_name'  geneseekr_request_pk=geneseekr_request.pk %}">{{geneseekr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
-        </form>
      </tr>
      {% endfor %}
   </tbody>
@@ -73,51 +72,62 @@
 
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bowser/1.9.3/bowser.min.js"></script>
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
-    $(document).ready(function () {
-        $('#geneseekr-request-table').dataTable()
+  $(document).ready(function () {
+    $('#geneseekr-request-table').dataTable()
     });
-    setInterval(function () {
-      {% for geneseekr_request in geneseekr_requests %}
-        {% if geneseekr_request.status == 'Processing' %}
-          window.location = window.location.href;
-        {% endif %}
-      {% endfor %}
+
+  setInterval(function () {
+    {% for geneseekr_request in geneseekr_requests %}
+      {% if geneseekr_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    {% endfor %}
     }, 15000) // This should refresh the page every 60 seconds as long as run status is processing
 
     $(".btn-danger").click(function(e) {
- e.preventDefault();
- var form = document.getElementById("form" + this.value);
- Swal.fire({
-  title: 'Are you sure?',
-  text: "You won't be able to revert this!",
-  type: 'warning',
-  showCancelButton: true,
-  confirmButtonColor: '#d33',
-  confirmButtonText: 'Yes, delete it!',
-  reverseButtons: true
- }).then((result) => {
-  if (result.value == true) {
-   Swal.fire({
-    title: 'Deleted!',
-    text: 'Your file has been deleted.',
-    type: 'success',
-    showConfirmButton: false
-   }).then((cont) => {
-    if (cont.value == null) {
-     form.submit();
-    }
-   })
-  } else {
-   Swal.fire({
-    title: 'Cancelled!',
-    text: 'Your file is safe.',
-    type: 'error',
-    showConfirmButton: false
-   })
-  }
- })
-});
-  </script>
+    e.preventDefault();
+    var btn = this.value;
+    var form = document.getElementById("form" + this.value);
+      Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true
+     }).then(function(result) {
+      if (result.value == true) {
+       Swal.fire({
+        title: 'Deleted!',
+        text: 'Your file has been deleted.',
+        type: 'success',
+        showConfirmButton: false
+       }).then(function(cont) {
+        if (cont.value == null) {
+          if (bowser.name =="Internet Explorer") {
+            $.ajax({
+            type:"POST",
+            data: {"delete":btn}}).done(function(data) {
+              location.reload();
+            });
+            
+          }else{
+          form.submit();}
+       }
+       })
+      } else {
+       Swal.fire({
+        title: 'Cancelled!',
+        text: 'Your file is safe.',
+        type: 'error',
+        showConfirmButton: false
+       })
+      }
+     })
+   });
+</script>
 {% endblock %}

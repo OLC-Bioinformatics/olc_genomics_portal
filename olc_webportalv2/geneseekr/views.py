@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
@@ -13,6 +14,7 @@ from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 from kombu import Queue
 
 # Create your views here.
+@csrf_exempt
 @login_required
 def geneseekr_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
@@ -172,7 +174,7 @@ def tree_request(request):
                       'form': form
                   })
 
-
+@csrf_exempt
 @login_required
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
