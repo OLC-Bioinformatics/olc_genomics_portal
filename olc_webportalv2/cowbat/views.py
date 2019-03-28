@@ -19,7 +19,6 @@ import azure.batch.models as batchmodels
 # Task Management
 from kombu import Queue
 
-
 log = logging.getLogger(__name__)
 
 def find_percent_complete(sequencing_run):

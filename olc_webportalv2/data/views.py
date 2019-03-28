@@ -1,13 +1,15 @@
+# Django-related imports
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-
+# Standard libraries
+import datetime
+# Portal-specific things
 from olc_webportalv2.data.tasks import get_assembled_data, get_raw_data
 from olc_webportalv2.data.forms import DataRequestForm
 from olc_webportalv2.data.models import DataRequest
-import datetime
+# Task Management
+from kombu import Queue
 
-
-# Create your views here.
 @login_required
 def data_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
@@ -17,7 +19,6 @@ def data_home(request):
                   {
                       'data_requests': data_requests
                   })
-
 
 @login_required
 def assembled_data(request):
@@ -32,7 +33,7 @@ def assembled_data(request):
             data_request.status = 'Processing'
             data_request.request_type = 'FASTA'
             data_request.save()
-            get_assembled_data(data_request_pk=data_request.pk)
+            get_assembled_data.apply_async(queue='default', args=(data_request.pk, ))
             return redirect('data:data_download', data_request_pk=data_request.pk)
     return render(request,
                   'data/assembled_data.html',
@@ -64,7 +65,7 @@ def raw_data(request):
             data_request.status = 'Processing'
             data_request.request_type = 'FASTQ'
             data_request.save()
-            get_raw_data(data_request_pk=data_request.pk)
+            get_raw_data.apply_async(queue='default', args=(data_request.pk, ))
             return redirect('data:data_download', data_request_pk=data_request.pk)
     return render(request,
                   'data/raw_data.html',

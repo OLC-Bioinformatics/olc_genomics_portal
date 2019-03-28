@@ -1,17 +1,19 @@
+# Django-related imports
+from django.conf import settings
+# Standard libraries
 import datetime
 import fnmatch
 import shutil
 import os
-
-from background_task import background
-from django.conf import settings
+# Portal-specific things
 from olc_webportalv2.data.models import DataRequest
-
+# Azure!
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
+#Celery Task Management
+from celery import shared_task, task
 
-
-@background(schedule=1)
+@shared_task
 def get_assembled_data(data_request_pk):
     print('Assembled data request')
     data_request = DataRequest.objects.get(pk=data_request_pk)
@@ -75,7 +77,7 @@ def get_assembled_data(data_request_pk):
         data_request.save()
 
 
-@background(schedule=1)
+@shared_task
 def get_raw_data(data_request_pk):
     data_request = DataRequest.objects.get(pk=data_request_pk)
     try:
