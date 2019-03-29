@@ -1,5 +1,4 @@
 # Django-related imports
-from background_task import background
 from django.core.management.base import BaseCommand
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
 from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree

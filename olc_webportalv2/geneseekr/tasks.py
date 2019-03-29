@@ -5,7 +5,6 @@ import subprocess
 from Bio import SeqIO
 import multiprocessing
 from io import StringIO
-from background_task import background
 from django.conf import settings
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, ParsnpAzureRequest
 
