@@ -1,4 +1,5 @@
 import os
+import glob
 import shutil
 import datetime
 import subprocess
@@ -12,13 +13,71 @@ from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
 
 import csv
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404
 
-from celery import task, shared_task
+from celery import shared_task
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+
+
+def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file, vm_size='Standard_D8s_v3'):
+    """
+    Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
+    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names and keys
+    :param seqids: List of SeqIDs that are going to be analyzed.
+    :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
+    it will be put in olc_webportalv2/media/job_name - this will get cleaned up if it exists by our monitor_tasks function
+    :param input_data_folder: Name of folder on VM that FASTA sequences will be put into.
+    :param output_data_folder: Name of folder on VM that output files will be written to.
+    :param command: Command that's going to be run on the SeqIDs
+    :param config_file: Where you want to save the config file to.
+    :param vm_size: Size of VM you want to spin up. See https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general
+    for a list of options.
+    :return:
+    """
+    # Azure Batch does not like it one bit when too many input files get specified, so in the event that we have too
+    # many (more than 50 or so), need to download them, zip them, and then upload the zip folder.
+    if len(seqids) > 50:
+        # Create a zip file (but put where?) of all sequences.
+        job_dir = 'olc_webportalv2/media/{}'.format(job_name)
+        blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                       account_name=settings.AZURE_ACCOUNT_NAME)
+        for seqid in seqids:
+            blob_client.get_blob_to_path(container_name='processed-data',
+                                         blob_name='{}.fasta'.format(seqid),
+                                         file_path=os.path.join(job_dir, '{}.fasta'.format(seqid)))
+        shutil.make_archive(job_dir, 'zip', job_dir)
+    with open(config_file, 'w') as f:
+        f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
+        f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
+        f.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
+        f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(settings.AZURE_ACCOUNT_NAME))
+        f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
+        f.write('JOB_NAME:={}\n'.format(job_name))
+        f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
+        f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
+        f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
+        f.write('VM_SIZE:={}\n'.format(vm_size))
+        f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
+        if len(seqids) > 50:
+            f.write('INPUT:={}\n'.format(job_dir + '.zip'))
+            # If we have to add lots of files, prepend that to our command.
+            prepend = 'unzip {zipfile} && mkdir {input_dir} && mv *.fasta {input_dir} && '.format(zipfile=job_name + '.zip',
+                                                                                                  input_dir=input_data_folder)
+            command = prepend + command
+        else:
+            f.write('CLOUDIN:=')
+            for seqid in seqids:
+                f.write('processed-data/{}.fasta '.format(seqid))
+            f.write('{}\n'.format(input_data_folder))
+        # Adding / to the end of output folder makes AzureBatch download recursively.
+        if not output_data_folder.endswith('/'):
+            output_data_folder += '/'
+        f.write('OUTPUT:={}\n'.format(output_data_folder))
+        f.write('COMMAND:={}\n'.format(command))
+
 
 @shared_task
 def run_parsnp(parsnp_request_pk):
@@ -41,36 +100,29 @@ def run_parsnp(parsnp_request_pk):
         else:
             vm_size = 'Standard_D32s_v3'
             cpus = 32
+        # Create our config file for submission to azure batch service.
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        with open(batch_config_file, 'w') as f:
-            f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
-            f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
-            f.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
-            f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(settings.AZURE_ACCOUNT_NAME))
-            f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
-            f.write('JOB_NAME:={}\n'.format(container_name))
-            f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
-            f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-            f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
-            f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-            f.write('VM_SIZE:={}\n'.format(vm_size))
-            f.write('CLOUDIN:=')
-            for seqid in tree_request.seqids:
-                f.write('processed-data/{}.fasta '.format(seqid))
-            f.write('sequences\n')
-            f.write('OUTPUT:={}\n'.format(container_name + '/'))
-            f.write('COMMAND:=source $CONDA/activate /envs/parsnp && parsnp '
-                    '-d sequences -r ! -o {} -p {}\n'.format(container_name, cpus))
-
+        make_config_file(seqids=tree_request.seqids,
+                         job_name=container_name,
+                         input_data_folder='sequences',
+                         output_data_folder=container_name,
+                         command='source $CONDA/activate /envs/parsnp && parsnp -d sequences -r! -o {} -p {}'.format(container_name, cpus),
+                         config_file=batch_config_file,
+                         vm_size=vm_size)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
         ParsnpAzureRequest.objects.create(tree_request=tree_request,
                                           exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
+        # Delete any downloaded fasta files that were used in zip creation if necessary.
+        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        for fasta_file in fasta_files_to_delete:
+            os.remove(fasta_file)
     except:
         tree_request.status = 'Error'
         tree_request.save()
+
 
 def send_email(subject, body, recipient):
     fromaddr = os.environ.get('EMAIL_HOST_USER')
@@ -87,7 +139,8 @@ def send_email(subject, body, recipient):
     text = msg.as_string()
     server.sendmail(fromaddr, toaddr, text)
 
-#media file not made until GeneSeekr has run
+
+# TODO: Make geneseekr run on a cloud VM - then we can move the portal VM to a much smaller machine and save money, woo!
 @shared_task
 def run_geneseekr(geneseekr_request_pk):
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
@@ -161,7 +214,7 @@ def run_geneseekr(geneseekr_request_pk):
 
         print('Uploading result files')
         blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                        account_name=settings.AZURE_ACCOUNT_NAME)
+                                       account_name=settings.AZURE_ACCOUNT_NAME)
         geneseekr_result_container = 'geneseekr-{}'.format(geneseekr_request.pk)
         blob_client.create_container(geneseekr_result_container)
         blob_name = os.path.split('olc_webportalv2/media/geneseekr-{}/blast_report.tsv'.format(geneseekr_request.pk))[1]
@@ -175,8 +228,8 @@ def run_geneseekr(geneseekr_request_pk):
         # Generate an SAS url with read access that users will be able to use to download their sequences.
         print('Creating Download Link')
         sas_token = blob_client.generate_container_shared_access_signature(container_name=geneseekr_result_container,
-                                                                            permission=BlobPermissions.READ,
-                                                                            expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
+                                                                           permission=BlobPermissions.READ,
+                                                                           expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
         sas_url = blob_client.make_blob_url(container_name=geneseekr_result_container,
                                             blob_name=blob_name,
                                             sas_token=sas_token)
