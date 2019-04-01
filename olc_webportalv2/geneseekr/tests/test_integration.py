@@ -27,7 +27,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         self.login()
         # This takes us to home page - navigate to geneseekr page
         # Dropdown menu
-        self.driver.find_element_by_xpath('//button[text()="Analyze Data"]').click()
+        self.driver.find_element_by_xpath('//button[text()="Analyze"]').click()
         self.driver.find_element_by_link_text('Find Genes').click()
         # Now move to create query button.
         self.driver.find_element_by_link_text('Create A GeneSeekr Query').click()
