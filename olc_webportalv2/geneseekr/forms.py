@@ -118,6 +118,8 @@ class ParsnpForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False)
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
 
+    tree_program = forms.ChoiceField(label='Which tree program? ', initial='parsnp',choices=[('parsnp', 'parsnp'), ('mashtree', 'mashtree')], required=True, widget=forms.RadioSelect())
+    number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
     def clean(self):
         super().clean()
         #KeyError raises when only whitespace is submitted
@@ -152,7 +154,7 @@ class ParsnpForm(forms.Form):
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
-        return seqid_list, name
+        return seqid_list, name, tree_program, number_diversitree_strains
 
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)

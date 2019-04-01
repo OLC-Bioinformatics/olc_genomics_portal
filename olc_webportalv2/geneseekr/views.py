@@ -157,7 +157,7 @@ def tree_request(request):
     if request.method == 'POST':
         form = ParsnpForm(request.POST)
         if form.is_valid():
-            seqids, name = form.cleaned_data
+            seqids, name, tree_program, number_diversitree_strains  = form.cleaned_data
             tree_request = ParsnpTree.objects.create(user=request.user,
                                                      seqids=seqids)
             tree_request.status = 'Processing'
