@@ -22,7 +22,7 @@
        <th>Type</th>
     </tr>
   </thead>
-    <tbody>
+  <tbody>
     {% for data_request in data_requests %}
       <tr>
         <td>
@@ -39,11 +39,11 @@
          {% elif data_request.status == 'Warning' %}
           <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Processing' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar progress-bar-striped progress-bar-animated bg-info" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Error' %}
              <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-danger" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary" disabled>{{ data_request.status }}</button</td>
+             <td><button class="btn-secondary" disabled>{{ data_request.status }}</button></td>
           {% endif %}
 
           {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}
@@ -58,15 +58,14 @@
         {% elif data_request.request_type == 'FASTQ' %}
           <td><button class="btn btn-dark" disabled>FASTQ</button></td>
         {% endif %}
-        <td></td>
       </tr>
-
     {% endfor %}
     </tbody>
   </table>
   <br>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+
   <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {

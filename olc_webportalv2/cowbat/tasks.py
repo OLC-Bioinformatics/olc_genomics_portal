@@ -22,7 +22,6 @@ import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
 import re
-
 #Celery Task Management
 from celery import shared_task, task
 
