@@ -27,7 +27,7 @@
         <i class="fas fa-bars" style="color:white"></i>
         </button>
         <a class="navbar-brand" href="{% url 'home' %}">
-                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal <i class="fas fa-dna"></i></strong>
+                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal</strong>
         </a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav mr-auto">
@@ -35,21 +35,21 @@
               <a class="nav-link" href="{% url 'home' %}">Home <i class="fas fa-home"></i></a>
             </li>
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
+              <a class="nav-link" href="{% url 'metadata:metadata_home' %}">Explore <i class="fas fa-search"></i></a>
             </li>
 
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'data:data_home' %}">Get Data</a>
+              <a class="nav-link" href="{% url 'data:data_home' %}">Retrieve <i class="far fa-file-alt"></i></a>
              </li>
 
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly</a>
+              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly <i class="fas fa-cogs"></i></i></i></a>
             </li>
               <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze Data</button>
+                <button class="btn btn-outline" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze <i class="fas fa-chevron-down fa-xs"></i></button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes</a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree</a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
                 </div>
             </div>
             </ul>
@@ -102,7 +102,7 @@
         </div>
         <br>
         <p class="lead h6">
-            <span class="h1"><b>Welcome to the OLC Webportal</b></span><br>
+            <span class="h1"><b>Welcome to the OLC Webportal</b> <i class="fas fa-dna"></i></span><br>
         </p>
         <br>
         <div class="card-deck d-flex">
@@ -147,7 +147,7 @@
               sequences should be from the same genus, or parsnp may fail.</p>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree </a>
             </div>
           </article>
         </div>
@@ -179,8 +179,8 @@
       if (bowser.name =="Internet Explorer") {
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
-      }
-      </script>
+}
+     </script>
     {% endblock javascript %}
   </body>
 </html>

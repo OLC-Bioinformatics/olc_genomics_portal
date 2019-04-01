@@ -76,9 +76,6 @@ LOCAL_APPS = [
     # Sortable HTML tables
     'django_tables2',
 
-    # django-background-tasks (alternative to Celery)
-    'background_task',
-
     # Highcharts
     #'highcharts',
 
@@ -86,7 +83,6 @@ LOCAL_APPS = [
     'widget_tweaks',
 
 ]
-
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -138,7 +134,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 # ------------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = [
-    ("""Forest Dussault""", 'forest.dussault@inspection.gc.ca'),
+     ("""Andrew Low""", 'andrew.low@canada.ca'),
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
