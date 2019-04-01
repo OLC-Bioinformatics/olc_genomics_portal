@@ -21,6 +21,7 @@ from azure.storage.blob import BlobPermissions
 import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
+from strainchoosr import strainchoosr
 import re
 #Celery Task Management
 from celery import shared_task, task
@@ -248,8 +249,14 @@ def monitor_tasks():
                 download_container(blob_service=blob_client,
                                    container_name=batch_job_name + '-output',
                                    output_dir='olc_webportalv2/media')
-                with open('olc_webportalv2/media/parsnp-{}/parsnp.tree'.format(tree_task.pk)) as f:
+                tree_file = 'olc_webportalv2/media/parsnp-{}/parsnp.tree'.format(tree_task.pk)
+                with open(tree_file) as f:
                     tree_string = f.readline()
+                if tree_task.number_diversitree_strains > 0:
+                    diverse_strains = strainchoosr.run_strainchoosr(treefile=tree_file,
+                                                                    number_representatives=[tree_task.number_diversitree_strains],
+                                                                    output_name='olc_webportalv2/media/parsnp-{}/strainchoosr_output'.format(tree_task.pk))
+                    tree_task.seqids_diversitree = diverse_strains[tree_task.number_diversitree_strains]
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
                 # Should now have results from parsnp in olc_webportalv2/media/parsnp-X, where X is pk of parsnp request

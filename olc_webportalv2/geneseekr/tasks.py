@@ -80,6 +80,117 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
 
 
 @shared_task
+def run_prokka(prokka_request_pk):
+    prokka_request = 'asdf'  # TODO: Have prokka object created in models
+    try:
+        container_name = 'prokka-{}'.format(prokka_request_pk)
+        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        if not os.path.isdir(run_folder):
+            os.makedirs(run_folder)
+        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        command = 'source $CONDA/activate /envs/prokka && mkdir {}'.format(container_name)
+        # Prokka doesn't seem to have any sort of way to run on multiple genomes, so we have to run it separately
+        # on each genome.
+        # TODO: Make sure this still works with a really long command caused by lots of SEQIDs
+        for seqid in prokka_request.seqids:
+            command += ' && prokka --outdir {container_name} --prefix {seqid} --cpus 8 sequences/{seqid.fasta}'.format(container_name=container_name,
+                                                                                                                       seqid=seqid)
+        make_config_file(seqids=prokka_request.seqids,
+                         job_name=container_name,
+                         input_data_folder='sequences',
+                         output_data_folder=container_name,
+                         command=command,
+                         config_file=batch_config_file)
+        # With that done, we can submit the file to batch with our package.
+        # Use Popen to run in background so that task is considered complete.
+        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # TODO: Have a Prokka request object get created and tracked.
+        # Also TODO: add the prokka request to monitor_tasks in olc_webportalv2/cowbat/tasks
+        # Delete any downloaded fasta files that were used in zip creation if necessary.
+        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        for fasta_file in fasta_files_to_delete:
+            os.remove(fasta_file)
+    except:
+        prokka_request.status = 'Error'
+        prokka_request.save()
+
+
+@shared_task
+def run_sistr(sistr_request_pk):
+    sistr_request = 'asdf'  # TODO: Make a sistr request object in models.
+    try:
+        container_name = 'sistr-{}'.format(sistr_request_pk)
+        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        if not os.path.isdir(run_folder):
+            os.makedirs(run_folder)
+        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        # TODO: This doesn't actually work right now - there's a .logfile attribute that doesn't get instantiated
+         # in the command line call, so crash. Need to update OLCTools
+        command = 'source $CONDA/activate /envs/cowbat && python -m spadespipeline.sistr -s sequences {container_name}' \
+                  ' && mv sequences {container_name}'.format(container_name=container_name)
+        make_config_file(seqids=sistr_request.seqids,
+                         job_name=container_name,
+                         input_data_folder='sequences',
+                         output_data_folder=container_name,
+                         command=command,
+                         config_file=batch_config_file)
+        # With that done, we can submit the file to batch with our package.
+        # Use Popen to run in background so that task is considered complete.
+        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # TODO: Have a SISTR request object get created and tracked.
+        # Also TODO: add the SISTR request to monitor_tasks in olc_webportalv2/cowbat/tasks
+        # Delete any downloaded fasta files that were used in zip creation if necessary.
+        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        for fasta_file in fasta_files_to_delete:
+            os.remove(fasta_file)
+
+    except:
+        sistr_request.status = 'Error'
+        sistr_request.save()
+
+
+@shared_task
+def run_amr_summary(amr_summary_pk):
+    amr_summary_request = 'asdf'  # TODO: Make this.
+    try:
+        container_name = 'amrsummary-{}'.format(amr_summary_pk)
+        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        if not os.path.isdir(run_folder):
+            os.makedirs(run_folder)
+        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        # Delete any downloaded fasta files that were used in zip creation if necessary.
+        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        for fasta_file in fasta_files_to_delete:
+            os.remove(fasta_file)
+        command = 'source $CONDA/activate /envs/cowbat && GeneSeekr blastn -s sequences -t {resfinder_db} ' \
+                  '-r sequences/reports -A && python spadespipeline.mobrecon -s sequences -r {mob_db}' \
+                  ' && mv sequences {container_name}'.format(resfinder_db='/databases/0.3.4/resfinder',
+                                                            mob_db='/databases/0.3.4/mobrecon',
+                                                            container_name=container_name)
+        make_config_file(seqids=amr_summary_request.seqids,
+                         job_name=container_name,
+                         input_data_folder='sequences',
+                         output_data_folder=container_name,
+                         command=command,
+                         config_file=batch_config_file)
+        # With that done, we can submit the file to batch with our package.
+        # Use Popen to run in background so that task is considered complete.
+        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # TODO: Add a monitor tasks entry for this.
+        # Delete any downloaded fasta files that were used in zip creation if necessary.
+        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        for fasta_file in fasta_files_to_delete:
+            os.remove(fasta_file)
+    except:
+        amr_summary_request.status = 'Error'
+        amr_summary_request.save()
+
+
+
+@shared_task
 def run_parsnp(parsnp_request_pk):
     tree_request = ParsnpTree.objects.get(pk=parsnp_request_pk)
     try:
@@ -102,13 +213,23 @@ def run_parsnp(parsnp_request_pk):
             cpus = 32
         # Create our config file for submission to azure batch service.
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        make_config_file(seqids=tree_request.seqids,
-                         job_name=container_name,
-                         input_data_folder='sequences',
-                         output_data_folder=container_name,
-                         command='source $CONDA/activate /envs/parsnp && parsnp -d sequences -r! -o {} -p {}'.format(container_name, cpus),
-                         config_file=batch_config_file,
-                         vm_size=vm_size)
+        if tree_request.tree_program == 'parsnp':
+            make_config_file(seqids=tree_request.seqids,
+                             job_name=container_name,
+                             input_data_folder='sequences',
+                             output_data_folder=container_name,
+                             command='source $CONDA/activate /envs/parsnp && parsnp -d sequences -r! -o {} -p {}'.format(container_name, cpus),
+                             config_file=batch_config_file,
+                             vm_size=vm_size)
+        elif tree_request.tree_program == 'mashtree':
+            make_config_file(seqids=tree_request.seqids,
+                             job_name=container_name,
+                             input_data_folder='sequences',
+                             output_data_folder=container_name,
+                             command='source $CONDA/activate /envs/mashtree && mkdir {outdir} && mashtree --numcpus '
+                                     '{cpus} sequences/*.fasta > {outdir}/parsnp.tree'.format(outdir=container_name, cpus=cpus),
+                             config_file=batch_config_file,
+                             vm_size=vm_size)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
