@@ -9,9 +9,15 @@ urlpatterns = [
     url(r'^geneseekr_results/(?P<geneseekr_request_pk>\d+)/$', views.geneseekr_results, name='geneseekr_results'),
     url(r'^geneseekr_name/(?P<geneseekr_request_pk>\d+)/$', views.geneseekr_name, name='geneseekr_name'),
 
-    # Tree stuff
+    # Tree Stuff
     url(r'^tree_home/', views.tree_home, name='tree_home'),
     url(r'^tree_request/', views.tree_request, name='tree_request'),
     url(r'^tree_result/(?P<parsnp_request_pk>\d+)/$', views.tree_result, name='tree_result'),    
-    url(r'^tree_name/(?P<parsnp_request_pk>\d+)/$', views.tree_name, name='tree_name'),    
+    url(r'^tree_name/(?P<parsnp_request_pk>\d+)/$', views.tree_name, name='tree_name'),   
+
+    # AMR Stuff 
+    url(r'^amr_home/', views.amr_home, name='amr_home'),
+    url(r'^amr_request/', views.amr_request, name='amr_request'),
+    # url(r'^amr_result/(?P<parsnp_request_pk>\d+)/$', views.amr_result, name='amr_result'),    
+    # url(r'^amr_name/(?P<amr_request_pk>\d+)/$', views.amr_name, name='amr_name'),   
 ]
