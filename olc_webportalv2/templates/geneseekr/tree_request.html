@@ -13,10 +13,17 @@
     </div>
    {% endif %}
   {% csrf_token %}
+   <div class="col-3" style="padding-left:0;">
       {{form.name|as_crispy_field }}
-      <p>Enter SeqIDs you want to create a tree from here.</p>
+      </div>
+      <p>Enter SeqIDs to build a tree</p>
       {{ form.seqids|as_crispy_field }}
-    <br>
+      {{form.tree_program|as_crispy_field }}
+
+      <div class="col-3" style="padding-left:0;">
+      {{form.number_diversitree_strains|as_crispy_field }}
+      </div>
+    
   <button type="submit" class="btn btn-primary btn-lg">Create Tree</button>
   </form>
 {% endblock %}

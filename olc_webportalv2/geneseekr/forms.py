@@ -7,7 +7,6 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
 
-
 class GeneSeekrForm(forms.Form):
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
     query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea, label='', required=False)
@@ -118,6 +117,8 @@ class ParsnpForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False)
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
 
+    tree_program = forms.ChoiceField(label='Which tree program? ', initial='parsnp',choices=[('parsnp', 'parsnp'), ('mashtree', 'mashtree')], widget=forms.RadioSelect())
+    number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
     def clean(self):
         super().clean()
         #KeyError raises when only whitespace is submitted
@@ -129,6 +130,15 @@ class ParsnpForm(forms.Form):
             name = self.cleaned_data['name']
         except KeyError:
             name = None
+        try:
+            tree_program = self.cleaned_data['tree_program']
+        except KeyError:
+            tree_program  = 'parsnp'
+        try:
+            number_diversitree_strains = self.cleaned_data['number_diversitree_strains']
+        except KeyError:
+            number_diversitree_strains = 0
+
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
@@ -141,7 +151,7 @@ class ParsnpForm(forms.Form):
                                         'SEQID per line.\n'
                                         'Invalid SEQIDs: {}'.format(bad_seqids))
         # Also check that SEQIDs are present in our database of SEQIDs
-        sequence_data_objects = SequenceData.objects.filter()
+        sequence_data_objects = SequenceData.objects.filter()    
         seqids_in_database = list()
         bad_seqids = list()
         for sequence_data in sequence_data_objects:
@@ -152,7 +162,11 @@ class ParsnpForm(forms.Form):
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
-        return seqid_list, name
+        # Diversitree strains can't be greater than total strains
+        if number_diversitree_strains !=None:
+            if len(seqid_list) < number_diversitree_strains:
+                raise forms.ValidationError('Too many Diversitree strains selected, must be {} or less'.format(len(seqid_list)))
+        return seqid_list, name,tree_program, number_diversitree_strains
 
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)

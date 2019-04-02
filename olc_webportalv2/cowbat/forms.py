@@ -15,6 +15,5 @@ class RunNameForm(forms.Form):
             raise forms.ValidationError('Invalid run name. Format must be YYMMDD_LAB', code='BadRunName')
         return run_name
 
-
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")

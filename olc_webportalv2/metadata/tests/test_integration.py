@@ -32,7 +32,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         # Login.
         self.login()
         # This takes us to home page - navigate to metadata page
-        self.driver.find_element_by_link_text('Explore Data').click()
+        self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
         self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
@@ -48,7 +48,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         # Login.
         self.login()
         # This takes us to home page - navigate to metadata page
-        self.driver.find_element_by_link_text('Explore Data').click()
+        self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
         # Select low quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail
@@ -66,7 +66,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         # Login.
         self.login()
         # This takes us to home page - navigate to metadata page
-        self.driver.find_element_by_link_text('Explore Data').click()
+        self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
         # Select ref quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail

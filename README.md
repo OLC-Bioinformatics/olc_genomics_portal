@@ -126,4 +126,4 @@ If "encoding error", use nano or vim to edit make_metadata_csv.py
 and remove `, encoding='ISO-8859-1'` and save
 
 For sequences, copy folder into root directory of app
--`cp -r /mnt/nas2/users/(youruser)/sequences/ .`
+-`sudo cp -r /mnt/nas2/users/(youruser)/sequences/ .`
