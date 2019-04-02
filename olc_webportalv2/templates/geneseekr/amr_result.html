@@ -7,7 +7,6 @@
 
   <h2>AMR Summary Results</h2>
   <br>
-
   {% if amr_request.status == 'Processing' %}
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
       <br>
@@ -85,7 +84,7 @@
   {% elif amr_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ amr_request.status }} <i class="fas fa-check-circle"></i></button>
     <br><br>
-    
+
     <br>
     <br>
     <p>These results will be available for 7 days.</p>
