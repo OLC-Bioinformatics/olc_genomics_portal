@@ -165,6 +165,11 @@ def tree_request(request):
                 tree_request.name = tree_request.pk
             else:
                 tree_request.name = name
+            if number_diversitree_strains == None:
+                tree_request.number_diversitree_strains == 0
+            else:
+                tree_request.number_diversitree_strains = number_diversitree_strains
+            tree_request.tree_program = tree_program
             tree_request.save()
             run_parsnp.apply_async(queue='geneseekr', args=(tree_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=tree_request.pk)

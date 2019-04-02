@@ -7,7 +7,6 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
 
-
 class GeneSeekrForm(forms.Form):
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
     query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea, label='', required=False)
@@ -131,6 +130,14 @@ class ParsnpForm(forms.Form):
             name = self.cleaned_data['name']
         except KeyError:
             name = None
+        try:
+            tree_program = self.cleaned_data['tree_program']
+        except:
+            tree_program
+        try:
+            number_diversitree_strains = self.cleaned_data['number_diversitree_strains']
+        except:
+            number_diversitree_strains
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
@@ -154,7 +161,11 @@ class ParsnpForm(forms.Form):
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
-        return seqid_list, name, tree_program, number_diversitree_strains
+        # Diversitree strains can't be greater than total strains
+        if number_diversitree_strains !=None:
+            if len(seqid_list) < number_diversitree_strains:
+                raise forms.ValidationError('Too many Diversitree strains selected, must be {} or less'.format(len(seqid_list)))
+        return seqid_list, name,tree_program, number_diversitree_strains
 
 class GeneSeekrNameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False)
