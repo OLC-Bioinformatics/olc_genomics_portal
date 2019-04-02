@@ -14,11 +14,6 @@ label.col-sm-2.control-label {
   line-height: 1.80rem;
 }
 
-#dropdownMenuButton::after{
-  color:red;
-}
-
-
 /* Hover change on all buttons, regardless of outline */
 .btn:hover{
   background-color: transparent;
