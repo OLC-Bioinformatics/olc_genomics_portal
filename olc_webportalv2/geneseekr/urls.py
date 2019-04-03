@@ -18,6 +18,6 @@ urlpatterns = [
     # AMR Stuff 
     url(r'^amr_home/', views.amr_home, name='amr_home'),
     url(r'^amr_request/', views.amr_request, name='amr_request'),
-    url(r'^amr_result/(?P<amr_request_pk>\d+)/', views.amr_result, name='amr_result'),    
+    url(r'^amr_result/(?P<amr_request_pk>\d+)/$', views.amr_result, name='amr_result'),    
     url(r'^amr_name/(?P<amr_request_pk>\d+)/', views.amr_name, name='amr_name'),  
 ]
