@@ -87,15 +87,19 @@
     <p>These results will be available for 7 days.</p>
     <br>
   {% if amr_request.status == 'Complete' %}
+  <form id='seqForm' method='post'>
+    {% csrf_token %}
+    <input type="hidden" value="" id="seqID" name="selectedSeq" />
     <ul class="nav nav-tabs nav-justified">
-    {% for i in amr_request.seqids %}
-      <li><a data-toggle="tab" class="btn btn-outline-primary">{{amr_request.seqids}}</a></li>
+    {% for seq in amr_request.seqids %}
+      <li><a data-toggle="tab" class="btn btn-outline-primary" onclick="Func('{{seq}}');" name="{{seq}}">{{seq}}</a></li>
     {% endfor %}
     </ul>
+    </form>
     <div class="tab-content">
-        <div id="overall" class="tab-pane fade">
+        <div id="" class="tab-pane fade">
             <br>
-             <table id="datatable" class="table table-hover compact">
+             <table id="datatable" class="table">
               <thead>
                 <tr>
                   <th>Gene</th>
@@ -103,11 +107,15 @@
                 </tr>
               </thead>
               <tbody>
-                  {% for key, value in amr_request.amr_results.items %}
-                    <tr>
-                       <td>{{ key }}</td>
-                       <td>{{ value }}</td>
-                    </tr>
+                  {% for i in amr_details%}
+                    {% if i.seqid==seqID.value%}
+                      {% for key, value in amr_details.items%}               
+                        <tr>
+                          <td>{{ key }}</td>
+                          <td>{{ value }}</td>
+                        </tr>
+                      {% endfor %}
+                    {% endif %}
                   {% endfor %}
               </tbody>
             </table>
@@ -137,5 +145,13 @@
         window.location = window.location.href;
       {% endif %}
     }, 45000)  // Refresh every 45 seconds
+
+function Func(x){
+  var input = document.getElementById('seqID');
+  input.value = x;
+  document.getElementById('seqForm').submit();
+
+}
+    
    </script>
 {% endblock %}
