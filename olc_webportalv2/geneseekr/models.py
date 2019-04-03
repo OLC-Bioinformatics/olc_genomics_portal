@@ -85,6 +85,7 @@ class AMRSummary(models.Model):
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
+    amr_results = JSONField(default={}, blank=True, null=True)
 
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
