@@ -85,7 +85,6 @@ class AMRSummary(models.Model):
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
-    amr_results = JSONField(default={}, blank=True, null=True)
 
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
@@ -93,8 +92,6 @@ class AMRSummary(models.Model):
 class AMRDetail(models.Model):
     amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='amrdetail', null=True)
     seqid = models.CharField(max_length=24, default='')
-    # Pretty much identical to amr request JSONField, but this one has percent ID for the value instead of percent
-    # of times found.
     amr_results = JSONField(default={}, blank=True, null=True)
 
     def __str__(self):

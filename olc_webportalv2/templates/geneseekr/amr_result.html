@@ -88,8 +88,8 @@
     <br>
   {% if amr_request.status == 'Complete' %}
     <ul class="nav nav-tabs nav-justified">
-    {% for i in amr_request.amr_results.items %}
-      <li><a data-toggle="tab" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
+    {% for i in amr_request.seqids %}
+      <li><a data-toggle="tab" class="btn btn-outline-primary">{{amr_request.seqids}}</a></li>
     {% endfor %}
     </ul>
     <div class="tab-content">

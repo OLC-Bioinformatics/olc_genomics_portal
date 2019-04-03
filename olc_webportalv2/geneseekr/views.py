@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 import datetime
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, GeneSeekrNameForm, TreeNameForm, EmailForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 # Task Management
 from kombu import Queue
@@ -257,6 +257,7 @@ def amr_request(request):
 @login_required
 def amr_result(request, amr_request_pk):
     amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    amr_details = AMRDetail.objects.filter(amr_request=amr_request)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
@@ -273,9 +274,8 @@ def amr_result(request, amr_request_pk):
     return render(request,
                   'geneseekr/amr_result.html',
                   {
-                      'amr_request': amr_request, 'form': form,
+                      'amr_request': amr_request,'amr_details': amr_details, 'form': form,
                   })
-
 
 @login_required
 def amr_name(request, amr_request_pk):
