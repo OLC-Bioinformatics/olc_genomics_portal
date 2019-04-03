@@ -11,7 +11,7 @@
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
       <br>
       <p>This page will automatically refresh. Your Summary request should be complete within 5 minutes (more if you requested many SeqIDs).</p>
-      <p>You don't have to remain on this page - this Summary request will be visible on <a href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
+      <p>You don't have to remain on this page - this Summary request will be visible on <a href="{% url 'amr:amr_home' %}">AMR Home</a> </p>
 
       {% comment %} Email Block {% endcomment %}
       {% if messages %}
@@ -83,11 +83,41 @@
     <br>
   {% elif amr_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ amr_request.status }} <i class="fas fa-check-circle"></i></button>
-    <br><br>
-
-    <br>
     <br>
     <p>These results will be available for 7 days.</p>
+    <br>
+  {% if amr_request.status == 'Complete' %}
+    <ul class="nav nav-tabs nav-justified">
+    {% for i in amr_request.amr_results.items %}
+      <li><a data-toggle="tab" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
+    {% endfor %}
+    </ul>
+    <div class="tab-content">
+        <div id="overall" class="tab-pane fade">
+            <br>
+             <table id="datatable" class="table table-hover compact">
+              <thead>
+                <tr>
+                  <th>Gene</th>
+                  <th>Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                  {% for key, value in amr_request.amr_results.items %}
+                    <tr>
+                       <td>{{ key }}</td>
+                       <td>{{ value }}</td>
+                    </tr>
+                  {% endfor %}
+              </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+  {% endif %}
+    <br>
+    <br>
+    
     <br>
     <div style="text-align: center">
         <a href="{{ amr_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Summary</a>
@@ -101,8 +131,6 @@
   
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/bootstrap.min.js' %}"></script>
-  <script src="{% static 'js/d3.v3.min.js' %}"></script>
-  <script src="{% static 'js/underscore-min.js' %}" charset="utf-8"></script>
   <script type="text/javascript">
     setInterval(function () {
       {% if amr_request.status == 'Processing' %}

@@ -84,11 +84,12 @@
     <br>
   {% elif parsnp_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></button>
-    <br><br>
+    <br>
+    <p>These results will be available for 7 days.</p>
+    <br>
     <svg id="tree_display" />
     <br>
     <br>
-    <p>These results will be available for 7 days.</p>
     <br>
     <div style="text-align: center">
         <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Tree (.nwk format)</a>

@@ -90,6 +90,16 @@ class AMRSummary(models.Model):
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
 
+class AMRDetail(models.Model):
+    amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='amrdetail', null=True)
+    seqid = models.CharField(max_length=24, default='')
+    # Pretty much identical to amr request JSONField, but this one has percent ID for the value instead of percent
+    # of times found.
+    amr_results = JSONField(default={}, blank=True, null=True)
+
+    def __str__(self):
+        return self.seqid
+
 class AMRAzureRequest(models.Model):
     amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='azuretask')
     exit_code_file = models.CharField(max_length=256)
