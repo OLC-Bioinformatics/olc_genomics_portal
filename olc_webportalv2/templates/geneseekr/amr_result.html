@@ -7,74 +7,72 @@
 
 <h2>AMR Summary Results</h2>
 <br>
-{% if amr_request.status == 'Processing' %}
-<button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
-<br>
-<p>This page will automatically refresh. Your Summary request should be complete within 5 minutes (more if you requested many SeqIDs).</p>
-<p>You don't have to remain on this page - this Summary request will be visible on <a href="{% url 'amr:amr_home' %}">AMR Home</a> </p>
+  {% if amr_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
+      <br>
+      <p>This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested many SeqIDs).</p>
+      <p>You don't have to remain on this page - this AMR request will be visible on <a href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
 
-{% comment %} Email Block {% endcomment %}
-{% if messages %}
-<ul class="messages">
-    {% for message in messages %}
-    <li class="{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+      {% comment %} Email Block {% endcomment %}
+      {% if messages %}
+        <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
 
-{% if request.user.email in amr_request.emails_array %}
-<p>Your email is already on the list to be notified. </p>
-Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+      {% if request.user.email in amr.emails_array %}
+      <p>Your email is already on the list to be notified. </p>
+      Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
 
-<form method="Post" id='addEmail'>
-    {% csrf_token %}
-    {{form}}
-    <button type="submit">Save Email</button>
-    <br>
-    <br>
-</form>
+      <form method="Post" id='addEmail'>
+        {% csrf_token %}
+        {{form}}
+        <button type="submit">Save Email</button>
+        <br>
+        <br>
+      </form>
 
-<script>
-    var checkbox = document.getElementById('cbx').checked;
-    var form = document.getElementById('addEmail');
-    if (checkbox != true) {
-        form.style.visibility = "hidden";
-    } else {
-        form.style.visibility = "visible";
-    }
-    function cbxCheck() {
+    <script>
+      var checkbox = document.getElementById('cbx').checked;
+      var form = document.getElementById('addEmail');
+      if (checkbox != true){
+        form.style.visibility ="hidden";}
+      else {
+          form.style.visibility ="visible";}
+      function cbxCheck(){
         var checkbox = document.getElementById('cbx').checked;
         var form = document.getElementById('addEmail');
-        if (checkbox == true) {
-            form.style.visibility = "visible";
-        } else {
-            form.style.visibility = "hidden";
-        }
-    }
-</script>
+        if (checkbox == true){
+          form.style.visibility ="visible";}
+        else{
+          form.style.visibility ="hidden";} 
+          }
+    </script>
 
-{% else %}
-<p>Would you like an email upon completion?</p>
-<form method="Post">
-    {% csrf_token %}
-    {{form}}
-    <button type="submit">Save</button>
-    <br>
-    <br>
-</form>
-{% endif %}
+      {% else %}
+      <p>Would you like an email upon completion?</p>
+      <form method="Post">
+      {% csrf_token %}
+      {{form}}
+      <button type="submit">Save</button>
+      <br>
+      <br>
+      </form>
+      {% endif %}
 
-<button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
-<div id="emails-button" class="collapse">
-    <br>
-    {% if amr_request.emails_array|length == 0 %}
-    <p>No users have signed up to receive an email for this run.</p>
-    {% else %}
-    {% for email in amr_request.emails_array %}
-    <p>{{ email }}</p>
-    {% endfor %}
-    {% endif %}
-</div>
+      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
+      <div id="emails-button" class="collapse">
+        <br>
+        {% if amr_request.emails_array|length == 0 %}
+          <p>No users have signed up to receive an email for this run.</p>
+        {% else %}
+            {% for email in amr_request.emails_array %}
+              <p>{{ email }}</p>
+            {% endfor %}
+        {% endif %}
+      </div>
   {% comment %} End Email Block {% endcomment %}
 
   {% elif amr_request.status == 'Unprocessed' %}
