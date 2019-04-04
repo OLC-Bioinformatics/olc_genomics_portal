@@ -41,7 +41,7 @@
           {% elif data_request.status == 'Processing' %}
              <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Error' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-danger" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-outline-danger" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Unprocessed' %}
              <td><button class="btn-secondary" disabled>{{ data_request.status }}</button></td>
           {% endif %}

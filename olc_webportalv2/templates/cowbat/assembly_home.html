@@ -27,7 +27,7 @@
           {% elif sequencing_run.status == 'Processing' %}
              <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ sequencing_run.status }} </a></td>
           {% elif sequencing_run.status == 'Error' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-danger" role="button">{{ sequencing_run.status }}</a></td>
+             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-outline-danger" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'UploadError' %} 
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}

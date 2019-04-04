@@ -12,6 +12,8 @@
     <button class="btn btn-primary btn-block" disabled>{{ sequencing_run.status }}</button>
 {% elif sequencing_run.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ sequencing_run.status }}</button>
+    <br>
+    <p>Return to <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
 {% elif sequencing_run.status == 'UploadError' %}
   <button class="btn btn-warning btn-block" disabled>{{ sequencing_run.status }}</button>
   <br>

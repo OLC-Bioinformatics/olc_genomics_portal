@@ -82,6 +82,7 @@
   {% elif amr_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ amr_request.status }}</button>
     <br>
+    <p>Return to <a href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
   {% elif amr_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ amr_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
@@ -110,8 +111,7 @@
     <tbody>
     {% if selectedSeq != None%}
       {% for i in amr_details%}
-        {% if i.seqid == selectedSeq%}  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/bootstrap.min.js' %}"></script>
+        {% if i.seqid == selectedSeq%}  
           {% for key, value in i.amr_results.items %} 
             <tr>
               <td>{{key}}</td>

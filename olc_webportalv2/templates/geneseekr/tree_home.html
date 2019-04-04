@@ -38,7 +38,7 @@
           {% elif parsnp_request.status == 'Processing' %}
              <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ parsnp_request.status }}</a></td>
           {% elif parsnp_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn btn-danger" role="button">{{ parsnp_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn btn-outline-danger" role="button">{{ parsnp_request.status }}</a></td>
           {% elif parsnp_request.status == 'Unprocessed' %}
              <td><button class="btn-secondary" disabled>{{ parsnp_request.status }}</button></td>
           {% endif %}

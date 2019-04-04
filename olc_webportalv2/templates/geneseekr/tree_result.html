@@ -84,6 +84,7 @@
   {% elif parsnp_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ parsnp_request.status }}</button>
     <br>
+    <p>Return to <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
   {% elif parsnp_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>

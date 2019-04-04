@@ -38,7 +38,7 @@
           {% elif geneseekr_request.status == 'Processing' %}
              <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-danger" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-danger" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Unprocessed' %}
              <td><button class="btn-secondary" disabled>{{ geneseekr_request.status }}</button></td>
           {% endif %}

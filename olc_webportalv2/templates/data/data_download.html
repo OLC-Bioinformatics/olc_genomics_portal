@@ -15,6 +15,7 @@
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ data_request.status }}</button>
       <br>
       <p>This page will automatically refresh.</p>
+      <p>You don't have to remain on this page - this request will be visible on <a href="{% url 'data:data_home' %}">Data Home</a> </p>
   {% elif data_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ data_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
@@ -39,7 +40,12 @@
     <div class="alert alert-primary" role="alert" align="center">
       <p>Shareable link: {{ data_request.download_link }}</p>
     </div>
-  {% endif %}
+  {% elif data_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{{ data_request.status }}</button>
+    <br>
+    <p>Return to <a href="{% url 'data:data_home' %}">Data Home</a> </p>
+    <br>
+    {% endif %}
     <script type="text/javascript">
     setInterval(function () {
       {% if data_request.status == 'Processing' %}
