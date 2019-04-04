@@ -259,22 +259,26 @@ def amr_result(request, amr_request_pk):
     amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
     amr_details = AMRDetail.objects.filter(amr_request=amr_request)
     form = EmailForm()
+    selectedSeq = None
     if request.method == 'POST':
-        form = EmailForm(request.POST)
-        if form.is_valid():
-            Email = form.cleaned_data.get('email')
-            if Email not in amr_request.emails_array:
-                amr_request.emails_array.append(Email)
-                amr_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
+        if 'selectedSeq' in request.POST:
+            selectedSeq = request.POST.get('selectedSeq')
+        else:    
+            form = EmailForm(request.POST)
+            if form.is_valid():
+                Email = form.cleaned_data.get('email')
+                if Email not in amr_request.emails_array:
+                    amr_request.emails_array.append(Email)
+                    amr_request.save()
+                    form = EmailForm()
+                    messages.success(request, 'Email saved')
+                else:
+                    messages.error(request, 'Email has already been saved')
             
     return render(request,
                   'geneseekr/amr_result.html',
                   {
-                      'amr_request': amr_request,'amr_details': amr_details, 'form': form,
+                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq
                   })
 
 @login_required

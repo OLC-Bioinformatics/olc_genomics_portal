@@ -96,8 +96,6 @@
     {% endfor %}
     </ul>
     </form>
-    <div class="tab-content">
-        <div id="" class="tab-pane fade">
             <br>
              <table id="datatable" class="table">
               <thead>
@@ -107,20 +105,21 @@
                 </tr>
               </thead>
               <tbody>
+              {% if selectedSeq != None%}
                   {% for i in amr_details%}
-                    {% if i.seqid==seqID.value%}
-                      {% for key, value in amr_details.items%}               
+                    {% if i.seqid == selectedSeq%}
+                      {% for key, value in i.amr_results.items %} 
                         <tr>
-                          <td>{{ key }}</td>
-                          <td>{{ value }}</td>
+                          <td>{{key}}</td>
+                          <td>{{ value}}</td>
                         </tr>
                       {% endfor %}
-                    {% endif %}
+                    {% endif %} 
                   {% endfor %}
+                  {% endif %} 
               </tbody>
             </table>
-            </div>
-        </div>
+
     </div>
   {% endif %}
     <br>
@@ -150,7 +149,6 @@ function Func(x){
   var input = document.getElementById('seqID');
   input.value = x;
   document.getElementById('seqForm').submit();
-
 }
     
    </script>
