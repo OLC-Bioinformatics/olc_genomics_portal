@@ -3,6 +3,8 @@
 {% load staticfiles %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
 
   <h2>Treesults</h2>
@@ -102,8 +104,6 @@
   {% endif %}
   
   <link rel="stylesheet" type="text/css" href="{% static 'css/phylotree.css' %}"/>
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/bootstrap.min.js' %}"></script>
   <script src="{% static 'js/d3.v3.min.js' %}"></script>
   <script src="{% static 'js/underscore-min.js' %}" charset="utf-8"></script>
   <script src="{% static 'js/phylotree.js' %} "></script>

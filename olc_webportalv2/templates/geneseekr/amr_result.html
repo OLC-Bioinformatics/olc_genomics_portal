@@ -3,8 +3,9 @@
 {% load staticfiles %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
-
 <h2>AMR Summary Results</h2>
 <br>
   {% if amr_request.status == 'Processing' %}
@@ -109,7 +110,8 @@
     <tbody>
     {% if selectedSeq != None%}
       {% for i in amr_details%}
-        {% if i.seqid == selectedSeq%}
+        {% if i.seqid == selectedSeq%}  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/bootstrap.min.js' %}"></script>
           {% for key, value in i.amr_results.items %} 
             <tr>
               <td>{{key}}</td>
@@ -133,8 +135,6 @@
     </div>
     </div>
   {% endif %}
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/bootstrap.min.js' %}"></script>
   <script type="text/javascript">
     setInterval(function () {
       {% if amr_request.status == 'Processing' %}
@@ -142,12 +142,11 @@
       {% endif %}
     }, 45000)  // Refresh every 45 seconds
 
-function Func(x){
-  var input = document.getElementById('seqID');
-  input.value = x;
-  var btn = document.getElementById(x);
-  document.getElementById('seqForm').submit();
-}
-
+    function Func(x){
+      var input = document.getElementById('seqID');
+      input.value = x;
+      var btn = document.getElementById(x);
+      document.getElementById('seqForm').submit();
+    }
    </script>
 {% endblock %}
