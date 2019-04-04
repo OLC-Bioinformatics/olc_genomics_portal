@@ -5,74 +5,76 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-  <h2>AMR Summary Results</h2>
-  <br>
-  {% if amr_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
-      <br>
-      <p>This page will automatically refresh. Your Summary request should be complete within 5 minutes (more if you requested many SeqIDs).</p>
-      <p>You don't have to remain on this page - this Summary request will be visible on <a href="{% url 'amr:amr_home' %}">AMR Home</a> </p>
+<h2>AMR Summary Results</h2>
+<br>
+{% if amr_request.status == 'Processing' %}
+<button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ amr_request.status }}</button>
+<br>
+<p>This page will automatically refresh. Your Summary request should be complete within 5 minutes (more if you requested many SeqIDs).</p>
+<p>You don't have to remain on this page - this Summary request will be visible on <a href="{% url 'amr:amr_home' %}">AMR Home</a> </p>
 
-      {% comment %} Email Block {% endcomment %}
-      {% if messages %}
-        <ul class="messages">
-        {% for message in messages %}
-        <li class="{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
+{% comment %} Email Block {% endcomment %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+    <li class="{{ message.tags }}">{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
 
-      {% if request.user.email in amr_request.emails_array %}
-      <p>Your email is already on the list to be notified. </p>
-      Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+{% if request.user.email in amr_request.emails_array %}
+<p>Your email is already on the list to be notified. </p>
+Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
 
-      <form method="Post" id='addEmail'>
-        {% csrf_token %}
-        {{form}}
-        <button type="submit">Save Email</button>
-        <br>
-        <br>
-      </form>
+<form method="Post" id='addEmail'>
+    {% csrf_token %}
+    {{form}}
+    <button type="submit">Save Email</button>
+    <br>
+    <br>
+</form>
 
-    <script>
-      var checkbox = document.getElementById('cbx').checked;
-      var form = document.getElementById('addEmail');
-      if (checkbox != true){
-        form.style.visibility ="hidden";}
-      else {
-          form.style.visibility ="visible";}
-      function cbxCheck(){
+<script>
+    var checkbox = document.getElementById('cbx').checked;
+    var form = document.getElementById('addEmail');
+    if (checkbox != true) {
+        form.style.visibility = "hidden";
+    } else {
+        form.style.visibility = "visible";
+    }
+    function cbxCheck() {
         var checkbox = document.getElementById('cbx').checked;
         var form = document.getElementById('addEmail');
-        if (checkbox == true){
-          form.style.visibility ="visible";}
-        else{
-          form.style.visibility ="hidden";} 
-          }
-    </script>
+        if (checkbox == true) {
+            form.style.visibility = "visible";
+        } else {
+            form.style.visibility = "hidden";
+        }
+    }
+</script>
 
-      {% else %}
-      <p>Would you like an email upon completion?</p>
-      <form method="Post">
-      {% csrf_token %}
-      {{form}}
-      <button type="submit">Save</button>
-      <br>
-      <br>
-      </form>
-      {% endif %}
+{% else %}
+<p>Would you like an email upon completion?</p>
+<form method="Post">
+    {% csrf_token %}
+    {{form}}
+    <button type="submit">Save</button>
+    <br>
+    <br>
+</form>
+{% endif %}
 
-      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
-      <div id="emails-button" class="collapse">
-        <br>
-        {% if amr_request.emails_array|length == 0 %}
-          <p>No users have signed up to receive an email for this run.</p>
-        {% else %}
-            {% for email in amr_request.emails_array %}
-              <p>{{ email }}</p>
-            {% endfor %}
-        {% endif %}
-      </div>
+<button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
+<div id="emails-button" class="collapse">
+    <br>
+    {% if amr_request.emails_array|length == 0 %}
+    <p>No users have signed up to receive an email for this run.</p>
+    {% else %}
+    {% for email in amr_request.emails_array %}
+    <p>{{ email }}</p>
+    {% endfor %}
+    {% endif %}
+</div>
   {% comment %} End Email Block {% endcomment %}
 
   {% elif amr_request.status == 'Unprocessed' %}
@@ -86,45 +88,43 @@
     <br>
     <p>These results will be available for 7 days.</p>
     <br>
-  {% if amr_request.status == 'Complete' %}
   <form id='seqForm' method='post'>
     {% csrf_token %}
     <input type="hidden" value="" id="seqID" name="selectedSeq" />
-    <ul class="nav nav-tabs nav-justified">
+    <ul class="nav" >
     {% for seq in amr_request.seqids %}
-      <li><a data-toggle="tab" class="btn btn-outline-primary" onclick="Func('{{seq}}');" name="{{seq}}">{{seq}}</a></li>
+      <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
+      {% if selectedSeq == seq %}
+        active
+      {% endif%} "onclick="Func('{{seq}}');" id="{{seq}}">{{seq}}</a></li>
     {% endfor %}
     </ul>
     </form>
-            <br>
-             <table id="datatable" class="table">
-              <thead>
-                <tr>
-                  <th>Gene</th>
-                  <th>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-              {% if selectedSeq != None%}
-                  {% for i in amr_details%}
-                    {% if i.seqid == selectedSeq%}
-                      {% for key, value in i.amr_results.items %} 
-                        <tr>
-                          <td>{{key}}</td>
-                          <td>{{ value}}</td>
-                        </tr>
-                      {% endfor %}
-                    {% endif %} 
-                  {% endfor %}
-                  {% endif %} 
-              </tbody>
-            </table>
-
-    </div>
-  {% endif %}
+    <br>
+    <table id="datatable" class="table">
+    <thead>
+      <tr>
+        <th>Gene</th>
+        <th>Location</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% if selectedSeq != None%}
+      {% for i in amr_details%}
+        {% if i.seqid == selectedSeq%}
+          {% for key, value in i.amr_results.items %} 
+            <tr>
+              <td>{{key}}</td>
+              <td>{{ value}}</td>
+            </tr>
+          {% endfor %}
+        {% endif %} 
+      {% endfor %}
+    {% endif %} 
+  </tbody>
+    </table>
     <br>
     <br>
-    
     <br>
     <div style="text-align: center">
         <a href="{{ amr_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Summary</a>
@@ -135,7 +135,6 @@
     </div>
     </div>
   {% endif %}
-  
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/bootstrap.min.js' %}"></script>
   <script type="text/javascript">
@@ -148,8 +147,9 @@
 function Func(x){
   var input = document.getElementById('seqID');
   input.value = x;
+  var btn = document.getElementById(x);
   document.getElementById('seqForm').submit();
 }
-    
+
    </script>
 {% endblock %}
