@@ -11,7 +11,7 @@
  <br>
   <table id="amr-request-table" class="table table-hover">
   <thead>
-    <tr>
+    <tr style="text-align:center">
        <th>SEQIDs</th>
        <th>Status</th>
        <th>Download</th>
@@ -21,10 +21,9 @@
 {#       <th>Type</th>#}
     </tr>
   </thead>
-
   <tbody>
      {% for amr_request in amr_requests %}
-     <tr>
+     <tr style="text-align:center">
        <td style="text-indent: 7px">
           {% for seqid in amr_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
@@ -34,26 +33,26 @@
          {% endif %}
        </td>
           {% if amr_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-success" role="button">{{ amr_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-success btn-block" role="button">{{ amr_request.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif amr_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ amr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ amr_request.status }}</a></td>
           {% elif amr_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger" role="button">{{ amr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ amr_request.status }}</a></td>
           {% elif amr_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary" disabled>{{ amr_request.status }}</button></td>
+             <td><button class="btn-secondary btn-block" disabled>{{ amr_request.status }}</button></td>
           {% endif %}
 
           {% if amr_request.status == 'Complete' %}
-            <td><a href="{{ amr_request.download_link }}" class="btn btn-dark"  role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ amr_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn-dark" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
           {% endif %}
       
           <td style="text-indent: 5px">{{ amr_request.created_at }}</td>
 
         {% if amr_request.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{amr_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{amr_request.pk}}" name="delete" value={{amr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{amr_request.pk}}" name="delete" value={{amr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{amr_request.pk}}" name="delete" value={{amr_request.pk}}>
           </form>
         {% else %}

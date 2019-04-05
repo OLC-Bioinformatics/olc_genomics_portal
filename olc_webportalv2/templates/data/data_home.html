@@ -14,7 +14,7 @@
 
   <table id="data-request-table" class="table table-hover">
   <thead>
-    <tr>
+    <tr style="text-align:center">
        <th>SEQIDs</th>
        <th>Status</th>
        <th>Download</th>
@@ -24,7 +24,7 @@
   </thead>
   <tbody>
     {% for data_request in data_requests %}
-      <tr>
+      <tr style="text-align:center">
         <td>
           {% for seqid in data_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
@@ -35,28 +35,28 @@
         </td>
 
          {% if data_request.status == 'Complete' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-success" role="button">{{ data_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-success btn-block" role="button">{{ data_request.status }} <i class="fas fa-check-circle"></i></a></td>
          {% elif data_request.status == 'Warning' %}
-          <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning" role="button">{{ data_request.status }}</a></td>
+          <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning btn-block" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Processing' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Error' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-outline-danger" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ data_request.status }}</a></td>
           {% elif data_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary" disabled>{{ data_request.status }}</button></td>
+             <td><button class="btn-secondary btn-block" disabled>{{ data_request.status }}</button></td>
           {% endif %}
 
           {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}
-            <td><a href="{{ data_request.download_link }}" class="btn btn-dark" role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ data_request.download_link }}" class="btn btn-dark btn-block" role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn-dark" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
           {% endif %}
 
         <td>{{ data_request.created_at }}</td>
         {% if data_request.request_type == 'FASTA' %}
-          <td><button class="btn btn-secondary" disabled>FASTA</button></td>
+          <td><button class="btn btn-outline-info btn-block" disabled>FASTA</button></td>
         {% elif data_request.request_type == 'FASTQ' %}
-          <td><button class="btn btn-dark" disabled>FASTQ</button></td>
+          <td><button class="btn btn-info btn-block" disabled>FASTQ</button></td>
         {% endif %}
       </tr>
     {% endfor %}

@@ -11,8 +11,8 @@
   <br>
   <table id="geneseekr-request-table" class="table table-hover">
     <thead>
-    <tr>
-       <th>SEQIDs</th>
+    <tr style="text-align:center">
+       <th >SEQIDs</th>
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
@@ -24,7 +24,7 @@
 
   <tbody>
      {% for geneseekr_request in geneseekr_requests %}
-     <tr id="row{{geneseekr_request.pk}}">
+     <tr id="row{{geneseekr_request.pk}}" style="text-align:center">
        <td style="text-indent: 7px">
           {% for seqid in geneseekr_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
@@ -34,19 +34,19 @@
          {% endif %}
        </td>
           {% if geneseekr_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success" role="button">{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success btn-block" role="button">{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif geneseekr_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-danger" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ geneseekr_request.status }}</a></td>
           {% elif geneseekr_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary" disabled>{{ geneseekr_request.status }}</button></td>
+             <td><button class="btn-secondary btn-block" disabled>{{ geneseekr_request.status }}</button></td>
           {% endif %}
 
           {% if geneseekr_request.status == 'Complete' %}
-            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-dark"  role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn-dark" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
           {% endif %}
 
         <td style="text-indent: 7px">{{ geneseekr_request.created_at }}</td>
@@ -58,7 +58,7 @@
 {#        {% endif %}#}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{geneseekr_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{geneseekr_request.pk}}" name="delete" value={{geneseekr_request.pk}}>
           </form>
         {% else %}
