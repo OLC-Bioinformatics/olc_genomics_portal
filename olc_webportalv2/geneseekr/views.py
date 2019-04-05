@@ -9,7 +9,7 @@ import datetime
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, GeneSeekrNameForm, TreeNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail
-from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
+from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary
 # Task Management
 from kombu import Queue
 
@@ -161,7 +161,7 @@ def tree_request(request):
             else:
                 parsnp_request.name = name
             if number_diversitree_strains == None:
-                parsnp_request.number_diversitree_strains == 0
+                parsnp_request.number_diversitree_strains = 0
             else:
                 parsnp_request.number_diversitree_strains = number_diversitree_strains
             parsnp_request.tree_program = tree_program
@@ -214,7 +214,7 @@ def tree_name(request, parsnp_request_pk):
                   })
 
 
-# AMR Summary Views------------------------------------------------------------------------------------------------------------------------------>
+# AMR Summary Views--------------------------------------------------------------------------------------------
 @csrf_exempt
 @login_required
 def amr_home(request):
@@ -236,17 +236,18 @@ def amr_home(request):
 def amr_request(request):
     form = AMRForm()
     if request.method == 'POST':
-        form = AMR(request.POST)
+        form = AMRForm(request.POST)
         if form.is_valid():
-            seqids, name  = form.cleaned_data
+            seqids, name = form.cleaned_data
             amr_request = AMRSummary.objects.create(user=request.user,
-                                                     seqids=seqids)
+                                                    seqids=seqids)
             amr_request.status = 'Processing'
             if name == None:
                 amr_request.name = amr_request.pk
             else:
                 amr_request.name = name
             amr_request.save()
+            run_amr_summary.apply_async(queue='geneseekr', args=(amr_request.pk, ), countdown=10)
             return redirect('geneseekr:amr_result', amr_request_pk=amr_request.pk)
     return render(request,
                   'geneseekr/amr_request.html',

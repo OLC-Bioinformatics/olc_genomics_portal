@@ -114,8 +114,12 @@
         {% if i.seqid == selectedSeq%}  
           {% for key, value in i.amr_results.items %} 
             <tr>
-              <td>{{key}}</td>
-              <td>{{ value}}</td>
+              <td>{{ key }}</td>
+              {% if value == "chromosome" %}
+                  <td class="table-secondary">Chromosome</td>
+              {% else %}
+                  <td class="table-info">Plasmid {{ value }}</td>
+              {% endif %}
             </tr>
           {% endfor %}
         {% endif %} 

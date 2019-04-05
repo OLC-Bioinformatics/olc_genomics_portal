@@ -1,6 +1,6 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree
+from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, AMRDetail
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 from django.core.mail import send_mail  # To be used eventually, only works in cloud
@@ -8,6 +8,7 @@ from django.core.mail import send_mail  # To be used eventually, only works in c
 import subprocess
 import datetime
 from datetime import timezone
+import csv
 # For whatever reason tasks.py doesn't get django settings properly, so send_mail from django doesn't work.
 # Use SMTPlib combined with os.environ.get to get around this.
 from email.mime.multipart import MIMEMultipart
@@ -189,6 +190,7 @@ def cowbat_cleanup(sequencing_run_pk):
 
 @shared_task
 def monitor_tasks():
+    # TODO: put each check into its own method - this code is getting ridiculously long.
     # Check for completed cowbat runs
     azure_tasks = AzureTask.objects.filter()
     # Create batch client so we can check on the status of runs.
@@ -288,6 +290,68 @@ def monitor_tasks():
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
 
+    # Next up - AMR summary requests. # TODO: Actually populate data. For now, just have download link
+    amr_summary_tasks = AMRAzureRequest.objects.filter()
+    for task in amr_summary_tasks:
+        amr_task = AMRSummary.objects.get(pk=task.amr_request.pk)
+        batch_job_name = 'amrsummary-{}'.format(task.amr_request.pk)
+        # Check if tasks related with this amrsummary job have finished.
+        tasks_completed = True
+        for cloudtask in batch_client.task.list(batch_job_name):
+            if cloudtask.state != batchmodels.TaskState.completed:
+                tasks_completed = False
+        # If tasks have completed, check if they were successful.
+        if tasks_completed:
+            exit_codes_good = True
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.execution_info.exit_code != 0:
+                    exit_codes_good = False
+            # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
+            if exit_codes_good:
+                # Now need to generate an SAS URL and give access to it/update the download link.
+                blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                               account_name=settings.AZURE_ACCOUNT_NAME)
+                # Download the output container so we can zip it.
+                download_container(blob_service=blob_client,
+                                   container_name=batch_job_name + '-output',
+                                   output_dir='olc_webportalv2/media')
+                output_dir = 'olc_webportalv2/media/{}'.format(batch_job_name)
+                if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
+                    os.remove(os.path.join(output_dir, 'batch_config.txt'))
+                shutil.make_archive(output_dir, 'zip', output_dir)
+                amr_result_container = 'amrsummary-{}'.format(amr_task.pk)
+                sas_url = generate_download_link(blob_client=blob_client,
+                                                 container_name=amr_result_container,
+                                                 output_zipfile=output_dir + '.zip',
+                                                 expiry=8)
+                # Also need to populate our AMRDetail model with results.
+                seq_amr_dict = dict()
+                for seqid in amr_task.seqids:
+                    seq_amr_dict[seqid] = dict()
+                with open(os.path.join(output_dir, 'reports', 'amr_summary.csv')) as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        seqid = row['Strain']
+                        gene = row['Gene']
+                        location = row['Location']
+                        seq_amr_dict[seqid][gene] = location
+                for seqid in seq_amr_dict:
+                    AMRDetail.objects.create(amr_request=amr_task,
+                                             seqid=seqid,
+                                             amr_results=seq_amr_dict[seqid])
+                # Finally, do some cleanup
+                shutil.rmtree(output_dir)
+                os.remove(output_dir + '.zip')
+                amr_task.download_link = sas_url
+                amr_task.status = 'Complete'
+                amr_task.save()
+            else:
+                amr_task.status = 'Error'
+                amr_task.save()
+            AMRAzureRequest.objects.filter(id=task.id).delete()
+
 
 def generate_download_link(blob_client, container_name, output_zipfile, expiry=8):
     """
@@ -338,7 +402,7 @@ def clean_old_containers():
                                    account_key=settings.AZURE_ACCOUNT_KEY)
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
-    patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$']
+    patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$', 'amrsummary-\d+$']
     generator = blob_client.list_containers(include_metadata=True)
     for container in generator:
         for pattern in patterns_to_search:

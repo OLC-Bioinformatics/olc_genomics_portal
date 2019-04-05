@@ -7,7 +7,8 @@ from Bio import SeqIO
 import multiprocessing
 from io import StringIO
 from django.conf import settings
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, ParsnpAzureRequest
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, \
+    ParsnpAzureRequest, AMRSummary, AMRAzureRequest
 
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
@@ -153,7 +154,7 @@ def run_sistr(sistr_request_pk):
 
 @shared_task
 def run_amr_summary(amr_summary_pk):
-    amr_summary_request = 'asdf'  # TODO: Make this.
+    amr_summary_request = AMRSummary.objects.get(pk=amr_summary_pk)
     try:
         container_name = 'amrsummary-{}'.format(amr_summary_pk)
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
@@ -164,11 +165,13 @@ def run_amr_summary(amr_summary_pk):
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
-        command = 'source $CONDA/activate /envs/cowbat && GeneSeekr blastn -s sequences -t {resfinder_db} ' \
-                  '-r sequences/reports -A && python spadespipeline.mobrecon -s sequences -r {mob_db}' \
+        # click (which geneseekr uses) needs these env vars set or it freaks out.
+        command = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
+                  'source $CONDA/activate /envs/cowbat && GeneSeekr blastn -s sequences -t {resfinder_db} ' \
+                  '-r sequences/reports -R && python -m spadespipeline.mobrecon -s sequences -r {mob_db}' \
                   ' && mv sequences {container_name}'.format(resfinder_db='/databases/0.3.4/resfinder',
-                                                            mob_db='/databases/0.3.4/mobrecon',
-                                                            container_name=container_name)
+                                                             mob_db='/databases/0.3.4/mobrecon',
+                                                             container_name=container_name)
         make_config_file(seqids=amr_summary_request.seqids,
                          job_name=container_name,
                          input_data_folder='sequences',
@@ -176,10 +179,10 @@ def run_amr_summary(amr_summary_pk):
                          command=command,
                          config_file=batch_config_file)
         # With that done, we can submit the file to batch with our package.
-        # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        # TODO: Add a monitor tasks entry for this.
+        AMRAzureRequest.objects.create(amr_request=amr_summary_request,
+                                       exit_code_file='NA')
         # Delete any downloaded fasta files that were used in zip creation if necessary.
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
