@@ -25,7 +25,7 @@
   <tbody>
      {% for geneseekr_request in geneseekr_requests %}
      <tr id="row{{geneseekr_request.pk}}" style="text-align:center">
-       <td style="text-indent: 7px">
+       <td>
           {% for seqid in geneseekr_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
@@ -49,7 +49,7 @@
             <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
           {% endif %}
 
-        <td style="text-indent: 7px">{{ geneseekr_request.created_at }}</td>
+        <td>{{ geneseekr_request.created_at }}</td>
 {#        {% if geneseekr_request.request_type == 'BLASTN' %}#}
 {#          <td><button class="btn btn-secondary" disabled>BLASTN</button></td>#}
 {#          TODO: Add other geneseekr blast options once they're implemented.#}
@@ -75,7 +75,8 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
   $(document).ready(function () {
-    $('#geneseekr-request-table').dataTable()
+    $('#geneseekr-request-table').dataTable({
+        "order": [[3,"desc"], [1,"asc"]]    });
     });
 
   setInterval(function () {

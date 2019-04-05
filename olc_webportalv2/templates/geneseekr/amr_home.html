@@ -69,7 +69,9 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {
-        $('#amr-request-table').dataTable()
+        $('#amr-request-table').dataTable({
+                "order": [[3,"desc"], [1,"asc"]]
+        });
     });
     setInterval(function () {
       {% for amr_request in amr_requests %}
