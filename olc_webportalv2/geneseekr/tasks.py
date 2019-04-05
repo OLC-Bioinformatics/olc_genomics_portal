@@ -170,7 +170,7 @@ def run_amr_summary(amr_summary_pk):
                   'source $CONDA/activate /envs/cowbat && GeneSeekr blastn -s sequences -t {resfinder_db} ' \
                   '-r sequences/reports -R && python -m spadespipeline.mobrecon -s sequences -r {mob_db}' \
                   ' && mv sequences {container_name}'.format(resfinder_db='/databases/0.3.4/resfinder',
-                                                             mob_db='/databases/0.3.4/mobrecon',
+                                                             mob_db='/databases/0.3.4',
                                                              container_name=container_name)
         make_config_file(seqids=amr_summary_request.seqids,
                          job_name=container_name,
