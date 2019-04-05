@@ -74,7 +74,7 @@ export FLOWER_PASSWORD=a_flower_password
 
 #### Booting up the portal
 
-Add your IP address to ALLOWED_HOSTS in `prod.yml`, and make a directory called
+Add your IP address to ALLOWED_HOSTS in `prod.py`, and make a directory called
 `postgres-data` in the root of your cloned dir. You should now be able to boot up the portal. You'll need the following commands (in this order, run in the root
 of the directory you cloned):
 
