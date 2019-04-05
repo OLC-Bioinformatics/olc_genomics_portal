@@ -102,4 +102,20 @@ class AMRDetail(models.Model):
 
 class AMRAzureRequest(models.Model):
     amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='azuretask')
-    exit_code_file = models.CharField(max_length=256)
+    exit_code_file = models.CharField(max_length=256, blank=True, null=True)
+
+
+class ProkkaRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    download_link = models.CharField(max_length=256, blank=True)
+    created_at = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=64, default='Unprocessed')
+
+    name = models.CharField(max_length=50, blank=True, null=True)
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+
+
+class ProkkaAzureRequest(models.Model):
+    prokka_request = models.ForeignKey(ProkkaRequest, on_delete=models.CASCADE, related_name='azuretask')
+    exit_code_file = models.CharField(max_length=256, blank=True, null=True)
