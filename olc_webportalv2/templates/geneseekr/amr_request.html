@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>AMR Summary Request</h2>
+  <form action='' enctype="multipart/form-data" method="post">
+   {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+  {% csrf_token %}
+   <div class="col-3" style="padding-left:0;">
+      {{form.name|as_crispy_field }}
+      </div>
+      <p>Enter SeqIDs to build a summary</p>
+      {{ form.seqids|as_crispy_field }}
+
+  <button type="submit" class="btn btn-primary btn-lg">Create Summary</button>
+  </form>
+{% endblock %}

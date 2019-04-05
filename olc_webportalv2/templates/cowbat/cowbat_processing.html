@@ -12,6 +12,8 @@
     <button class="btn btn-primary btn-block" disabled>{{ sequencing_run.status }}</button>
 {% elif sequencing_run.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ sequencing_run.status }}</button>
+    <br>
+    <p>Return to <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
 {% elif sequencing_run.status == 'UploadError' %}
   <button class="btn btn-warning btn-block" disabled>{{ sequencing_run.status }}</button>
   <br>
@@ -23,7 +25,7 @@
      role="button" >Retry Sequence Upload For {{ sequencing_run.run_name }}</a>
   </div>
 {% elif sequencing_run.status == 'Processing' %}
-  <button class="btn btn-info btn-block" disabled>{{ sequencing_run.status }}</button>
+  <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ sequencing_run.status }}</button>
   <br><br>
   <div style="text-align: center">
       <h4>Run Progress</h4>

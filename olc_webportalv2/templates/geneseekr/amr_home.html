@@ -5,11 +5,11 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>Create A New Tree</strong></a>
+  <a href="{% url 'geneseekr:amr_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>Create A New Summary</strong></a>
 <br>
-<h2>Tree Home</h2>
+<h2>AMR Home</h2>
  <br>
-  <table id="tree-request-table" class="table table-hover">
+  <table id="amr-request-table" class="table table-hover">
   <thead>
     <tr style="text-align:center">
        <th>SEQIDs</th>
@@ -22,43 +22,43 @@
     </tr>
   </thead>
   <tbody>
-     {% for parsnp_request in parsnp_requests %}
+     {% for amr_request in amr_requests %}
      <tr style="text-align:center">
        <td style="text-indent: 7px">
-          {% for seqid in parsnp_request.seqids|slice:":3" %}
+          {% for seqid in amr_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
-         {% if parsnp_request.seqids|length > 3 %}
-           <p style="font-size:14px">...and {{ parsnp_request.seqids|length|add:'-3' }} more</p>
+         {% if amr_request.seqids|length > 3 %}
+           <p style="font-size:14px">...and {{ amr_request.seqids|length|add:'-3' }} more</p>
          {% endif %}
        </td>
-          {% if parsnp_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=parsnp_request.pk %}" class="btn btn-success btn-block" role="button">{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></a></td>
-          {% elif parsnp_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ parsnp_request.status }}</a></td>
-          {% elif parsnp_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {{ parsnp_request.status }}     </a></td>
-          {% elif parsnp_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ parsnp_request.status }}</button></td>
+          {% if amr_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-success btn-block" role="button">{{ amr_request.status }} <i class="fas fa-check-circle"></i></a></td>
+          {% elif amr_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ amr_request.status }}</a></td>
+          {% elif amr_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ amr_request.status }}</a></td>
+          {% elif amr_request.status == 'Unprocessed' %}
+             <td><button class="btn-secondary btn-block" disabled>{{ amr_request.status }}</button></td>
           {% endif %}
 
-          {% if parsnp_request.status == 'Complete' %}
-            <td><a href="{{ parsnp_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+          {% if amr_request.status == 'Complete' %}
+            <td><a href="{{ amr_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
           {% endif %}
       
-          <td style="text-indent: 5px">{{ parsnp_request.created_at }}</td>
+          <td style="text-indent: 5px">{{ amr_request.created_at }}</td>
 
-        {% if parsnp_request.status != 'Processing' and 'Unprocessed' %}
-          <form id="form{{parsnp_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' id="delete{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}>
+        {% if amr_request.status != 'Processing' and 'Unprocessed' %}
+          <form id="form{{amr_request.pk}}" method="post">
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{amr_request.pk}}" name="delete" value={{amr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' id="delete{{amr_request.pk}}" name="delete" value={{amr_request.pk}}>
           </form>
         {% else %}
           <td></td>
         {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name' parsnp_request.pk %}">{{parsnp_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:amr_name'  amr_request.pk %}">{{amr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
      </tr>
      {% endfor %}
   </tbody>
@@ -69,14 +69,14 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {
-       var table =  $('#tree-request-table').DataTable();
-          table
+        var table = $('#amr-request-table').DataTable();
+        table
         .order([3,"desc"], [1,"asc"])
         .draw();
     });
     setInterval(function () {
-      {% for parsnp_request in parsnp_requests %}
-        {% if parsnp_request.status == 'Processing' %}
+      {% for amr_request in amr_requests %}
+        {% if amr_request.status == 'Processing' %}
           window.location = window.location.href;
         {% endif %}
       {% endfor %}

@@ -12,7 +12,7 @@
   <br>
   <table id="assembly-table" class="table table-hover">
       <thead>
-          <tr>
+          <tr style="text-align:center">
             <th>Run Name</th>
             <th>Run Status</th>
             <th>Report Download</th>
@@ -20,24 +20,24 @@
       </thead>
       <tbody>
       {% for sequencing_run in sequencing_runs %}
-        <tr>
-          <td style="text-indent: 7px">{{ sequencing_run.run_name }}</td>
+        <tr style="text-align:center">
+          <td>{{ sequencing_run.run_name }}</td>
           {% if sequencing_run.status == 'Complete' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success" role="button">{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success btn-block" role="button">{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></a></td>
           {% elif sequencing_run.status == 'Processing' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info" style="color:white;" role="button">{{ sequencing_run.status }} </a></td>
+             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ sequencing_run.status }} </a></td>
           {% elif sequencing_run.status == 'Error' %}
-             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-danger" role="button">{{ sequencing_run.status }}</a></td>
+             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'UploadError' %} 
-            <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning" role="button">{{ sequencing_run.status }}</a></td>
+            <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning btn-block" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}
-          <td style="text-indent: 7px"><button class="btn-secondary" disabled>Unprocessed</button></td>
+          <td><button class="btn-secondary btn-block" disabled>Unprocessed</button></td>
           {% endif %}
-          <td style="text-indent: 8px">
+          <td>
           {% if sequencing_run.status == 'Complete' %}
-            <a href="{{ sequencing_run.download_link }}" class="btn btn-dark" style="padding-left:3px;" role="button">Download <i class="fas fa-download"></i></a>
+            <a href="{{ sequencing_run.download_link }}" class="btn btn-dark btn-block" style="padding-left:3px;" role="button">Download <i class="fas fa-download"></i></a>
           {% else %}
-          <button class="btn-dark" disabled>Unavailable</button>
+          <button class="btn btn-dark btn-block" disabled>Not Available</button>
           {% endif %}
           </td>
         </tr>

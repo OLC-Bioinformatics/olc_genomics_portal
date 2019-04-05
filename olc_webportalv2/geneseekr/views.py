@@ -7,13 +7,13 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, GeneSeekrNameForm, TreeNameForm, EmailForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, GeneSeekrNameForm, TreeNameForm, EmailForm
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp
 # Task Management
 from kombu import Queue
 
-# Create your views here.
+# Geneseekr Views------------------------------------------------------------------------------------------------------------------------------>
 @csrf_exempt
 @login_required
 def geneseekr_home(request):
@@ -127,63 +127,12 @@ def geneseekr_results(request, geneseekr_request_pk):
                       # 'top_blast_hits': top_blast_hits
                   })
 
-
-@login_required
-def tree_result(request, parsnp_request_pk):
-    tree_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
-    form = EmailForm()
-    if request.method == 'POST':
-        form = EmailForm(request.POST)
-        if form.is_valid():
-            Email = form.cleaned_data.get('email')
-            if Email not in tree_request.emails_array:
-                tree_request.emails_array.append(Email)
-                tree_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
-            
-    return render(request,
-                  'geneseekr/tree_result.html',
-                  {
-                      'tree_request': tree_request, 'form': form,
-                  })
-
-
-@login_required
-def tree_request(request):
-    form = ParsnpForm()
-    if request.method == 'POST':
-        form = ParsnpForm(request.POST)
-        if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains  = form.cleaned_data
-            tree_request = ParsnpTree.objects.create(user=request.user,
-                                                     seqids=seqids)
-            tree_request.status = 'Processing'
-            if name == None:
-                tree_request.name = tree_request.pk
-            else:
-                tree_request.name = name
-            if number_diversitree_strains == None:
-                tree_request.number_diversitree_strains == 0
-            else:
-                tree_request.number_diversitree_strains = number_diversitree_strains
-            tree_request.tree_program = tree_program
-            tree_request.save()
-            run_parsnp.apply_async(queue='geneseekr', args=(tree_request.pk, ), countdown=10)
-            return redirect('geneseekr:tree_result', parsnp_request_pk=tree_request.pk)
-    return render(request,
-                  'geneseekr/tree_request.html',
-                  {
-                      'form': form
-                  })
-
+# Tree Views------------------------------------------------------------------------------------------------------------------------------>
 @csrf_exempt
 @login_required
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    tree_requests = ParsnpTree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+    parsnp_requests = ParsnpTree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
 
     if request.method == "POST":
         if request.POST.get('delete'): 
@@ -194,22 +143,157 @@ def tree_home(request):
     return render(request,
                   'geneseekr/tree_home.html',
                   {
-                      'tree_requests': tree_requests
+                      'parsnp_requests': parsnp_requests
+                  })
+
+@login_required
+def tree_request(request):
+    form = ParsnpForm()
+    if request.method == 'POST':
+        form = ParsnpForm(request.POST)
+        if form.is_valid():
+            seqids, name, tree_program, number_diversitree_strains  = form.cleaned_data
+            parsnp_request = ParsnpTree.objects.create(user=request.user,
+                                                     seqids=seqids)
+            parsnp_request.status = 'Processing'
+            if name == None:
+                parsnp_request.name = parsnp_request.pk
+            else:
+                parsnp_request.name = name
+            if number_diversitree_strains == None:
+                parsnp_request.number_diversitree_strains == 0
+            else:
+                parsnp_request.number_diversitree_strains = number_diversitree_strains
+            parsnp_request.tree_program = tree_program
+            parsnp_request.save()
+            run_parsnp.apply_async(queue='geneseekr', args=(parsnp_request.pk, ), countdown=10)
+            return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)
+    return render(request,
+                  'geneseekr/tree_request.html',
+                  {
+                      'form': form
+                  })
+
+@login_required
+def tree_result(request, parsnp_request_pk):
+    parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in parsnp_request.emails_array:
+                parsnp_request.emails_array.append(Email)
+                parsnp_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+            
+    return render(request,
+                  'geneseekr/tree_result.html',
+                  {
+                      'parsnp_request': parsnp_request, 'form': form,
                   })
 
 @login_required
 def tree_name(request, parsnp_request_pk):
     form = TreeNameForm()
-    tree_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
     if request.method == "POST":  
         form = TreeNameForm(request.POST)
         if form.is_valid():
-            tree_request.name = form.cleaned_data['name']
-            tree_request.save()
+            parsnp_request.name = form.cleaned_data['name']
+            parsnp_request.save()
         return redirect('geneseekr:tree_home')
         
     return render(request,
                   'geneseekr/tree_name.html',
                   {
-                      'tree_request': tree_request,  'form': form
+                      'parsnp_request': parsnp_request,  'form': form
+                  })
+
+
+# AMR Summary Views------------------------------------------------------------------------------------------------------------------------------>
+@csrf_exempt
+@login_required
+def amr_home(request):
+    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
+    amr_requests = AMRSummary.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+
+    if request.method == "POST":
+        if request.POST.get('delete'): 
+            query = AMRSummary.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+        
+    return render(request,
+                  'geneseekr/amr_home.html',
+                  {
+                      'amr_requests': amr_requests
+                  })
+
+@login_required
+def amr_request(request):
+    form = AMRForm()
+    if request.method == 'POST':
+        form = AMR(request.POST)
+        if form.is_valid():
+            seqids, name  = form.cleaned_data
+            amr_request = AMRSummary.objects.create(user=request.user,
+                                                     seqids=seqids)
+            amr_request.status = 'Processing'
+            if name == None:
+                amr_request.name = amr_request.pk
+            else:
+                amr_request.name = name
+            amr_request.save()
+            return redirect('geneseekr:amr_result', amr_request_pk=amr_request.pk)
+    return render(request,
+                  'geneseekr/amr_request.html',
+                  {
+                      'form': form
+                  })
+
+@login_required
+def amr_result(request, amr_request_pk):
+    amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    amr_details = AMRDetail.objects.filter(amr_request=amr_request)
+    form = EmailForm()
+    selectedSeq = None
+    if request.method == 'POST':
+        if 'selectedSeq' in request.POST:
+            selectedSeq = request.POST.get('selectedSeq')
+        else:    
+            form = EmailForm(request.POST)
+            if form.is_valid():
+                Email = form.cleaned_data.get('email')
+                if Email not in amr_request.emails_array:
+                    amr_request.emails_array.append(Email)
+                    amr_request.save()
+                    form = EmailForm()
+                    messages.success(request, 'Email saved')
+                else:
+                    messages.error(request, 'Email has already been saved')
+            
+    return render(request,
+                  'geneseekr/amr_result.html',
+                  {
+                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq
+                  })
+
+@login_required
+def amr_name(request, amr_request_pk):
+    form = TreeNameForm()
+    amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    if request.method == "POST":  
+        form = TreeNameForm(request.POST)
+        if form.is_valid():
+            amr_request.name = form.cleaned_data['name']
+            amr_request.save()
+        return redirect('geneseekr:amr_home')
+        
+    return render(request,
+                  'geneseekr/amr_name.html',
+                  {
+                      'amr_request': amr_request,  'form': form
                   })

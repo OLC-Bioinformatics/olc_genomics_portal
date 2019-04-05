@@ -46,10 +46,11 @@
               <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly <i class="fas fa-cogs"></i></i></i></a>
             </li>
               <div class="dropdown">
-                <button class="btn btn-outline" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze <i class="fas fa-chevron-down fa-xs"></i></button>
+                <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze</i></button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                   <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Create AMR <i class="fas fa-vial"></i></a>
                 </div>
             </div>
             </ul>
@@ -101,11 +102,11 @@
             email andrew.low@canada.ca and we'll get them sorted out as soon as possible.</p>
         </div>
         <br>
-        <p class="lead h6">
-            <span class="h1"><b>Welcome to the OLC Webportal</b> <i class="fas fa-dna"></i></span><br>
+        <p class="lead h6" style="text-align:center">
+            <span class="h1" ><b>Welcome to the OLC Webportal</b> <i class="fas fa-dna"></i></span><br>
         </p>
         <br>
-        <div class="card-deck d-flex">
+        <div class="card-deck d-flex h-100 justify-content-center align-self-center">
           
           <article>
             <div class="text">
@@ -148,6 +149,15 @@
               <br>
               <br>
               <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree </a>
+            </div>
+          </article>
+          <article>
+            <div class="text">
+              <h3>Create a AMR Summary</h3>
+              <p id="article5">things things things</p>
+              <br>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Create AMR Summary </a>
             </div>
           </article>
         </div>
