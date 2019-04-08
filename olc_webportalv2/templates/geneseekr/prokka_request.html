@@ -5,7 +5,7 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Tree Query</h2>
+  <h2>Annotation Request</h2>
   <form action='' enctype="multipart/form-data" method="post">
    {% if form.errors %}
      <div class="alert alert-danger" role="alert" align="center">
@@ -16,14 +16,9 @@
    <div class="col-3" style="padding-left:0;">
       {{form.name|as_crispy_field }}
       </div>
-      <p>Enter SeqIDs to build a tree</p>
+      <p>Enter SeqIDs to Annotate</p>
       {{ form.seqids|as_crispy_field }}
-      {{form.tree_program|as_crispy_field }}
 
-      <div class="col-3" style="padding-left:0;">
-      {{form.number_diversitree_strains|as_crispy_field }}
-      </div>
-    
-  <button type="submit" class="btn btn-primary btn-lg">Create Tree</button>
+  <button type="submit" class="btn btn-primary btn-lg">Create Annotation</button>
   </form>
 {% endblock %}

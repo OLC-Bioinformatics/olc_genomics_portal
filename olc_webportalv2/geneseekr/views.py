@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, GeneSeekrNameForm, TreeNameForm, EmailForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, TreeNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary
 # Task Management

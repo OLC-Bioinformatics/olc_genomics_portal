@@ -7,13 +7,13 @@
 
   <h2>Tree Rename</h2>
   <br>
-  <h4>{{tree_request.pk}} - {{tree_request.created_at}}</h4>
+  <h4>{{prokka_request.pk}} - {{prokka_request.created_at}}</h4>
 
   <form method='post'>
   {% csrf_token %}
-  Previous Name: {{tree_request.name}} </br></br>
+  Previous Name: {{prokka_request.name}} </br></br>
   {{form}} </br></br>
- <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:tree_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
+ <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:prokka_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
   </form>
 
 {% endblock %}
