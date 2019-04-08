@@ -20,4 +20,10 @@ urlpatterns = [
     url(r'^amr_request/', views.amr_request, name='amr_request'),
     url(r'^amr_result/(?P<amr_request_pk>\d+)/', views.amr_result, name='amr_result'),    
     url(r'^amr_name/(?P<amr_request_pk>\d+)/', views.amr_name, name='amr_name'),  
+
+    # Prokka Stuff 
+    url(r'^prokka_home/', views.prokka_home, name='prokka_home'),
+    url(r'^prokka_request/', views.prokka_request, name='prokka_request'),
+    url(r'^prokka_result/(?P<prokka_request_pk>\d+)/', views.prokka_result, name='prokka_result'),    
+    url(r'^prokka_name/(?P<prokka_request_pk>\d+)/', views.prokka_name, name='prokka_name'),
 ]
