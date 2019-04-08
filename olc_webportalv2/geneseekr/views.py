@@ -8,13 +8,13 @@ from django.views.decorators.csrf import csrf_exempt
 import datetime
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, GeneSeekrNameForm, TreeNameForm, EmailForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary
 # Task Management
 from kombu import Queue
 
 # Geneseekr Views------------------------------------------------------------------------------------------------------------------------------>
-@csrf_exempt
+@csrf_exempt #needed or IE explodes
 @login_required
 def geneseekr_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
@@ -128,7 +128,7 @@ def geneseekr_results(request, geneseekr_request_pk):
                   })
 
 # Tree Views------------------------------------------------------------------------------------------------------------------------------>
-@csrf_exempt
+@csrf_exempt #needed or IE explodes
 @login_required
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
@@ -215,7 +215,7 @@ def tree_name(request, parsnp_request_pk):
 
 
 # AMR Summary Views--------------------------------------------------------------------------------------------
-@csrf_exempt
+@csrf_exempt #needed or IE explodes
 @login_required
 def amr_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
@@ -297,4 +297,86 @@ def amr_name(request, amr_request_pk):
                   'geneseekr/amr_name.html',
                   {
                       'amr_request': amr_request,  'form': form
+                  })
+
+
+
+# Prokka Views----------------------------------------------------------------------------------------------->
+@csrf_exempt #needed or IE explodes
+@login_required
+def prokka_home(request):
+    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
+    prokka_requests = ProkkaRequest.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+
+    if request.method == "POST":
+        if request.POST.get('delete'): 
+            query = ProkkaRequest.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+        
+    return render(request,
+                  'geneseekr/prokka_home.html',
+                  {
+                      'prokka_requests': prokka_requests
+                  })
+
+@login_required
+def prokka_request(request):
+    form = ProkkaForm()
+    if request.method == 'POST':
+        form = ProkkaForm(request.POST)
+        if form.is_valid():
+            seqids, name = form.cleaned_data
+            prokka_request = ProkkaRequest.objects.create(user=request.user,
+                                                    seqids=seqids)
+            prokka_request.status = 'Processing'
+            if name == None:
+                prokka_request.name = prokka_request.pk
+            else:
+                prokka_request.name = name
+            prokka_request.save()
+            # run_prokka_summary.apply_async(queue='geneseekr', args=(prokka_request.pk, ), countdown=10)
+            return redirect('geneseekr:prokka_result', prokka_request_pk=prokka_request.pk)
+    return render(request,
+                  'geneseekr/prokka_request.html',
+                  {
+                      'form': form
+                  })
+
+@login_required
+def prokka_result(request, prokka_request_pk):
+    prokka_request = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in prokka_request.emails_array:
+                prokka_request.emails_array.append(Email)
+                prokka_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+        
+    return render(request,
+                  'geneseekr/prokka_result.html',
+                  {
+                      'prokka_request': prokka_request, 'form': form,
+                  })
+
+@login_required
+def prokka_name(request, prokka_request_pk):
+    form = TreeNameForm()
+    prokka_request = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
+    if request.method == "POST":  
+        form = TreeNameForm(request.POST)
+        if form.is_valid():
+            prokka_request.name = form.cleaned_data['name']
+            prokka_request.save()
+        return redirect('geneseekr:prokka_home')
+        
+    return render(request,
+                  'geneseekr/prokka_name.html',
+                  {
+                      'prokka_request': prokka_request,  'form': form
                   })
