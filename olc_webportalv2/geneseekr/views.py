@@ -9,7 +9,7 @@ import datetime
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, TreeNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
-from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary
+from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka
 # Task Management
 from kombu import Queue
 
@@ -334,7 +334,7 @@ def prokka_request(request):
             else:
                 prokka_request.name = name
             prokka_request.save()
-            # run_prokka_summary.apply_async(queue='geneseekr', args=(prokka_request.pk, ), countdown=10)
+            run_prokka.apply_async(queue='geneseekr', args=(prokka_request.pk, ), countdown=10)
             return redirect('geneseekr:prokka_result', prokka_request_pk=prokka_request.pk)
     return render(request,
                   'geneseekr/prokka_request.html',

@@ -243,12 +243,7 @@ def run_parsnp(parsnp_request_pk):
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
-
-        # email_list = parsnp_request.emails_array
-        # for email in email_list:
-        #     send_email(subject='Geneseekr Query {} has finished.'.format(str(geneseekr_request)),
-        #                body='This email is to inform you that the Geneseekr Query {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
-        #                recipient=email)    
+ 
     except:
         parsnp_request.status = 'Error'
         parsnp_request.save()
