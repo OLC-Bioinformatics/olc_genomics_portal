@@ -76,7 +76,7 @@ class ParsnpTree(models.Model):
 
 
 class ParsnpAzureRequest(models.Model):
-    tree_request = models.ForeignKey(ParsnpTree, on_delete=models.CASCADE, related_name='azuretask')
+    parsnp_request = models.ForeignKey(ParsnpTree, on_delete=models.CASCADE, related_name='azuretask')
     exit_code_file = models.CharField(max_length=256)
 
 

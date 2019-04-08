@@ -51,6 +51,7 @@
                   <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Create AMR <i class="fas fa-vial"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">Annotate <i class="fas fa-highlighter"></i></a>
                 </div>
             </div>
             </ul>
@@ -158,6 +159,15 @@
               <br>
               <br>
               <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Create AMR Summary </a>
+            </div>
+          </article>
+          <article>
+            <div class="text">
+              <h3>Annotate</h3>
+              <p id="article5">things things things</p>
+              <br>
+              <br>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">Annotate </a>
             </div>
           </article>
         </div>

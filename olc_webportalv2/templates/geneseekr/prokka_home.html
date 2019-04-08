@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+<br>
+  <a href="{% url 'geneseekr:prokka_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>New Prokka Annotation</strong></a>
+<br>
+<h2>Annotate Home</h2>
+ <br>
+  <table id="prokka-request-table" class="table table-hover">
+  <thead>
+    <tr style="text-align:center">
+       <th>SEQIDs</th>
+       <th>Status</th>
+       <th>Download</th>
+       <th>Request Date</th>
+       <th data-orderable="false">       </th>
+       <th>Name</th>
+{#       <th>Type</th>#}
+    </tr>
+  </thead>
+  <tbody>
+     {% for prokka_request in prokka_requests %}
+     <tr style="text-align:center">
+       <td style="text-indent: 7px">
+          {% for seqid in prokka_request.seqids|slice:":3" %}
+            <p style="font-size:14px">{{ seqid }}</p>
+          {% endfor %}
+         {% if prokka_request.seqids|length > 3 %}
+           <p style="font-size:14px">...and {{ prokka_request.seqids|length|add:'-3' }} more</p>
+         {% endif %}
+       </td>
+          {% if prokka_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:prokka_result' prokka_request_pk=prokka_request.pk %}" class="btn btn-success btn-block" role="button">{{ prokka_request.status }} <i class="fas fa-check-circle"></i></a></td>
+          {% elif prokka_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:prokka_result'  prokka_request_pk=prokka_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ prokka_request.status }}</a></td>
+          {% elif prokka_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:prokka_result'  prokka_request_pk=prokka_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {{ prokka_request.status }}     </a></td>
+          {% elif prokka_request.status == 'Unprocessed' %}
+             <td><button class="btn-secondary btn-block" disabled>{{ prokka_request.status }}</button></td>
+          {% endif %}
+
+          {% if prokka_request.status == 'Complete' %}
+            <td><a href="{{ prokka_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+          {% else %}
+            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+          {% endif %}
+      
+          <td style="text-indent: 5px">{{ prokka_request.created_at }}</td>
+
+        {% if prokka_request.status != 'Processing' and 'Unprocessed' %}
+          <form id="form{{prokka_request.pk}}" method="post">
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{prokka_request.pk}}" name="delete" value={{prokka_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' id="delete{{prokka_request.pk}}" name="delete" value={{prokka_request.pk}}>
+          </form>
+        {% else %}
+          <td></td>
+        {% endif %}
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:prokka_name' prokka_request.pk %}">{{prokka_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+     </tr>
+     {% endfor %}
+  </tbody>
+  </table>
+
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+    $(document).ready(function () {
+       var table =  $('#prokka-request-table').DataTable();
+          table
+        .order([3,"desc"], [1,"asc"])
+        .draw();
+    });
+    setInterval(function () {
+      {% for prokka_request in prokka_requests %}
+        {% if prokka_request.status == 'Processing' %}
+          window.location = window.location.href;
+        {% endif %}
+      {% endfor %}
+    }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
+
+    $(".btn-danger").click(function(e) {
+    e.preventDefault();
+    var btn = this.value;
+    var form = document.getElementById("form" + this.value);
+      Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true
+     }).then(function(result) {
+      if (result.value == true) {
+       Swal.fire({
+        title: 'Deleted!',
+        text: 'Your file has been deleted.',
+        type: 'success',
+        showConfirmButton: false
+       }).then(function(cont) {
+        if (cont.value == null) {
+          if (bowser.name =="Internet Explorer") {
+            $.ajax({
+            type:"POST",
+            data: {"delete":btn}}).done(function(data) {
+              location.reload();
+            });
+            
+          }else{
+          form.submit();}
+       }
+       })
+      } else {
+       Swal.fire({
+        title: 'Cancelled!',
+        text: 'Your file is safe.',
+        type: 'error',
+        showConfirmButton: false
+       })
+      }
+     })
+   });
+  </script>
+{% endblock %}

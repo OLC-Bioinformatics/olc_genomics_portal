@@ -1,6 +1,6 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, AMRDetail
+from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, AMRDetail, ProkkaRequest, ProkkaAzureRequest
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 from django.core.mail import send_mail  # To be used eventually, only works in cloud
@@ -226,8 +226,8 @@ def monitor_tasks():
     # Also check for Parsnp tree creation tasks
     tree_tasks = ParsnpAzureRequest.objects.filter()
     for task in tree_tasks:
-        tree_task = ParsnpTree.objects.get(pk=task.tree_request.pk)
-        batch_job_name = 'parsnp-{}'.format(task.tree_request.pk)
+        tree_task = ParsnpTree.objects.get(pk=task.parsnp_request.pk)
+        batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
         # Check if tasks related with this parsnp job have finished.
         tasks_completed = True
         for cloudtask in batch_client.task.list(batch_job_name):
@@ -286,7 +286,7 @@ def monitor_tasks():
                 #     recipient=email)
 
             else:
-                ParsnpTree.objects.filter(pk=task.tree_request.pk).update(status='Error')
+                ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
 
@@ -347,6 +347,12 @@ def monitor_tasks():
                 amr_task.download_link = sas_url
                 amr_task.status = 'Complete'
                 amr_task.save()
+
+                # email_list = amr_task.emails_array
+                # for email in email_list:
+                #     send_email(subject='AMR Summary {} has finished.'.format(amr_task.name),
+                #     body='This email is to inform you that the AMR Summary request {} has completed and is available at the following link {}'.format(str(amr_task),sas_url),
+                #     recipient=email)
             else:
                 amr_task.status = 'Error'
                 amr_task.save()
