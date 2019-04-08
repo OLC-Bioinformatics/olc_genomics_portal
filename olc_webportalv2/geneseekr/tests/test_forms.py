@@ -1,5 +1,5 @@
 from django.test import TestCase
-from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm
+from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm, ProkkaForm
 from olc_webportalv2.metadata.models import SequenceData
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -183,3 +183,42 @@ class AMRFormTest(TestCase):
             'seqids': ''
         })
         self.assertFalse(form.is_valid())
+
+class ProkkaFormTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
+                                                    quality='Pass',
+                                                    genus='Listeria')
+        sequence_data.save()
+        sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
+                                                    quality='Pass',
+                                                    genus='Listeria')
+        sequence_data.save()
+
+    def test_valid_form(self):
+        form = ProkkaForm({
+            'seqids': '2015-SEQ-0711 2015-SEQ-0712'
+        })
+        self.assertTrue(form.is_valid())
+        seqids, name = form.cleaned_data
+        self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
+
+    def test_invalid_form_wrong_seqid_regex(self):
+        form =  ProkkaForm({
+            'seqids': '22015-SEQ-0711 2015-SEQ-0712'
+        })
+        self.assertFalse(form.is_valid())
+
+    def test_invalid_form_wrong_seqid_does_not_exist(self):
+        form =  ProkkaForm({
+            'seqids': '2222-SEQ-0711 2015-SEQ-0712'
+        })
+        self.assertFalse(form.is_valid())
+
+    def test_invalid_form_blank(self):
+        form =  ProkkaForm({
+            'seqids': ''
+        })
+        self.assertFalse(form.is_valid())
+
