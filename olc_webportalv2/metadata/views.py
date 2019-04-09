@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from olc_webportalv2.metadata.forms import MetaDataRequestForm
-from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData
+from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID
 from django.contrib.auth.decorators import login_required
 
 # Create your views here.
