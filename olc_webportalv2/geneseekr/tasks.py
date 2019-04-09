@@ -8,7 +8,7 @@ import multiprocessing
 from io import StringIO
 from django.conf import settings
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, \
-    ParsnpAzureRequest, AMRSummary, AMRAzureRequest
+    ParsnpAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest
 
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
@@ -82,7 +82,7 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
 
 @shared_task
 def run_prokka(prokka_request_pk):
-    prokka_request = 'asdf'  # TODO: Have prokka object created in models
+    prokka_request = ProkkaRequest.objects.get(pk=prokka_request_pk)
     try:
         container_name = 'prokka-{}'.format(prokka_request_pk)
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
@@ -94,7 +94,7 @@ def run_prokka(prokka_request_pk):
         # on each genome.
         # TODO: Make sure this still works with a really long command caused by lots of SEQIDs
         for seqid in prokka_request.seqids:
-            command += ' && prokka --outdir {container_name} --prefix {seqid} --cpus 8 sequences/{seqid.fasta}'.format(container_name=container_name,
+            command += ' && prokka --outdir {container_name}/{seqid} --prefix {seqid} --cpus 8 sequences/{seqid}.fasta'.format(container_name=container_name,
                                                                                                                        seqid=seqid)
         make_config_file(seqids=prokka_request.seqids,
                          job_name=container_name,
@@ -102,12 +102,11 @@ def run_prokka(prokka_request_pk):
                          output_data_folder=container_name,
                          command=command,
                          config_file=batch_config_file)
-        # With that done, we can submit the file to batch with our package.
-        # Use Popen to run in background so that task is considered complete.
+        # With that done, we can submit the file to batch with our package and create a tracking object.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        # TODO: Have a Prokka request object get created and tracked.
-        # Also TODO: add the prokka request to monitor_tasks in olc_webportalv2/cowbat/tasks
+        ProkkaAzureRequest.objects.create(prokka_request=prokka_request,
+                                          exit_code_file='NA')
         # Delete any downloaded fasta files that were used in zip creation if necessary.
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:

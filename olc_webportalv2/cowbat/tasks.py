@@ -1,6 +1,7 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, AMRDetail, ProkkaRequest, ProkkaAzureRequest
+from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, \
+    AMRDetail, ProkkaRequest, ProkkaAzureRequest
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 from django.core.mail import send_mail  # To be used eventually, only works in cloud
@@ -290,7 +291,7 @@ def monitor_tasks():
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
 
-    # Next up - AMR summary requests. # TODO: Actually populate data. For now, just have download link
+    # Next up - AMR summary requests.
     amr_summary_tasks = AMRAzureRequest.objects.filter()
     for task in amr_summary_tasks:
         amr_task = AMRSummary.objects.get(pk=task.amr_request.pk)
@@ -357,6 +358,57 @@ def monitor_tasks():
                 amr_task.status = 'Error'
                 amr_task.save()
             AMRAzureRequest.objects.filter(id=task.id).delete()
+
+    # Prokka!
+    prokka_tasks = ProkkaAzureRequest.objects.filter()
+    for task in prokka_tasks:
+        prokka_task = ProkkaRequest.objects.get(pk=task.prokka_request.pk)
+        batch_job_name = 'prokka-{}'.format(task.prokka_request.pk)
+        # Check if tasks related with this amrsummary job have finished.
+        tasks_completed = True
+        for cloudtask in batch_client.task.list(batch_job_name):
+            if cloudtask.state != batchmodels.TaskState.completed:
+                tasks_completed = False
+        # If tasks have completed, check if they were successful.
+        if tasks_completed:
+            exit_codes_good = True
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.execution_info.exit_code != 0:
+                    exit_codes_good = False
+            # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
+            if exit_codes_good:
+                # Now need to generate an SAS URL and give access to it/update the download link.
+                blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                               account_name=settings.AZURE_ACCOUNT_NAME)
+                # Download the output container so we can zip it.
+                download_container(blob_service=blob_client,
+                                   container_name=batch_job_name + '-output',
+                                   output_dir='olc_webportalv2/media')
+                output_dir = 'olc_webportalv2/media/{}'.format(batch_job_name)
+                if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
+                    os.remove(os.path.join(output_dir, 'batch_config.txt'))
+                shutil.make_archive(output_dir, 'zip', output_dir)
+                prokka_result_container = 'prokka-result-{}'.format(prokka_task.pk)
+                sas_url = generate_download_link(blob_client=blob_client,
+                                                 container_name=prokka_result_container,
+                                                 output_zipfile=output_dir + '.zip',
+                                                 expiry=8)
+                prokka_task.download_link = sas_url
+                prokka_task.status = 'Complete'
+                prokka_task.save()
+                shutil.rmtree(output_dir)
+                os.remove(output_dir + '.zip')
+                # email_list = prokka_task.emails_array
+                # for email in email_list:
+                #     send_email(subject='Annotation Task {} has finished.'.format(amr_task.name),
+                #     body='This email is to inform you that the annotation request {} has completed and is available at the following link {}'.format(str(amr_task),sas_url),
+                #     recipient=email)
+            else:
+                prokka_task.status = 'Error'
+                prokka_task.save()
+            ProkkaAzureRequest.objects.filter(id=task.id).delete()
 
 
 def generate_download_link(blob_client, container_name, output_zipfile, expiry=8):
