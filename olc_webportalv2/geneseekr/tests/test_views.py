@@ -83,3 +83,35 @@ class SampleTestCase(TestCase):
         resp = self.client.get(reverse('geneseekr:tree_result', kwargs={'parsnp_request_pk': 123}))
         self.assertEqual(resp.status_code, 404)
 
+# AMR View Tests ----------------------------------------------------------------------------------------------------------------->
+
+    def test_amr_home_login_required(self):
+        resp = self.client.get(reverse('geneseekr:amr_home'))
+        self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.
+
+    def test_amr_home(self):
+        self.client.login(username='TestUser', password='password')
+        resp = self.client.get(reverse('geneseekr:amr_home'))
+        self.assertEqual(resp.status_code, 200)
+        amr_requests = AMRSummary.objects.filter()
+        for request in amr_requests:
+            self.assertIn(request.name, resp.content.decode('utf-8'))
+    
+    def test_user_amr_home(self):
+        self.client.login(username='Test', password='password')
+        resp = self.client.get(reverse('geneseekr:amr_home'))
+        self.assertEqual(resp.status_code, 200)
+        amr_requests = AMRSummary.objects.filter()
+        for request in amr_requests:
+            self.assertNotIn(request.name, resp.content.decode('utf-8'))
+
+    def test_amr_result_login_required(self):
+        resp = self.client.get(reverse('geneseekr:amr_result', kwargs={'amr_request_pk': 1}))
+        self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.
+
+    def test_amr_result_404_no_run(self):
+        self.client.login(username='TestUser', password='password')
+        resp = self.client.get(reverse('geneseekr:amr_result', kwargs={'amr_request_pk': 123}))
+        self.assertEqual(resp.status_code, 404)
+
+
