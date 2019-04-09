@@ -17,6 +17,7 @@ class SampleTestCase(TestCase):
         resp = self.client.get(reverse('cowbat:assembly_home'))
         self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.
 
+    #Verifying that all the run names are in the table 
     def test_assembly_home(self):
         self.client.login(username='TestUser', password='password')
         resp = self.client.get(reverse('cowbat:assembly_home'))
