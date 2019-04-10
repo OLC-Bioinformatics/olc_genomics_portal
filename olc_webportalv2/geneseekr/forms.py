@@ -117,7 +117,7 @@ class ParsnpForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False)
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
 
-    tree_program = forms.ChoiceField(label='Which tree program? ', initial='parsnp',choices=[('parsnp', 'parsnp'), ('mashtree', 'mashtree')], widget=forms.RadioSelect())
+    tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('parsnp', 'parsnp'), ('mashtree', 'mashtree')], widget=forms.RadioSelect())
     number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
     def clean(self):
         super().clean()

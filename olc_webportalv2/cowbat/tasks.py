@@ -25,6 +25,7 @@ import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
 from strainchoosr import strainchoosr
 import re
+import ete3
 #Celery Task Management
 from celery import shared_task, task
 
@@ -231,10 +232,16 @@ def monitor_tasks():
         batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
         # Check if tasks related with this parsnp job have finished.
         tasks_completed = True
-        for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != batchmodels.TaskState.completed:
-                tasks_completed = False
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
 
+        except:  # If something errors first time through job doesn't exist. In that case, give up.
+            ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+            # Delete task so we don't keep iterating over it.
+            ParsnpAzureRequest.objects.filter(id=task.id).delete()
+            continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
             exit_codes_good = True
@@ -256,10 +263,10 @@ def monitor_tasks():
                 with open(tree_file) as f:
                     tree_string = f.readline()
                 if tree_task.number_diversitree_strains > 0:
-                    diverse_strains = strainchoosr.run_strainchoosr(treefile=tree_file,
-                                                                    number_representatives=[tree_task.number_diversitree_strains],
-                                                                    output_name='olc_webportalv2/media/parsnp-{}/strainchoosr_output'.format(tree_task.pk))
-                    tree_task.seqids_diversitree = diverse_strains[tree_task.number_diversitree_strains]
+                    diverse_strains = strainchoosr.pd_greedy(tree=ete3.Tree(tree_file),
+                                                             number_tips=tree_task.number_diversitree_strains,
+                                                             starting_strains=[])
+                    tree_task.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
                 # Should now have results from parsnp in olc_webportalv2/media/parsnp-X, where X is pk of parsnp request
@@ -298,9 +305,15 @@ def monitor_tasks():
         batch_job_name = 'amrsummary-{}'.format(task.amr_request.pk)
         # Check if tasks related with this amrsummary job have finished.
         tasks_completed = True
-        for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != batchmodels.TaskState.completed:
-                tasks_completed = False
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
+        except:  # If something errors first time through job can't get deleted. In that case, give up.
+            AMRSummary.objects.filter(pk=task.amr_request.pk).update(status='Error')
+            # Delete task so we don't keep iterating over it.
+            AMRAzureRequest.objects.filter(id=task.id).delete()
+            continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
             exit_codes_good = True
@@ -366,9 +379,15 @@ def monitor_tasks():
         batch_job_name = 'prokka-{}'.format(task.prokka_request.pk)
         # Check if tasks related with this amrsummary job have finished.
         tasks_completed = True
-        for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != batchmodels.TaskState.completed:
-                tasks_completed = False
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
+        except:  # If something errors first time through job can't get deleted. In that case, give up.
+            ProkkaRequest.objects.filter(pk=task.prokka_request.pk).update(status='Error')
+            # Delete task so we don't keep iterating over it.
+            ProkkaAzureRequest.objects.filter(id=task.id).delete()
+            continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
             exit_codes_good = True

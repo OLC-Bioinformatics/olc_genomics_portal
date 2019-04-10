@@ -93,6 +93,23 @@
     <svg id="tree_display" />
     <br>
     <br>
+    {% if parsnp_request.seqids_diversitree %}
+      <h4>Most Diverse Strains</h4>
+      <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>SeqID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seqid in parsnp_request.seqids_diversitree %}
+          <tr>
+            <td>{{ seqid }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    {% endif %}
     <br>
     <div style="text-align: center">
         <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Tree (.nwk format)</a>

@@ -34,3 +34,13 @@ if __name__ == '__main__':
             blob_service.create_blob_from_path(container_name='processed-data',
                                                blob_name=fasta_name,
                                                file_path=fasta)
+
+    # Do same for nextseq assemblies
+    local_fastas = glob.glob('/mnt/nas2/processed_sequence_data/nextseq_assemblies/*/BestAssemblies/*.fasta')
+    for fasta in local_fastas:
+        fasta_name = os.path.basename(fasta)
+        if fasta_name not in fastas_in_cloud:
+            print('Uploading {}'.format(fasta_name))
+            blob_service.create_blob_from_path(container_name='processed-data',
+                                               blob_name=fasta_name,
+                                               file_path=fasta)

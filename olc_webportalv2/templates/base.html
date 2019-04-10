@@ -50,7 +50,7 @@
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                   <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Create AMR <i class="fas fa-vial"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Investigate AMR <i class="fas fa-vial"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">Annotate <i class="fas fa-highlighter"></i></a>
                 </div>
             </div>
@@ -98,10 +98,6 @@
       {% endif %}
 
       {% block content %}
-        <div class="alert alert-info" role="alert" align="center">
-          <p>Please note that this portal is in early development. Bugs may be present. If you run into any issues,
-            email andrew.low@canada.ca and we'll get them sorted out as soon as possible.</p>
-        </div>
         <br>
         <p class="lead h6" style="text-align:center">
             <span class="h1" ><b>Welcome to the OLC Webportal</b> <i class="fas fa-dna"></i></span><br>
@@ -120,7 +116,7 @@
           <article >
             <div class="text">
               <h3>Get Data</h3>
-              <p id="article2">Retrive copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA) or raw data (FASTQ), a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
+              <p id="article2">Retrive copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA), and a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
               <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">Get Data</a>
             </div>
           </article>
@@ -145,8 +141,8 @@
           <article>
             <div class="text">
               <h3>Create a Tree</h3>
-              <p id="article5">Create phylogenetic trees based on whole genome sequences using parsnp. Note that
-              sequences should be from the same genus, or parsnp may fail.</p>
+              <p id="article5">Create phylogenetic trees based on whole genome sequences to investigate relatedness
+              of isolates.</p>
               <br>
               <br>
               <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree </a>
@@ -154,20 +150,21 @@
           </article>
           <article>
             <div class="text">
-              <h3>Create a AMR Summary</h3>
-              <p id="article5">things things things</p>
+              <h3>Investigate AMR</h3>
+              <p id="article5">Look for AMR genes in sequence data, and find out if they're present on mobile
+                elements or the chromosome.</p>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Create AMR Summary </a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Investigate AMR</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Annotate</h3>
-              <p id="article5">things things things</p>
+              <h3>Annotate Genomes</h3>
+              <p id="article5">Annotate genomes of interest using prokka to find out what genes are present.</p>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">Annotate </a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">Annotate Genomes</a>
             </div>
           </article>
         </div>
