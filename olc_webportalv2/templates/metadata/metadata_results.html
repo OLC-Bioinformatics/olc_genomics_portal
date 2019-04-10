@@ -10,20 +10,32 @@
   <button class="btn btn-primary" style="float: right" onclick=copyText()>Copy SeqIDs to clipboard</button>
   <br>
   <br>
+
+  {% comment %}  {% endcomment %}
   <table class="table table-hover compact" id="seqid-table">
   <thead>
     <tr>
       <th>SeqID</th>
+      <th>LabID</th>
     </tr>
   </thead>
   <tbody>
     {% for seqid in metadata_result.seqids %}
       <tr>
         <td>{{ seqid }}</td>
+        {% for key, value in thisdict.items %}
+        {% if key == seqid%}
+        <td>{{value}}</td>
       </tr>
+      {% endif %}
+    {% endfor %}
     {% endfor %}
   </tbody>
   </table>
+  {% comment %}  {% endcomment %}
+
+
+
   <script type="text/javascript">
   function copyText() {
       // First, iterate through table and grab all SeqIDs, put them into a string.
