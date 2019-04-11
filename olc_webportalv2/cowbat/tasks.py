@@ -421,8 +421,8 @@ def monitor_tasks():
                 os.remove(output_dir + '.zip')
                 # email_list = prokka_task.emails_array
                 # for email in email_list:
-                #     send_email(subject='Annotation Task {} has finished.'.format(amr_task.name),
-                #     body='This email is to inform you that the annotation request {} has completed and is available at the following link {}'.format(str(amr_task),sas_url),
+                #     send_email(subject='Annotation Task {} has finished.'.format(prokka_task.name),
+                #     body='This email is to inform you that the annotation request {} has completed and is available at the following link {}'.format(str(prokka_task),sas_url),
                 #     recipient=email)
             else:
                 prokka_task.status = 'Error'
