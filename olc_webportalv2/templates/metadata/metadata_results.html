@@ -59,8 +59,6 @@ $(document).ready(function() {
         $('#btnLab').show();
         $('#btnBoth').hide();
         $('#btnSeq').hide();
-        
-
     }else if ($this.val() === 'Both') {
         $('td:nth-child(2),th:nth-child(2)').show();
         $('td:nth-child(1),th:nth-child(1)').show();
@@ -77,6 +75,7 @@ $(document).ready(function() {
         $('#btnSeq').show();
         $('#btnLab').hide();
         $('#btnBoth').hide();
+         location.reload();
     }
     } );
 } )
@@ -110,6 +109,7 @@ $(document).ready(function() {
   if (document.getElementById('alert-div') === null) {
     document.getElementById('insertbefore').insertBefore(div, insertbefore.firstChild)
   }
+   $(".alert").fadeOut(2000);
   }
 
   function copyTable() {
@@ -142,6 +142,7 @@ $(document).ready(function() {
   if (document.getElementById('alert-div') === null) {
     document.getElementById('insertbefore').insertBefore(div, insertbefore.firstChild)
   }
+   $(".alert").fadeOut(2000);
   }
 
   </script>
