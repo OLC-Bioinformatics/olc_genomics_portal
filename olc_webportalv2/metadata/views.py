@@ -46,22 +46,20 @@ def metadata_home(request):
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
-    thisdict = LabID_sync_SeqID(metadata_result)
+    labidDict = LabID_sync_SeqID(metadata_result.seqids)
     return render(request,
                   'metadata/metadata_results.html',
                   {
-                      'metadata_result': metadata_result, 'thisdict': thisdict
+                      'metadata_result': metadata_result, 'labidDict': labidDict
                   })
 
-def LabID_sync_SeqID(metadata_request):
-    thisdict ={}
-    for y in metadata_request.seqids:
+def LabID_sync_SeqID(x):
+    labidDict ={}
+    for y in x:
         sequence_result = SequenceData.objects.get(seqid=y)
         if sequence_result.labid is not None:
             labid_result = LabID.objects.get(pk=sequence_result.labid.pk)
-            # labid_result = labid.labid
         else:
             labid_result = 'N/A'
-        
-        thisdict.update({sequence_result.seqid: str(labid_result)})
-    return thisdict 
+        labidDict.update({sequence_result.seqid: str(labid_result)})
+    return labidDict
