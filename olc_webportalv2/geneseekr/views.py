@@ -10,6 +10,8 @@ import datetime
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, TreeNameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka
+from olc_webportalv2.metadata.models import SequenceData
+from olc_webportalv2.metadata.views import LabID_sync_SeqID
 # Task Management
 from kombu import Queue
 
@@ -48,7 +50,6 @@ def geneseekr_name(request, geneseekr_request_pk):
                       'geneseekr_request': geneseekr_request,  'form': form
                   })
                   
-
 @login_required
 def geneseekr_query(request):
     form = GeneSeekrForm()
@@ -86,7 +87,6 @@ def geneseekr_query(request):
                      'form': form, 'formName':formName,
                   })
 
-
 @login_required
 def geneseekr_processing(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
@@ -109,11 +109,11 @@ def geneseekr_processing(request, geneseekr_request_pk):
                      'geneseekr_request': geneseekr_request, "form": form
                   })
 
-
 @login_required
 def geneseekr_results(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
+    labidDict = LabID_sync_SeqID(geneseekr_request.seqids)
     # Create dictionary where each gene gets its own top hits
     gene_top_hits = dict()
     for gene_name in geneseekr_request.gene_targets:
@@ -124,6 +124,7 @@ def geneseekr_results(request, geneseekr_request_pk):
                       'geneseekr_request': geneseekr_request,
                       'geneseekr_details': geneseekr_details,
                       'gene_top_hits': gene_top_hits,
+                      'labidDict': labidDict,
                       # 'top_blast_hits': top_blast_hits
                   })
 
@@ -213,7 +214,6 @@ def tree_name(request, parsnp_request_pk):
                       'parsnp_request': parsnp_request,  'form': form
                   })
 
-
 # AMR Summary Views--------------------------------------------------------------------------------------------
 @csrf_exempt #needed or IE explodes
 @login_required
@@ -300,7 +300,6 @@ def amr_name(request, amr_request_pk):
                   })
 
 
-
 # Prokka Views----------------------------------------------------------------------------------------------->
 @csrf_exempt #needed or IE explodes
 @login_required
@@ -380,3 +379,4 @@ def prokka_name(request, prokka_request_pk):
                   {
                       'prokka_request': prokka_request,  'form': form
                   })
+
