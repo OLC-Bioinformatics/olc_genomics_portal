@@ -45,7 +45,7 @@ See the following for CSS to SASS compilation docs: `Live reloading and SASS com
 .. _`Live reloading and SASS compilation`: http://cookiecutter-django.readthedocs.io/en/latest/live-reloading-and-sass-compilation.html
 
 
-Celery (currently non-functional)
+Celery 
 ^^^^^^
 
 This app comes with Celery.
