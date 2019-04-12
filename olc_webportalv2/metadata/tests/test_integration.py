@@ -41,8 +41,8 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         table = self.driver.find_element_by_id('seqid-table')
         table_rows = table.find_elements_by_tag_name('tr')
         self.assertEqual(3, len(table_rows))
-        self.assertEqual(table_rows[1].text, '1234-SEQ-0001')
-        self.assertEqual(table_rows[2].text, '1234-SEQ-0002')
+        self.assertEqual(table_rows[1].text, '1234-SEQ-0001 N/A')
+        self.assertEqual(table_rows[2].text, '1234-SEQ-0002 N/A')
 
     def test_query_low_quality_sequences(self):
         # Login.
@@ -58,9 +58,9 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         table = self.driver.find_element_by_id('seqid-table')
         table_rows = table.find_elements_by_tag_name('tr')
         self.assertEqual(4, len(table_rows))
-        self.assertEqual(table_rows[1].text, '1234-SEQ-0001')
-        self.assertEqual(table_rows[2].text, '1234-SEQ-0002')
-        self.assertEqual(table_rows[3].text, '1234-SEQ-0003')
+        self.assertEqual(table_rows[1].text, '1234-SEQ-0001 N/A')
+        self.assertEqual(table_rows[2].text, '1234-SEQ-0002 N/A')
+        self.assertEqual(table_rows[3].text, '1234-SEQ-0003 N/A')
 
     def test_query_ref_quality_sequences(self):
         # Login.
@@ -76,7 +76,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         table = self.driver.find_element_by_id('seqid-table')
         table_rows = table.find_elements_by_tag_name('tr')
         self.assertEqual(2, len(table_rows))
-        self.assertEqual(table_rows[1].text, '1234-SEQ-0002')
+        self.assertEqual(table_rows[1].text, '1234-SEQ-0002 N/A')
 
     def tearDown(self):
         self.driver.close()
