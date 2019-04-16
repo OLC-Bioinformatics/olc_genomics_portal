@@ -114,7 +114,6 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
                          {% for top_blast_hit in top_blast_hits %}
                            <tr>
                              <td>{{ top_blast_hit.contig_name }}</td>
-                             <td>"hiii"</td>
                              <td>{{ top_blast_hit.query_coverage|floatformat:"-2" }}</td>
                              <td>{{ top_blast_hit.percent_identity }}</td>
                              <td>{{ top_blast_hit.start_position }}</td>

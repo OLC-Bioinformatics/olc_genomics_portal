@@ -91,15 +91,25 @@
   <form id='seqForm' method='post'>
     {% csrf_token %}
     <input type="hidden" value="" id="seqID" name="selectedSeq" />
-    <ul class="nav" >
+
+    <ul class="nav">
     {% for seq in amr_request.seqids %}
       <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
       {% if selectedSeq == seq %}
         active
-      {% endif%} "onclick="Func('{{seq}}');" id="{{seq}}">{{seq}}</a></li>
-    {% endfor %}
+      {% endif%} "onclick="Func('{{seq}}');" id="{{seq}}">
+      {% for key, value in labidDict.items %}
+                    {% if key == seq%}
+                    {{key}}</a></li>
+                  {% endif %}
+                {% endfor %} 
+         {% endfor %}
     </ul>
     </form>
+    <br>
+    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" >View LabIDs</button>
+    <br>
+    <br>
     <br>
     <table id="datatable" class="table">
     <thead>
@@ -138,8 +148,57 @@
         <p><i class="fas fa-share-alt"></i> Shareable link: {{ amr_request.download_link }}</p>
     </div>
     </div>
+
+
+
+
+      {% comment %} {% for seq in amr_request.seqids %}
+      <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
+      {% if selectedSeq == seq %}
+        active
+      {% endif%} "onclick="Func('{{seq}}');" id="{{seq}}">
+      {% if display == 'Lab' %}
+      {% for key, value in labidDict.items %}
+                    {% if key == seq%}
+                    {{value}}</a></li>
+                  {% endif %}
+                {% endfor %} 
+      {% elif display == 'Both' %}
+         {% for key, value in labidDict.items %}
+                    {% if key == seq%}
+                    {{value}}
+                  {% endif %}
+                {% endfor %}                    
+      {{seq}}</a></li>
+      {% elif display == 'Seq' %}               
+      {{seq}}</a></li>
+      {% endif %}
+    {% endfor %} {% endcomment %}
   {% endif %}
-  <script type="text/javascript">
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script type="text/javascript">
+$(document).ready(function () {
+  $('#toggle-vis').on( 'click', function () {
+    var $form = document.getElementById('seqForm');
+    var articles = $form.getElementsByTagName('a');
+    var $this = $(this);
+    if ($this.val() === 'Lab') {
+        $this.val('Both');
+        $this.html('View Both');
+      for (var i = 0, len = articles.length; i < len; i++) {
+        articles[1].innerHTML= 'byyyeee';
+      }        
+
+    }else if ($this.val() === 'Both') {
+        $this.val('Seq');
+        $this.html('View SeqIDs')
+    }else {
+        $this.val('Lab');
+        $this.html('View LabIDs')
+    }
+    } );
+  });
     setInterval(function () {
       {% if amr_request.status == 'Processing' %}
         window.location = window.location.href;
