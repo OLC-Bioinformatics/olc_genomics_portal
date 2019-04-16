@@ -162,8 +162,6 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <script type="text/javascript">
   $(document).ready(function () {
     $('#toggle-vis').on('click', function () {
-      var $form = document.getElementById('seqForm');
-      var articles = $form.getElementsByTagName('a');
       var $this = $(this);
       if ($this.val() === 'Lab') {
         $this.val('Both');
