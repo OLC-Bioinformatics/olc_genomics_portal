@@ -63,7 +63,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <form method="Post">
   {% csrf_token %}
   {{form}}
-  <button type="submit">Save</button>
+  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
   <br>
   <br>
 </form>
@@ -156,39 +156,6 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
     <p><i class="fas fa-share-alt"></i> Shareable link: {{ amr_request.download_link }}</p>
   </div>
 </div>
-
-
-
-
-{% comment %} {% for seq in amr_request.seqids %}
-<li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
-      {% if selectedSeq == seq %}
-        active
-      {% endif%} " onclick="Func('{{seq}}');" id="{{seq}}">
-    {% if display == 'Lab' %}
-    {% for key, value in labidDict.items %}
-    {% if key == seq%}
-    {{value}}</a></li>
-{% endif %}
-{% endfor %}
-{% elif display == 'Both' %}
-{% for key, value in labidDict.items %}
-{% if key == seq%}
-{{value}}
-{% endif %}
-{% endfor %}
-{{seq}}</a></li>
-{% elif display == 'Seq' %}
-{{seq}}</a></li>
-{% endif %}
-{% endfor %} {% endcomment %}
-
-{% comment %} 
-   {% for key, value in labidDict.items %}
-          if ({{key}} == articles[i].innerHTML) {
-            articles[i].innerHTML = {{value}};
-          } 
-          {% endfor %} {% endcomment %}
 {% endif %}
 
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
@@ -205,13 +172,20 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
          var i = document.getElementById('{{key}}');
          i.innerHTML = '{{value}}';
         {% endfor%};
-          
       } else if ($this.val() === 'Both') {
         $this.val('Seq');
-        $this.html('View SeqIDs')
+        $this.html('View SeqIDs');
+        {% for key,value in labidDict.items%}
+         var i = document.getElementById('{{key}}');
+         i.innerHTML = '{{key}} {{value}}';
+        {% endfor%};
       } else {
         $this.val('Lab');
         $this.html('View LabIDs');
+        {% for key,value in labidDict.items%}
+        var i = document.getElementById('{{key}}');
+        i.innerHTML = '{{key}}';
+        {% endfor%};
       }
     });
   });
