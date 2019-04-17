@@ -90,6 +90,10 @@
     <br>
     <p>These results will be available for 7 days.</p>
     <br>
+    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
+    <br>
+    <br>
+    <br>
     <svg id="tree_display" />
     <br>
     <br>
@@ -140,4 +144,41 @@
        'top-bottom-spacing': 'fit-to-size'}).size([500, 500]);
    tree(tree_string).layout()
    </script>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script type="text/javascript">
+  $(document).ready(function () {
+    $('#toggle-vis').on('click', function () {
+      var $this = $(this);
+      var items = document.getElementsByClassName('node');
+      if ($this.val() === 'Lab') {
+        $this.val('Both');
+        $this.html('View Both');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          }}
+        {% endfor%}
+      } else if ($this.val() === 'Both') {
+        $this.val('Seq');
+        $this.html('View SeqIDs');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          }}
+        {% endfor%}
+      } else {
+        $this.val('Lab');
+        $this.html('View LabIDs');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          }}
+        {% endfor%}
+      }
+    });
+  });
+  </script>
 {% endblock %}
