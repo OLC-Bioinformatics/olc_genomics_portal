@@ -178,6 +178,7 @@ def tree_request(request):
 @login_required
 def tree_result(request, parsnp_request_pk):
     parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    labidDict = LabID_sync_SeqID(parsnp_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
@@ -194,7 +195,7 @@ def tree_result(request, parsnp_request_pk):
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 'form': form,
+                      'parsnp_request': parsnp_request, 'form': form, 'labidDict':labidDict,
                   })
 
 @login_required

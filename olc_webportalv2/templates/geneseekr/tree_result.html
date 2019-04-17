@@ -103,12 +103,18 @@
       <thead>
         <tr>
           <th>SeqID</th>
+          <th>LabID</th>
         </tr>
       </thead>
       <tbody>
         {% for seqid in parsnp_request.seqids_diversitree %}
           <tr>
             <td>{{ seqid }}</td>
+            {% for key, value in labidDict.items %}
+                    {% if key == seqid%}
+                    <td>{{value}}</td>
+                  {% endif %}
+                {% endfor %}
           </tr>
         {% endfor %}
       </tbody>
@@ -141,16 +147,19 @@
    var tree = d3.layout.phylotree().svg(d3.select('#tree_display')).options(
      { 'zoom': true,
        'left-right-spacing': 'fit-to-size',
-       'top-bottom-spacing': 'fit-to-size'}).size([500, 500]);
+       'top-bottom-spacing': 'fit-to-size'}).size([600, 600]);
    tree(tree_string).layout()
-   </script>
+      </script>
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
   $(document).ready(function () {
+    $('td:nth-child(2),th:nth-child(2)').hide();
     $('#toggle-vis').on('click', function () {
       var $this = $(this);
       var items = document.getElementsByClassName('node');
       if ($this.val() === 'Lab') {
+        $('td:nth-child(2),th:nth-child(2)').show();
+        $('td:nth-child(1),th:nth-child(1)').hide();
         $this.val('Both');
         $this.html('View Both');
         {% for key,value in labidDict.items%}
@@ -160,21 +169,25 @@
           }}
         {% endfor%}
       } else if ($this.val() === 'Both') {
+        $('td:nth-child(2),th:nth-child(2)').show();
+        $('td:nth-child(1),th:nth-child(1)').show();
         $this.val('Seq');
         $this.html('View SeqIDs');
         {% for key,value in labidDict.items%}
         for(var i = 0; i < items.length; i++){
-          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
-          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{value}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}} {{value}}';
           }}
         {% endfor%}
       } else {
+        $('td:nth-child(1),th:nth-child(1)').show();
+        $('td:nth-child(2),th:nth-child(2)').hide();
         $this.val('Lab');
         $this.html('View LabIDs');
         {% for key,value in labidDict.items%}
         for(var i = 0; i < items.length; i++){
-          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
-          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}} {{value}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}}';
           }}
         {% endfor%}
       }
