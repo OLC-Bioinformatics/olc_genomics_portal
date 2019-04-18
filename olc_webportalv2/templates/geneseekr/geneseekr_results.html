@@ -17,7 +17,7 @@
         <div id="overall" class="tab-pane fade">
             <br>
             <p>This graph shows the percentage of sequences in which each query gene was found.</p>
-            <div id="container" style="height: 500px"></div>
+            <div id="container" style="height: 500px;"></div>
             <button type="button" class="btn btn-outline-primary btn-block" data-toggle="collapse" data-target="#geneseekr-results"><strong>View Table</strong></button>
             <div id="geneseekr-results" class="collapse">
             <table id="datatable" class="table table-hover compact">
@@ -147,7 +147,8 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
     <script>
     Highcharts.chart('container', {
         chart: {
-            type: 'column'
+            type: 'column',
+            
         },
         title: {
             text: ''
@@ -155,14 +156,15 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         xAxis: {
             title: {
                 text: 'Gene'
-            }
+            },
+            marginLeft: 100,
         },
         yAxis: {
             min: 0,
             max: 100,
             title: {
                 text: '% sequences where gene was found'
-            }
+            },
         },
         colors: ['#191b80'],
         legend: {
@@ -228,10 +230,21 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
 
         });
     {% endfor %}
-    </script>
+  </script>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   $(document).ready(function () {
+    var graph_items = document.getElementsByClassName('highcharts-axis-labels highcharts-xaxis-labels')[1];
+    var text_graph_items = graph_items.getElementsByTagName('text');
+    for(var i = 0; i < text_graph_items.length; i++){
+          var seq = text_graph_items[i].innerHTML.split('_');
+          text_graph_items[i].id = seq[0] +'-graph';
+          }
+    var table_items = document.getElementsByClassName('contig');
+      for(var j = 0; j < table_items.length; j++){
+        var seq = table_items[j].innerHTML.split('_');
+        table_items[j].id = seq[0]+'-table';
+        }
   $('td:nth-child(2),th:nth-child(2)').hide();
   $('#toggle-vis').on( 'click', function () {
     var $this = $(this);
@@ -247,7 +260,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         $('td:nth-child(2),th:nth-child(2)').show();
         $('td:nth-child(1),th:nth-child(1)').show();
         $this.val('Seq');
-        $this.html('View SeqIDs')
+        $this.html('View SeqIDs');
         $('#btnBoth').show();
         $('#btnSeq').hide();
         $('#btnLab').hide();    
@@ -255,7 +268,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         $('td:nth-child(1),th:nth-child(1)').show();
         $('td:nth-child(2),th:nth-child(2)').hide();
         $this.val('Lab');
-        $this.html('View LabIDs')
+        $this.html('View LabIDs');
         $('#btnSeq').show();
         $('#btnLab').hide();
         $('#btnBoth').hide();
@@ -263,29 +276,71 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
     } );
     $('#toggle-vis-table').on( 'click', function () {
     var $this = $(this);
-    var graph_items = document.getElementsByClassName('highcharts-axis-labels highcharts-xaxis-labels')[1];
-    var text_graph_items = graph_items.getElementsByTagName('text');
-    var table_items = document.getElementsByClassName('contig');
       if ($this.val() === 'Lab') {
         $this.val('Both');
         $this.html('View Both');
         for(var i = 0; i < text_graph_items.length; i++){
-          var seq = text_graph_items[i].innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (seq[0] == '{{key}}'){
-            var replace = (text_graph_items[i].innerHTML).replace(seq[0], '{{value}}')
-            text_graph_items[i].innerHTML = replace;
-          }
+         {% for key,value in labidDict.items%}
+         if (text_graph_items[i].id == '{{key}}-graph'){
+          var item = document.getElementById('{{key}}-graph');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{value}}')
+          item.innerHTML = replace;}
+        {% endfor%}
+        }
+         for(var j = 0; j < table_items.length; j++){
+         {% for key,value in labidDict.items%}
+          if (table_items[j].id == '{{key}}-table'){
+          var item = document.getElementById('{{key}}-table');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{value}}')
+          item.innerHTML = replace;}
         {% endfor%}
         }
     }else if ($this.val() === 'Both') {
         $this.val('Seq');
-        $this.html('View SeqIDs')
+        $this.html('View SeqIDs');
+        for(var i = 0; i < text_graph_items.length; i++){
+         {% for key,value in labidDict.items%}
+         if (text_graph_items[i].id == '{{key}}-graph'){
+          var item = document.getElementById('{{key}}-graph');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{key}} {{value}}' )
+          item.innerHTML = replace;}
+        {% endfor%}
+        }
+       for(var j = 0; j < table_items.length; j++){
+         {% for key,value in labidDict.items%}
+          if (table_items[j].id == '{{key}}-table'){
+          var item = document.getElementById('{{key}}-table');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{key}} {{value}}')
+          item.innerHTML = replace;}
+        {% endfor%}
+        }
     }else {
         $this.val('Lab');
-        $this.html('View LabIDs')
+        $this.html('View LabIDs');
+      for(var i = 0; i < text_graph_items.length; i++){
+         {% for key,value in labidDict.items%}
+         if (text_graph_items[i].id == '{{key}}-graph'){
+          var item = document.getElementById('{{key}}-graph');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{key}}')
+          item.innerHTML = replace;}
+        {% endfor%}
+        }
+        for(var j = 0; j < table_items.length; j++){
+         {% for key,value in labidDict.items%}
+          if (table_items[j].id == '{{key}}-table'){
+          var item = document.getElementById('{{key}}-table');
+          var text = item.innerHTML.split('_');
+          var replace = item.innerHTML.replace(text[0], '{{key}}')
+          item.innerHTML = replace;}
+        {% endfor%}
+        }
     }
-    } );
+    });
     {% for gene, top_blast_hits in gene_top_hits.items %}
       var table = $('#{{ gene|slugify }}-table').DataTable({
         "pageLength": 50
