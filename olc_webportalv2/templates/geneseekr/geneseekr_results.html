@@ -9,9 +9,9 @@
   <br>
   {% if geneseekr_request.status == 'Complete' %}
     <ul class="nav nav-tabs nav-justified">
-      <li><a data-toggle="tab" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
-      <li><a data-toggle="tab" class="btn btn-outline-secondary" href="#sequence-by-sequence">Sequence By Sequence</a></li>
-      <li class="active"><a data-toggle="tab" class="btn btn-outline-dark" href="#top-hits">Top Blast Hits</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">Sequence By Sequence</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">Top Blast Hits</a></li>
     </ul>
     <div class="tab-content">
         <div id="overall" class="tab-pane fade">
@@ -80,11 +80,11 @@
             </tbody>
            </table>
           </div>
-         <div id="top-hits" class="tab-pane fade show active">
+         <div id="top-hits" class="tab-pane fade">
            <br>
            <ul class="nav nav-tabs nav-justified">
              {% for gene in geneseekr_request.gene_targets %}
-                 <li><a data-toggle="tab" class="btn btn-outline-info" href="#{{ gene|slugify }}">{{ gene }}</a></li>
+                 <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-info" href="#{{ gene|slugify }}">{{ gene }}</a></li>
              {% endfor %}
            </ul>
          <div class="tab-content">
@@ -113,7 +113,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
                      {% if top_blast_hits %}
                          {% for top_blast_hit in top_blast_hits %}
                            <tr>
-                             <td>{{ top_blast_hit.contig_name }}</td>
+                             <td class='contig'>{{ top_blast_hit.contig_name }}</td>
                              <td>{{ top_blast_hit.query_coverage|floatformat:"-2" }}</td>
                              <td>{{ top_blast_hit.percent_identity }}</td>
                              <td>{{ top_blast_hit.start_position }}</td>
@@ -259,6 +259,31 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         $('#btnSeq').show();
         $('#btnLab').hide();
         $('#btnBoth').hide();
+    }
+    } );
+    $('#toggle-vis-table').on( 'click', function () {
+    var $this = $(this);
+    var graph_items = document.getElementsByClassName('highcharts-axis-labels highcharts-xaxis-labels')[1];
+    var text_graph_items = graph_items.getElementsByTagName('text');
+    var table_items = document.getElementsByClassName('contig');
+      if ($this.val() === 'Lab') {
+        $this.val('Both');
+        $this.html('View Both');
+        for(var i = 0; i < text_graph_items.length; i++){
+          var seq = text_graph_items[i].innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (seq[0] == '{{key}}'){
+            var replace = (text_graph_items[i].innerHTML).replace(seq[0], '{{value}}')
+            text_graph_items[i].innerHTML = replace;
+          }
+        {% endfor%}
+        }
+    }else if ($this.val() === 'Both') {
+        $this.val('Seq');
+        $this.html('View SeqIDs')
+    }else {
+        $this.val('Lab');
+        $this.html('View LabIDs')
     }
     } );
     {% for gene, top_blast_hits in gene_top_hits.items %}
