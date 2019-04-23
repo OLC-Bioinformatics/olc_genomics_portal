@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 
 
 quality_choices = (
@@ -32,4 +32,5 @@ class SequenceData(models.Model):
 
 class MetaDataRequest(models.Model):
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    criteria = JSONField(default={}, blank=True, null=True) 
 

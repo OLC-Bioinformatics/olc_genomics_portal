@@ -6,6 +6,15 @@
 {% block content %}
   <h2>Metadata Results</h2>
   <br>
+  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">View Search Criteria</button>
+  <div id="criteria" class="collapse">
+  <br>
+  {% for criteria, value in metadata_result.criteria.items %}
+    <p><strong>{{ criteria }}:</strong> {{ value }}</p>
+  {% endfor %}
+  </div>
+  <br>
+  <br>
   <p id="insertbefore">Your search returned <strong>{{ metadata_result.seqids|length }}</strong> results.</p>
   <button class="btn btn-primary" id='btnSeq' style="float: right" onclick=copyText(0)>Copy SeqIDs to clipboard</button>
   <button class="btn btn-primary" id='btnLab' style="float: right; display:none;" onclick=copyText(1)>Copy LabIDs to clipboard</button>

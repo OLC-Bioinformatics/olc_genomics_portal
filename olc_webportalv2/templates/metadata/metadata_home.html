@@ -14,7 +14,11 @@
     </div>
    {% endif %}
     <p>Enter your genus of interest: {{ form.genus|as_crispy_field }}</p>
-    <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
+{#    <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>#}
+    <p>Enter your species of interest: {{ form.species|as_crispy_field }}</p>
+    <p>Enter your serotype of interest: {{ form.serotype|as_crispy_field }}</p>
+    <p>Enter your MLST of interest: {{ form.mlst|as_crispy_field }}</p>
+    <p>Enter your rMLST of interest: {{ form.rmlst|as_crispy_field }}</p>
     <p>Choose your desired assembly quality: {{ form.quality|add_class:"form-control" }}</p>
   {% csrf_token %}
     <br>

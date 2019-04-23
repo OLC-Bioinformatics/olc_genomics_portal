@@ -166,7 +166,7 @@ def tree_request(request):
                 parsnp_request.number_diversitree_strains = number_diversitree_strains
             parsnp_request.tree_program = tree_program
             parsnp_request.save()
-            run_parsnp.apply_async(queue='geneseekr', args=(parsnp_request.pk, ), countdown=10)
+            run_parsnp.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)
     return render(request,
                   'geneseekr/tree_request.html',
@@ -247,7 +247,7 @@ def amr_request(request):
             else:
                 amr_request.name = name
             amr_request.save()
-            run_amr_summary.apply_async(queue='geneseekr', args=(amr_request.pk, ), countdown=10)
+            run_amr_summary.apply_async(queue='cowbat', args=(amr_request.pk, ), countdown=10)
             return redirect('geneseekr:amr_result', amr_request_pk=amr_request.pk)
     return render(request,
                   'geneseekr/amr_request.html',
@@ -334,7 +334,7 @@ def prokka_request(request):
             else:
                 prokka_request.name = name
             prokka_request.save()
-            run_prokka.apply_async(queue='geneseekr', args=(prokka_request.pk, ), countdown=10)
+            run_prokka.apply_async(queue='cowbat', args=(prokka_request.pk, ), countdown=10)
             return redirect('geneseekr:prokka_result', prokka_request_pk=prokka_request.pk)
     return render(request,
                   'geneseekr/prokka_request.html',
