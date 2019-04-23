@@ -1,12 +1,13 @@
 from django.core.management.base import BaseCommand
-from olc_webportalv2.metadata.models import SequenceData
+from olc_webportalv2.metadata.models import SequenceData, LabID
 from django.conf import settings
 import csv
+import re
 
 from azure.storage.blob import BlockBlobService
 
 
-def upload_metadata(metadata_csv):
+def upload_metadata(seqtracking_csv, seqmetadata_csv):
     blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                    account_key=settings.AZURE_ACCOUNT_KEY)
     seqids_in_cloud = list()
@@ -14,38 +15,113 @@ def upload_metadata(metadata_csv):
     for blob in generator:
         seqids_in_cloud.append(blob.name.replace('.fasta', ''))
 
-    acceptable_qualities = ('Pass', 'Fail', 'Reference')
-    with open(metadata_csv) as csvFile:
-        reader = csv.DictReader(csvFile)
+    seqdata_dict = dict()  # This stores all of our DataToUpload objects, accessed with SeqID keys.
+    
+    # First up: Make a pass through seqtracking to pull out SeqIDs, LabIDs (if the SeqID has one), genus, species, 
+    # quality, and serotype.
+    with open(seqtracking_csv) as csvfile:
+        reader = csv.DictReader(csvfile)
         for row in reader:
-            if row['SeqID'] not in seqids_in_cloud:
-                print('WARNING: SeqID {} was listed on metadata sheet, but is not stored in cloud.'.format(row['SeqID']))
-                continue
-            if row['Quality'] not in acceptable_qualities:
-                raise AttributeError('Quality for SeqID {} was listed as {}. Only acceptable values are Pass, Fail, and'
-                                     ' Reference.'.format(row['SeqID'], row['Quality']))
-            # Check we don't already have the listed SEQID in database. If we do, update..
-            if not SequenceData.objects.filter(seqid=row['SeqID']).exists():
-                SequenceData.objects.create(seqid=row['SeqID'],
-                                            quality=row['Quality'],
-                                            genus=row['Genus'])
+            # Pull out variable so we don't have to look at ugly syntax
+            seqid = row['SEQID']
+            quality = row['CuratorFlag'].upper()
+            labid = row['LabID']
+            genus = row['Genus']
+            species = row['Species']
+            serotype = row['Serotype']
+            seqdata = DataToUpload(seqid)
+            
+            # Set quality attribute.
+            if 'REFERENCE' in quality:
+                seqdata.quality = 'Reference'
+            elif 'PASS' in quality:
+                seqdata.quality = 'Pass'
             else:
-                sequence_data = SequenceData.objects.get(seqid=row['SeqID'])
-                sequence_data.quality = row['Quality']
-                sequence_data.genus = row['Genus']
-                sequence_data.save()
+                seqdata.quality = 'Fail'
+            
+            # Check if our LabID looks acceptable. If yes, set the labid attr of seqdata_dict
+            if re.fullmatch('[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid):
+                seqdata.labid = labid
+                 
+            # Pull out genus, species, and serotype. Genus/serotype should have first char uppercase, species should
+            # be entirely lowercase. # TODO: Not sure what happens with a blank value. 
+            seqdata.genus = genus.lower().capitalize()
+            seqdata.serotype = serotype.lower().capitalize()
+            seqdata.species = species.lower()
+            
+            seqdata_dict[seqid] = seqdata
+
+    # Now go through seqmetadata to get mlst and rmlst updated
+    with open(seqmetadata_csv) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            seqid = row['SeqID']
+            mlst = row['MLST_Result']
+            rmlst = row['rMLST_Result']
+            if seqid in seqdata_dict:
+                seqdata_dict[seqid].mlst = mlst
+                seqdata_dict[seqid].rmlst = rmlst
+
+    # Now add the metadata to our database!
+    for seqid in seqdata_dict:
+        # If we don't have actual sequence data associated, don't upload metadata.
+        if seqid not in seqids_in_cloud:
+            print('WARNING: SeqID {} was listed on metadata sheet, but is not stored in cloud.'.format(seqid))
+            continue
+        # Create a SequenceData object, if needed. Otherwise, update!
+        if not SequenceData.objects.filter(seqid=seqid).exists():
+            SequenceData.objects.create(seqid=seqid,
+                                        quality=seqdata_dict[seqid].quality,
+                                        genus=seqdata_dict[seqid].genus,
+                                        species=seqdata_dict[seqid].species,
+                                        serotype=seqdata_dict[seqid].serotype,
+                                        mlst=seqdata_dict[seqid].mlst,
+                                        rmlst=seqdata_dict[seqid].rmlst)
+        else:
+            sequence_data = SequenceData.objects.get(seqid=seqid)
+            sequence_data.quality = seqdata_dict[seqid].quality
+            sequence_data.genus = seqdata_dict[seqid].genus
+            sequence_data.species = seqdata_dict[seqid].species
+            sequence_data.serotype = seqdata_dict[seqid].serotype
+            sequence_data.mlst = seqdata_dict[seqid].mlst
+            sequence_data.rmlst = seqdata_dict[seqid].rmlst
+            sequence_data.save()
+            
+        # Check if our seqdata has a labID. If it does, create labid object if necessary, and then link the SequenceData
+        # back to the labID
+        if seqdata_dict[seqid].labid is not None:
+            if not LabID.objects.filter(labid=seqdata_dict[seqid].labid).exists():
+                LabID.objects.create(labid=seqdata_dict[seqid].labid)
+            sequence_data = SequenceData.objects.get(seqid=seqid)
+            lab_data = LabID.objects.get(labid=seqdata_dict[seqid].labid)
+            sequence_data.labid = lab_data
+            sequence_data.save()
+            
+
+class DataToUpload:
+    # Class (but actually kinda a struct) that holds data we need to upload.
+    def __init__(self, seqid):
+        self.seqid = seqid
+        self.labid = None
+        self.mlst = None
+        self.rmlst = None
+        self.genus = None
+        self.species = None
+        self.quality = None
+        self.serotype = None
 
 
 class Command(BaseCommand):
-    help = 'Command to upload metadata into our metadata table. ' \
-           'Input file should be a CSV with columns SEQID, Genus, and Quality, where quality is Fail, Pass, or ' \
-           'Reference. All SEQIDs must have a corresponding assembly in a container called processed-data in Azure ' \
-           'Storage Container'
+    help = 'Updates metadata when given a SeqTracking.csv and SeqMetadata.csv from OLC Access database.' 
 
     def add_arguments(self, parser):
-        parser.add_argument('metadata_csv',
+        parser.add_argument('seqtracking_csv',
                             type=str,
-                            help='Full path to metadata sheet.')
+                            help='Full path to SeqTracking.csv exported from OLC Access Database.')
+        parser.add_argument('seqmetadata_csv',
+                            type=str,
+                            help='Full path to SeqMetadata.csv exported from OLC Access Database.')
 
     def handle(self, *args, **options):
-        upload_metadata(metadata_csv=options['metadata_csv'])
+        upload_metadata(seqtracking_csv=options['seqtracking_csv'],
+                        seqmetadata_csv=options['seqmetadata_csv'])
