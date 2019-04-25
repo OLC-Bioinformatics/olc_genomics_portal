@@ -99,10 +99,10 @@ def metadata_results(request, metadata_request_pk):
                       'metadata_result': metadata_result, 'labidDict': labidDict
                   })
 
-def LabID_sync_SeqID(x):
+def LabID_sync_SeqID(seqid_list):
     labidDict ={}
-    for y in x:
-        sequence_result = SequenceData.objects.get(seqid=y)
+    for item in seqid_list:
+        sequence_result = SequenceData.objects.get(seqid=item)
         if sequence_result.labid is not None:
             labid_result = LabID.objects.get(pk=sequence_result.labid.pk)
         else:

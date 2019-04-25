@@ -26,7 +26,7 @@
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p><i class="fas fa-share-alt"></i> Shareable link: {{ data_request.download_link }} </p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> Shareable link:</b> {{ data_request.download_link }} </p>
     </div>
   {% elif data_request.status == 'Warning' %}
     <button class="btn btn-warning btn-block" disabled>{{ data_request.status }}</button>
@@ -38,7 +38,7 @@
     <br>
     <br>
     <div class="alert alert-primary" role="alert" align="center">
-      <p>Shareable link: {{ data_request.download_link }}</p>
+      <p style="word-wrap:break-word;"><b>Shareable link:</b> {{ data_request.download_link }}</p>
     </div>
   {% elif data_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ data_request.status }}</button>

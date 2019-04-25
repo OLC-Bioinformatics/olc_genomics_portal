@@ -80,7 +80,7 @@
   <form method="Post">
   {% csrf_token %}
   {{form}}
-  <button type="submit">Save</button>
+  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
   <br>
   <br>
   </form>
@@ -116,7 +116,7 @@
   </div>
   <br>
      <div class="alert alert-primary" role="alert" align="center">
-        <p><i class="fas fa-share-alt"></i> Shareable link: {{ sequencing_run.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ sequencing_run.download_link }}</p>
     </div>
 {% endif %}
 
