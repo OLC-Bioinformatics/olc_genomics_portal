@@ -16,6 +16,41 @@ class LabID(models.Model):
         return self.labid
 
 
+class Genus(models.Model):
+    genus = models.CharField(max_length=48)
+
+    def __str__(self):
+        return self.genus
+
+
+class Species(models.Model):
+    species = models.CharField(max_length=48)
+
+    def __str__(self):
+        return self.species
+
+
+class Serotype(models.Model):
+    serotype = models.CharField(max_length=48)
+
+    def __str__(self):
+        return self.serotype
+
+
+class MLST(models.Model):
+    mlst = models.CharField(max_length=12)
+
+    def __str__(self):
+        return self.mlst
+
+
+class RMLST(models.Model):
+    rmlst = models.CharField(max_length=12)
+
+    def __str__(self):
+        return self.rmlst
+
+
 class SequenceData(models.Model):
     seqid = models.CharField(max_length=24)
     quality = models.CharField(choices=quality_choices, max_length=128)

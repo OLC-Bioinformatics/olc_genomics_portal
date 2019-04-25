@@ -42,8 +42,9 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
 
-    # Useful template tags:
-    # 'django.contrib.humanize',
+    # Django-autocomplete-light, for form auto completion. It's docs say it should go before django.contrib.admin
+    'dal',
+    'dal_select2',
 
     # Admin
     'django.contrib.admin',

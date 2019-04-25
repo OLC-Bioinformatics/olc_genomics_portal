@@ -14,6 +14,9 @@ django-environ==0.4.4
 # Forms
 django-crispy-forms==1.7.2
 
+# Form autocompletion
+django-autocomplete-light==3.3.0
+
 # Models
 django-model-utils==3.0.0
 

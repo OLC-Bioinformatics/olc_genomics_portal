@@ -1,7 +1,35 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from olc_webportalv2.metadata.forms import MetaDataRequestForm
+from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
+    make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
 from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID
 from django.contrib.auth.decorators import login_required
+from dal import autocomplete
+
+
+class GenusAutoCompleter(autocomplete.Select2ListView):
+    def get_list(self):
+        return make_genus_choice_list()
+
+
+class SpeciesAutoCompleter(autocomplete.Select2ListView):
+    def get_list(self):
+        return make_species_choice_list()
+
+
+class SerotypeAutoCompleter(autocomplete.Select2ListView):
+    def get_list(self):
+        return make_serotype_choice_list()
+
+
+class MLSTAutoCompleter(autocomplete.Select2ListView):
+    def get_list(self):
+        return make_mlst_choice_list()
+
+
+class RMLSTAutoCompleter(autocomplete.Select2ListView):
+    def get_list(self):
+        return make_rmlst_choice_list()
+
 
 # Create your views here.
 @login_required

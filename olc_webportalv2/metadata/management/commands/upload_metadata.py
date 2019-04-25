@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from olc_webportalv2.metadata.models import SequenceData, LabID
+from olc_webportalv2.metadata.models import SequenceData, LabID, Genus, Species, Serotype, MLST, RMLST
 from django.conf import settings
 import csv
 import re
@@ -16,8 +16,15 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
         seqids_in_cloud.append(blob.name.replace('.fasta', ''))
 
     seqdata_dict = dict()  # This stores all of our DataToUpload objects, accessed with SeqID keys.
-    
-    # First up: Make a pass through seqtracking to pull out SeqIDs, LabIDs (if the SeqID has one), genus, species, 
+
+    # Make lists of attributes we have.
+    genera_present = [str(genus) for genus in Genus.objects.filter()]
+    species_present = [str(species) for species in Species.objects.filter()]
+    serotypes_present = [str(serotype) for serotype in Serotype.objects.filter()]
+    mlst_present = [str(mlst) for mlst in MLST.objects.filter()]
+    rmlst_present = [str(rmlst) for rmlst in RMLST.objects.filter()]
+
+    # First up: Make a pass through seqtracking to pull out SeqIDs, LabIDs (if the SeqID has one), genus, species,
     # quality, and serotype.
     with open(seqtracking_csv) as csvfile:
         reader = csv.DictReader(csvfile)
@@ -68,6 +75,28 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
         if seqid not in seqids_in_cloud:
             print('WARNING: SeqID {} was listed on metadata sheet, but is not stored in cloud.'.format(seqid))
             continue
+
+        # Check if we need to add to our lists of Genera, Species, Serotype, MLST, RMLST for autocompletion
+        if seqdata_dict[seqid].genus not in genera_present:
+            Genus.objects.create(genus=seqdata_dict[seqid].genus)
+            genera_present.append(seqdata_dict[seqid].genus)
+
+        if seqdata_dict[seqid].species not in species_present:
+            Species.objects.create(species=seqdata_dict[seqid].species)
+            species_present.append(seqdata_dict[seqid].species)
+
+        if seqdata_dict[seqid].serotype not in serotypes_present:
+            Serotype.objects.create(serotype=seqdata_dict[seqid].serotype)
+            serotypes_present.append(seqdata_dict[seqid].serotype)
+
+        if seqdata_dict[seqid].mlst not in mlst_present:
+            MLST.objects.create(mlst=seqdata_dict[seqid].mlst)
+            mlst_present.append(seqdata_dict[seqid].mlst)
+
+        if seqdata_dict[seqid].rmlst not in rmlst_present:
+            RMLST.objects.create(rmlst=seqdata_dict[seqid].rmlst)
+            rmlst_present.append(seqdata_dict[seqid].rmlst)
+
         # Create a SequenceData object, if needed. Otherwise, update!
         if not SequenceData.objects.filter(seqid=seqid).exists():
             SequenceData.objects.create(seqid=seqid,

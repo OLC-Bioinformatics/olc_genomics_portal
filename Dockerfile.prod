@@ -6,7 +6,7 @@ WORKDIR /data/web
 
 # Setup
 RUN apt-get update
-RUN apt-get install -y python3 python3-dev postgresql-client postgresql-server-dev-all gettext ncbi-blast+
+RUN apt-get install -y python3 python3-dev postgresql-client postgresql-server-dev-all gettext ncbi-blast+ xvfb
 RUN apt-get install -y python3-pip
 RUN pip3 install --upgrade pip
 COPY requirements/base.txt /data/web/
