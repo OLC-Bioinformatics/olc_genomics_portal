@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from django.test import LiveServerTestCase
 from django.urls import reverse_lazy
 from olc_webportalv2.users.models import User
@@ -28,9 +29,6 @@ class MetadataIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_id('id_password').send_keys('password')
         self.driver.find_element_by_xpath('//button[text()="Sign In"]').click()
 
-    # TODO: Autocomplete forms break these, keys aren't actually getting sent.
-    #  Revisit.
-    """
     def test_create_query(self):
         # Login.
         self.login()
@@ -38,6 +36,7 @@ class MetadataIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
+        self.driver.find_element_by_id('id_genus').send_keys(Keys.ENTER)
         self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
 
         # Make sure we got two results (3 including table header)
@@ -54,6 +53,7 @@ class MetadataIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
+        self.driver.find_element_by_id('id_genus').send_keys(Keys.ENTER)
         # Select low quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail
         self.driver.find_element_by_xpath('//*[@id="id_quality"]/option[3]').click()
         # Make sure we got three results (4 including table header)
@@ -72,6 +72,7 @@ class MetadataIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_link_text('Explore').click()
         # Get Escherichia sequences - default is to do pass and reference quality.
         self.driver.find_element_by_id('id_genus').send_keys('Escherichia')
+        self.driver.find_element_by_id('id_genus').send_keys(Keys.ENTER)
         # Select ref quality sequences option via xpath. option[1] gets Pass, 2 gets reference, 3 gets fail
         self.driver.find_element_by_xpath('//*[@id="id_quality"]/option[2]').click()
         self.driver.find_element_by_xpath('//button[text()="Get SeqIDs"]').click()
@@ -80,7 +81,6 @@ class MetadataIntegrationTest(LiveServerTestCase):
         table_rows = table.find_elements_by_tag_name('tr')
         self.assertEqual(2, len(table_rows))
         self.assertEqual(table_rows[1].text, '1234-SEQ-0002 N/A')
-    """
 
     def tearDown(self):
         self.driver.close()
