@@ -240,12 +240,12 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
     var text_graph_items = graph_items.getElementsByTagName('text');
     for(var i = 0; i < text_graph_items.length; i++){
           var seq = text_graph_items[i].innerHTML.split('_');
-          text_graph_items[i].id = seq[0] +'-graph-'+k;
+          text_graph_items[i].classList.add(seq[0],'graph');
           }
     var table_items = document.getElementsByClassName('contig');
-      for(var j = 0; j < table_items.length; j++){
+    for(var j = 0; j < table_items.length; j++){
         var seq = table_items[j].innerHTML.split('_');
-        table_items[j].id = seq[0]+'-table-'+k;
+        table_items[j].classList.add(seq[0],'table');
         }
     }
   $('td:nth-child(2),th:nth-child(2)').hide();
@@ -289,73 +289,77 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
   function myfunc(x) {
     var btn = x;
     var selected = $($('div.tab-content').find('div .active.show.gene'));
-    var index = selected.index()+1;
+    var index = selected.index();
     var txt_gph_items = selected[0].getElementsByTagName('text');
-    var table_items = document.getElementsByClassName('contig');
-      if (btn.value === 'Lab') {
-        btn.value == 'Both';
-        btn.innerHTML =='View Both';
+    var table_items = selected[0].getElementsByClassName('contig');
+    if (btn.value === 'Lab') {
+        btn.value ='Both';
+        btn.innerHTML='View Both';
         for(var i = 0; i < txt_gph_items.length; i++){
-         {% for key,value in labidDict.items%}
-         if (txt_gph_items[i].id == '{{key}}-graph-'+index) {
-          var item = document.getElementById('{{key}}-graph-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{value}}')
-          item.innerHTML = replace;}
-        {% endfor%}
+          var obj = txt_gph_items[i];
+          var text = obj.innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (text[0] =='{{key}}' ){
+          var replace = obj.innerHTML.replace(text[0], '{{value}}')
+          obj.innerHTML = replace;}
+          {% endfor %}
         }
-         for(var j = 0; j < table_items.length; j++){
-         {% for key,value in labidDict.items%}
-          if (table_items[j].id == '{{key}}-table-'+index){
-          var item = document.getElementById('{{key}}-table-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{value}}')
-          item.innerHTML = replace;}
-        {% endfor%}
+        for(var i = 0; i < table_items.length; i++){
+          var txt = table_items[i].innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (txt[0] == '{{key}}'){
+          var replace = table_items[i].innerHTML.replace(txt[0], '{{value}}')
+          table_items[i].innerHTML = replace;
+          }
+          {% endfor %}
         }
-    }else if ($this.val() === 'Both') {
-        $this.val('Seq');
-        $this.html('View SeqIDs');
-        for(var i = 0; i < text_graph_items.length; i++){
-         {% for key,value in labidDict.items%}
-         if (text_graph_items[i].id == '{{key}}-graph-'+index){
-          var item = document.getElementById('{{key}}-graph-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{key}} {{value}}' )
-          item.innerHTML = replace;}
-        {% endfor%}
+
+    }else if (btn.value === 'Both') {
+        btn.value ='Seq';
+        btn.innerHTML='View SeqIDs';
+         for(var i = 0; i < txt_gph_items.length; i++){
+          var obj = txt_gph_items[i];
+          var text = obj.innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (obj.classList[0]== ("{{key}}") && obj.classList[1]== ("graph") ) {
+          var replace = obj.innerHTML.replace(text[0], '{{key}} {{value}}')
+          obj.innerHTML = replace;
+          }
+          {% endfor %}
         }
-       for(var j = 0; j < table_items.length; j++){
-         {% for key,value in labidDict.items%}
-          if (table_items[j].id == '{{key}}-table-'+index){
-          var item = document.getElementById('{{key}}-table-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{key}} {{value}}')
-          item.innerHTML = replace;}
-        {% endfor%}
+        for(var i = 0; i < table_items.length; i++){
+          var txt = table_items[i].innerHTML.split('_');
+          var obj = table_items[i];
+          {% for key,value in labidDict.items%}
+          if (obj.classList[1]== ("{{key}}") && obj.classList[2]== ("table") ) {
+          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}} {{value}}')
+          table_items[i].innerHTML = replace;
+          }
+
+          {% endfor %}
         }
     }else {
-        $this.val('Lab');
-        $this.html('View LabIDs');
-      for(var i = 0; i < text_graph_items.length; i++){
-         {% for key,value in labidDict.items%}
-         if (text_graph_items[i].id == '{{key}}-graph-'+index){
-          var item = document.getElementById('{{key}}-graph-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{key}}')
-          item.innerHTML = replace;}
-        {% endfor%}
+        btn.value ='Lab';
+        btn.innerHTML ='View LabIDs';
+         for(var i = 0; i < txt_gph_items.length; i++){
+          var obj = txt_gph_items[i];
+          var text = obj.innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (text[0] =='{{key}} {{value}}' ){
+          var replace = obj.innerHTML.replace(text[0], '{{key}}')
+          obj.innerHTML = replace;}
+          {% endfor %}
         }
-        for(var j = 0; j < table_items.length; j++){
-         {% for key,value in labidDict.items%}
-          if (table_items[j].id == '{{key}}-table-'+index){
-          var item = document.getElementById('{{key}}-table-'+index);
-          var text = item.innerHTML.split('_');
-          var replace = item.innerHTML.replace(text[0], '{{key}}')
-          item.innerHTML = replace;}
-        {% endfor%}
+        for(var i = 0; i < table_items.length; i++){
+          var txt = table_items[i].innerHTML.split('_');
+          {% for key,value in labidDict.items%}
+          if (txt[0] == '{{key}} {{value}}'){
+          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}}')
+          table_items[i].innerHTML = replace;
+          }
+          {% endfor %}
         }
     }
-    };
+  }
   </script>
 {% endblock %}
