@@ -234,6 +234,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   $(document).ready(function () {
+    //Assigns Class each element with a SEQID and its location
     var item = ($($('div.tab-content').find('div.gene'))).length;
     for(var k = 1; k < item+1; k++){
     var graph_items = document.getElementsByClassName('highcharts-axis-labels highcharts-xaxis-labels')[k];
@@ -248,7 +249,9 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         table_items[j].classList.add(seq[0],'table');
         }
     }
+  // Default display for seq-seq table
   $('td:nth-child(2),th:nth-child(2)').hide();
+  // Toggle for seq-seq table
   $('#toggle-vis').on( 'click', function () {
     var $this = $(this);
        if ($this.val() === 'Lab') {
@@ -285,13 +288,15 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
       table.order([5, 'asc'], [2, 'desc'], [1, 'desc']).draw();
     {% endfor %}
   });
-
+// Toggle function for Top Blast Hits, changes table and chart 
+// Finds which gene is selected, find that page's text items and change accordingly
   function myfunc(x) {
     var btn = x;
     var selected = $($('div.tab-content').find('div .active.show.gene'));
     var index = selected.index();
     var txt_gph_items = selected[0].getElementsByTagName('text');
     var table_items = selected[0].getElementsByClassName('contig');
+    //First Click
     if (btn.value === 'Lab') {
         btn.value ='Both';
         btn.innerHTML='View Both';
@@ -313,7 +318,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
           }
           {% endfor %}
         }
-
+    //Second Click
     }else if (btn.value === 'Both') {
         btn.value ='Seq';
         btn.innerHTML='View SeqIDs';
@@ -338,6 +343,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
 
           {% endfor %}
         }
+    //Third Click
     }else {
         btn.value ='Lab';
         btn.innerHTML ='View LabIDs';
