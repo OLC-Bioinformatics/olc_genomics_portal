@@ -33,7 +33,7 @@ def assembled_data(request):
             data_request.status = 'Processing'
             data_request.request_type = 'FASTA'
             data_request.save()
-            get_assembled_data.apply_async(queue='default', args=(data_request.pk, ))
+            get_assembled_data.apply_async(queue='default', args=(data_request.pk, ), countdown=10)
             return redirect('data:data_download', data_request_pk=data_request.pk)
     return render(request,
                   'data/assembled_data.html',
@@ -65,7 +65,7 @@ def raw_data(request):
             data_request.status = 'Processing'
             data_request.request_type = 'FASTQ'
             data_request.save()
-            get_raw_data.apply_async(queue='default', args=(data_request.pk, ))
+            get_raw_data.apply_async(queue='default', args=(data_request.pk, ), countdown=10)
             return redirect('data:data_download', data_request_pk=data_request.pk)
     return render(request,
                   'data/raw_data.html',

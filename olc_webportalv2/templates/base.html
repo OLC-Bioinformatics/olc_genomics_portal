@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
-    <title> {% block title %}OLC Webportal {% endblock title %}</title>
+    <title> {% block title %}CFIA FoodPort {% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
 
@@ -27,7 +27,7 @@
         <i class="fas fa-bars" style="color:white"></i>
         </button>
         <a class="navbar-brand" href="{% url 'home' %}">
-                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  OLC Webportal</strong>
+                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  CFIA FoodPort</strong>
         </a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav mr-auto">
@@ -100,7 +100,7 @@
       {% block content %}
         <br>
         <p class="lead h6" style="text-align:center">
-            <span class="h1" ><b>Welcome to the OLC Webportal</b> <i class="fas fa-dna"></i></span><br>
+            <span class="h1" ><b>Welcome to the CFIA FoodPort</b> <i class="fas fa-dna"></i></span><br>
         </p>
         <br>
         <div class="card-deck d-flex h-100 justify-content-center align-self-center">
@@ -108,7 +108,7 @@
           <article>
             <div class="text">
               <h3>Explore Data</h3>
-              <p id="article1">Identify SeqIDs for analysis. Search for your genus of interest at differing levels of assembly quality and receive list of SeqIDs.<br><br> <small>More search options coming soon - email andrew.low@canada.ca with any requests.</small></p>
+              <p id="article1">Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs.</p>
               <a class="btn btn-primary btn-lg" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
               </div>
           </article>
@@ -116,7 +116,7 @@
           <article >
             <div class="text">
               <h3>Get Data</h3>
-              <p id="article2">Retrive copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA), and a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
+              <p id="article2">Retrieve copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA), and a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
               <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">Get Data</a>
             </div>
           </article>
