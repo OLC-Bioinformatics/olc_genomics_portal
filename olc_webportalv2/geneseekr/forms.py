@@ -7,6 +7,15 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
 
+
+class NearNeighborForm(forms.Form):
+    name = forms.CharField(max_length=56, label='Name: ', required=False)
+    seqid = forms.CharField(max_length=24, label='SeqID: ')
+    number_neighbors = forms.IntegerField(label='Number neigbhors: ')
+
+    # TODO: Custom clean to make sure SeqID is valid/in our database.
+
+
 class GeneSeekrForm(forms.Form):
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
     query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea, label='', required=False)

@@ -7,13 +7,16 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, TreeNameForm, EmailForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, \
+    TreeNameForm, EmailForm, NearNeighborForm
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, \
+    AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.metadata.views import LabID_sync_SeqID
 # Task Management
 from kombu import Queue
+
 
 # Geneseekr Views------------------------------------------------------------------------------------------------------------------------------>
 @csrf_exempt #needed or IE explodes
@@ -382,3 +385,26 @@ def prokka_name(request, prokka_request_pk):
                       'prokka_request': prokka_request,  'form': form
                   })
 
+
+################################### NEAREST NEIGHBORS #############################
+@login_required
+def neighbor_request(request):
+    form = NearNeighborForm()
+    if request.method == 'POST':
+        form = NearNeighborForm(request.POST)
+        if form.is_valid():
+            seqid = form.cleaned_data.get('seqid')
+            number_neighbors = form.cleaned_data.get('number_neighbors')
+            name = form.cleaned_data.get('name')
+            if name is None:
+                name = ''
+            NearestNeighbors.objects.create(seqid=seqid,
+                                            number_neighbors=number_neighbors,
+                                            name=name,
+                                            user=request.user)
+
+    return render(request,
+                  'geneseekr/neighbor_request.html',
+                  {
+                      'form': form
+                  })
