@@ -15,13 +15,13 @@
     </div>
    {% endif %}
 {#    <p>Enter your genus of interest: {{ form.genus|as_crispy_field }}</p>#}
-    <p>Enter your genus of interest: {{ form.genus }}</p>
+    <p data-tooltip='tooltip' title='hi'>Enter your genus of interest: {{ form.genus }}</p>
 {#    <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>#}
-    <p>Enter your species of interest: {{ form.species }}</p>
-    <p>Enter your serotype of interest: {{ form.serotype }}</p>
-    <p>Enter your MLST of interest: {{ form.mlst }}</p>
-    <p>Enter your rMLST of interest: {{ form.rmlst }}</p>
-    <p>Choose your desired assembly quality: {{ form.quality|add_class:"form-control" }}</p>
+    <p data-tooltip='tooltip' title='hi'>Enter your species of interest: {{ form.species }}</p>
+    <p data-tooltip='tooltip' title='hi'>Enter your serotype of interest: {{ form.serotype }}</p>
+    <p data-tooltip='tooltip' title='hi'>Enter your MLST of interest: {{ form.mlst }}</p>
+    <p data-tooltip='tooltip' title='hi'>Enter your rMLST of interest: {{ form.rmlst }}</p>
+    <p data-tooltip='tooltip' title='hi'>Choose your desired assembly quality: {{ form.quality|add_class:"form-control" }}</p>
   {% csrf_token %}
     <br>
   <button type="submit" class="btn btn-primary btn-lg">Get SeqIDs</button>
