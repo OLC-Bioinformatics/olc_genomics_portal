@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+  <h2>Near Neighbor Rename</h2>
+  <br>
+  <h4>{{neighbor_request.pk}} - {{neighbor_request.created_at}}</h4>
+
+  <form method='post'>
+  {% csrf_token %}
+  Previous Name: {{neighbor_request.name}} </br></br>
+  {{form}} </br><br>
+ <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:neighbor_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
+  </form>
+
+{% endblock %}

@@ -28,5 +28,8 @@ urlpatterns = [
     url(r'^prokka_name/(?P<prokka_request_pk>\d+)/', views.prokka_name, name='prokka_name'),
 
     # Nearest neighbor stuff
-    url(r'^neighbor_request', views.neighbor_request, name='neighbor_request')
+    url(r'^neighbor_home/', views.neighbor_home, name='neighbor_home'),
+    url(r'^neighbor_request', views.neighbor_request, name='neighbor_request'),
+    url(r'^neighbor_result/(?P<neighbor_request_pk>\d+)/$', views.neighbor_result, name='neighbor_result'),
+    url(r'^neighbor_name/(?P<neighbor_request_pk>\d+)/', views.neighbor_name, name='neighbor_name'),
 ]

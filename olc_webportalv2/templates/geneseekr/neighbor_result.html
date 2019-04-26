@@ -7,16 +7,15 @@
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
 
-  <h2>Treesults</h2>
+  <h2>Nearest Neighbor Results for {{ neighbor_request.seqid }}</h2>
   <br>
 
-  {% if parsnp_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ parsnp_request.status }}</button>
+  {% if neighbor_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ neighbor_request.status }}</button>
       <br>
-      <p>This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs).</p>
-      <p>You don't have to remain on this page - this Tree request will be visible on <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
+      <p>This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes.</p>
+      <p>You don't have to remain on this page - this request will be visible on <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
 
-      {% comment %} Email Block {% endcomment %}
       {% if messages %}
         <ul class="messages">
         {% for message in messages %}
@@ -25,134 +24,68 @@
         </ul>
       {% endif %}
 
-      {% if request.user.email in parsnp_request.emails_array %}
-      <p>Your email is already on the list to be notified. </p>
-      Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
 
-      <form method="Post" id='addEmail'>
-        {% csrf_token %}
-        {{form}}
-        <button type="submit">Save Email</button>
-        <br>
-        <br>
-      </form>
-
-    <script>
-      var checkbox = document.getElementById('cbx').checked;
-      var form = document.getElementById('addEmail');
-      if (checkbox != true){
-        form.style.visibility ="hidden";}
-      else {
-          form.style.visibility ="visible";}
-      function cbxCheck(){
-        var checkbox = document.getElementById('cbx').checked;
-        var form = document.getElementById('addEmail');
-        if (checkbox == true){
-          form.style.visibility ="visible";}
-        else{
-          form.style.visibility ="hidden";} 
-          }
-    </script>
-
-      {% else %}
-      <p>Would you like an email upon completion?</p>
-      <form method="Post">
-      {% csrf_token %}
-      {{form}}
-      <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
-      <br>
-      <br>
-      </form>
-      {% endif %}
-
-      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
-      <div id="emails-button" class="collapse">
-        <br>
-        {% if parsnp_request.emails_array|length == 0 %}
-          <p>No users have signed up to receive an email for this run.</p>
-        {% else %}
-            {% for email in parsnp_request.emails_array %}
-              <p>{{ email }}</p>
-            {% endfor %}
-        {% endif %}
-      </div>
-  {% comment %} End Email Block {% endcomment %}
-
-  {% elif parsnp_request.status == 'Unprocessed' %}
-    <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ parsnp_request.status }}</button>
+  {% elif neighbor_request.status == 'Unprocessed' %}
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ neighbor_request.status }}</button>
     <br>
-  {% elif parsnp_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{{ parsnp_request.status }}</button>
+  {% elif neighbor_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{{ neighbor_request.status }}</button>
     <br>
-    <p>Return to <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
-  {% elif parsnp_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></button>
-    <br>
-    <p>These results will be available for 7 days.</p>
+    <p>Return to <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
+  {% elif neighbor_request.status == 'Complete' %}
+    <button class="btn btn-success btn-block" disabled>{{ neighbor_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
     <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
-    <br>
-    <br>
-    <br>
-    <svg id="tree_display" />
-    <br>
-    <br>
-    {% if parsnp_request.seqids_diversitree %}
-      <h4>Most Diverse Strains</h4>
-      <table class="table table-compact">
+    <br><br><br>
+    <table id="distance-table" class="table table-hover">
       <thead>
         <tr>
           <th>SeqID</th>
           <th>LabID</th>
+          <th>Distance</th>
         </tr>
       </thead>
       <tbody>
-        {% for seqid in parsnp_request.seqids_diversitree %}
-          <tr>
-            <td>{{ seqid }}</td>
-            {% for key, value in labidDict.items %}
-                    {% if key == seqid%}
-                    <td>{{value}}</td>
-                  {% endif %}
-                {% endfor %}
-          </tr>
-        {% endfor %}
+         {% for seqid, distance in results.items %}
+           <tr>
+             <td>{{ seqid }}</td>
+             {% for key, value in labidDict.items %}
+               {% if key == seqid%}
+                   <td>{{value}}</td>
+               {% endif %}
+             {% endfor %}
+             <td>{{ distance }}</td>
+           </tr>
+         {% endfor %}
       </tbody>
-      </table>
-    {% endif %}
+    </table>
+    <br>
+    <p>These results will be available for 7 days.</p>
+    <br>
     <br>
     <div style="text-align: center">
-        <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Tree (.nwk format)</a>
+        <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Full Results</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ parsnp_request.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ neighbor_request.download_link }}</p>
     </div>
     </div>
   {% endif %}
-  
-  <link rel="stylesheet" type="text/css" href="{% static 'css/phylotree.css' %}"/>
-  <script src="{% static 'js/d3.v3.min.js' %}"></script>
-  <script src="{% static 'js/underscore-min.js' %}" charset="utf-8"></script>
-  <script src="{% static 'js/phylotree.js' %} "></script>
+
   <script type="text/javascript">
     setInterval(function () {
-      {% if parsnp_request.status == 'Processing' %}
+      {% if neighbor_request.status == 'Processing' %}
         window.location = window.location.href;
       {% endif %}
     }, 45000)  // Refresh every 45 seconds
    </script>
-   <script type="text/javascript">
-   var tree_string = "{{ parsnp_request.newick_tree }}";
-   var tree = d3.layout.phylotree().svg(d3.select('#tree_display')).options(
-     { 'zoom': true,
-       'left-right-spacing': 'fit-to-size',
-       'top-bottom-spacing': 'fit-to-size'}).size([600, 600]);
-   tree(tree_string).layout()
-      </script>
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
 <script type="text/javascript">
   $(document).ready(function () {
+    $('#distance-table').DataTable({ "lengthMenu": [[-1], ['All']]}).order([2, 'asc']).draw();
     $('td:nth-child(2),th:nth-child(2)').hide();
     $('#toggle-vis').on('click', function () {
       var $this = $(this);

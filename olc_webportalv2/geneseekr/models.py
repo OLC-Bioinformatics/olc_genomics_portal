@@ -128,6 +128,8 @@ class NearestNeighbors(models.Model):
     number_neighbors = models.IntegerField()
     download_link = models.CharField(max_length=256, blank=True, null=True)
     name = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=64, default='Unprocessed', blank=True, null=True)
+    created_at = models.DateField(auto_now_add=True, blank=True, null=True)
 
 
 class NearNeighborDetail(models.Model):
