@@ -1,5 +1,5 @@
 from django.test import TestCase
-from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm, ProkkaForm
+from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm, ProkkaForm, NearNeighborForm
 from olc_webportalv2.metadata.models import SequenceData
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -222,3 +222,52 @@ class ProkkaFormTest(TestCase):
         })
         self.assertFalse(form.is_valid())
 
+
+class NearNeighborsFormTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
+                                                    quality='Pass',
+                                                    genus='Listeria')
+        sequence_data.save()
+        sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
+                                                    quality='Pass',
+                                                    genus='Listeria')
+        sequence_data.save()
+
+    def test_valid_form(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 10})
+        self.assertTrue(form.is_valid())
+        seqid, name, number_neighbors = form.cleaned_data
+        self.assertEqual(seqid, '2015-SEQ-0711')
+        self.assertEqual(number_neighbors, 10)
+
+    def test_negative_neighbors(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': -10})
+        self.assertFalse(form.is_valid())
+
+    def test_bad_seqid(self):
+        form = NearNeighborForm({'seqid': '2015-FAKE-0711', 'number_neighbors': 10})
+        self.assertFalse(form.is_valid())
+
+    def test_neighbor_boundary_low_valid(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 1})
+        self.assertTrue(form.is_valid())
+        seqid, name, number_neighbors = form.cleaned_data
+        self.assertEqual(seqid, '2015-SEQ-0711')
+        self.assertEqual(number_neighbors, 1)
+
+    def test_neighbor_boundary_high_valid(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 250})
+        self.assertTrue(form.is_valid())
+        seqid, name, number_neighbors = form.cleaned_data
+        self.assertEqual(seqid, '2015-SEQ-0711')
+        self.assertEqual(number_neighbors, 250)
+
+    def test_neighbor_boundary_high_invalid(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 251})
+        self.assertFalse(form.is_valid())
+
+    def test_neighbor_boundary_low_invalid(self):
+        form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 0})
+        self.assertFalse(form.is_valid())

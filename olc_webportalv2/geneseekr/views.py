@@ -156,9 +156,9 @@ def tree_request(request):
     if request.method == 'POST':
         form = ParsnpForm(request.POST)
         if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains  = form.cleaned_data
+            seqids, name, tree_program, number_diversitree_strains = form.cleaned_data
             parsnp_request = ParsnpTree.objects.create(user=request.user,
-                                                     seqids=seqids)
+                                                       seqids=seqids)
             parsnp_request.status = 'Processing'
             if name == None:
                 parsnp_request.name = parsnp_request.pk
@@ -393,9 +393,7 @@ def neighbor_request(request):
     if request.method == 'POST':
         form = NearNeighborForm(request.POST)
         if form.is_valid():
-            seqid = form.cleaned_data.get('seqid')
-            number_neighbors = form.cleaned_data.get('number_neighbors')
-            name = form.cleaned_data.get('name')
+            seqid, name, number_neighbors = form.cleaned_data
             if name is None:
                 name = ''
             nearest_neighbor_task = NearestNeighbors.objects.create(seqid=seqid,
