@@ -20,7 +20,7 @@
   <br>
   <br>
   <div class="accordion" id="accordionExample">
-        <button class="btn btn-block btn-outline-dark" type="button" data-toggle="collapse" data-target="#collapseOne"
+        <button class="btn btn-block btn-outline-dark" type="button" data-toggle="collapse" data-target="#collapseOne" data-tooltip='tooltip' title='hi'
           aria-expanded="true" aria-controls="collapseOne">
           Choose Genus to Search
         </button>
@@ -33,7 +33,7 @@
       </div>
 
     <br>
-        <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"
+        <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='hi'
           data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
           Choose SeqIDs to Search
         </button>
@@ -50,4 +50,12 @@
   <br>
   <button type="submit" class="btn btn-primary btn-lg">Run Query</button>
 </form>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  $(document).ready(function () {
+  var query_sequence = document.getElementById('div_id_query_sequence');
+  $(query_sequence).attr('data-tooltip','tooltip');
+  $(query_sequence).attr('title','Why here');
+  });
+  </script>
 {% endblock %}
