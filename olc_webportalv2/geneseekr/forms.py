@@ -33,8 +33,8 @@ class NearNeighborForm(forms.Form):
 
 
 class GeneSeekrForm(forms.Form):
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=False)
-    query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea, label='', required=False)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+    query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea(attrs={'placeholder': '>Gene\nACGTACGT'}), label='', required=False)
     query_file = forms.FileField(label='', required=False)
     genus = forms.CharField(max_length=48, label='', required=False)  # TODO: Genus should be an autocomplete field
     everything_but = forms.BooleanField(required=False)
@@ -139,10 +139,10 @@ class GeneSeekrForm(forms.Form):
 
 
 class ParsnpForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False)
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
+    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
 
-    tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('parsnp', 'parsnp'), ('mashtree', 'mashtree')], widget=forms.RadioSelect())
+    tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
     number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
     def clean(self):
         super().clean()
@@ -195,8 +195,8 @@ class ParsnpForm(forms.Form):
 
 
 class AMRForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False)
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
+    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
 
     def clean(self):
         super().clean()
@@ -237,8 +237,8 @@ class AMRForm(forms.Form):
         return seqid_list, name
 
 class ProkkaForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False)
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea, label='', required=True)
+    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
 
     def clean(self):
         super().clean()
@@ -278,11 +278,8 @@ class ProkkaForm(forms.Form):
 
         return seqid_list, name
 
-class GeneSeekrNameForm(forms.Form):
-    name = forms.CharField(label='Name ', required=False)
-
-class TreeNameForm(forms.Form):
-    name = forms.CharField(label='Name ', required=False)
+class NameForm(forms.Form):
+    name = forms.CharField(label='Name ', required=False ,widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
 
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")

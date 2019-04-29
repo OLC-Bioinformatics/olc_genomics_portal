@@ -26,4 +26,24 @@
     
   <button type="submit" class="btn btn-primary btn-lg">Create Tree</button>
   </form>
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  $(document).ready(function () {
+  var tree_options = document.getElementsByClassName('form-check');
+  $(tree_options[0]).attr('data-tooltip','tooltip');
+  $(tree_options[0]).attr('title','Why mashtree');
+  $(tree_options[1]).attr('data-tooltip','tooltip');
+  $(tree_options[1]).attr('title','Why parsnp');
+
+  var diversitree = document.getElementById('div_id_number_diversitree_strains');
+  $(diversitree).attr('data-tooltip','tooltip');
+  $(diversitree).attr('title','Whats this');
+
+  var seqids = document.getElementById('div_id_seqids');
+  $(seqids).attr('data-tooltip','tooltip');
+  $(seqids).attr('title','Whats this');
+
+  });
+  </script>
 {% endblock %}

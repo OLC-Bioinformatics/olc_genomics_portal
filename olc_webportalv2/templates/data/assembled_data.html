@@ -8,10 +8,24 @@
   <h2>Assembled Data Request</h2>
   <p>Enter the SEQIDs you want to retrieve FASTA files for below, one per line.</p>
   <br>
-  <form action='' method="post">
-    {{ form|crispy }}
+<form action='' enctype="multipart/form-data" method="post">
+   {% if form.seqids.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+  {{ form.seqids.errors|escape }}
+  </div>
+  {% endif %}
   {% csrf_token %}
+  {{ form.seqids|as_crispy_field }}
     <br>
   <button type="submit" class="btn btn-primary btn-lg">Get Files</button>
   </form>
+  
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  $(document).ready(function () {
+  var seqids = document.getElementById('div_id_seqids');
+  $(seqids).attr('data-tooltip','tooltip');
+  $(seqids).attr('title','Why here');
+  });
+  </script>
 {% endblock %}

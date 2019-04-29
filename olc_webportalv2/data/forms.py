@@ -3,7 +3,7 @@ import re
 
 
 class DataRequestForm(forms.Form):
-    seqids = forms.CharField(max_length=2048, widget=forms.Textarea, label='')
+    seqids = forms.CharField(max_length=2048, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='')
 
     def clean_seqids(self):
         seqid_input = self.cleaned_data['seqids']

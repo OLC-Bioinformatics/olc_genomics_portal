@@ -6,7 +6,7 @@ from django.forms.widgets import EmailInput
 
 
 class RunNameForm(forms.Form):
-    run_name = forms.CharField(max_length=64)
+    run_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': 'YYMMDD_LAB'}))
 
     def clean_run_name(self):
         run_name = self.cleaned_data['run_name']
