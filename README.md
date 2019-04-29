@@ -25,13 +25,10 @@ your Azure Batch account
 and a `/envs` folder where conda environments are stored - see the `tasks.py` of various apps to see the commands that
 the VM actually runs
 - create a container called `raw-data` in your Azure storage account and store .fastq.gz files there - it's assumed that
-they're MiSeq files that start with SEQIDs
+they're MiSeq files that start with SEQIDs **NOTE: No tools in the portal currently use raw data. This is a future TODO**
 - create a container called `processed-data` in your Azure storage account and put your illumina assemblies there. It's 
 assumed that they're named in the format seqid.fasta
 
-#### Portal Machine Setup
-A copy of all your processed data needs to be on your portal machine - change the ./sequences volume mount
-in `docker-compose.yml` as necessary, and put all the FASTA files there in addition to the `processed-data` blob container.
 
 #### Making Your Env File
 
@@ -81,50 +78,46 @@ of the directory you cloned):
 - `docker-compose -f docker-compose-prod.yml build`
 - `docker-compose -f docker-compose-prod.yml up`
 
-At this point the portal should be up and fully functional, and will restart automatically if it fails for any reason.
+You'll then need to get database structure set up - attach into the running web container (command will be something like
+ `docker exec -it olc_genomics_portal_web_1 /bin/bash`) and run `python3 manage.py migrate` (you shouldn't need to make migrations,
+ these get pushed to the repository.) At this point, the portal will be up and running, but there won't be any metadata in there,
+ and so it's still pretty useless. Read on to see how to get metadata into the portal.
+ 
+ 
+#### Adding in metadata/sequence data so the portal isn't useless
+
+In the root of this repository there are 2 scripts used to get sequence data working - it's assumed that you're at OLC 
+and on the local network there, or they won't work at all. Here's what they do and how to use them.
+
+First, make a container in your Azure Storage account called `databases` - these scripts assume that it already exists.
+
+The `make_mash_sketch.py` script will create a mash sketch of all OLC's sequence data that the near neighbors tool needs 
+and upload the sketch to blob storage.
+To run it, just run `python make_mash_sketch.py` in a virtualenv with Azure Storage installed and provide the Azure account 
+name and key when prompted (you'll also need mash v2.1 installed and on your path). Once the script is done,
+you should be able to see a file called `sketchomatic.msh` in the `databases` blob storage container.
+
+The `make_mega_fasta.py` script will combine all of OLC's sequence files into one, make a BLAST database from it, and 
+upload the BLAST database to blob storage. You'll need to have BLAST installed on your machine to make this work, and have
+biopython/azure-storage available in your python environment. 
+
+Once both of those scripts have run, go to the machine the portal is running on and run `download_databases.py` from the root of
+this repository, providing azure account credentials when asked. This will download the files created by the
+previous two scripts from blob storage into the correct locations on your machine.
+
+Now sequence data is present, but no metadata is associated with the sequences. The metadata in the portal
+comes from OLC's access database. You'll need to export the SeqTracking and SeqMetadata queries from that database as CSV files,
+and then get them onto the machine the portal is running on. From there, attach into the web container as 
+previously described, and run `python3 manage.py upload_metadata SeqTracking.csv SeqMetadata.csv`. This should get all relevant metadata
+from those file into the portal's database. At this point, the portal should now be fully funcitonal! Woohoo!
 
 
 #### Running tests
 
-To run unit tests, run the following command:
+This happens automatically via Travis-CI - see `.travis.yml` for the commands used to make this work if you want to run 
+tests locally.
 
-`docker-compose run web python3 manage.py test`
+Often, Travis decides that the tests have failed even though they haven't actually (it'll show all tests pass, but
+build exits with a non-zero code). As far as I can tell this is completely random, so you actually have to 
+go into the Travis web UI to see if tests are passing or not.
 
-If anything fails, you definitely don't want to deploy.
-
-To make tests that run via selenium work:
-
-Download gecko driver to root of repository:
-
-`wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz && tar xf geckodriver-v0.24.0-linux64.tar.gz`
-
-Actually run tests:
-
-`docker-compose run web /bin/bash -c "(Xvfb :99 &) && export DISPLAY=:99 && python3 manage.py test"`
-
-### Troubleshooting
-Once container is running, open a new terminal window and type
--`docker ps`. This will give you a list of all the containers.
-Type
--`docker exec -it TAB` the tab will populate with olc. From there, add a 'w' and TAB again to complete the path. Add `/bin/bash` to the end of the line. It should look something like this.
--`docker exec -it olc_genomics_portal_web_1_e276278d1742 /bin/bash`
-
-This attaches into the container. 
--`python3 manage.py migrate` will migrate changes to the models.
--`python3 manage.py createsuperuser` to create user for portal
-
-Open new terminal in root portal folder,
--`cp /mnt/nas2/users/(youruser)/SeqTracking.csv .` 
--`cp /mnt/nas/users/brenna/SeqMetadata.csv . `
-
-Return to the docker container terminal window and input
--`python3 manage.py upload_metadata SeqTracking.csv SeqMetadata.csv ` 
-this populates the database with sequences.
-
-If "encoding error", use nano or vim to edit make_metadata_csv.py 
--`nano make_metadata_csv.py` or
--`vi make_metadata_csv.py`
-and remove `, encoding='ISO-8859-1'` and save
-
-For sequences, copy folder into root directory of app
--`sudo cp -r /mnt/nas2/users/(youruser)/sequences/ .`

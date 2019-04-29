@@ -236,6 +236,7 @@ class AMRForm(forms.Form):
 
         return seqid_list, name
 
+
 class ProkkaForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
@@ -278,8 +279,10 @@ class ProkkaForm(forms.Form):
 
         return seqid_list, name
 
+
 class NameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False ,widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
+
 
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")

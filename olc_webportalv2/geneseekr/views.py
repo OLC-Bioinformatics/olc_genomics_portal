@@ -7,8 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, \
-    TreeNameForm, EmailForm, NearNeighborForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, NameForm, EmailForm, NearNeighborForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, \
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, run_nearest_neighbors
@@ -448,10 +447,10 @@ def neighbor_home(request):
 
 @login_required
 def neighbor_name(request, neighbor_request_pk):
-    form = TreeNameForm()
+    form = NameForm()
     neighbor_request = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
     if request.method == "POST":
-        form = TreeNameForm(request.POST)
+        form = NameForm(request.POST)
         if form.is_valid():
             neighbor_request.name = form.cleaned_data['name']
             neighbor_request.save()
