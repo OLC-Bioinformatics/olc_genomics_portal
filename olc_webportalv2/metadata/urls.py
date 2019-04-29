@@ -4,6 +4,7 @@ from django.conf.urls import url, include
 urlpatterns = [
     url(r'^metadata_home/', views.metadata_home, name='metadata_home'),
     url(r'^metadata_results/(?P<metadata_request_pk>\d+)/$', views.metadata_results, name='metadata_results'),
+    url(r'^metadata_browse/', views.metadata_browse, name='metadata_browse'),
 
     # Views for autocompletion
     url(r'^genus_autocompleter/$',

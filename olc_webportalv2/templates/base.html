@@ -35,7 +35,13 @@
               <a class="nav-link" href="{% url 'home' %}">Home <i class="fas fa-home"></i></a>
             </li>
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'metadata:metadata_home' %}">Explore <i class="fas fa-search"></i></a>
+              <div class="dropdown">
+                <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton" data-toggle="dropdown">Explore</button>
+                <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
+                  <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">Search <i class="fas fa-search"></i></a>
+                  <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">Browse <i class="fas fa-book"></i></a>
+                </div>
+              </div>
             </li>
 
             <li class="nav-item active">
