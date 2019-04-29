@@ -3,6 +3,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.fields import JSONField
 from olc_webportalv2.users.models import User
 
+
 # Create your models here.
 class GeneSeekrRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -119,3 +120,19 @@ class ProkkaRequest(models.Model):
 class ProkkaAzureRequest(models.Model):
     prokka_request = models.ForeignKey(ProkkaRequest, on_delete=models.CASCADE, related_name='azuretask')
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
+
+
+class NearestNeighbors(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    seqid = models.CharField(max_length=24)
+    number_neighbors = models.IntegerField()
+    download_link = models.CharField(max_length=256, blank=True, null=True)
+    name = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=64, default='Unprocessed', blank=True, null=True)
+    created_at = models.DateField(auto_now_add=True, blank=True, null=True)
+
+
+class NearNeighborDetail(models.Model):
+    near_neighbor_request = models.ForeignKey(NearestNeighbors, on_delete=models.CASCADE, related_name='neighbor_detail')
+    seqid = models.CharField(max_length=24)
+    distance = models.FloatField()

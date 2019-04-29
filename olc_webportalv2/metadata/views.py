@@ -99,8 +99,20 @@ def metadata_results(request, metadata_request_pk):
                       'metadata_result': metadata_result, 'labidDict': labidDict
                   })
 
+
+@login_required
+def metadata_browse(request):
+    sequence_data = SequenceData.objects.filter()
+    return render(request,
+                  'metadata/metadata_browse.html',
+                  {
+                      'sequence_data': sequence_data
+                  })
+
+
+
 def LabID_sync_SeqID(seqid_list):
-    labidDict ={}
+    labidDict = dict()
     for item in seqid_list:
         sequence_result = SequenceData.objects.get(seqid=item)
         if sequence_result.labid is not None:

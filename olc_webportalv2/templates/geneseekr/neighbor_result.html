@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+{% block content %}
+
+  <h2>Nearest Neighbor Results for {{ neighbor_request.seqid }}</h2>
+  <br>
+
+  {% if neighbor_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ neighbor_request.status }}</button>
+      <br>
+      <p>This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes.</p>
+      <p>You don't have to remain on this page - this request will be visible on <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
+
+      {% if messages %}
+        <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+
+
+  {% elif neighbor_request.status == 'Unprocessed' %}
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ neighbor_request.status }}</button>
+    <br>
+  {% elif neighbor_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{{ neighbor_request.status }}</button>
+    <br>
+    <p>Return to <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
+  {% elif neighbor_request.status == 'Complete' %}
+    <button class="btn btn-success btn-block" disabled>{{ neighbor_request.status }} <i class="fas fa-check-circle"></i></button>
+    <br>
+    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
+    <br><br><br>
+    <table id="distance-table" class="table table-hover">
+      <thead>
+        <tr>
+          <th>SeqID</th>
+          <th>LabID</th>
+          <th>Distance</th>
+        </tr>
+      </thead>
+      <tbody>
+         {% for seqid, distance in results.items %}
+           <tr>
+             <td>{{ seqid }}</td>
+             {% for key, value in labidDict.items %}
+               {% if key == seqid%}
+                   <td>{{value}}</td>
+               {% endif %}
+             {% endfor %}
+             <td>{{ distance }}</td>
+           </tr>
+         {% endfor %}
+      </tbody>
+    </table>
+    <br>
+    <p>These results will be available for 7 days.</p>
+    <br>
+    <br>
+    <div style="text-align: center">
+        <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Full Results</a>
+        <br>
+        <br>
+    <div class="alert alert-primary" role="alert" align="center">
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ neighbor_request.download_link }}</p>
+    </div>
+    </div>
+  {% endif %}
+
+  <script type="text/javascript">
+    setInterval(function () {
+      {% if neighbor_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    }, 45000)  // Refresh every 45 seconds
+   </script>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+<script type="text/javascript">
+  $(document).ready(function () {
+    $('#distance-table').DataTable({ "lengthMenu": [[-1], ['All']]}).order([2, 'asc']).draw();
+    $('td:nth-child(2),th:nth-child(2)').hide();
+    $('#toggle-vis').on('click', function () {
+      var $this = $(this);
+      var items = document.getElementsByClassName('node');
+      if ($this.val() === 'Lab') {
+        $('td:nth-child(2),th:nth-child(2)').show();
+        $('td:nth-child(1),th:nth-child(1)').hide();
+        $this.val('Both');
+        $this.html('View Both');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
+          }}
+        {% endfor%}
+      } else if ($this.val() === 'Both') {
+        $('td:nth-child(2),th:nth-child(2)').show();
+        $('td:nth-child(1),th:nth-child(1)').show();
+        $this.val('Seq');
+        $this.html('View SeqIDs');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{value}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}} {{value}}';
+          }}
+        {% endfor%}
+      } else {
+        $('td:nth-child(1),th:nth-child(1)').show();
+        $('td:nth-child(2),th:nth-child(2)').hide();
+        $this.val('Lab');
+        $this.html('View LabIDs');
+        {% for key,value in labidDict.items%}
+        for(var i = 0; i < items.length; i++){
+          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}} {{value}}'){
+          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}}';
+          }}
+        {% endfor%}
+      }
+    });
+  });
+  </script>
+{% endblock %}

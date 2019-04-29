@@ -7,13 +7,16 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, NameForm, EmailForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
-from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, \
+    TreeNameForm, EmailForm, NearNeighborForm
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, \
+    AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
+from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, run_nearest_neighbors
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.metadata.views import LabID_sync_SeqID
 # Task Management
 from kombu import Queue
+
 
 # Geneseekr Views------------------------------------------------------------------------------------------------------------------------------>
 @csrf_exempt #needed or IE explodes
@@ -153,9 +156,9 @@ def tree_request(request):
     if request.method == 'POST':
         form = ParsnpForm(request.POST)
         if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains  = form.cleaned_data
+            seqids, name, tree_program, number_diversitree_strains = form.cleaned_data
             parsnp_request = ParsnpTree.objects.create(user=request.user,
-                                                     seqids=seqids)
+                                                       seqids=seqids)
             parsnp_request.status = 'Processing'
             if name == None:
                 parsnp_request.name = parsnp_request.pk
@@ -381,4 +384,84 @@ def prokka_name(request, prokka_request_pk):
                   {
                       'prokka_request': prokka_request,  'form': form
                   })
+
+
+################################### NEAREST NEIGHBORS #############################
+@login_required
+def neighbor_request(request):
+    form = NearNeighborForm()
+    if request.method == 'POST':
+        form = NearNeighborForm(request.POST)
+        if form.is_valid():
+            seqid, name, number_neighbors = form.cleaned_data
+            if name is None:
+                name = ''
+            nearest_neighbor_task = NearestNeighbors.objects.create(seqid=seqid,
+                                                                    number_neighbors=number_neighbors,
+                                                                    name=name,
+                                                                    user=request.user,
+                                                                    status='Processing')
+            nearest_neighbor_task.save()
+            run_nearest_neighbors.apply_async(queue='geneseekr', args=(nearest_neighbor_task.pk, ), countdown=10)
+            return redirect('geneseekr:neighbor_result', neighbor_request_pk=nearest_neighbor_task.pk)
+    return render(request,
+                  'geneseekr/neighbor_request.html',
+                  {
+                      'form': form
+                  })
+
+
+@login_required
+def neighbor_result(request, neighbor_request_pk):
+    neighbor_request = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
+    result_dict = dict()
+    if neighbor_request.status == 'Complete':
+        neighbor_details = NearNeighborDetail.objects.filter(near_neighbor_request=neighbor_request)
+        for neighbor_detail in neighbor_details:
+            result_dict[neighbor_detail.seqid] = neighbor_detail.distance
+
+    lab_id_dict = LabID_sync_SeqID(list(result_dict.keys()))
+    return render(request,
+                  'geneseekr/neighbor_result.html',
+                  {
+                      'neighbor_request': neighbor_request,
+                      'results': result_dict,
+                      'labidDict': lab_id_dict
+                  })
+
+@csrf_exempt
+@login_required
+def neighbor_home(request):
+    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
+    neighbor_requests = NearestNeighbors.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+
+    if request.method == "POST":
+        if request.POST.get('delete'):
+            query = NearestNeighbors.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+
+    return render(request,
+                  'geneseekr/neighbor_home.html',
+                  {
+                      'neighbor_requests': neighbor_requests
+                  })
+
+@login_required
+def neighbor_name(request, neighbor_request_pk):
+    form = TreeNameForm()
+    neighbor_request = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
+    if request.method == "POST":
+        form = TreeNameForm(request.POST)
+        if form.is_valid():
+            neighbor_request.name = form.cleaned_data['name']
+            neighbor_request.save()
+        return redirect('geneseekr:neighbor_home')
+
+    return render(request,
+                  'geneseekr/neighbor_name.html',
+                  {
+                      'neighbor_request': neighbor_request,  'form': form
+                  })
+
+
 
