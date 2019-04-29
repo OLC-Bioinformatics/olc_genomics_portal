@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, GeneSeekrNameForm, TreeNameForm, EmailForm
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, NameForm, EmailForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, AMRDetail, ProkkaRequest
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka
 from olc_webportalv2.metadata.models import SequenceData
@@ -35,10 +35,10 @@ def geneseekr_home(request):
 
 @login_required
 def geneseekr_name(request, geneseekr_request_pk):
-    form = GeneSeekrNameForm()
+    form = NameForm()
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     if request.method == "POST":  
-        form = GeneSeekrNameForm(request.POST)
+        form = NameForm(request.POST)
         if form.is_valid():
             geneseekr_request.name = form.cleaned_data['name']
             geneseekr_request.save()
@@ -53,11 +53,11 @@ def geneseekr_name(request, geneseekr_request_pk):
 @login_required
 def geneseekr_query(request):
     form = GeneSeekrForm()
-    formName = GeneSeekrNameForm()
+    formName = NameForm()
     formEmail = EmailForm()
     if request.method == 'POST':
         form = GeneSeekrForm(request.POST, request.FILES)
-        formName = GeneSeekrNameForm(request.POST)
+        formName = NameForm(request.POST)
         if form.is_valid():
             # seqid_input = form.cleaned_data.get('seqids')
             # seqids = seqid_input.split()
@@ -200,10 +200,10 @@ def tree_result(request, parsnp_request_pk):
 
 @login_required
 def tree_name(request, parsnp_request_pk):
-    form = TreeNameForm()
+    form = NameForm()
     parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
     if request.method == "POST":  
-        form = TreeNameForm(request.POST)
+        form = NameForm(request.POST)
         if form.is_valid():
             parsnp_request.name = form.cleaned_data['name']
             parsnp_request.save()
@@ -286,10 +286,10 @@ def amr_result(request, amr_request_pk):
 
 @login_required
 def amr_name(request, amr_request_pk):
-    form = TreeNameForm()
+    form = NameForm()
     amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
     if request.method == "POST":  
-        form = TreeNameForm(request.POST)
+        form = NameForm(request.POST)
         if form.is_valid():
             amr_request.name = form.cleaned_data['name']
             amr_request.save()
@@ -367,10 +367,10 @@ def prokka_result(request, prokka_request_pk):
 
 @login_required
 def prokka_name(request, prokka_request_pk):
-    form = TreeNameForm()
+    form = NameForm()
     prokka_request = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
     if request.method == "POST":  
-        form = TreeNameForm(request.POST)
+        form = NameForm(request.POST)
         if form.is_valid():
             prokka_request.name = form.cleaned_data['name']
             prokka_request.save()

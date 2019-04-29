@@ -253,11 +253,8 @@ class ProkkaForm(forms.Form):
 
         return seqid_list, name
 
-class GeneSeekrNameForm(forms.Form):
+class NameForm(forms.Form):
     name = forms.CharField(label='Name ', required=False ,widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-
-class TreeNameForm(forms.Form):
-    name = forms.CharField(label='Name ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
 
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")
