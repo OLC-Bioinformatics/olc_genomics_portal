@@ -68,7 +68,6 @@ export FLOWER_USER=a_flower_username
 export FLOWER_PASSWORD=a_flower_password
 ```
 
-
 #### Booting up the portal
 
 Add your IP address to ALLOWED_HOSTS in `prod.py`, and make a directory called
