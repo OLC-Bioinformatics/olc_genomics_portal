@@ -161,11 +161,13 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
+var toggle = document.getElementById('toggle');
   $(document).ready(function () {
     });
   function toggleFunc (x) {
       var btn = x;
       if (btn.value === 'Lab') {
+        toggle.value = 'Lab';
         btn.value= 'Both';
         btn.innerHTML ='View Both';
         {% for key,value in labidDict.items%}
@@ -173,6 +175,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
          i.innerHTML = '{{value}}';
         {% endfor%};
       } else if (btn.value === 'Both') {
+        toggle.value = 'Both';
         btn.value ='Seq';
         btn.innerHTML ='View SeqIDs';
         {% for key,value in labidDict.items%}
@@ -180,6 +183,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
          i.innerHTML = '{{key}} {{value}}';
         {% endfor%};
       } else {
+        toggle.value = 'Seq';
         btn.value ='Lab';
         btn.innerHTML ='View LabIDs';
         {% for key,value in labidDict.items%}
@@ -198,7 +202,6 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
   function Func(x) {
     var input = document.getElementById('seqID');
     input.value = x;
-    var btn = document.getElementById(x);
     document.getElementById('seqForm').submit();
   }
 </script>
