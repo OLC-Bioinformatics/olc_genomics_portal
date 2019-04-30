@@ -97,9 +97,10 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <br>
 <form id='seqForm' method='post'>
   {% csrf_token %}
-  <input type="hidden" value="" id="seqID" name="selectedSeq" />
-  <input type="hidden" value="" id="toggle" name="selectedTog" />
-
+  
+  <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq" />
+  <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog" />
+  
   <ul class="nav">
     {% for seq in amr_request.seqids %}
     <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
@@ -163,7 +164,22 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <script type="text/javascript">
 var toggle = document.getElementById('toggle');
   $(document).ready(function () {
-    });
+    if ((document.getElementById('seqID').value) != 'None'){
+    toggleFunc(document.getElementById('toggle'));
+    }
+    else{
+      (document.getElementById('toggle')).value = 'Seq';
+  toggleFunc(document.getElementById('toggle'));
+    }
+
+  {% comment %} {% if selectedTog != None%}
+  toggleFunc(document.getElementById('toggle'));
+  {% else%}
+  (document.getElementById('toggle')).value = 'Seq';
+  toggleFunc(document.getElementById('toggle'));
+  {% endif %} {% endcomment %}
+  
+  });
   function toggleFunc (x) {
       var btn = x;
       if (btn.value === 'Lab') {
