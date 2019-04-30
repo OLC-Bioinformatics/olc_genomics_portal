@@ -51,6 +51,7 @@
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <script type="text/javascript">
 $(document).ready(function() {
+  //Default table display
     var table = $('#seqid-table').DataTable( {
       "paging": false,
       "bFilter": false,
@@ -59,6 +60,7 @@ $(document).ready(function() {
       $('td:nth-child(2),th:nth-child(2)').hide();
 
   $('#toggle-vis').on( 'click', function () {
+    //Toggle between column visibilities. 
     var $this = $(this);
        if ($this.val() === 'Lab') {
         $('td:nth-child(2),th:nth-child(2)').show();
@@ -122,6 +124,7 @@ $(document).ready(function() {
   }
 
   function copyTable() {
+    //Copies entire table instead of one column
       // First, iterate through table and grab all SeqIDs, put them into a string.
       var seqid_string = '';
       var table = document.getElementById('seqid-table');

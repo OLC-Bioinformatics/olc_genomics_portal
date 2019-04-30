@@ -16,7 +16,7 @@
       <p>This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs).</p>
       <p>You don't have to remain on this page - this Tree request will be visible on <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
 
-      {% comment %} Email Block {% endcomment %}
+      <!--Email Block-->
       {% if messages %}
         <ul class="messages">
         {% for message in messages %}
@@ -76,7 +76,7 @@
             {% endfor %}
         {% endif %}
       </div>
-  {% comment %} End Email Block {% endcomment %}
+  <!--Email Block-->
 
   {% elif parsnp_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ parsnp_request.status }}</button>
@@ -142,6 +142,7 @@
       {% endif %}
     }, 45000)  // Refresh every 45 seconds
    </script>
+
    <script type="text/javascript">
    var tree_string = "{{ parsnp_request.newick_tree }}";
    var tree = d3.layout.phylotree().svg(d3.select('#tree_display')).options(
@@ -149,10 +150,12 @@
        'left-right-spacing': 'fit-to-size',
        'top-bottom-spacing': 'fit-to-size'}).size([600, 600]);
    tree(tree_string).layout()
-      </script>
+  </script>
+
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
   $(document).ready(function () {
+    //hides LabID Column on page load
     $('td:nth-child(2),th:nth-child(2)').hide();
     $('#toggle-vis').on('click', function () {
       var $this = $(this);

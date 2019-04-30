@@ -69,6 +69,7 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {
+      //Default order of table on page load
        var table =  $('#prokka-request-table').DataTable();
           table
         .order([3,"desc"], [1,"asc"])
@@ -83,6 +84,7 @@
     }, 60000) // This should refresh the page every 60 seconds as long as run status is processing
 
     $(".btn-danger").click(function(e) {
+    //Delete button SweetAlerts
     e.preventDefault();
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
@@ -103,7 +105,7 @@
         showConfirmButton: false
        }).then(function(cont) {
         if (cont.value == null) {
-          if (bowser.name =="Internet Explorer") {
+          if (bowser.name =="Internet Explorer") { //allows for page submission IE
             $.ajax({
             type:"POST",
             data: {"delete":btn}}).done(function(data) {

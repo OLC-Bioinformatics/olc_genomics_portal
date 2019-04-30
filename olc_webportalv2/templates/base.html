@@ -58,7 +58,7 @@
                   <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Investigate AMR <i class="fas fa-vial"></i></a>
                   <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">Annotate <i class="fas fa-highlighter"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">Find Near Neighbors <i class="fas fa-project-diagram"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">Find Near Neighbors <i class="fas fa-code-branch"></i></a>
                 </div>
             </div>
             </ul>
@@ -209,7 +209,8 @@
       <!-- Project specific Javascript goes in this file -->
       <script src="{% static 'js/project.js' %}"></script>
       <script type="text/javascript">
-      if (bowser.name =="Internet Explorer") {
+      if (bowser.name =="Internet Explorer") { 
+      //IE doesn't like nice things - this adjusts the image so it is not distorted
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
 }

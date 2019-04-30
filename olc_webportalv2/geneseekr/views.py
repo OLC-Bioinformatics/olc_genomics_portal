@@ -264,10 +264,13 @@ def amr_result(request, amr_request_pk):
     amr_details = AMRDetail.objects.filter(amr_request=amr_request)
     form = EmailForm()
     selectedSeq = None
+    selectedTog = None
     labidDict = LabID_sync_SeqID(amr_request.seqids)
     if request.method == 'POST':
         if 'selectedSeq' in request.POST:
             selectedSeq = request.POST.get('selectedSeq')
+        if 'selectedTog' in request.POST:
+            selectedTog = request.POST.get('selectedTog')
         else:    
             form = EmailForm(request.POST)
             if form.is_valid():
@@ -283,7 +286,7 @@ def amr_result(request, amr_request_pk):
     return render(request,
                   'geneseekr/amr_result.html',
                   {
-                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq, 'labidDict':labidDict,
+                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq, 'selectedTog':selectedTog ,'labidDict':labidDict,
                   })
 
 @login_required

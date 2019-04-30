@@ -24,7 +24,8 @@
 
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
-  $(document).ready(function () {
+  $(document).ready(function () { 
+  // adds tool tips 
   var seqids = document.getElementById('div_id_seqids');
   $(seqids).attr('data-tooltip','tooltip');
   $(seqids).attr('title','Enter SeqIDs you want to look for mobile AMR genes on here, one per line.');
