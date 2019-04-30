@@ -98,6 +98,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <form id='seqForm' method='post'>
   {% csrf_token %}
   <input type="hidden" value="" id="seqID" name="selectedSeq" />
+  <input type="hidden" value="" id="toggle" name="selectedTog" />
 
   <ul class="nav">
     {% for seq in amr_request.seqids %}
@@ -114,7 +115,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
   </ul>
 </form>
 <br>
-<button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
+<button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" onclick='toggleFunc(this)'>View LabIDs</button>
 <br>
 <br>
 <br>
@@ -161,32 +162,33 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
   $(document).ready(function () {
-    $('#toggle-vis').on('click', function () {
-      var $this = $(this);
-      if ($this.val() === 'Lab') {
-        $this.val('Both');
-        $this.html('View Both');
+    });
+  function toggleFunc (x) {
+      var btn = x;
+      if (btn.value === 'Lab') {
+        btn.value= 'Both';
+        btn.innerHTML ='View Both';
         {% for key,value in labidDict.items%}
          var i = document.getElementById('{{key}}');
          i.innerHTML = '{{value}}';
         {% endfor%};
-      } else if ($this.val() === 'Both') {
-        $this.val('Seq');
-        $this.html('View SeqIDs');
+      } else if (btn.value === 'Both') {
+        btn.value ='Seq';
+        btn.innerHTML ='View SeqIDs';
         {% for key,value in labidDict.items%}
          var i = document.getElementById('{{key}}');
          i.innerHTML = '{{key}} {{value}}';
         {% endfor%};
       } else {
-        $this.val('Lab');
-        $this.html('View LabIDs');
+        btn.value ='Lab';
+        btn.innerHTML ='View LabIDs';
         {% for key,value in labidDict.items%}
         var i = document.getElementById('{{key}}');
         i.innerHTML = '{{key}}';
         {% endfor%};
       }
-    });
-  });
+    };
+  
   setInterval(function () {
     {% if amr_request.status == 'Processing' %}
     window.location = window.location.href; 
