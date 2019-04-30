@@ -98,8 +98,8 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <form id='seqForm' method='post'>
   {% csrf_token %}
   
-  <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq" />
-  <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog" />
+  <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq"/>
+  <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog"/>
   
   <ul class="nav">
     {% for seq in amr_request.seqids %}
@@ -116,7 +116,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
   </ul>
 </form>
 <br>
-<button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" onclick='toggleFunc(this)'>View LabIDs</button>
+<button class="btn btn-info btn-lg" id="toggle-vis" value='{{selectedTog}}' style="float: left" onclick='toggleFunc()'>Toggle</button>
 <br>
 <br>
 <br>
@@ -165,23 +165,11 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 var toggle = document.getElementById('toggle');
   $(document).ready(function () {
     if ((document.getElementById('seqID').value) != 'None'){
-    toggleFunc(document.getElementById('toggle'));
+    toggleFunc(toggle);
     }
-    else{
-      (document.getElementById('toggle')).value = 'Seq';
-  toggleFunc(document.getElementById('toggle'));
-    }
-
-  {% comment %} {% if selectedTog != None%}
-  toggleFunc(document.getElementById('toggle'));
-  {% else%}
-  (document.getElementById('toggle')).value = 'Seq';
-  toggleFunc(document.getElementById('toggle'));
-  {% endif %} {% endcomment %}
-  
   });
-  function toggleFunc (x) {
-      var btn = x;
+  function toggleFunc () {
+      var btn = document.getElementById('toggle-vis');
       if (btn.value === 'Lab') {
         toggle.value = 'Lab';
         btn.value= 'Both';
