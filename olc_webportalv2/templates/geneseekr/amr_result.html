@@ -17,7 +17,7 @@
 <p>You don't have to remain on this page - this AMR request will be visible on <a
     href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
 
-{% comment %} Email Block {% endcomment %}
+<!--Email Block-->
 {% if messages %}
 <ul class="messages">
   {% for message in messages %}
@@ -81,7 +81,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
   {% endfor %}
   {% endif %}
 </div>
-{% comment %} End Email Block {% endcomment %}
+<!-- End Email Block-->
 
 {% elif amr_request.status == 'Unprocessed' %}
 <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ amr_request.status }}</button>
@@ -97,7 +97,7 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <br>
 <form id='seqForm' method='post'>
   {% csrf_token %}
-  
+<!--hidden inputs that pass variables between Django and JS -->
   <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq"/>
   <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog"/>
   
@@ -163,11 +163,13 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
 var toggle = document.getElementById('toggle');
+ // If page load is post, change sequence titles to toggle of choice
   $(document).ready(function () {
     if ((document.getElementById('seqID').value) != 'None'){
     toggleFunc(toggle);
     }
   });
+  // Finds Toggle button, checks value, changes button value + display then alters list of sequences displays
   function toggleFunc () {
       var btn = document.getElementById('toggle-vis');
       if (btn.value === 'Lab') {
@@ -203,6 +205,7 @@ var toggle = document.getElementById('toggle');
     {% endif %}
   }, 45000) // Refresh every 45 seconds
 
+// Called when sequence list items are selected, chosen seq value is assigned and page is submitted
   function Func(x) {
     var input = document.getElementById('seqID');
     input.value = x;
