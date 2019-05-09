@@ -14,7 +14,7 @@
       <p>This page will automatically refresh. Your GeneSeekr request should be complete in a minute or two.</p>
       <p>You don't have to remain on this page - this GeneSeekr request will be visible on <a href="{% url 'geneseekr:geneseekr_home' %}">GeneSeekr Home</a> </p>
    
-      {% comment %} Email Block {% endcomment %}
+    <!--Email Block--> 
       {% if messages %}
         <ul class="messages">
         {% for message in messages %}
@@ -74,8 +74,8 @@
           {% endfor %}
       {% endif %}
     </div>
-    {% comment %} End Email Block {% endcomment %}
-  
+    <!--End Email Block--> 
+    
   {% elif geneseekr_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ geneseekr_request.status }}</button>
     <br>

@@ -11,7 +11,7 @@ from django.forms.widgets import EmailInput
 class NearNeighborForm(forms.Form):
     name = forms.CharField(max_length=56, label='Name: ', required=False)
     seqid = forms.CharField(max_length=24, label='SeqID: ')
-    number_neighbors = forms.IntegerField(label='Number neigbhors: ', initial=2, required=True)
+    number_neighbors = forms.IntegerField(label='Number neighbors: ', initial=2, required=True)
 
     def clean(self):
         MIN_NUM_NEIGHBORS = 1

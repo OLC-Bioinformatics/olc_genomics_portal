@@ -16,7 +16,7 @@
       <p>This page will automatically refresh. Your Annotation request should be complete in 1-3 minutes per sample (more if you requested many SeqIDs).</p>
       <p>You don't have to remain on this page - this Annotation request will be visible on <a href="{% url 'geneseekr:prokka_home' %}">Annotation Home</a> </p>
 
-      {% comment %} Email Block {% endcomment %}
+      <!--Email Block-->
       {% if messages %}
         <ul class="messages">
         {% for message in messages %}
@@ -76,7 +76,7 @@
             {% endfor %}
         {% endif %}
       </div>
-  {% comment %} End Email Block {% endcomment %}
+  <!--End Email Block-->
 
   {% elif prokka_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ prokka_request.status }}</button>

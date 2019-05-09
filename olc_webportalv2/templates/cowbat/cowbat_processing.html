@@ -38,7 +38,7 @@
   <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
   <p>You don't have to remain on this page - this assembly request will be visible on <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
   
-  {% comment %} Email Block {% endcomment %}
+  <!--Email Block-->
   {% if messages %}
   <ul class="messages">
     {% for message in messages %}
@@ -97,7 +97,7 @@
         {% endfor %}
     {% endif %}
   </div>
-  {% comment %} End Email Block {% endcomment %}
+  <!--End Email Block-->
 
 {% elif sequencing_run.status == 'Complete' %}
   <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></button>
