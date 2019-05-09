@@ -379,7 +379,8 @@ VM_CLIENT_ID = env('VM_CLIENT_ID')
 VM_SECRET = env('VM_SECRET')
 VM_TENANT = env('VM_TENANT')
 
-sentry_sdk.init(
-    dsn=env('SENTRY_DSN'),
-    integrations=[DjangoIntegration()]
-)
+if 'SENTRY_DSN' in os.environ:
+    sentry_sdk.init(
+        dsn=env('SENTRY_DSN'),
+        integrations=[DjangoIntegration()]
+    )
