@@ -11,6 +11,7 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
     ParsnpAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
+from sentry_sdk import capture_exception
 
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
@@ -113,7 +114,8 @@ def run_prokka(prokka_request_pk):
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
-    except:
+    except Exception as e:
+        capture_exception(e)
         prokka_request.status = 'Error'
         prokka_request.save()
 
@@ -188,7 +190,8 @@ def run_amr_summary(amr_summary_pk):
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
-    except:
+    except Exception as e:
+        capture_exception(e)
         amr_summary_request.status = 'Error'
         amr_summary_request.save()
 
@@ -245,7 +248,8 @@ def run_parsnp(parsnp_request_pk):
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
  
-    except:
+    except Exception as e:
+        capture_exception(e)
         parsnp_request.status = 'Error'
         parsnp_request.save()
 
@@ -374,7 +378,8 @@ def run_geneseekr(geneseekr_request_pk):
         #     send_email(subject='Geneseekr Query {} has finished.'.format(str(geneseekr_request)),
         #                body='This email is to inform you that the Geneseekr Query {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
         #                recipient=email)    
-    except:
+    except Exception as e:
+        capture_exception(e)
         geneseekr_request.status = 'Error'
         geneseekr_request.save()
 
@@ -551,49 +556,54 @@ def get_blast_top_hits(blast_result_file, geneseekr_task, num_hits=50):
 @shared_task
 def run_nearest_neighbors(nearest_neighbor_pk):
     nearest_neighbor_request = NearestNeighbors.objects.get(pk=nearest_neighbor_pk)
-    work_dir = 'olc_webportalv2/media/neighbor-{}'.format(nearest_neighbor_pk)
-    if not os.path.isdir(work_dir):
-        os.makedirs(work_dir)
-    seqids_in_metadata = list()
-    for sequence_data in SequenceData.objects.filter():
-        seqids_in_metadata.append(sequence_data.seqid)
-    # Download requested SeqID from blob storage - we *should* have already validated that the sequence exists.
-    fasta_file = os.path.join(work_dir, nearest_neighbor_request.seqid + '.fasta')
-    blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                   account_key=settings.AZURE_ACCOUNT_KEY)
-    # TODO: Check what error happens here if blob doesn't actually exist and catch, or verify that blob exists before
-    #  trying to retrieve it.
-    blob_client.get_blob_to_path(container_name='processed-data',
-                                 blob_name=nearest_neighbor_request.seqid + '.fasta',
-                                 file_path=fasta_file)
+    try:
+        work_dir = 'olc_webportalv2/media/neighbor-{}'.format(nearest_neighbor_pk)
+        if not os.path.isdir(work_dir):
+            os.makedirs(work_dir)
+        seqids_in_metadata = list()
+        for sequence_data in SequenceData.objects.filter():
+            seqids_in_metadata.append(sequence_data.seqid)
+        # Download requested SeqID from blob storage - we *should* have already validated that the sequence exists.
+        fasta_file = os.path.join(work_dir, nearest_neighbor_request.seqid + '.fasta')
+        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        # TODO: Check what error happens here if blob doesn't actually exist and catch, or verify that blob exists before
+        #  trying to retrieve it.
+        blob_client.get_blob_to_path(container_name='processed-data',
+                                     blob_name=nearest_neighbor_request.seqid + '.fasta',
+                                     file_path=fasta_file)
 
-    mash_output_file = os.path.join(work_dir, 'mash_dist_results.tsv')
-    cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,  # TODO: Actually install mash in dockerfile
-                                                         sketch='/data/web/sketchomatic.msh',  # TODO: Change me!
-                                                         output=mash_output_file)
-    os.system(cmd)  # Subprocess doesn't work here. Should be OK to switch once mash is actually installed.
-    shutil.make_archive(work_dir, 'zip', work_dir)
-    sas_url = generate_download_link(blob_client=blob_client,
-                                     container_name='neighbor-output-{}'.format(nearest_neighbor_pk),
-                                     output_zipfile=work_dir + '.zip',
-                                     expiry=8)
-    nearest_neighbor_request.download_link = sas_url
-    distances = dict()
-    with open(mash_output_file) as f:
-        for line in f:
-            x = line.split()
-            query_seqid = x[1].split('/')[-1].replace('.fasta', '')
-            query_distance = float(x[2])
-            # Don't show the fact we get match to self. Not useful info
-            if query_seqid != nearest_neighbor_request.seqid and query_seqid in seqids_in_metadata:
-                distances[query_seqid] = query_distance
-    sorted_distances = sorted(distances.items(), key=lambda kv: kv[1])
-    for i in range(nearest_neighbor_request.number_neighbors):
-        NearNeighborDetail.objects.create(near_neighbor_request=nearest_neighbor_request,
-                                          seqid=sorted_distances[i][0],
-                                          distance=sorted_distances[i][1])
-    shutil.rmtree(work_dir)
-    os.remove(work_dir + '.zip')
-    nearest_neighbor_request.status = 'Complete'
-    nearest_neighbor_request.save()
+        mash_output_file = os.path.join(work_dir, 'mash_dist_results.tsv')
+        cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,  # TODO: Actually install mash in dockerfile
+                                                             sketch='/data/web/sketchomatic.msh',  # TODO: Change me!
+                                                             output=mash_output_file)
+        os.system(cmd)  # Subprocess doesn't work here. Should be OK to switch once mash is actually installed.
+        shutil.make_archive(work_dir, 'zip', work_dir)
+        sas_url = generate_download_link(blob_client=blob_client,
+                                         container_name='neighbor-output-{}'.format(nearest_neighbor_pk),
+                                         output_zipfile=work_dir + '.zip',
+                                         expiry=8)
+        nearest_neighbor_request.download_link = sas_url
+        distances = dict()
+        with open(mash_output_file) as f:
+            for line in f:
+                x = line.split()
+                query_seqid = x[1].split('/')[-1].replace('.fasta', '')
+                query_distance = float(x[2])
+                # Don't show the fact we get match to self. Not useful info
+                if query_seqid != nearest_neighbor_request.seqid and query_seqid in seqids_in_metadata:
+                    distances[query_seqid] = query_distance
+        sorted_distances = sorted(distances.items(), key=lambda kv: kv[1])
+        for i in range(nearest_neighbor_request.number_neighbors):
+            NearNeighborDetail.objects.create(near_neighbor_request=nearest_neighbor_request,
+                                              seqid=sorted_distances[i][0],
+                                              distance=sorted_distances[i][1])
+        shutil.rmtree(work_dir)
+        os.remove(work_dir + '.zip')
+        nearest_neighbor_request.status = 'Complete'
+        nearest_neighbor_request.save()
+    except Exception as e:
+        capture_exception(e)
+        nearest_neighbor_request.status = 'Error'
+        nearest_neighbor_request.save()
 

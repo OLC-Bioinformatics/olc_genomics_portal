@@ -89,7 +89,6 @@ def cowbat_processing(request, sequencing_run_pk):
             else:
                 messages.error(request, 'Email has already been saved')
             
-
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {

@@ -9,6 +9,8 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 """
 import environ
 import os
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
@@ -376,3 +378,8 @@ VM_IMAGE = env('VM_IMAGE')
 VM_CLIENT_ID = env('VM_CLIENT_ID')
 VM_SECRET = env('VM_SECRET')
 VM_TENANT = env('VM_TENANT')
+
+sentry_sdk.init(
+    dsn=env('SENTRY_DSN'),
+    integrations=[DjangoIntegration()]
+)

@@ -26,8 +26,10 @@ import azure.batch.models as batchmodels
 from strainchoosr import strainchoosr
 import re
 import ete3
-#Celery Task Management
+# Celery Task Management
 from celery import shared_task, task
+# Sentry
+from sentry_sdk import capture_exception
 
 @shared_task
 def run_cowbat_batch(sequencing_run_pk):
@@ -87,12 +89,8 @@ def run_cowbat_batch(sequencing_run_pk):
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
         AzureTask.objects.create(sequencing_run=sequencing_run,
                                  exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
-    except:
-        """
-        send_email(subject='Assembly Error - Run {} was not successfully submitted to Azure Batch.'.format(str(sequencing_run)),
-                   body='Fix it!',
-                   recipient='andrew.low@canada.ca')
-        """
+    except Exception as e:
+        capture_exception(e)
         SequencingRun.objects.filter(pk=sequencing_run_pk).update(status='Error')
 
 

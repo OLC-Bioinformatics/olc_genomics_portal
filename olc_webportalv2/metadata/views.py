@@ -102,7 +102,7 @@ def metadata_results(request, metadata_request_pk):
 
 @login_required
 def metadata_browse(request):
-    sequence_data = SequenceData.objects.filter()
+    sequence_data = SequenceData.objects.filter().select_related('labid')
     return render(request,
                   'metadata/metadata_browse.html',
                   {
@@ -110,7 +110,7 @@ def metadata_browse(request):
                   })
 
 
-
+# TODO: The optimization on this is horrendous. We're hitting the DB potentially thousands of times.
 def LabID_sync_SeqID(seqid_list):
     labidDict = dict()
     for item in seqid_list:

@@ -10,8 +10,10 @@ from olc_webportalv2.data.models import DataRequest
 # Azure!
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
-#Celery Task Management
+# Celery Task Management
 from celery import shared_task, task
+# Sentry, send me error reports
+from sentry_sdk import capture_exception
 
 @shared_task
 def get_assembled_data(data_request_pk):
@@ -72,7 +74,8 @@ def get_assembled_data(data_request_pk):
         else:
             data_request.status = 'Warning'
         data_request.save()
-    except:
+    except Exception as e:
+        capture_exception(e)
         data_request.status = 'Error'
         data_request.save()
 
@@ -142,6 +145,7 @@ def get_raw_data(data_request_pk):
         else:
             data_request.status = 'Warning'
         data_request.save()
-    except:
+    except Exception as e:
+        capture_exception(e)
         data_request.status = 'Error'
         data_request.save()

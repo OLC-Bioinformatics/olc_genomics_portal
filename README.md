@@ -14,6 +14,8 @@ You will need to:
 - clone this repository
 - have docker-compose installed and working on your system
 - have an azure storage and azure batch account
+- have a sentry.io account and django dsn set up (see https://docs.sentry.io/platforms/python/django/ - this lets 
+you get emails/notifications whenever things go wrong!)
 
 ## Setup
 
@@ -52,6 +54,7 @@ VM_IMAGE=/subscriptions/subscription_id/resourceGroups/subscription/providers/Mi
 VM_CLIENT_ID=vm_client_id
 VM_SECRET=vm_secret_key
 VM_TENANT=vm_tenant_id
+SENTRY_DSN=your_sentry_dsn
 ```
 
 #### Task monitoring
