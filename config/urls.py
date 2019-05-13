@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.conf.urls import include, url
+from django.urls import path
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.views.generic import TemplateView
@@ -21,6 +22,7 @@ urlpatterns = [
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
+    path('api-auth/', include('rest_framework.urls'))
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

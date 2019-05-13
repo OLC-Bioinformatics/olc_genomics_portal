@@ -85,6 +85,9 @@ LOCAL_APPS = [
     # django-widget-tweaks
     'widget_tweaks',
 
+    # REST framework
+    'rest_framework'
+
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -101,6 +104,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
 
 # CHANGE PERMISSONS ON UPLOADED FILES TO ALLOW FOR COWBAT TO RUN
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o766

@@ -1,5 +1,10 @@
 from olc_webportalv2.metadata import views
 from django.conf.urls import url, include
+from django.urls import path
+from rest_framework.urlpatterns import format_suffix_patterns
+from rest_framework.schemas import get_schema_view
+
+schema_view = get_schema_view(title='Metadata API')
 
 urlpatterns = [
     url(r'^metadata_home/', views.metadata_home, name='metadata_home'),
@@ -21,5 +26,12 @@ urlpatterns = [
         name='mlst_autocompleter'),
     url(r'^rmlst_autocompleter/$',
         views.RMLSTAutoCompleter.as_view(),
-        name='rmlst_autocompleter')
+        name='rmlst_autocompleter'),
+
+    # REST API Stuff
+    path('sequencedata/', views.SequenceDataList.as_view()),
+    path('sequencedata/<int:pk>/', views.SequenceDataDetail.as_view()),
+    path('schema/', schema_view)
 ]
+
+urlpatterns = format_suffix_patterns(urlpatterns)

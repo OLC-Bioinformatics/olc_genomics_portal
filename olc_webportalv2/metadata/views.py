@@ -1,9 +1,52 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
+from django.conf import settings
+
 from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
     make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
 from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID
+from olc_webportalv2.metadata.serializers import SequenceDataSerializer
+import datetime
 from django.contrib.auth.decorators import login_required
 from dal import autocomplete
+from rest_framework import generics, permissions, pagination
+from azure.storage.blob import BlockBlobService, BlobPermissions
+
+
+# Not sure where to put this - create pagination.py?
+class LargeResultsPagination(pagination.PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 20000
+
+
+class SequenceDataList(generics.ListCreateAPIView):
+    queryset = SequenceData.objects.all()
+    serializer_class = SequenceDataSerializer
+    permission_classes = (permissions.IsAdminUser,)
+    pagination_class = LargeResultsPagination
+
+
+class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = SequenceData.objects.all()
+    serializer_class = SequenceDataSerializer
+    permission_classes = (permissions.IsAdminUser,)
+
+    def retrieve(self, request, *args, **kwargs):
+        primary_key = kwargs['pk']
+        seqid = SequenceData.objects.get(pk=primary_key).seqid
+        blob_service = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                        account_name=settings.AZURE_ACCOUNT_NAME)
+        sas_token = blob_service.generate_blob_shared_access_signature(container_name='processed-data',
+                                                                       blob_name=seqid + '.fasta',
+                                                                       permission=BlobPermissions.READ,
+                                                                       expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=1))
+        sas_url = blob_service.make_blob_url(container_name='processed-data',
+                                             blob_name=seqid + '.fasta',
+                                             sas_token=sas_token)
+        return JsonResponse({'id': primary_key,
+                             'seqid': seqid,
+                             'download_link': sas_url})
 
 
 class GenusAutoCompleter(autocomplete.Select2ListView):

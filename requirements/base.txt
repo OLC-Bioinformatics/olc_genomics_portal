@@ -54,6 +54,10 @@ django-test-plus==1.0.22
 # Sentry, for error reporting
 sentry-sdk==0.7.14
 
+# Django rest framework
+djangorestframework==3.9.3
+coreapi==2.3.3
+
 # Custom requirements beyond cookiecutter-django
 adal==1.2.1
 amqp==2.4.2
