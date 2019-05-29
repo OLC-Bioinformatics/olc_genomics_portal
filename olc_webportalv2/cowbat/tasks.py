@@ -192,9 +192,7 @@ def cowbat_cleanup(sequencing_run_pk):
     #                recipient=email)
 
 
-@shared_task
-def monitor_tasks():
-    # TODO: put each check into its own method - this code is getting ridiculously long.
+def check_cowbat_tasks():
     # Check for completed cowbat runs
     azure_tasks = AzureTask.objects.filter()
     # Create batch client so we can check on the status of runs.
@@ -227,8 +225,12 @@ def monitor_tasks():
             # Delete task so we don't have to keep checking up on it.
             AzureTask.objects.filter(id=task.id).delete()
 
+
+def check_tree_tasks():
     # Also check for Parsnp tree creation tasks
     tree_tasks = ParsnpAzureRequest.objects.filter()
+    credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
+    batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
         tree_task = ParsnpTree.objects.get(pk=task.parsnp_request.pk)
         batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
@@ -300,8 +302,11 @@ def monitor_tasks():
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
 
-    # Next up - AMR summary requests.
+
+def check_amr_summary_tasks():
     amr_summary_tasks = AMRAzureRequest.objects.filter()
+    credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
+    batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in amr_summary_tasks:
         amr_task = AMRSummary.objects.get(pk=task.amr_request.pk)
         batch_job_name = 'amrsummary-{}'.format(task.amr_request.pk)
@@ -374,8 +379,12 @@ def monitor_tasks():
                 amr_task.save()
             AMRAzureRequest.objects.filter(id=task.id).delete()
 
+
+def check_prokka_tasks():
     # Prokka!
     prokka_tasks = ProkkaAzureRequest.objects.filter()
+    credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
+    batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in prokka_tasks:
         prokka_task = ProkkaRequest.objects.get(pk=task.prokka_request.pk)
         batch_job_name = 'prokka-{}'.format(task.prokka_request.pk)
@@ -430,6 +439,36 @@ def monitor_tasks():
                 prokka_task.status = 'Error'
                 prokka_task.save()
             ProkkaAzureRequest.objects.filter(id=task.id).delete()
+
+
+@shared_task
+def monitor_tasks():
+    # Keep track of jobs that have been submitted to Azure Batch Service.
+    # Call each type of task we submit to Batch separately, and have sentry tell us if anything goes wrong.
+
+    # Check for completed cowbat runs
+    try:
+        check_cowbat_tasks()
+    except Exception as e:
+        capture_exception(e)
+
+    # Also check for Parsnp tree creation tasks
+    try:
+        check_tree_tasks()
+    except Exception as e:
+        capture_exception(e)
+
+    # Next up - AMR summary requests.
+    try:
+        check_amr_summary_tasks()
+    except Exception as e:
+        capture_exception(e)
+
+    # Prokka!
+    try:
+        check_prokka_tasks()
+    except Exception as e:
+        capture_exception(e)
 
 
 def generate_download_link(blob_client, container_name, output_zipfile, expiry=8):
