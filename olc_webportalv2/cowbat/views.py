@@ -166,8 +166,17 @@ def verify_realtime(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     form = RealTimeForm(instance=sequencing_run)
     if request.method == 'POST':
-        # Read form data, update realtime strains as necessary.
-        return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
+        form = RealTimeForm(request.POST, instance=sequencing_run)
+        if form.is_valid():
+            # Read form data, update realtime strains as necessary.
+            seqids = form.cleaned_data.get('realtime_select')
+            for seqid in sequencing_run.realtime_strains:
+                if seqid in seqids:
+                    sequencing_run.realtime_strains[seqid] = 'True'
+                else:
+                    sequencing_run.realtime_strains[seqid] = 'False'
+            sequencing_run.save()
+            return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/verify_realtime.html',
                   {

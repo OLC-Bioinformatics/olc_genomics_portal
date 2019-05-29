@@ -25,7 +25,8 @@ class RealTimeForm(forms.ModelForm):
     realtime_select = forms.MultipleChoiceField(
         help_text='Select strains that are RealTime',
         widget=forms.CheckboxSelectMultiple,
-        label=''
+        label='',
+        required=False
     )
 
     class Meta:
