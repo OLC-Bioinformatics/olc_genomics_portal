@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<h2>Select RealTime Strains for {{ sequencing_run.run_name }}</h2>
+  <br>
+  <p>Strains thought to be RealTime based on your SampleSheet are already checked off. Please verify that these
+  strains are in fact RealTime and that you haven't missed any other strains.</p>
+  <form action='' enctype="multipart/form-data" method="post">
+    {% csrf_token %}
+    {{ form.realtime_select|as_crispy_field }}
+  <button type="submit" class="btn btn-primary btn-lg">Verify Realtime</button>
+  </form>
+
+{% endblock %}
+

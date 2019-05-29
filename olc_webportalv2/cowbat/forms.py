@@ -15,5 +15,34 @@ class RunNameForm(forms.Form):
             raise forms.ValidationError('Invalid run name. Format must be YYMMDD_LAB', code='BadRunName')
         return run_name
 
+
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50,label= "Email ")
+
+
+class RealTimeForm(forms.ModelForm):
+
+    realtime_select = forms.MultipleChoiceField(
+        help_text='Select strains that are RealTime',
+        widget=forms.CheckboxSelectMultiple,
+        label=''
+    )
+
+    class Meta:
+        model = SequencingRun
+        fields = list()
+
+    def __init__(self, *args, **kwargs):
+        super(RealTimeForm, self).__init__(*args, **kwargs)
+        choice_list = list()
+        for seqid in sorted(self.instance.realtime_strains):
+            choice_list.append((seqid, seqid))
+        self.choice_list = tuple(choice_list)
+
+        initials = list()
+        for seqid in self.instance.realtime_strains:
+            if self.instance.realtime_strains[seqid] == 'True':
+                initials.append(seqid)
+        self.initials = initials
+        self.fields['realtime_select'].choices = self.choice_list
+        self.fields['realtime_select'].initial = self.initials

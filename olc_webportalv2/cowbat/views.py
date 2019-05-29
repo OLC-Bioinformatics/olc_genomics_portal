@@ -9,7 +9,7 @@ import fnmatch
 import os
 # Portal-specific things
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm
+from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm, RealTimeForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 # Azure!
 from azure.storage.blob import BlockBlobService
@@ -20,6 +20,7 @@ import azure.batch.models as batchmodels
 from kombu import Queue
 
 log = logging.getLogger(__name__)
+
 
 def find_percent_complete(sequencing_run):
     try:
@@ -135,18 +136,43 @@ def upload_metadata(request):
                         lines = f.readlines()
                     seqid_start = False
                     seqid_list = list()
+                    realtime_dict = dict()
                     for i in range(len(lines)):
                         if seqid_start:
                             seqid = lines[i].split(',')[0]
+                            try:
+                                realtime = lines[i].rstrip().split(',')[9]
+                            except IndexError:
+                                realtime = ''
                             seqid_list.append(seqid)
+                            if realtime == 'TRUE' or realtime == 'VRAI':
+                                realtime_dict[seqid] = 'True'  # Not sure JSONField this gets stored in can handle bool
+                            else:
+                                realtime_dict[seqid] = 'False'
                         if 'Sample_ID' in lines[i]:
                             seqid_start = True
-                    SequencingRun.objects.filter(pk=sequencing_run.pk).update(seqids=seqid_list)
-            return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
+                    SequencingRun.objects.filter(pk=sequencing_run.pk).update(seqids=seqid_list,
+                                                                              realtime_strains=realtime_dict)
+            return redirect('cowbat:verify_realtime', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/upload_metadata.html',
                   {
                       'form': form
+                  })
+
+
+@login_required
+def verify_realtime(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    form = RealTimeForm(instance=sequencing_run)
+    if request.method == 'POST':
+        # Read form data, update realtime strains as necessary.
+        return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
+    return render(request,
+                  'cowbat/verify_realtime.html',
+                  {
+                      'form': form,
+                      'sequencing_run': sequencing_run
                   })
 
 
