@@ -137,9 +137,14 @@ def upload_metadata(request):
                     seqid_start = False
                     seqid_list = list()
                     realtime_dict = dict()
+                    # Sample plate column in SampleSheet should have Lab/Whatever other ID.
+                    # Store that data in a dictionary with SeqIDs as keys and LabIDs as values
+                    sample_plate_dict = dict()
                     for i in range(len(lines)):
                         if seqid_start:
                             seqid = lines[i].split(',')[0]
+                            labid = lines[i].split(',')[2]
+                            sample_plate_dict[seqid] = labid
                             try:
                                 realtime = lines[i].rstrip().split(',')[9]
                             except IndexError:
@@ -152,7 +157,8 @@ def upload_metadata(request):
                         if 'Sample_ID' in lines[i]:
                             seqid_start = True
                     SequencingRun.objects.filter(pk=sequencing_run.pk).update(seqids=seqid_list,
-                                                                              realtime_strains=realtime_dict)
+                                                                              realtime_strains=realtime_dict,
+                                                                              sample_plate=sample_plate_dict)
             return redirect('cowbat:verify_realtime', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/upload_metadata.html',
@@ -176,6 +182,8 @@ def verify_realtime(request, sequencing_run_pk):
                 else:
                     sequencing_run.realtime_strains[seqid] = 'False'
             sequencing_run.save()
+            # Also modify samplesheet to reflect the updated Realtime strains and overwrite the previous upload
+            # to blob storage
             return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/verify_realtime.html',

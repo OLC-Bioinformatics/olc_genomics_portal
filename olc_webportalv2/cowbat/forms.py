@@ -17,7 +17,7 @@ class RunNameForm(forms.Form):
 
 
 class EmailForm(forms.Form):
-    email = forms.EmailField(max_length=50,label= "Email ")
+    email = forms.EmailField(max_length=50, label='Email ')
 
 
 class RealTimeForm(forms.ModelForm):
@@ -37,7 +37,7 @@ class RealTimeForm(forms.ModelForm):
         super(RealTimeForm, self).__init__(*args, **kwargs)
         choice_list = list()
         for seqid in sorted(self.instance.realtime_strains):
-            choice_list.append((seqid, seqid))
+            choice_list.append((seqid, seqid + ' (' + self.instance.sample_plate[seqid] + ')'))
         self.choice_list = tuple(choice_list)
 
         initials = list()

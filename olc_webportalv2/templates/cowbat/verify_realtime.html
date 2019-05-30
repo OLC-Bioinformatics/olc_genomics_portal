@@ -6,11 +6,11 @@
 {% load crispy_forms_tags %}
 {% block content %}
 
-<h2>Select RealTime Strains for {{ sequencing_run.run_name }}</h2>
+<h2>Select ROGA Strains for {{ sequencing_run.run_name }}</h2>
   <br>
-  <p>Strains thought to be RealTime based on your SampleSheet are already checked off. Please verify that these
-  strains are in fact RealTime and that you haven't missed any other strains.</p>
-  <form action='' enctype="multipart/form-data" method="post">
+  <p>Strains thought to need ROGAs based on your SampleSheet are already checked off. Please verify that these
+  strains do in fact need ROGAs and that you haven't missed any other strains.</p>
+  <form id="realtimeform" action='' enctype="multipart/form-data" method="post">
     {% if form.errors %}
     <div class="alert alert-danger" role="alert" align="center">
       {{ form.errors }}
@@ -19,8 +19,42 @@
     {% endif %}
     {% csrf_token %}
     {{ form.realtime_select|as_crispy_field }}
-  <button type="submit" class="btn btn-primary btn-lg">Verify Realtime Strains</button>
+  <button type="submit" id="verifyButton" class="btn btn-primary btn-lg">Verify ROGA Strains</button>
   </form>
 
+
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  // Check that at least one strain is checked off. If none are checked off, send an 'Are you sure' alert to
+  // the user to make sure that they haven't missed anything.
+  $('#verifyButton').click(function(e) {
+    e.preventDefault();
+    var checkboxes = document.getElementsByClassName('form-check-input');
+    var at_least_one_check = false;
+    for(var i=0;i<checkboxes.length;i++) {
+      if (checkboxes[i].checked === true) {
+        at_least_one_check = true;
+      }
+    }
+    if (at_least_one_check === false) {
+      Swal.fire({
+        title: 'No strains selected',
+        text: 'Are you sure no strains need ROGAs?',
+        type: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, I\'m sure!',
+        cancelButtonText: 'No, take me back!'}).then(function(result) {
+          if (result.value === true) {
+            $('#realtimeform').submit()
+          }
+      });
+    }
+    else {
+      $('#realtimeform').submit()
+    }
+  })
+  </script>
 {% endblock %}
 

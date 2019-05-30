@@ -21,6 +21,7 @@ class SequencingRun(models.Model):
     run_name = models.CharField(max_length=64)
     status = models.CharField(max_length=64, default='Unprocessed')
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    sample_plate = JSONField(default={}, blank=True, null=True)
     realtime_strains = JSONField(default={}, blank=True, null=True)
     download_link = models.CharField(max_length=256, blank=True, default='')
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=[])
