@@ -184,6 +184,31 @@ def verify_realtime(request, sequencing_run_pk):
             sequencing_run.save()
             # Also modify samplesheet to reflect the updated Realtime strains and overwrite the previous upload
             # to blob storage
+            samplesheet_path = 'olc_webportalv2/media/{run_name}/SampleSheet.csv'.format(run_name=str(sequencing_run))
+            with open(samplesheet_path) as f:
+                lines = f.readlines()
+            seqid_start = False
+            with open(samplesheet_path, 'w') as f:
+                for i in range(len(lines)):
+                    if seqid_start:
+                        seqid = lines[i].split(',')[0]
+                        line_split = lines[i].split(',')
+                        if sequencing_run.realtime_strains[seqid] == 'True':
+                            line_split[-1] = 'TRUE\n'
+                        else:
+                            line_split[-1] = '\n'
+                        to_write = ','.join(line_split)
+                        f.write(to_write)
+                    else:
+                        f.write(lines[i])
+                    if 'Sample_ID' in lines[i]:
+                        seqid_start = True
+            container_name = sequencing_run.run_name.lower().replace('_', '-')
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            blob_client.create_blob_from_path(container_name=container_name,
+                                              blob_name='SampleSheet.csv',
+                                              file_path=samplesheet_path)
             return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/verify_realtime.html',
