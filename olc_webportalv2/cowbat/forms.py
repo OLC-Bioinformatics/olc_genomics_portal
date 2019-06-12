@@ -20,6 +20,11 @@ class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50, label='Email ')
 
 
+def validate_no_comma(value):
+    if ',' in value:
+        raise forms.ValidationError('Strain names cannot have commas in them!')
+
+
 class RealTimeForm(forms.ModelForm):
 
     realtime_select = forms.MultipleChoiceField(
@@ -49,5 +54,8 @@ class RealTimeForm(forms.ModelForm):
         self.fields['realtime_select'].initial = self.initials
         for seqid in sorted(self.instance.sample_plate):
             self.fields.update({
-                seqid: forms.CharField(widget=forms.TextInput, initial=self.instance.sample_plate[seqid], required=True)
+                seqid: forms.CharField(widget=forms.TextInput,
+                                       initial=self.instance.sample_plate[seqid],
+                                       required=True,
+                                       validators=[validate_no_comma])
             })
