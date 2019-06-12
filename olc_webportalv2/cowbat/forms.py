@@ -23,10 +23,10 @@ class EmailForm(forms.Form):
 class RealTimeForm(forms.ModelForm):
 
     realtime_select = forms.MultipleChoiceField(
-        help_text='Select strains that are RealTime',
-        widget=forms.CheckboxSelectMultiple,
+        help_text='',
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkBoxSelect'}),
         label='',
-        required=False
+        required=False,
     )
 
     class Meta:
@@ -37,7 +37,7 @@ class RealTimeForm(forms.ModelForm):
         super(RealTimeForm, self).__init__(*args, **kwargs)
         choice_list = list()
         for seqid in sorted(self.instance.realtime_strains):
-            choice_list.append((seqid, seqid + ' (' + self.instance.sample_plate[seqid] + ')'))
+            choice_list.append((seqid, seqid))
         self.choice_list = tuple(choice_list)
 
         initials = list()
@@ -47,3 +47,7 @@ class RealTimeForm(forms.ModelForm):
         self.initials = initials
         self.fields['realtime_select'].choices = self.choice_list
         self.fields['realtime_select'].initial = self.initials
+        for seqid in sorted(self.instance.sample_plate):
+            self.fields.update({
+                seqid: forms.CharField(widget=forms.TextInput, initial=self.instance.sample_plate[seqid], required=True)
+            })

@@ -181,6 +181,8 @@ def verify_realtime(request, sequencing_run_pk):
                     sequencing_run.realtime_strains[seqid] = 'True'
                 else:
                     sequencing_run.realtime_strains[seqid] = 'False'
+                strain_name = form.cleaned_data.get(seqid)
+                sequencing_run.sample_plate[seqid] = strain_name
             sequencing_run.save()
             # Also modify samplesheet to reflect the updated Realtime strains and overwrite the previous upload
             # to blob storage
@@ -193,6 +195,7 @@ def verify_realtime(request, sequencing_run_pk):
                     if seqid_start:
                         seqid = lines[i].split(',')[0]
                         line_split = lines[i].split(',')
+                        line_split[2] = sequencing_run.sample_plate[seqid]
                         if sequencing_run.realtime_strains[seqid] == 'True':
                             line_split[-1] = 'TRUE\n'
                         else:
