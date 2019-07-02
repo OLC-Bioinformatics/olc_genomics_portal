@@ -175,12 +175,12 @@ def cowbat_cleanup(sequencing_run_pk):
     for seqid in sequencing_run.realtime_strains:
         if sequencing_run.realtime_strains[seqid] == 'True':
             realtime_strains.append(seqid)
-    recipient_list = ['paul.manninger@canada.ca', 'andrew.low@canada.ca', 'adam.koziol@canada.ca']
+    recipient_list = ['ray.allain@canada.ca', 'andrew.low@canada.ca', 'adam.koziol@canada.ca']
     """
     for recipient in recipient_list:
         send_email(subject='Run {} has finished assembly.'.format(str(sequencing_run)),
                    body='If you are Andrew or Adam, please download the blob container to local OLC storage. '
-                        'If you\'re Paul, please add this data to the OLC database.\n Reports and assemblies '
+                        'If you\'re Ray, please add this data to the OLC database.\n Reports and assemblies '
                         'are available at the following link: {}\nIn this run, the following strains '
                         'will need ROGAs created: {}'.format(sas_url, realtime_strains),
                    recipient=recipient)
