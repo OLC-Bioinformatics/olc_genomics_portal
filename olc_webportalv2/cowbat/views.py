@@ -159,7 +159,10 @@ def upload_metadata(request):
                     SequencingRun.objects.filter(pk=sequencing_run.pk).update(seqids=seqid_list,
                                                                               realtime_strains=realtime_dict,
                                                                               sample_plate=sample_plate_dict)
-            return redirect('cowbat:verify_realtime', sequencing_run_pk=sequencing_run.pk)
+            # TODO: Change this back to verify_realtime once we've gotten the OK from external labs to make them
+            #  validate their data.
+            # return redirect('cowbat:verify_realtime', sequencing_run_pk=sequencing_run.pk)
+            return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/upload_metadata.html',
                   {
