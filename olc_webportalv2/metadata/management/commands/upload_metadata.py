@@ -131,10 +131,10 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             sequence_data.save()
         # Also check for some sort of OLN ID.
         if seqdata_dict[seqid].olnid is not None:
-            if not OLNID.objects.filter(labid=seqdata_dict[seqid].olnid).exists():
-                OLNID.objects.create(labid=seqdata_dict[seqid].olnid)
+            if not OLNID.objects.filter(olnid=seqdata_dict[seqid].olnid).exists():
+                OLNID.objects.create(olnid=seqdata_dict[seqid].olnid)
             sequence_data = SequenceData.objects.get(seqid=seqid)
-            lab_data = OLNID.objects.get(labid=seqdata_dict[seqid].olnid)
+            lab_data = OLNID.objects.get(olnid=seqdata_dict[seqid].olnid)
             sequence_data.olnid = lab_data
             sequence_data.save()
 
