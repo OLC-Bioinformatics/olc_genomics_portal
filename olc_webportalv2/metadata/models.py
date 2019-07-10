@@ -67,7 +67,7 @@ class SequenceData(models.Model):
     mlst = models.CharField(max_length=12, blank=True)  # MLST is numeric, but categorical, so keep as CharField
     rmlst = models.CharField(max_length=12, blank=True)  # Same as MLST. Numeric, but categorical.
     labid = models.ForeignKey(LabID, on_delete=models.CASCADE, null=True)
-    olnid = models.ForeignKey(OLNID, on_delete=models.CASCADE, null=True)
+    olnid = models.ForeignKey(OLNID, on_delete=models.CASCADE, null=True, related_name='seqids')
 
     def __str__(self):
         return self.seqid

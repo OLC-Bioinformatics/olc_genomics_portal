@@ -31,6 +31,8 @@ urlpatterns = [
     # REST API Stuff
     path('sequencedata/', views.SequenceDataList.as_view()),
     path('sequencedata/<int:pk>/', views.SequenceDataDetail.as_view()),
+    path('olndata/', views.OLNList.as_view()),
+    path('olndata/<str:oln_id>/', views.OLNDetail.as_view()),
     path('schema/', schema_view)
 ]
 

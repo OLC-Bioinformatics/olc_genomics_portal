@@ -4,8 +4,8 @@ from django.conf import settings
 
 from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
     make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
-from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID
-from olc_webportalv2.metadata.serializers import SequenceDataSerializer
+from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID, OLNID
+from olc_webportalv2.metadata.serializers import SequenceDataSerializer, OLNSerializer
 import datetime
 from django.contrib.auth.decorators import login_required
 from dal import autocomplete
@@ -18,6 +18,33 @@ class LargeResultsPagination(pagination.PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 20000
+
+
+class OLNList(generics.ListCreateAPIView):
+    queryset = OLNID.objects.all()
+    serializer_class = OLNSerializer
+    pagination_class = LargeResultsPagination
+
+
+class OLNDetail(generics.RetrieveAPIView):
+    serializer_class = OLNSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def get_queryset(self):
+        oln_id = self.kwargs['oln_id']
+        oln = OLNID.objects.get(olnid=oln_id)
+        return oln
+
+    def retrieve(self, request, *args, **kwargs):
+        oln = self.get_queryset()
+        seqids = SequenceData.objects.filter(olnid=oln)
+        seqdata_dict = dict()
+        for seqid in seqids:
+            seqdata_dict[seqid.seqid] = seqid.quality
+        return JsonResponse(seqdata_dict)
+
+    def handle_exception(self, exc):
+        return JsonResponse({'ERROR': str(exc)})
 
 
 class SequenceDataList(generics.ListCreateAPIView):
