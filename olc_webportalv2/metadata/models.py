@@ -16,6 +16,13 @@ class LabID(models.Model):
         return self.labid
 
 
+class OLNID(models.Model):
+    olnid = models.CharField(max_length=24)
+
+    def __str__(self):
+        return self.olnid
+
+
 class Genus(models.Model):
     genus = models.CharField(max_length=48)
 
@@ -60,6 +67,7 @@ class SequenceData(models.Model):
     mlst = models.CharField(max_length=12, blank=True)  # MLST is numeric, but categorical, so keep as CharField
     rmlst = models.CharField(max_length=12, blank=True)  # Same as MLST. Numeric, but categorical.
     labid = models.ForeignKey(LabID, on_delete=models.CASCADE, null=True)
+    olnid = models.ForeignKey(OLNID, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.seqid

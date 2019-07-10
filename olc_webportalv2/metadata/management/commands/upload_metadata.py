@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from olc_webportalv2.metadata.models import SequenceData, LabID, Genus, Species, Serotype, MLST, RMLST
+from olc_webportalv2.metadata.models import SequenceData, LabID, Genus, Species, Serotype, MLST, RMLST, OLNID
 from django.conf import settings
 import csv
 import re
@@ -36,6 +36,7 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             genus = row['Genus']
             species = row['Species']
             serotype = row['Serotype']
+            olnid = row['OLNID'].upper()
             seqdata = DataToUpload(seqid)
             
             # Set quality attribute.
@@ -49,6 +50,9 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             # Check if our LabID looks acceptable. If yes, set the labid attr of seqdata_dict
             if re.fullmatch('[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid):
                 seqdata.labid = labid
+
+            if 'OLF' in olnid or 'OLC' in olnid:
+                seqdata.olnid = olnid
                  
             # Pull out genus, species, and serotype. Genus/serotype should have first char uppercase, species should
             # be entirely lowercase. # TODO: Not sure what happens with a blank value. 
@@ -125,7 +129,15 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             lab_data = LabID.objects.get(labid=seqdata_dict[seqid].labid)
             sequence_data.labid = lab_data
             sequence_data.save()
-            
+        # Also check for some sort of OLN ID.
+        if seqdata_dict[seqid].olnid is not None:
+            if not OLNID.objects.filter(labid=seqdata_dict[seqid].olnid).exists():
+                OLNID.objects.create(labid=seqdata_dict[seqid].olnid)
+            sequence_data = SequenceData.objects.get(seqid=seqid)
+            lab_data = OLNID.objects.get(labid=seqdata_dict[seqid].olnid)
+            sequence_data.olnid = lab_data
+            sequence_data.save()
+
 
 class DataToUpload:
     # Class (but actually kinda a struct) that holds data we need to upload.
@@ -138,6 +150,7 @@ class DataToUpload:
         self.species = None
         self.quality = None
         self.serotype = None
+        self.olnid = None
 
 
 class Command(BaseCommand):
