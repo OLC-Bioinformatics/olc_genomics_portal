@@ -33,7 +33,7 @@ urlpatterns = [
     path('sequencedata/<int:pk>/', views.SequenceDataDetail.as_view()),
     path('olndata/', views.OLNList.as_view()),
     path('olndata/<str:oln_id>/', views.OLNDetail.as_view()),
-    path('schema/', schema_view)
+    path('schema/', schema_view),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

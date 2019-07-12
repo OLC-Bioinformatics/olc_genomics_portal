@@ -67,6 +67,7 @@ LOCAL_APPS = [
     'olc_webportalv2.data.apps.DataConfig',
     'olc_webportalv2.geneseekr.apps.GeneseekrConfig',
     'olc_webportalv2.metadata.apps.MetadataConfig',
+    'olc_webportalv2.api.apps.ApiConfig',
 
     # Need this to get django-multiselectfield to work
     'multiselectfield',

@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
+    url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
     path('api-auth/', include('rest_framework.urls'))
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
