@@ -12,6 +12,20 @@ class UploadView(views.APIView):
     parser_classes = (parsers.FileUploadParser, )
     permission_classes = (permissions.IsAuthenticated, )
 
+    def get(self, request, *args, **kwargs):
+        run_name = kwargs['run_name']
+        file_name = kwargs['filename']
+        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        # Check that a) file exists in blob storage and b) that it has non-zero size.
+        file_exists = blob_client.exists(container_name=run_name, blob_name=file_name)
+        if file_exists:
+            blob = blob_client.get_blob_properties(container_name=run_name, blob_name=file_name)
+            blob_size = blob.properties.content_length
+        else:
+            blob_size = 0
+        return JsonResponse({'exists': file_exists, 'size': blob_size})
+
     def put(self, request, *args, **kwargs):
         run_name = kwargs['run_name']
         file_name = kwargs['filename']
