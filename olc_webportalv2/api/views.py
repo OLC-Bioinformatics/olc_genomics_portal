@@ -14,13 +14,18 @@ class UploadView(views.APIView):
 
     def get(self, request, *args, **kwargs):
         run_name = kwargs['run_name']
+        container_name = run_name.lower().replace('_', '-')
         file_name = kwargs['filename']
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)
         # Check that a) file exists in blob storage and b) that it has non-zero size.
-        file_exists = blob_client.exists(container_name=run_name, blob_name=file_name)
+        if file_name.endswith('.bin'):
+            file_name = os.path.join('InterOp', file_name)
+        else:
+            file_name = file_name
+        file_exists = blob_client.exists(container_name=container_name, blob_name=file_name)
         if file_exists:
-            blob = blob_client.get_blob_properties(container_name=run_name, blob_name=file_name)
+            blob = blob_client.get_blob_properties(container_name=container_name, blob_name=file_name)
             blob_size = blob.properties.content_length
         else:
             blob_size = 0
