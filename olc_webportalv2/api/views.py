@@ -4,6 +4,7 @@ from olc_webportalv2.cowbat.models import SequencingRun, DataFile
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 from django.conf import settings
 from django.http import JsonResponse, Http404
+import fnmatch
 import os
 import copy
 
@@ -105,10 +106,27 @@ class StartCowbatView(generics.RetrieveAPIView):
         except SequencingRun.DoesNotExist:
             raise Http404
         if sequencing_run.status == 'Unprocessed':
-            run_cowbat_batch.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
-            sequencing_run.status = 'Processing'
-            sequencing_run.save()
-            return JsonResponse({'status': 'Started assembly of run {}'.format(self.kwargs['run_name'])})
+            blob_filenames = list()
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            container_name = self.kwargs['run_name'].lower().replace('_', '-')
+            blobs = blob_client.list_blobs(container_name=container_name)
+            for blob in blobs:
+                blob_filenames.append(blob.name)
+            all_files_present = True
+            for seqid in sequencing_run.seqids:
+                forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
+                reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
+                if len(forward_reads) != 1 or len(reverse_reads) != 1:
+                    all_files_present = False
+
+            if all_files_present is False:
+                return JsonResponse({'status': 'Some files were missing. Could not start assembly.'})
+            else:
+                run_cowbat_batch.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
+                sequencing_run.status = 'Processing'
+                sequencing_run.save()
+                return JsonResponse({'status': 'Started assembly of run {}'.format(self.kwargs['run_name'])})
         else:
             return JsonResponse({'status': 'Did not start assembly for {run_name}. Status for {run_name} is '
                                            '{status}'.format(run_name=self.kwargs['run_name'],
