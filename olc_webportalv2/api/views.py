@@ -5,6 +5,7 @@ from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 from django.conf import settings
 from django.http import JsonResponse, Http404
 import os
+import copy
 
 
 class UploadView(views.APIView):
@@ -22,8 +23,9 @@ class UploadView(views.APIView):
         sequencing_run = SequencingRun.objects.get(run_name=run_name)
         # SampleSheet has data we need - read through it.
         if file_name == 'SampleSheet.csv':
+            samplesheet_obj = copy.deepcopy(file_obj)  # If this isn't here, end up with 0 byte samplesheet upload.
             instance = DataFile(sequencing_run=sequencing_run,
-                                data_file=file_obj)
+                                data_file=samplesheet_obj)
             instance.save()
             with open('olc_webportalv2/media/{run_name}/SampleSheet.csv'.format(run_name=str(sequencing_run))) as f:
                 lines = f.readlines()
