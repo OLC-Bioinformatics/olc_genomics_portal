@@ -46,7 +46,7 @@ class UploadView(views.APIView):
             instance = DataFile(sequencing_run=sequencing_run,
                                 data_file=samplesheet_obj)
             instance.save()
-            with open('olc_webportalv2/media/{run_name}/SampleSheet.csv'.format(run_name=str(sequencing_run))) as f:
+            with open(os.path.join(settings.MEDIA_ROOT, instance.data_file.name)) as f:
                 lines = f.readlines()
             seqid_start = False
             seqid_list = list()
@@ -70,9 +70,10 @@ class UploadView(views.APIView):
                         realtime_dict[seqid] = 'False'
                 if 'Sample_ID' in lines[i]:
                     seqid_start = True
-            SequencingRun.objects.filter(pk=sequencing_run.pk).update(seqids=seqid_list,
-                                                                      realtime_strains=realtime_dict,
-                                                                      sample_plate=sample_plate_dict)
+            sequencing_run.seqids = seqid_list
+            sequencing_run.realtime_strains = realtime_dict
+            sequencing_run.sample_plate = sample_plate_dict
+            sequencing_run.save()
 
         # InterOp files will always have .bin extension, and need to be put into the InterOp folder
         if file_name.endswith('.bin'):
