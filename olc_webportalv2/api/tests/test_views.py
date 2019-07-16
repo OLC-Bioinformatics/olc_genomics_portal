@@ -135,3 +135,25 @@ class TestAPI(APITestCase):
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
+
+    def test_start_cowbat_login_required(self):
+        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        self.assertEqual(response.status_code, 403)
+
+    def test_start_cowbat_files_not_present(self):
+        sequencing_run = SequencingRun.objects.create(run_name='111111_FAKE',
+                                                      seqids=['2018-SEQ-1471', '2018-SEQ-1472'])
+        sequencing_run.save()
+        self.client.login(username='TestUser', password='password')
+        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        response_dict = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(response_dict['status'], 'Some files were missing. Could not start assembly.')
+
+    def test_start_cowbat_already_done(self):
+        sequencing_run = SequencingRun.objects.create(run_name='111111_FAKE',
+                                                      status='Complete')
+        sequencing_run.save()
+        self.client.login(username='TestUser', password='password')
+        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        response_dict = json.loads(response.content.decode('utf-8'))
+        self.assertIn('Did not start', response_dict['status'])

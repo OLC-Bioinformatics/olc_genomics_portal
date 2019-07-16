@@ -14,7 +14,7 @@ urlpatterns = [
     path('schema/', schema_view),
     # TODO: Enforce run name regex
     path('upload/<str:run_name>/<str:filename>', views.UploadView.as_view()),
-    path('run_cowbat/<str:run_name>/', views.StartCowbatView.as_view()),
+    path('run_cowbat/<str:run_name>', views.StartCowbatView.as_view()),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
