@@ -6,10 +6,10 @@ before_script:
   && tar xf geckodriver-v0.24.0-linux64.tar.gz
 script:
 - docker-compose -f docker-compose-test.yml build
-- docker-compose -f docker-compose-test.yml run -d postgres
-- sleep 10
+#- docker-compose -f docker-compose-test.yml run -d postgres
+#- sleep 10
 - docker-compose -f docker-compose-test.yml run web /bin/bash -c "(Xvfb :99 &) &&
-  export DISPLAY=:99 && python3 manage.py test --no-input -k"
+  export DISPLAY=:99 && python3 manage.py test --no-input"
 env:
   global:
   - secure: AIetSzn7fj0Hf4nwvscCZ1N94FTvmBusGML+zEEnegJiXswbTX+yaEoT4q47aBQ4/fATEDXFJkZiggmK7OsKk/wcVArWq81FvZCt4bqRAF1m+E5IL+JICzpSbC+7vF2XuGoaxwRFBA7+nRCEx1BsxiwTeHwxUZH3/F7nugPjU/q29t5F3wDvseK8Cx5Ci81coQhaj5+Qj2V9cAYOk4me8cgVzhy7dKCgZWI6WEU3dEajY1kWGLaCk7EUWRO6hu2eHvEWklLOfp3tVaGk+LfasGSBlgMF+Zop1Ws1i1CQaQ/dHrFOD08iIUVwBWLO+2FJqGmBEHu8nxyn2N8Sq7lX726fuKUwa+ZDBhNMxq5l3GXu+6un5RVh6O6iygvZm6EJhWYzWCudwocOx1bYYO2hlD3WfQX/RCuYswOqS98krTTiQ9+ftBUwSdZpZscsAQd9nDTD74ZluiuR25A5gqI6A5TDcjeN5HoEGIqOL7ezM7cage+oRrdRVMW0+2l+JGXCKPiLgJvZFqUGeZPmMTiTSeGS2+gh4wziE6Lw1mx7ATrwFoXpEl5QYXW7wZGv+rrMNVOsNT8PcQdQHjdDk91eBpFoUdQ9QaqRZK85fDaX+JLnOrk5s1Cqh0EVXEPNMldxR0uXEw7xp82b4041qalxKUnBg9bAsDZTLazmuBw6rSY=
