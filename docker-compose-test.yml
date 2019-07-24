@@ -62,7 +62,7 @@ services:
     volumes:
       - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./backups/postgresql:/backup
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./postgres-data-test:/var/lib/postgresql/data
     expose:
       - "5432"
 

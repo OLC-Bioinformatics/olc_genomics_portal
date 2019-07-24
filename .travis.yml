@@ -6,9 +6,7 @@ before_script:
   && tar xf geckodriver-v0.24.0-linux64.tar.gz
 script:
 - docker-compose -f docker-compose-test.yml build
-- docker-compose -f docker-compose-test.yml run -d postgres
-- sleep 10
-- docker-compose -f docker-compose-test.yml run web /bin/bash -c "(Xvfb :99 &) &&
+- docker-compose -f docker-compose-test.yml run web /bin/bash -c "sleep 20 && (Xvfb :99 &) &&
   export DISPLAY=:99 && python3 manage.py test --no-input"
 env:
   global:
