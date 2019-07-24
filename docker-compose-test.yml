@@ -38,7 +38,7 @@ services:
       - DB_PORT=5432
     ports:
       - "8000"
-    command: /bin/bash -c "service cron start && /usr/bin/supervisord -c /data/web/supervisord.conf && gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
+    command: /bin/bash -c "gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
 
   nginx:
     restart: always
