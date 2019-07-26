@@ -63,7 +63,8 @@ class TopBlastHit(models.Model):
 
 class ParsnpTree(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[], null=True)
+    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list()), null=True)
     newick_tree = models.CharField(max_length=10000, blank=True)
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)

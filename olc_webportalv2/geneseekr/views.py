@@ -155,9 +155,9 @@ def tree_home(request):
 def tree_request(request):
     form = ParsnpForm()
     if request.method == 'POST':
-        form = ParsnpForm(request.POST)
+        form = ParsnpForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains = form.cleaned_data
+            seqids, name, tree_program, number_diversitree_strains, other_files = form.cleaned_data
             parsnp_request = ParsnpTree.objects.create(user=request.user,
                                                        seqids=seqids)
             parsnp_request.status = 'Processing'
@@ -170,6 +170,18 @@ def tree_request(request):
             else:
                 parsnp_request.number_diversitree_strains = number_diversitree_strains
             parsnp_request.tree_program = tree_program
+            container_name = 'parsnp-{}'.format(parsnp_request.pk)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            parsnp_request.other_input_files = file_names
             parsnp_request.save()
             run_parsnp.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)

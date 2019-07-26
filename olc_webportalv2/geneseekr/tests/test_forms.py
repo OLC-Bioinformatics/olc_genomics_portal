@@ -112,39 +112,39 @@ class ParsnpFormTest(TestCase):
     def test_valid_form(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertTrue(form.is_valid())
-        seqids, name,tree_program, number_diversitree_strains = form.cleaned_data
+        seqids, name,tree_program, number_diversitree_strains, other_files = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
         form = ParsnpForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
         form = ParsnpForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_negative_number_diversitree_strains(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp', 'number_diversitree_strains':'-2'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_large_number_diversitree_strains(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp', 'number_diversitree_strains':'5'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
         form = ParsnpForm({
             'seqids': ''
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
 class AMRFormTest(TestCase):

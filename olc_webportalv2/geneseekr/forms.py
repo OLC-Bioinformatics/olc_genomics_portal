@@ -149,8 +149,9 @@ class GeneSeekrForm(forms.Form):
 
 class ParsnpForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
 
+    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
     tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
     number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
     def clean(self):
@@ -173,6 +174,7 @@ class ParsnpForm(forms.Form):
         except KeyError:
             number_diversitree_strains = 0
 
+        other_files = self.files.getlist('other_files')
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
@@ -197,10 +199,15 @@ class ParsnpForm(forms.Form):
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
         # Diversitree strains can't be greater than total strains
-        if number_diversitree_strains !=None:
-            if len(seqid_list) < number_diversitree_strains:
+        if number_diversitree_strains is not None:
+            if len(seqid_list) + len(other_files) < number_diversitree_strains:
                 raise forms.ValidationError('Too many Diversitree strains selected, must be {} or less'.format(len(seqid_list)))
-        return seqid_list, name,tree_program, number_diversitree_strains
+        for other_file in other_files:
+            if not other_file.name.endswith('.fasta'):
+                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
+        if len(seqid_list) + len(other_files) < 2:
+            raise forms.ValidationError('At least 2 input sequences must be given.')
+        return seqid_list, name, tree_program, number_diversitree_strains, other_files
 
 
 class AMRForm(forms.Form):

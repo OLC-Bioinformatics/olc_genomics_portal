@@ -241,7 +241,8 @@ def run_parsnp(parsnp_request_pk):
                              output_data_folder=container_name,
                              command='source $CONDA/activate /envs/parsnp && parsnp -d sequences -r! -o {} -p {}'.format(container_name, cpus),
                              config_file=batch_config_file,
-                             vm_size=vm_size)
+                             vm_size=vm_size,
+                             other_input_files=parsnp_request.other_input_files)
         elif parsnp_request.tree_program == 'mashtree':
             make_config_file(seqids=parsnp_request.seqids,
                              job_name=container_name,
@@ -250,7 +251,8 @@ def run_parsnp(parsnp_request_pk):
                              command='source $CONDA/activate /envs/mashtree && mkdir {outdir} && mashtree --numcpus '
                                      '{cpus} sequences/*.fasta > {outdir}/parsnp.tree'.format(outdir=container_name, cpus=cpus),
                              config_file=batch_config_file,
-                             vm_size=vm_size)
+                             vm_size=vm_size,
+                             other_input_files=parsnp_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
