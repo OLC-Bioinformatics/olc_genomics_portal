@@ -238,7 +238,7 @@ class NearNeighborsFormTest(TestCase):
     def test_valid_form(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 10})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 10)
 
@@ -253,14 +253,14 @@ class NearNeighborsFormTest(TestCase):
     def test_neighbor_boundary_low_valid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 1})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 1)
 
     def test_neighbor_boundary_high_valid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 250})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 250)
 
