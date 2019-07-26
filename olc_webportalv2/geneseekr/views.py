@@ -283,36 +283,38 @@ def amr_request(request):
                   {
                       'form': form
                   })
+@login_required
+def amr_detail(request, amr_detail_pk):
+    amr_detail = get_object_or_404(AMRDetail, pk=amr_detail_pk)
+    amr_request = AMRSummary.objects.get(amrdetail=amr_detail)
+    return render(request,
+                  'geneseekr/amr_detail.html',
+                  {
+                      'amr_request': amr_request,
+                      'amr_detail': amr_detail
+                  })
 
 @login_required
 def amr_result(request, amr_request_pk):
     amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
-    amr_details = AMRDetail.objects.filter(amr_request=amr_request)
     form = EmailForm()
-    selectedSeq = None
-    selectedTog = None
-    labidDict = LabID_sync_SeqID(amr_request.seqids)
     if request.method == 'POST':
-        if 'selectedSeq' in request.POST:
-            selectedSeq = request.POST.get('selectedSeq')
-        if 'selectedTog' in request.POST:
-            selectedTog = request.POST.get('selectedTog')
-        else:    
-            form = EmailForm(request.POST)
-            if form.is_valid():
-                Email = form.cleaned_data.get('email')
-                if Email not in amr_request.emails_array:
-                    amr_request.emails_array.append(Email)
-                    amr_request.save()
-                    form = EmailForm()
-                    messages.success(request, 'Email saved')
-                else:
-                    messages.error(request, 'Email has already been saved')
-            
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in amr_request.emails_array:
+                amr_request.emails_array.append(Email)
+                amr_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+
     return render(request,
                   'geneseekr/amr_result.html',
                   {
-                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq, 'selectedTog':selectedTog ,'labidDict':labidDict,
+                      'amr_request': amr_request,
+                      'form': form,
                   })
 
 @login_required
