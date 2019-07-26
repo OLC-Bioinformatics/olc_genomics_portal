@@ -108,9 +108,10 @@ class AMRAzureRequest(models.Model):
 
 class ProkkaRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[], null=True)
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
+    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list()), null=True)
     status = models.CharField(max_length=64, default='Unprocessed')
 
     name = models.CharField(max_length=50, blank=True, null=True)

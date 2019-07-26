@@ -167,7 +167,7 @@ class ParsnpForm(forms.Form):
         try:
             tree_program = self.cleaned_data['tree_program']
         except KeyError:
-            tree_program  = 'parsnp'
+            tree_program = 'parsnp'
         try:
             number_diversitree_strains = self.cleaned_data['number_diversitree_strains']
         except KeyError:
@@ -248,11 +248,12 @@ class AMRForm(forms.Form):
 
 class ProkkaForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
     def clean(self):
         super().clean()
-        #KeyError raises when only whitespace is submitted
+        # KeyError raises when only whitespace is submitted
         try:
             seqid_input = self.cleaned_data['seqids']
         except KeyError:
@@ -261,6 +262,8 @@ class ProkkaForm(forms.Form):
             name = self.cleaned_data['name']
         except KeyError:
             name = None
+
+        other_files = self.files.getlist('other_files')
 
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
@@ -285,8 +288,13 @@ class ProkkaForm(forms.Form):
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
+        if len(seqid_list) == 0 and len(other_files) == 0:
+            raise forms.ValidationError('Must enter at least one SeqID or upload at least one file.')
+        for other_file in other_files:
+            if not other_file.name.endswith('.fasta'):
+                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
 
-        return seqid_list, name
+        return seqid_list, name, other_files
 
 
 class NameForm(forms.Form):

@@ -26,7 +26,8 @@ from email.mime.text import MIMEText
 import smtplib
 
 
-def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file, vm_size='Standard_D8s_v3'):
+def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file,
+                     vm_size='Standard_D8s_v3', other_input_files=list()):
     """
     Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
     KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names and keys
@@ -39,6 +40,8 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
     :param config_file: Where you want to save the config file to.
     :param vm_size: Size of VM you want to spin up. See https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general
     for a list of options.
+    :param other_input_files: List of other files to put into input folder. Each entry in list should be a string
+    in format container_name/file_name
     :return:
     """
     # Azure Batch does not like it one bit when too many input files get specified, so in the event that we have too
@@ -72,10 +75,16 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
                                                                                                   input_dir=input_data_folder)
             command = prepend + command
         else:
-            f.write('CLOUDIN:=')
-            for seqid in seqids:
-                f.write('processed-data/{}.fasta '.format(seqid))
-            f.write('{}\n'.format(input_data_folder))
+            if len(seqids) > 0:
+                f.write('CLOUDIN:=')
+                for seqid in seqids:
+                    f.write('processed-data/{}.fasta '.format(seqid))
+                f.write('{}\n'.format(input_data_folder))
+            if len(other_input_files) > 0:
+                f.write('CLOUDIN:=')
+                for other_file in other_input_files:
+                    f.write('{} '.format(other_file))
+                f.write('{}\n'.format(input_data_folder))
         # Adding / to the end of output folder makes AzureBatch download recursively.
         if not output_data_folder.endswith('/'):
             output_data_folder += '/'
@@ -98,13 +107,18 @@ def run_prokka(prokka_request_pk):
         # TODO: Make sure this still works with a really long command caused by lots of SEQIDs
         for seqid in prokka_request.seqids:
             command += ' && prokka --outdir {container_name}/{seqid} --prefix {seqid} --cpus 8 sequences/{seqid}.fasta'.format(container_name=container_name,
-                                                                                                                       seqid=seqid)
+                                                                                                                               seqid=seqid)
+        for other_file in prokka_request.other_input_files:
+            command += ' && prokka --outdir {} --prefix {} --cpus 8 sequences/{}'.format(other_file,
+                                                                                         os.path.split(other_file)[1].replace('.fasta', ''),
+                                                                                         os.path.split(other_file)[1])
         make_config_file(seqids=prokka_request.seqids,
                          job_name=container_name,
                          input_data_folder='sequences',
                          output_data_folder=container_name,
                          command=command,
-                         config_file=batch_config_file)
+                         config_file=batch_config_file,
+                         other_input_files=prokka_request.other_input_files)
         # With that done, we can submit the file to batch with our package and create a tracking object.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)

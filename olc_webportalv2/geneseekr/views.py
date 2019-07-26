@@ -14,6 +14,7 @@ from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_s
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.metadata.views import LabID_sync_SeqID
 from azure.storage.blob import BlockBlobService
+import os
 # Task Management
 from kombu import Queue
 
@@ -330,16 +331,29 @@ def prokka_home(request):
 def prokka_request(request):
     form = ProkkaForm()
     if request.method == 'POST':
-        form = ProkkaForm(request.POST)
+        form = ProkkaForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name = form.cleaned_data
+            seqids, name, other_files = form.cleaned_data
             prokka_request = ProkkaRequest.objects.create(user=request.user,
-                                                    seqids=seqids)
-            prokka_request.status = 'Processing'
+                                                          seqids=seqids,
+                                                          status='Processing')
             if name == None:
                 prokka_request.name = prokka_request.pk
             else:
                 prokka_request.name = name
+            prokka_request.save()
+            container_name = 'prokka-{}'.format(prokka_request.pk)
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            blob_client.create_container(container_name)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            prokka_request.other_input_files = file_names
             prokka_request.save()
             run_prokka.apply_async(queue='cowbat', args=(prokka_request.pk, ), countdown=10)
             return redirect('geneseekr:prokka_result', prokka_request_pk=prokka_request.pk)
