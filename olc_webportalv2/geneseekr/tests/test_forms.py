@@ -271,3 +271,22 @@ class NearNeighborsFormTest(TestCase):
     def test_neighbor_boundary_low_invalid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 0})
         self.assertFalse(form.is_valid())
+
+    def test_neighbor_uploaded_file_no_seqid(self):
+        with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
+            file_data = {'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read())}
+            form = NearNeighborForm({'seqid': '', 'number_neighbors': 4}, file_data)
+            self.assertTrue(form.is_valid())
+
+    def test_neighbor_uploaded_file_bad_extension(self):
+        with open('olc_webportalv2/test_files/config.xml', 'rb') as upload_file:
+            form = NearNeighborForm({'seqid': '',
+                                     'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read()),
+                                     'number_neighbors': 4})
+            self.assertFalse(form.is_valid())
+
+    def test_form_invalid_seqid_and_file(self):
+        with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
+            file_data = {'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read())}
+            form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 4}, file_data)
+            self.assertFalse(form.is_valid())
