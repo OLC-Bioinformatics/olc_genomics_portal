@@ -357,6 +357,8 @@ def check_amr_summary_tasks():
                         seqid = row['Strain']
                         gene = row['Gene']
                         location = row['Location']
+                        if seqid not in seq_amr_dict:
+                            seq_amr_dict[seqid] = dict()
                         seq_amr_dict[seqid][gene] = location
                 for seqid in seq_amr_dict:
                     AMRDetail.objects.create(amr_request=amr_task,

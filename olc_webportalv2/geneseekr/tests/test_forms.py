@@ -162,27 +162,27 @@ class AMRFormTest(TestCase):
     def test_valid_form(self):
         form = AMRForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertTrue(form.is_valid())
-        seqids, name = form.cleaned_data
+        seqids, name, other_files = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': ''
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
 

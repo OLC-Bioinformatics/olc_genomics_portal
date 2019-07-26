@@ -194,7 +194,8 @@ def run_amr_summary(amr_summary_pk):
                          input_data_folder='sequences',
                          output_data_folder=container_name,
                          command=command,
-                         config_file=batch_config_file)
+                         config_file=batch_config_file,
+                         other_input_files=amr_summary_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)

@@ -253,9 +253,9 @@ def amr_home(request):
 def amr_request(request):
     form = AMRForm()
     if request.method == 'POST':
-        form = AMRForm(request.POST)
+        form = AMRForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name = form.cleaned_data
+            seqids, name, other_files = form.cleaned_data
             amr_request = AMRSummary.objects.create(user=request.user,
                                                     seqids=seqids)
             amr_request.status = 'Processing'
@@ -263,6 +263,18 @@ def amr_request(request):
                 amr_request.name = amr_request.pk
             else:
                 amr_request.name = name
+            container_name = 'parsnp-{}'.format(amr_request.pk)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            amr_request.other_input_files = file_names
             amr_request.save()
             run_amr_summary.apply_async(queue='cowbat', args=(amr_request.pk, ), countdown=10)
             return redirect('geneseekr:amr_result', amr_request_pk=amr_request.pk)

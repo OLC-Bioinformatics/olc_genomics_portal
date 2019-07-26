@@ -212,7 +212,8 @@ class ParsnpForm(forms.Form):
 
 class AMRForm(forms.Form):
     name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=True)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
     def clean(self):
         super().clean()
@@ -226,6 +227,7 @@ class AMRForm(forms.Form):
         except KeyError:
             name = None
 
+        other_files = self.files.getlist('other_files')
         # Check that SEQIDs specified are in valid SEQID format.
         seqid_list = seqid_input.split()
         bad_seqids = list()
@@ -250,7 +252,13 @@ class AMRForm(forms.Form):
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
                                         'SEQIDs not found: {}'.format(bad_seqids))
 
-        return seqid_list, name
+        for other_file in other_files:
+            if not other_file.name.endswith('.fasta'):
+                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
+
+        if len(seqid_list) + len(other_files) == 0:
+            raise forms.ValidationError('At least 1 input sequence must be given.')
+        return seqid_list, name, other_files
 
 
 class ProkkaForm(forms.Form):
