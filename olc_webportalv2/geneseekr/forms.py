@@ -10,7 +10,8 @@ from django.forms.widgets import EmailInput
 
 class NearNeighborForm(forms.Form):
     name = forms.CharField(max_length=56, label='Name: ', required=False)
-    seqid = forms.CharField(max_length=24, label='SeqID: ')
+    seqid = forms.CharField(max_length=24, label='SeqID: ', required=False)
+    uploaded_file = forms.FileField(label='', required=False)
     number_neighbors = forms.IntegerField(label='Number neighbors: ', initial=2, required=True)
 
     def clean(self):
@@ -20,16 +21,24 @@ class NearNeighborForm(forms.Form):
         seqid = self.cleaned_data.get('seqid')
         name = self.cleaned_data.get('name')
         number_neighbors = self.cleaned_data.get('number_neighbors')
+        uploaded_file = self.cleaned_data.get('uploaded_file')
         sequence_data_objects = SequenceData.objects.filter()
         seqids_in_database = list()
         for sequence_data in sequence_data_objects:
             seqids_in_database.append(sequence_data.seqid)
-        if seqid not in seqids_in_database:
+        if uploaded_file is None and seqid == '':
+            raise forms.ValidationError('Must enter at least one of SeqID or uploaded file.')
+        elif seqid != '' and uploaded_file is not None:
+            raise forms.ValidationError('Only enter one of SeqID and uploaded file.')
+        elif uploaded_file is not None:
+            if not uploaded_file.name.endswith('.fasta'):
+                raise forms.ValidationError('Uploaded file must be in FASTA format and filename must end with .fasta')
+        elif seqid not in seqids_in_database:
             raise forms.ValidationError('Requested SEQID is not in the database. Correct format for SeqID is '
                                         'YYYY-LAB-####. Please check your SEQID and try again.')
         if not MIN_NUM_NEIGHBORS <= number_neighbors <= MAX_NUM_NEIGHBORS:
             raise forms.ValidationError('Invalid number of nearest neighbors requested. Valid values are from 1 to 250.')
-        return seqid, name, number_neighbors
+        return seqid, name, number_neighbors, uploaded_file
 
 
 class GeneSeekrForm(forms.Form):

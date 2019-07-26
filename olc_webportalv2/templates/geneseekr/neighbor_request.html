@@ -16,8 +16,14 @@
    <div class="col-3" style="padding-left:0;">
       {{form.name|as_crispy_field }}
       </div>
-      {{ form.seqid|as_crispy_field }}
+  <br>
+      <p>Enter the SeqID you want to use, or choose a .fasta file to upload.</p>
+    <div class="col-3" style="padding-left:0;">
+          {{ form.seqid|as_crispy_field }}
+          {{ form.uploaded_file|as_crispy_field }}
+        </div>
 
+  <br>
       <div class="col-3" style="padding-left:0;">
       {{form.number_neighbors|as_crispy_field }}
       </div>

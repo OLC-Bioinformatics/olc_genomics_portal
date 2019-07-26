@@ -564,14 +564,20 @@ def run_nearest_neighbors(nearest_neighbor_pk):
         for sequence_data in SequenceData.objects.filter():
             seqids_in_metadata.append(sequence_data.seqid)
         # Download requested SeqID from blob storage - we *should* have already validated that the sequence exists.
-        fasta_file = os.path.join(work_dir, nearest_neighbor_request.seqid + '.fasta')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)
-        # TODO: Check what error happens here if blob doesn't actually exist and catch, or verify that blob exists before
-        #  trying to retrieve it.
-        blob_client.get_blob_to_path(container_name='processed-data',
-                                     blob_name=nearest_neighbor_request.seqid + '.fasta',
-                                     file_path=fasta_file)
+        if nearest_neighbor_request.seqid != '':
+            fasta_file = os.path.join(work_dir, nearest_neighbor_request.seqid + '.fasta')
+            # TODO: Check what error happens here if blob doesn't actually exist and catch, or verify that blob exists before
+            #  trying to retrieve it.
+            blob_client.get_blob_to_path(container_name='processed-data',
+                                         blob_name=nearest_neighbor_request.seqid + '.fasta',
+                                         file_path=fasta_file)
+        else:
+            fasta_file = os.path.join(work_dir, nearest_neighbor_request.uploaded_file_name)
+            blob_client.get_blob_to_path(container_name='neighbor-{}'.format(nearest_neighbor_request.pk),
+                                         blob_name=nearest_neighbor_request.uploaded_file_name,
+                                         file_path=fasta_file)
 
         mash_output_file = os.path.join(work_dir, 'mash_dist_results.tsv')
         cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,  # TODO: Actually install mash in dockerfile

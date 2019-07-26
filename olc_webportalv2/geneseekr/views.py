@@ -13,6 +13,7 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, run_nearest_neighbors
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.metadata.views import LabID_sync_SeqID
+from azure.storage.blob import BlockBlobService
 # Task Management
 from kombu import Queue
 
@@ -393,17 +394,32 @@ def prokka_name(request, prokka_request_pk):
 def neighbor_request(request):
     form = NearNeighborForm()
     if request.method == 'POST':
-        form = NearNeighborForm(request.POST)
+        form = NearNeighborForm(request.POST, request.FILES)
         if form.is_valid():
-            seqid, name, number_neighbors = form.cleaned_data
+            seqid, name, number_neighbors, uploaded_file = form.cleaned_data
             if name is None:
                 name = ''
+            if seqid is None:
+                seqid = ''
+            if uploaded_file is None:
+                uploaded_file_name = ''
+            else:
+                uploaded_file_name = uploaded_file.name
             nearest_neighbor_task = NearestNeighbors.objects.create(seqid=seqid,
                                                                     number_neighbors=number_neighbors,
                                                                     name=name,
                                                                     user=request.user,
+                                                                    uploaded_file_name=uploaded_file_name,
                                                                     status='Processing')
             nearest_neighbor_task.save()
+            if uploaded_file_name != '':
+                container_name = 'neighbor-{}'.format(nearest_neighbor_task.pk)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=uploaded_file_name,
+                                                   blob=uploaded_file.read())
             run_nearest_neighbors.apply_async(queue='geneseekr', args=(nearest_neighbor_task.pk, ), countdown=10)
             return redirect('geneseekr:neighbor_result', neighbor_request_pk=nearest_neighbor_task.pk)
     return render(request,

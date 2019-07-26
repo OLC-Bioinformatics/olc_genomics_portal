@@ -124,7 +124,8 @@ class ProkkaAzureRequest(models.Model):
 
 class NearestNeighbors(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqid = models.CharField(max_length=24)
+    seqid = models.CharField(max_length=24, blank=True, null=True)
+    uploaded_file_name = models.CharField(max_length=64, blank=True, null=True)
     number_neighbors = models.IntegerField()
     download_link = models.CharField(max_length=256, blank=True, null=True)
     name = models.CharField(max_length=50, blank=True, null=True)
