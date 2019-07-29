@@ -291,7 +291,7 @@ def amr_detail(request, amr_detail_pk):
                   'geneseekr/amr_detail.html',
                   {
                       'amr_request': amr_request,
-                      'amr_detail': amr_detail
+                      'amr_detail': amr_detail,
                   })
 
 @login_required
