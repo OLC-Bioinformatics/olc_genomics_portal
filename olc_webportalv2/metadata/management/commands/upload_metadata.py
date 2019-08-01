@@ -58,7 +58,7 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             # be entirely lowercase. # TODO: Not sure what happens with a blank value. 
             seqdata.genus = genus.lower().capitalize()
             seqdata.serotype = serotype.lower().capitalize()
-            seqdata.species = species.lower()
+            seqdata.species = species.lower() if species else 'ND'
             
             seqdata_dict[seqid] = seqdata
 
