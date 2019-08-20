@@ -1,0 +1,195 @@
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load static i18n widget_tweaks %}
+{% block content %}
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
+    <title> {% block title %}CFIA FoodPort {% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+
+    {% block css %}
+    <!-- Compiled and minified Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
+
+    <!-- Project-specific CSS -->
+    <link rel="stylesheet" href="{% static '/css/project.css' %}">
+
+    <!-- Third-party CSS libraries go here -->
+    <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
+        <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+    {% endblock %}
+
+</head>
+<br>
+<body>
+    <div class="col-md-2">
+        <img src="{% static 'images/CFIA_logo.png' %}" alt="CFIA Logo" style="width: 15%;" >
+    </div>
+    <hr>
+    <div class="col-md-4">
+        <h6>Project: {{ vir_typer_project }}</h6>
+        <h6>Report Issuance Date: {{ date }}</h6>
+        <br>
+    </div>
+    <div class="col-md-6">
+        <table id="lab-info" style="font-size: 12px;" class="table-borderless table-sm">
+            <thead>
+                <tr>
+                    <th>Laboratory</th>
+                    <th>Address</th>
+                    <th>Tel #</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CFIA-Burnaby</td>
+                    <td>3155 Willington Green, Burnaby, BC, V5G 4P2</td>
+                    <td>604-292-6028</td>
+                </tr>
+                <tr>
+                    <td>ACIA-St. Hyacinthe</td>
+                    <td>3400 Casavant Boul. Ouest, Saint-Hyacinthe, QC, J2S 8E3</td>
+                    <td>450-768-6800</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <br>
+
+    <div class="col-md-12">
+        <table id="results" style="font-size: 9px;" cellpadding="5px;" class="table-sm table-striped">
+            <thead>
+                    <tr>
+                        <th>Sample Name</th>
+                        <th>LSTS ID</th>
+                        <th>Date Received</th>
+                        <th>Source</th>
+                        <th>Organism</th>
+                        <th>Identifier</th>
+                        <th>Trimmed Sequence</th>
+                        <th>Allele</th>
+                        <th>Length</th>
+                        <th>Mismatches</th>
+                        <th>MeanQuality</th>
+                        <th>StdDevQuality</th>
+
+                    </tr>
+            </thead>
+            {% autoescape off %}
+            <tbody>
+            {% for sample_dict in results %}
+                 <tr style="vertical-align: top;">
+                    <td>{{ sample_dict.sample_name }} </td>
+                    <td> {{ sample_dict.lsts }} </td>
+                    <td> {{ sample_dict.date_received }} </td>
+                    <td> {{ sample_dict.isolate_source }} </td>
+                    <td> {{ sample_dict.organism }} </td>
+
+                    <td>
+                        {% for identifier in sample_dict.identifier %}
+                            {{ identifier }}<br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for sequence in sample_dict.sequence %}
+                            {{ sequence }} <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for allele in sample_dict.allele %}
+                            {{ allele }} <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for sequence_length in sample_dict.sequence_length %}
+                            {{ sequence_length }} <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for variable_locations in sample_dict.variable_locations %}
+                            {{ variable_locations }} <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for mean_quality in sample_dict.mean_quality %}
+                            {{ mean_quality }} <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for stdev_quality in sample_dict.stdev_quality %}
+                            {{ stdev_quality }} <br>
+                        {% endfor %}
+                    </td>
+        {#        {% for key, value in sample_dict.items %}#}
+        {##}
+        {#                <td> {{ value }} </td>#}
+        {##}
+        {#        {% endfor %}#}
+                </tr>
+            {% endfor %}
+            </tbody>
+            {% endautoescape %}
+        </table>
+    </div>
+    <br>
+    <div class="col-md-11">
+        <table id="footer" style="font-size: 12px;">
+            <tbody>
+            <tr>
+                <td>The assay was performed according to the method ACIA-CRNVA-08 current version v01 (FVNRC Sequencing and Cloning Confirmation Methods / <br>
+                    Méthode de confirmation des séquences génomiques amplifiées par épreuves moléculaires au CRNVA, au moyen des technique de clonage, de séquençage et d'analyse bioinformatiques). <br>
+                    The sequencing was performed by / séquençage par: Plateforme de Séquençage et de génotypage (CRCHUL)</td>
+            </tr>
+            </tbody>
+        </table>
+        <br>
+
+        <table id="codes" style="font-size: 12px;">
+            <tbody>
+                {% for code in codes %}
+                    <tr>
+                        <td>Please use the following sample manager entry code: <strong> {{ code.1 }} </strong> </td>
+                    </tr>
+                    <tr>
+                        <td>Add the following comments:</td>
+                    </tr>
+                    <tr>
+                        <td><strong>{{ code.2 }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>{{ code.3 }}</strong></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+    </div>
+</body>
+{##}
+{# <ul>#}
+{#      <li>The sequences are different from the sequences from the standard curve with insert or without insert</li>#}
+{#      <li>This sample has {{ codes }}</li>#}
+{#      <li></li>#}
+{#      <li></li>#}
+{#    </ul>#}
+{#<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>#}
+{#<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">#}
+{#<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css">#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/rowgroup/1.1.0/js/dataTables.rowGroup.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/dataTables.buttons.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.flash.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.html5.min.js"></script>#}
+{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.print.min.js"></script>#}
+
+{% endblock %}

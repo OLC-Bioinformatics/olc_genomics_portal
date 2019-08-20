@@ -2,6 +2,7 @@
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
 from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, \
     AMRDetail, ProkkaRequest, ProkkaAzureRequest
+from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 from django.core.mail import send_mail  # To be used eventually, only works in cloud
@@ -380,6 +381,73 @@ def check_amr_summary_tasks():
             AMRAzureRequest.objects.filter(id=task.id).delete()
 
 
+def check_vir_typer_tasks():
+    """
+    VirusTyper!
+    """
+    import json
+    vir_typer_tasks = VirTyperAzureRequest.objects.filter()
+    credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
+    batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
+    for sub_task in vir_typer_tasks:
+        vir_typer_task = VirTyperProject.objects.get(pk=sub_task.project_name.pk)
+        batch_job_name = VirTyperProject.objects.get(pk=vir_typer_task.pk).container_namer()
+        # Check if tasks related with this VirusTyper project have finished.
+        tasks_completed = True
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
+        except:  # If something errors first time through job can't get deleted. In that case, give up.
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(status='Error')
+            # Delete Azure task so we don't keep iterating over it.
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+            continue
+        # If tasks have completed, check if they were successful.
+        if tasks_completed:
+            exit_codes_good = True
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.execution_info.exit_code != 0:
+                    exit_codes_good = False
+            # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
+            if exit_codes_good:
+                # Now need to generate an SAS URL and give access to it/update the download link.
+                blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                               account_name=settings.AZURE_ACCOUNT_NAME)
+                vir_typer_result_container = batch_job_name + '-output'
+                #
+
+                # Download the output container so we can zip it.
+                download_container(blob_service=blob_client,
+                                   container_name=vir_typer_result_container,
+                                   output_dir='olc_webportalv2/media')
+                output_dir = 'olc_webportalv2/media/{}'.format(batch_job_name)
+                if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
+                    os.remove(os.path.join(output_dir, 'batch_config.txt'))
+                shutil.make_archive(output_dir, 'zip', output_dir)
+                # Read in the json output
+                json_output = os.path.join(output_dir, 'virus_typer_outputs.json')
+                with open(json_output, 'r') as json_report:
+
+                    vir_typer_task.report = json.load(json_report)
+                # vir_typer_result_container = 'vir-typer-result-{}'.format(vir_typer_task.pk)
+                sas_url = generate_download_link(blob_client=blob_client,
+                                                 container_name=vir_typer_result_container,
+                                                 output_zipfile=output_dir + '.zip',
+                                                 expiry=8)
+                vir_typer_task.download_link = sas_url
+                vir_typer_task.status = 'Complete'
+                vir_typer_task.save()
+                shutil.rmtree(output_dir)
+                os.remove(output_dir + '.zip')
+            else:
+                vir_typer_task.status = 'Error'
+                vir_typer_task.save()
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+
+
 def check_prokka_tasks():
     # Prokka!
     prokka_tasks = ProkkaAzureRequest.objects.filter()
@@ -463,7 +531,11 @@ def monitor_tasks():
         check_amr_summary_tasks()
     except Exception as e:
         capture_exception(e)
-
+    # VirusTyper!
+    try:
+        check_vir_typer_tasks()
+    except Exception as e:
+        capture_exception(e)
     # Prokka!
     try:
         check_prokka_tasks()

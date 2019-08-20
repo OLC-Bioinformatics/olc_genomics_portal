@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Step 2 of 2: Upload Sequence Files and Begin Typing</h2>
+  <br>
+  <div id="upload-div" class="center" style="width: 600px;"></div>
+  <br>
+  <form action={% url 'vir_typer:vir_typer_upload' vir_typer_pk=vir_typer_project.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+   <div class="dz-message needsclick">
+        Drop files to upload or click here<br>
+        <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+  {% csrf_token %}
+  </form>
+  <div id="files-required-button" class="collapse show">
+    <br>
+    <div class="container">
+      <table id="files-required-table" class="table table-striped small compact">
+        <thead>
+        <tr>
+          <td> <strong>Sample</strong></td>
+          <td style="text-align:center"> <strong>Sequence Files </strong></td>
+        </tr>
+        </thead>
+        <tbody>
+        {% for sample in vir_typer_samples %}
+          <tr>
+            <td>{{ sample.sample_name }}</td>
+            <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+<button id="validate" class="btn btn-primary">Validate Sequence Files</button><br><br>
+  <button id="submit" class="btn btn-lg btn-success" disabled>Upload Sequence Files</button>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+  <script src={% static 'js/dropzone.js' %}></script>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  Dropzone.options.myDropzone = {
+
+    // Prevents Dropzone from uploading dropped files immediately
+    autoProcessQueue: false,
+    addRemoveLinks: true,
+    acceptedFiles: '.ab1',
+    maxFilesize: 1024, // This is in MB. Shouldn't ever have files bigger than this.
+    parallelUploads: 200, // Number of files allowed to upload at one. Shouldn't ever be bigger than this
+    uploadMultiple: true,
+    maxFiles: 200,
+    timeout: 3600000,
+     init : function() {
+        var submitButton = document.querySelector("#submit");
+        var validateButton = document.querySelector("#validate");
+        var myDropzone = this;
+        this.on("queuecomplete", function () {
+          $("#myDropzone").submit();
+        });
+        // Create a list of the passed sample names; will still contain HTML tags
+        var sampleHTMLNames = ["{{ vir_typer_sample_names }}"];
+        // Decode the extracted sample names from HTML
+        var sampleString = '';
+        // Iterate through the supplied sample names
+        for(var i=0; i<sampleHTMLNames.length; i++) {
+            // Using logic from: https://stackoverflow.com/a/7394787
+            // Essentially, create an HTML element that can then have its value added to the list of cleaned names
+            var txt = document.createElement("textarea");
+            txt.innerHTML = sampleHTMLNames[i];
+            sampleString = sampleString.concat(txt.value);
+        }
+        // Split the string on commas to create an array of the sample names
+        var sampleNames = [];
+        for(var i=0; i<sampleString.split(',').length; i++) {
+            sampleNames.push(sampleString.split(',')[i])
+
+        }
+
+        validateButton.addEventListener("click", function(e) {
+              // Todo: Actually make this validation do something.
+              var filesAccepted = myDropzone.getAcceptedFiles();
+              var filesTable = document.getElementById('files-required-table');
+              var filesAcceptedNames = [];
+             // Get all the names put into array for validation.
+              for(var i=0; i<filesAccepted.length; i++) {
+                filesAcceptedNames.push(filesAccepted[i].name)
+              }
+              // Delete the table in preparation to recreating it based on file presence
+              for(var i = 1; i < filesTable.rows.length;)
+                      {
+                          filesTable.deleteRow(i);
+                      }
+              var file_present = false;
+              var sample_validation = {};
+              // Iterate through the supplied sample names
+              for(var i=0; i<sampleNames.length; i++ ) {
+                  // Variable to determine whether one or more sequence file(s) have been provided for this sample
+                  file_present = false;
+                  // Strip off illegal characters, and trim to get rid of whitespace (there's probably a better way
+                  // to get this to work
+                  var sample_name = sampleNames[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim();
+                  sample_validation[sample_name] = false;
+                  // Iterate through all the names of the files in Dropzone
+                  for (var j = 0; j < filesAcceptedNames.length; j++) {
+                      // If the sample name is a substring of the file name, then the file is associated with the sample
+                      if (filesAcceptedNames[j].indexOf(sample_name) !== -1) {
+                          // Set the file_present Boolean to true, and add it to the array of all sample file presence
+                          // Booleans
+                          file_present = true;
+                          sample_validation[sample_name] = true;
+
+                      }
+                  }
+                  // If the sample has one or more associated sequence files, set the table to "pass" (green
+                  // background with a checkmark)
+                  if (file_present) {
+                      var row = filesTable.insertRow();
+                      var cell1 = row.insertCell();
+                      var cell2 = row.insertCell();
+                      cell1.innerHTML = sample_name;
+                      cell2.classList.add('table-success');
+                      cell2.align = 'center';
+                      cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                  // Otherwise, keep the red background with an x)
+                  } else {
+                      var row = filesTable.insertRow();
+                      var cell1 = row.insertCell();
+                      var cell2 = row.insertCell();
+                      cell1.innerHTML = sample_name;
+                      cell2.classList.add('table-danger');
+                      cell2.align = 'center';
+                      cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                      {#validationSuccess = false;#}
+                  }
+              }
+              // Initialise a variable to store whether all the required files are present
+              var validationSuccess = true;
+              // Iterate through the supplied sample names
+              for(var i=0; i<sampleNames.length; i++ ) {
+                  // Iterate through the list of all the sample to determine if each sample has at least one sequence
+                  // file present
+                  var s_name = sampleNames[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim();
+                  if (sample_validation[s_name] === false) {
+                      validationSuccess = false;
+                  }
+              }
+              // Enable the submit button if all samples have files
+              if (validationSuccess === true) {
+                $('#submit').prop('disabled', false);
+              }
+        });
+        submitButton.addEventListener("click", function(e) {
+            myDropzone.processQueue();
+            // Tell Dropzone to process all queued files.
+        });
+      }
+  };
+  </script>
+ <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  $(document).ready(function () {
+  //add tooltips
+  var dropzone = document.getElementById('myDropzone');
+  $(dropzone).attr('data-tooltip','tooltip');
+  $(dropzone).attr('title','Why here');
+  });
+  </script>
+{% endblock %}

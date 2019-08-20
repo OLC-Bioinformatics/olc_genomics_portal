@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>Edit Project</h2>
+  <form action='' enctype="multipart/form-data" method="post" novalidate>
+   {% if tombstone_form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ tombstone_form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+  {% csrf_token %}
+   <div class="col-3" style="padding-left:0;">
+      {{ tombstone_form.project_name|as_crispy_field }}
+      </div>
+
+  <button type="submit" class="btn btn-primary btn-lg">Update Project</button>
+  </form>
+
+ <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+   <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+   <script src="{% static 'js/jquery.formset.js' %}"></script>
+
+{% endblock %}

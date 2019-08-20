@@ -70,6 +70,7 @@ LOCAL_APPS = [
     'olc_webportalv2.geneseekr.apps.GeneseekrConfig',
     'olc_webportalv2.metadata.apps.MetadataConfig',
     'olc_webportalv2.api.apps.ApiConfig',
+    'olc_webportalv2.vir_typer.apps.VirTyperConfig',
 
     # Need this to get django-multiselectfield to work
     'multiselectfield',
@@ -99,6 +100,8 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'user_language_middleware.UserLanguageMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -144,7 +147,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 # MANAGER CONFIGURATION
 # ------------------------------------------------------------------------------
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#/As
 ADMINS = [
      ("""Andrew Low""", 'andrew.low@canada.ca'),
 ]
@@ -177,6 +180,13 @@ DATABASES['default']['ATOMIC_REQUESTS'] = True
 TIME_ZONE = 'Canada/Eastern'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
+# LANGUAGE_CODE = 'en-ca'
+from django.utils.translation import ugettext_lazy as language
+LANGUAGES = (
+    ('en-ca', language('English')),
+    ('fr', language('French')),
+)
+
 LANGUAGE_CODE = 'en-ca'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#site-id
@@ -256,6 +266,11 @@ MEDIA_ROOT = str(APPS_DIR('media'))
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = '/media/'
+
+# LOCALE CONFIGURATION
+LOCALE_PATHS = [
+    str(APPS_DIR.path('locale')),
+]
 
 # URL Configuration
 # ------------------------------------------------------------------------------
@@ -358,7 +373,7 @@ ADMIN_URL = r'^admin/'
 
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
-ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20', "192.168.1.8"]
+ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20', "192.168.1.8", '192.168.1.12']
 MAX_ATTEMPTS = 1
 
 LOGGING = {

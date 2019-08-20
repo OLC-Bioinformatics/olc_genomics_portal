@@ -23,7 +23,7 @@ services:
       - DOCKER_GROUP=dockerhost
       - DOCKER_HOST=unix:///var/run/docker.sock
     ports:
-      - "8000"
+      - "8000:8000"
     command: /bin/bash -c "gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
 
   nginx:

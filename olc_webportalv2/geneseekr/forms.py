@@ -144,6 +144,7 @@ class ParsnpForm(forms.Form):
 
     tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
     number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
+
     def clean(self):
         super().clean()
         #KeyError raises when only whitespace is submitted

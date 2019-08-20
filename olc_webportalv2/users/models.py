@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
-
+from config.settings import prod as settings
 
 @python_2_unicode_compatible
 class User(AbstractUser):
@@ -65,3 +65,6 @@ class User(AbstractUser):
     lab = models.CharField(max_length=100, choices=lab_choices, blank=True, default=15)
     rank = models.CharField(max_length=100, choices=rank_choices, default='Diagnostic')
     cfia_access = models.BooleanField(default=False)
+    language = models.CharField(max_length=10,
+                                choices=settings.LANGUAGES,
+                                default=settings.LANGUAGE_CODE)

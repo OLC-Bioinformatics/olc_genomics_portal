@@ -24,6 +24,7 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
 class UserUpdateView(LoginRequiredMixin, UpdateView):
 
     fields = ['name',
+              'language',
               'lab',
               'rank']
 

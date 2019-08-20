@@ -197,7 +197,7 @@ def tree_result(request, parsnp_request_pk):
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 'form': form, 'labidDict':labidDict,
+                      'parsnp_request': parsnp_request, 'form': form, 'labidDict': labidDict,
                   })
 
 @login_required
