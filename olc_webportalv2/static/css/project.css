@@ -55,7 +55,6 @@ label.col-sm-2.control-label {
 }
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
-  font-weight: 500 !important;
   color: black !important;
 }
 
@@ -101,6 +100,36 @@ margin-left: -5%;
 .form-control > .option{
   color:black;
 }
+
+/* Settings Bar styling */
+.settings {
+  padding-top: 1em;
+
+}
+
+/* Language select styling */
+.sel-lang {
+  color: white !important;
+  border:none;
+  background-color: transparent;
+}
+.sel-lang:hover{
+  background-color: white;
+  color: black!important;
+  border-radius: 0.25rem;
+}
+
+.sel-lang:focus {
+  background: white;
+  color: black!important;
+  border: none;
+  box-shadow: none;
+}
+.sel-lang option {
+    background:white;
+    color: black;
+  }
+
 
 .navbar {
   background-color: #0e4164; }
