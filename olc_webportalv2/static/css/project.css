@@ -55,7 +55,6 @@ label.col-sm-2.control-label {
 }
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
-  font-weight: 500 !important;
   color: black !important;
 }
 
@@ -102,6 +101,37 @@ margin-left: -5%;
   color:black;
 }
 
+/* Settings Bar styling */
+.settings {
+  padding-top: 1em;
+
+}
+
+/* Language select styling */
+.sel-lang {
+  color: white !important;
+  border:none;
+  background-color: transparent;
+  padding:8px;
+  width:100px;  
+}
+.sel-lang:hover{
+  background-color: white;
+  color: black!important;
+  border-radius: 0.25rem;
+}
+
+.sel-lang:focus {
+  background: white;
+  color: black!important;
+  border: none;
+  box-shadow: none;
+}
+.sel-lang option {
+    background:white;
+    color: black;
+  }
+
 .navbar {
   background-color: #0e4164; }
   .navbar .navbar-brand {
@@ -141,6 +171,8 @@ margin-left: -5%;
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
     background-color: #193451; } 
+  .sel-lang {
+    padding-left: 0px;}
   }
 
 @media (max-width: 767px) {
@@ -156,6 +188,10 @@ margin-left: -5%;
       margin-left: 4px;
       padding-right:100%
     }
+    .sel-lang {
+    padding-left: 0px;
+  }
+    
   }
 @media (max-width: 991px) {
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item {
