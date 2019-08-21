@@ -14,13 +14,12 @@
   <table id="vir_typer-request-table" class="table table-hover">
     <thead>
     <tr style="text-align:center">
-       <th >Project Name</th>
+       <th>Project Name</th>
        <th>Status</th>
        <th>Download</th>
        <th>Request Date</th>
-       <th data-orderable="false">       </th>
+       <th data-orderable="false">      </th>
        <th>Edit Project</th>
-       {#       <th>Type</th>#}
     </tr>
   </thead>
 
@@ -67,7 +66,7 @@
   <script type="text/javascript">
   $(document).ready(function () {
     //Default order of table on page load
-    var table = $('#geneseekr-request-table').DataTable(); 
+    var table = $('#vir_typer-request-table').DataTable(); 
         table
         .order([3,"desc"], [1,"asc"])
         .draw();
