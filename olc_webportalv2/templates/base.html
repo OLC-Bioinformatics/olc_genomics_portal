@@ -65,14 +65,14 @@
 
             </ul>
 
-            <ul class="navbar-nav ml-auto settings">
+            <ul class="navbar-nav settings">
             {# Language selection #}
             <li class="nav-item active">
             <form action="{% url "set_language" %}" method="post" class="dropdown">
               {% csrf_token %}
               {% get_current_language as LANGUAGE_CODE %}
               {% get_available_languages as LANGUAGES %}
-              <div class="form-group sel-lang">
+              <div class="form-group">
                <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
                 {% for language in LANGUAGES %}
                 <option value="{{ language.0 }}"
