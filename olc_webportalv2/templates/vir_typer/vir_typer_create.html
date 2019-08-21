@@ -5,7 +5,7 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Sample Creation</h2>
+  <h2>{% trans "Sample Creation" %}</h2>
   <form action='' enctype="multipart/form-data" method="post" novalidate>
    {% if tombstone_form.errors %}
      <div class="alert alert-danger" role="alert" align="center">
@@ -51,7 +51,7 @@
 	</div>
 {% endfor %}
   <br>
-  <button type="submit" class="btn btn-primary btn-lg">Create samples</button>
+  <button type="submit" class="btn btn-primary btn-lg">{% trans "Create samples" %}</button>
   </form>
 
  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
@@ -60,8 +60,8 @@
    <script src="{% static 'js/jquery.formset.js' %}"></script>
    <script type="text/javascript"> // Allows adding and removal of formsets
         $('.sample_formset').formset({
-            addText: 'Add',
-            deleteText: 'Remove'
+            addText: "{% trans 'Add' %}",
+            deleteText: "{% trans 'Remove' %}"
     });
     </script>
 

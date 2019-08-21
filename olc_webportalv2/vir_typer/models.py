@@ -1,4 +1,5 @@
 from django.contrib.postgres.fields import ArrayField
+from django.utils.translation import ugettext_lazy as _
 from olc_webportalv2.users.models import User
 from django.db import models
 
@@ -6,7 +7,7 @@ from django.db import models
 class VirTyperProject(models.Model):
     # request = models.ForeignKey(VirTyperRequest, on_delete=models.CASCADE, related_name='vir_typer_request')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project_name = models.CharField(max_length=256, unique=True, error_messages={'unique': 'Project name must be unique!'})
+    project_name = models.CharField(max_length=256, unique=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     # emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
     download_link = models.CharField(max_length=256, blank=True)
@@ -50,8 +51,8 @@ class VirTyperRequest(models.Model):
     LSTS_ID = models.CharField(max_length=50, blank=False)
     putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
     sample_name = models.CharField(max_length=50, blank=False)
-    subunit = models.CharField(max_length=3, blank=False)
-    date_received = models.DateTimeField(blank=False)
+    subunit = models.IntegerField(max_length=3, null=True, blank=True)
+    date_received = models.DateField(blank=False)
     analyst_name = models.CharField(max_length=50, blank=False)
 
     def __str__(self):

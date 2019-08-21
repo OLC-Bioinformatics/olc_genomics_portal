@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-07-31 20:15+0000\n"
+"POT-Creation-Date: 2019-08-20 18:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,8 +60,9 @@ msgid "Re-send Verification"
 msgstr ""
 
 #: olc_webportalv2/templates/account/email.html:41
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:64
 msgid "Remove"
-msgstr ""
+msgstr "Retirer"
 
 #: olc_webportalv2/templates/account/email.html:48
 msgid "Warning:"
@@ -257,24 +258,111 @@ msgstr ""
 
 #: olc_webportalv2/templates/base.html:90
 msgid "Profile"
-msgstr ""
+msgstr "Profile"
 
 #: olc_webportalv2/templates/base.html:95
 msgid "Sign Out"
-msgstr ""
+msgstr "Se Déconnecter"
 
 #: olc_webportalv2/templates/base.html:101
 msgid "Login"
-msgstr ""
+msgstr "S'identifier"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:11
-msgid "Let's translate this"
-msgstr "Le bonjour!"
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:8
+msgid "Sample Creation"
+msgstr "Création des échantillons"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:13
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:54
+msgid "Create samples"
+msgstr "Créer les échantillons"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:63
+msgid "Add"
+msgstr "Ajouter"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:10
 msgid "Create A Virus Typer Query"
 msgstr "Créer une requête de Virus Typer"
 
 #: olc_webportalv2/users/models.py:13
 msgid "Name"
-msgstr ""
+msgstr "Nom"
+
+#: olc_webportalv2/vir_typer/forms.py:23
+msgid "Sample name is required"
+msgstr "Le nom de l'échantillon est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:25
+msgid "Reception date is required"
+msgstr "La date de réception est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:27
+msgid "LSTS ID is required"
+msgstr "Identifiant SIESAL est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:29
+msgid "Isolate source is required"
+msgstr "La source de l'échantillon est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:31
+msgid "Analyst name is required"
+msgstr "Le nom de l'analyste est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:66
+msgid "date"
+msgstr "date"
+
+#: olc_webportalv2/vir_typer/forms.py:80
+msgid "Required"
+msgstr "Champs obligatoires"
+
+#: olc_webportalv2/vir_typer/forms.py:83
+msgid "Project Name"
+msgstr "Nom du projet"
+
+#: olc_webportalv2/vir_typer/forms.py:87
+msgid "The project name must be unique"
+msgstr "Le nom du projet doit être unique"
+
+#: olc_webportalv2/vir_typer/forms.py:103
+msgid "Sample Name"
+msgstr "Échantillon"
+
+#: olc_webportalv2/vir_typer/forms.py:104
+msgid "Date received"
+msgstr "Date de réception"
+
+#: olc_webportalv2/vir_typer/forms.py:105
+msgid "LSTS ID"
+msgstr "Identifiant SIESAL"
+
+#: olc_webportalv2/vir_typer/forms.py:106
+msgid "Lab ID"
+msgstr "Identifiant labo"
+
+#: olc_webportalv2/vir_typer/forms.py:107
+msgid "Subunit"
+msgstr "Sous-unité"
+
+#: olc_webportalv2/vir_typer/forms.py:108
+msgid "Putative classification"
+msgstr "Classification putative"
+
+#: olc_webportalv2/vir_typer/forms.py:109
+msgid "Isolate source"
+msgstr "Source de l'échantillon"
+
+#: olc_webportalv2/vir_typer/forms.py:110
+msgid "Analyst name"
+msgstr "Nom de l'analyste"
+
+#: olc_webportalv2/vir_typer/forms.py:121
+msgid "YYYY-MM-DD"
+msgstr "AAAA-MM-JJ"
+
+#: olc_webportalv2/vir_typer/views.py:100
+msgid "You have created project "
+msgstr "Vous avez créé le projet "
+
+#~ msgid "The sample name is required"
+#~ msgstr "Le nom de l'échantillon est requis"

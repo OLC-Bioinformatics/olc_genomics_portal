@@ -1,5 +1,6 @@
 from django import forms
 from django.forms.models import formset_factory
+from django.forms.widgets import DateInput
 from django.forms.formsets import BaseFormSet
 from Bio import SeqIO
 from io import StringIO
@@ -9,27 +10,28 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 from django.forms.widgets import EmailInput
 from django.forms import ModelForm
 from .models import VirTyperProject, VirTyperRequest
+from django.utils.translation import ugettext_lazy as _
 
 
 class BaseVirTyperSampleFormSet(BaseFormSet):
 
     def clean(self):
         super().clean()
-        print(self.errors)
-        # raise forms.ValidationError('Missing required field!')
-        # sample_names = list()
-        # cleaned_data = self.cleaned_data
-        # for sample in cleaned_data:
-        #     try:
-        #         sample_input = sample['sample_name']
-        #     except KeyError:
-        #         raise forms.ValidationError('Sample name required! {}'.format(cleaned_data))
-        #     date_received = form.cleaned_data.get('date_received')
-        #     if sample_name in sample_names:
-        #         raise forms.ValidationError("Articles in a set must have distinct titles.")
-        #     if not sample_name or not date_received:
-        #         raise forms.ValidationError('Missing required field!')
-        #     sample_names.append(sample_name)
+        for form in self.forms:
+            error_list = list()
+            key_names = [key for key in form.cleaned_data]
+            if 'sample_name' not in key_names:
+                error_list.append(_('Sample name is required'))
+            if 'date_received' not in key_names:
+                error_list.append(_('Reception date is required'))
+            if 'LSTS_ID' not in key_names:
+                error_list.append(_('LSTS ID is required'))
+            if 'isolate_source' not in key_names:
+                error_list.append(_('Isolate source is required'))
+            if 'analyst_name' not in key_names:
+                error_list.append(_('Analyst name is required'))
+            if error_list:
+                raise forms.ValidationError(error_list)
 
 
 class BaseModelForm(ModelForm):
@@ -47,15 +49,11 @@ class BaseModelForm(ModelForm):
                 if field_name == 'date_received':
                     field.widget = forms.TextInput(
                         attrs={
-                            'placeholder': 'Reception Date',
                             'type': 'date',
                         }
                     )
-                    # field.widget.attrs.update({
-                    #     'placeholder': field.help_text,
-                    #     'type': 'date',
-                    # })
-from django.utils.translation import ugettext_lazy as _
+
+
 class VirTyperProjectForm(ModelForm):
 
     class Meta:
@@ -69,16 +67,9 @@ class VirTyperProjectForm(ModelForm):
         }
         error_messages = {
             'project_name': {
-                'unique': _('The project name is required')
+                'unique': _('The project name must be unique')
             },
         }
-        # def clean(self):
-        #     super().clean()
-        #     try:
-        #         self.model.full_clean()
-        #     except ValidationError as e:
-        #         non_field_errors = e.message_dict[NON_FIELD_ERRORS]
-            # validators = [UniqueValidator(queryset=VirTyperProject.objects.all())]
 
 
 class VirTyperSampleForm(BaseModelForm):
@@ -87,26 +78,17 @@ class VirTyperSampleForm(BaseModelForm):
         model = VirTyperRequest
         fields = ['sample_name', 'LSTS_ID', 'lab_ID', 'putative_classification', 'isolate_source', 'analyst_name',
                   'date_received', 'subunit']
+        labels = {
+            'sample_name': _('Sample Name'),
+            'date_received': _('Date received'),
+            'LSTS_ID': _('LSTS ID'),
+            'Lab_ID': _('Lab ID'),
+            'subunit': _('Subunit'),
+            'putative_classification': _('Putative classification'),
+            'isolate_source': _('Isolate source'),
+            'analyst_name': _('Analyst name')
 
-
-        # help_texts = {
-        #     'sample_name': 'Format: VI####',
-            # 'date_received': 'YYYY-MM-DD'
-        # }
-
-
-
-# class VirTyperSampleForm(forms.Form):
-#     sample_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': 'Sample name'}),
-#                                   label='', required=True)
-#     date_received = forms.DateTimeField(required=True,
-#                                         label='',
-#                                         widget=forms.TextInput(
-#                                             attrs={
-#                                                 'placeholder': 'Reception Date',
-#                                                 'type': 'date',
-#                                                 }
-#                                         ))
+        }
 
 
 class VirTyperFileForm(forms.Form):

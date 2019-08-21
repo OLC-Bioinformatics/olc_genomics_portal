@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.translation import ugettext_lazy as _
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -16,6 +17,7 @@ from django.conf import settings
 import datetime
 import json
 import os
+
 
 # Vir_Typer Views
 @csrf_exempt  # needed or IE explodes
@@ -50,58 +52,67 @@ def vir_typer_home(request):
 def vir_typer_request(request):
     tombstone_form = VirTyperProjectForm()
     # TableFormSet = formset_factory(CustomTableForm, formset=BaseSearchFormSet)
-    SampleFormSet = formset_factory(VirTyperSampleForm, formset=BaseVirTyperSampleFormSet)
+    SampleFormSet = formset_factory(VirTyperSampleForm, formset=BaseVirTyperSampleFormSet, max_num=10)
     if request.method == 'POST':
         tombstone_form = VirTyperProjectForm(request.POST)
         sample_form_set = SampleFormSet(request.POST)
-        if tombstone_form.is_valid():
-            if sample_form_set.is_valid():
-                project_name = tombstone_form.cleaned_data.get('project_name')
-                vir_typer_project = VirTyperProject.objects.create(project_name=project_name,
-                                                                   user=request.user,)
+        if tombstone_form.is_valid() and sample_form_set.is_valid():
+            project_name = tombstone_form.cleaned_data.get('project_name')
+            vir_typer_project = VirTyperProject.objects.create(project_name=project_name,
+                                                               user=request.user,)
+
+            sample_data = list()
+            for form in sample_form_set:
+                print(vars(form))
+                # sample_name, lsts_id = form.cleaned_data
+                sample_name = form.cleaned_data.get('sample_name')
+                date_received = form.cleaned_data.get('date_received')
+                lab_id = form.cleaned_data.get('lab_ID')
+                lsts_id = form.cleaned_data.get('LSTS_ID')
+                isolate_source = form.cleaned_data.get('isolate_source')
+                putative_classification = form.cleaned_data.get('putative_classification')
+                analyst_name = form.cleaned_data.get('analyst_name')
+                subunit = form.cleaned_data.get('subunit')
+                '''
+                lab_id = models.CharField(max_length=20, choices=LABS, default=STHY, blank=False)
+                isolate_source = models.CharField(max_length=50, blank=False)
+                lsts_id = models.CharField(max_length=50, blank=False)
+                putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
+                sample_name = models.CharField(max_length=50, blank=False)
+                date_received = models.DateTimeField(blank=False)
+                analyst_name 
+                '''
+                if sample_name and date_received:
+                    sample_data.append(VirTyperRequest(sample_name=sample_name,
+                                                       project_name_id=vir_typer_project.pk,
+                                                       date_received=date_received,
+                                                       lab_ID=lab_id,
+                                                       LSTS_ID=lsts_id,
+                                                       isolate_source=isolate_source,
+                                                       putative_classification=putative_classification,
+                                                       analyst_name=analyst_name,
+                                                       subunit=subunit))
+
+            # with transaction.atomic():
+            if sample_data:
                 vir_typer_project.save()
-                sample_data = list()
-                for form in sample_form_set:
-                    sample_name = form.cleaned_data.get('sample_name')
-                    date_received = form.cleaned_data.get('date_received')
-                    lab_id = form.cleaned_data.get('lab_ID')
-                    lsts_id = form.cleaned_data.get('LSTS_ID')
-                    isolate_source = form.cleaned_data.get('isolate_source')
-                    putative_classification = form.cleaned_data.get('putative_classification')
-                    analyst_name = form.cleaned_data.get('analyst_name')
-                    subunit = form.cleaned_data.get('subunit')
-                    '''
-                    lab_id = models.CharField(max_length=20, choices=LABS, default=STHY, blank=False)
-                    isolate_source = models.CharField(max_length=50, blank=False)
-                    lsts_id = models.CharField(max_length=50, blank=False)
-                    putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
-                    sample_name = models.CharField(max_length=50, blank=False)
-                    date_received = models.DateTimeField(blank=False)
-                    analyst_name 
-                    '''
-                    if sample_name and date_received:
-                        sample_data.append(VirTyperRequest(sample_name=sample_name,
-                                                           project_name_id=vir_typer_project.pk,
-                                                           date_received=date_received,
-                                                           lab_ID=lab_id,
-                                                           LSTS_ID=lsts_id,
-                                                           isolate_source=isolate_source,
-                                                           putative_classification=putative_classification,
-                                                           analyst_name=analyst_name,
-                                                           subunit=subunit))
-                # with transaction.atomic():
                 VirTyperRequest.objects.bulk_create(sample_data)
-                messages.success(request, 'You have created project {project}'
+                message_str = _('You have created project ')
+                messages.success(request, message_str + '{project}'
                                  .format(project=vir_typer_project.project_name))
 
-                # return redirect('geneseekr:geneseekr_processing', geneseekr_request_pk=geneseekr_request.pk)
                 return redirect('vir_typer:vir_typer_upload',
                                 vir_typer_pk=vir_typer_project.pk)
-            else:
-                messages.error(request, sample_form_set.errors)
-                pass
         else:
-            messages.error(request, tombstone_form.errors['project_name'], vars(tombstone_form))
+            out_str = str()
+            for error in sample_form_set.errors:
+                for field, err in error.items():
+                    out_str += '{field}: {err}\n'.format(field=field, err=err)
+                # out_str += '{key}: {value}\n'.format(key=key,
+                #                                      value=value)
+            messages.error(request, sample_form_set.non_form_errors())
+        # else:
+        #     messages.error(request, tombstone_form.errors['project_name'])
     else:
         sample_form_set = SampleFormSet()
     return render(request,
@@ -233,7 +244,7 @@ def sequence_consensus(sequence_list, vir_typer_pk):
     records = list()
     if len(sequence_list) >= 2:
         for sequence_dict in sequence_list:
-            print(sequence_dict)
+            # print(sequence_dict)
             for seq_code, sequence in sequence_dict.items():
                 record = SeqRecord(Seq(sequence, IUPAC.unambiguous_dna),
                                    id=seq_code,
