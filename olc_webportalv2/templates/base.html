@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
-    <title> {% block title %}CFIA FoodPort {% endblock title %}</title>
+    <title> {% block title %}{% trans "CFIA FoodPort" %} {% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
 
@@ -27,45 +27,45 @@
         <i class="fas fa-bars" style="color:white"></i>
         </button>
         <a class="navbar-brand" href="{% url 'home' %}">
-                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  CFIA FoodPort</strong>
+                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  {% trans "  CFIA FoodPort" %}</strong>
         </a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav mr-auto">
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'home' %}">Home <i class="fas fa-home"></i></a>
+              <a class="nav-link" href="{% url 'home' %}">{% trans "Home " %}<i class="fas fa-home"></i></a>
             </li>
             <li class="nav-item active">
               <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton" data-toggle="dropdown">Explore</button>
+                <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton" data-toggle="dropdown">{% trans "Explore" %}</button>
                 <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
-                  <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">Search <i class="fas fa-search"></i></a>
-                  <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">Browse <i class="fas fa-book"></i></a>
+                  <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">{% trans "Search " %}<i class="fas fa-search"></i></a>
+                  <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %}<i class="fas fa-book"></i></a>
                 </div>
               </div>
             </li>
 
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'data:data_home' %}">Retrieve <i class="far fa-file-alt"></i></a>
+              <a class="nav-link" href="{% url 'data:data_home' %}">{% trans "Retrieve " %}<i class="far fa-file-alt"></i></a>
              </li>
 
             <li class="nav-item active">
-              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly <i class="fas fa-cogs"></i></a>
+              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly " %}<i class="fas fa-cogs"></i></a>
             </li>
               <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze</button>
+                <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">{% trans "Analyze" %}</button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Investigate AMR <i class="fas fa-vial"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">Annotate <i class="fas fa-highlighter"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">Find Near Neighbors <i class="fas fa-code-branch"></i></a>
-                  <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typing <i class="fas fa-pastafarianism"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes " %}<i class="fas fa-microscope"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}<i class="fas fa-seedling"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR " %}<i class="fas fa-vial"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate " %}<i class="fas fa-highlighter"></i></a>
+                  <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">{% trans "Find Near Neighbors " %}<i class="fas fa-code-branch"></i></a>
+                  <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer <i class="fas fa-pastafarianism"></i></a>
                 </div>
               </div>
 
             </ul>
 
-            <ul class="navbar-nav ml-auto">
+            <ul class="navbar-nav settings">
             {# Language selection #}
             <li class="nav-item active">
             <form action="{% url "set_language" %}" method="post" class="dropdown">
@@ -73,7 +73,7 @@
               {% get_current_language as LANGUAGE_CODE %}
               {% get_available_languages as LANGUAGES %}
               <div class="form-group">
-               <select name="language" class="form-control" onchange="this.form.submit()">
+               <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
                 {% for language in LANGUAGES %}
                 <option value="{{ language.0 }}"
                     {% if language.0 == LANGUAGE_CODE %}selected="selected"{% endif %}>
@@ -127,93 +127,91 @@
       {% block content %}
         <br>
         <p class="lead h6" style="text-align:center">
-            <span class="h1" ><b>Welcome to the CFIA FoodPort</b> <i class="fas fa-dna"></i></span><br>
+            <span class="h1" ><b>{% trans "Welcome to the CFIA FoodPort" %}</b> <i class="fas fa-dna"></i></span><br>
         </p>
         <br>
         <div class="card-deck d-flex h-100 justify-content-center align-self-center">
 
           <article>
             <div class="text">
-              <h3>Explore Data</h3>
-              <p id="article1">Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs.</p>
+              <h3>{% trans "Explore Data" %}</h3>
+              <p id="article1">{% trans "Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs." %}</p>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'metadata:metadata_home' %}">{% trans "Explore Data" %}</a>
               </div>
           </article>
 
           <article >
             <div class="text">
-              <h3>Get Data</h3>
-              <p id="article2">Retrieve copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA), and a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
-              <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">Get Data</a>
+              <h3>{% trans "Get Data" %}</h3>
+              <p id="article2">{% trans "Retrieve copies of files stored at OLC to analyze locally." %}</p>
+              <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">{% trans "Get Data" %}</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Assembly</h3>
-              <p id="article3" >For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs.</p>
+              <h3>{% trans "Assembly" %}</h3>
+              <p id="article3" >{% trans "For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs." %}</p>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'cowbat:assembly_home' %}">Assembly</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly" %}</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Find Genes</h3>
-              <p id="article4" >Implements OLC's GeneSeekr tool to search for any gene of interest in our collection. Specify which sequences you want to search using SeqIDs, and also provide a gene (or genes) you want to search for in FASTA format.</p>
+              <h3>{% trans "Find Genes" %}</h3>
+              <p id="article4" >{% trans "Use GeneSeekr to search for any gene of interest in our assembly database." %}</p>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes" %}</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Create a Tree</h3>
-              <p id="article5">Create phylogenetic trees based on whole genome sequences to investigate relatedness
-              of isolates.</p>
+              <h3>{% trans "Create a Tree" %}</h3>
+              <p id="article5">{% trans "Create phylogenetic trees of assemblies." %}</p>
               <br>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree </a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Investigate AMR</h3>
-              <p id="article5">Look for AMR genes in sequence data, and find out if they're present on mobile
-                elements or the chromosome.</p>
+              <h3>{% trans "Investigate AMR" %}</h3>
+              <p id="article5">{% trans "Look for AMR genes in assemblies, and find out if they're present on mobile elements or the chromosome." %}</p>
               <br>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Investigate AMR</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR" %}</a>
             </div>
           </article>
           <article>
             <div class="text">
-              <h3>Annotate Genomes</h3>
-              <p id="article5">Annotate genomes of interest using Prokka to find out what genes are present.</p>
+              <h3>{% trans "Annotate Genomes" %}</h3>
+              <p id="article5">{% trans "Annotate assemblies with Prokka." %}</p>
               <br>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">Annotate Genomes</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate Genomes" %}</a>
             </div>
           </article>
         <article>
             <div class="text">
-              <h3>Virus Typing</h3>
-              <p id="article5">Perform typing on viral sequences.</p>
+              <h3>Virus Typer</h3>
+              <p id="article5">{% trans "Perform typing on viral sequences." %}</p>
               <br>
               <br>
               <br>
               <br>
               <br>
               <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typing</a>
+              <a class="btn btn-primary btn-lg" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer</a>
             </div>
           </article>
         </div>

@@ -14,13 +14,12 @@
   <table id="vir_typer-request-table" class="table table-hover">
     <thead>
     <tr style="text-align:center">
-       <th >Project Name</th>
-       <th>Status</th>
-       <th>Download</th>
-       <th>Request Date</th>
-       <th data-orderable="false">       </th>
-       <th>Edit Project</th>
-       {#       <th>Type</th>#}
+       <th>{% trans "Project Name" %}</th>
+       <th>{% trans "Status" %}</th>
+       <th>{% trans "Download" %}</th>
+       <th>{% trans "Request Date" %}</th>
+       <th data-orderable="false">      </th>
+       <th>{% trans "Edit Project" %}</th>
     </tr>
   </thead>
 
@@ -31,25 +30,25 @@
             <p style="text-align:center">{{ vir_typer_project }}</p>
        </td>
           {% if vir_typer_project.status == 'Complete' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success btn-block" role="button">{{ vir_typer_project.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
           {% elif vir_typer_project.status == 'Processing' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ vir_typer_project.status }}</a></td>
+             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button"> {% trans "Processing" %} </a></td>
           {% elif vir_typer_project.status == 'Error' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ vir_typer_project.status }}</a></td>
+             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
           {% elif vir_typer_project.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ vir_typer_project.status }}</button></td>
+             <td><button class="btn btn-outline-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
           {% endif %}
 
           {% if vir_typer_project.status == 'Complete' %}
-            <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button></td>
           {% endif %}
 
         <td>{{ vir_typer_project.created_at }}</td>
         {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{vir_typer_project.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %}<i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
           </form>
         {% else %}
@@ -67,7 +66,21 @@
   <script type="text/javascript">
   $(document).ready(function () {
     //Default order of table on page load
-    var table = $('#geneseekr-request-table').DataTable(); 
+    var table = $('#vir_typer-request-table').DataTable({
+            language: {
+                emptyTable: '{% trans "No data available in table" %}',
+                infoEmpty: '{% trans "Showing 0 to 0 of 0 entries" %}',
+                info: '{% trans "Showing " %} _START_ {% trans "to " %} _END_ {% trans "of " %}  _TOTAL_ {% trans "entries" %}',
+                lengthMenu: '{% trans "Show " %} _MENU_ {% trans "entries" %}',
+                paginate: {
+                    first: '{% trans "First" %}',
+                    previous: '{% trans "Previous" %}',
+                    next: '{% trans "Next" %}',
+                    last: '{% trans "Last" %}'
+                },
+            }
+        }
+    );
         table
         .order([3,"desc"], [1,"asc"])
         .draw();
@@ -86,18 +99,19 @@
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
       Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
+      title: '{% trans "Are you sure?" %}',
+      text: '{% trans "You will not be able to revert this!" %}',
       type: 'warning',
       showCancelButton: true,
+      cancelButtonText: '{% trans "Cancel" %}',
       confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: '{% trans "Yes, delete it!" %}',
       reverseButtons: true
      }).then(function(result) {
       if (result.value == true) {
        Swal.fire({
-        title: 'Deleted!',
-        text: 'Your file has been deleted.',
+        title: '{% trans "Deleted!" %}',
+        text: '{% trans "Your project has been deleted." %}',
         type: 'success',
         showConfirmButton: false
        }).then(function(cont) {
@@ -115,8 +129,8 @@
        })
       } else {
        Swal.fire({
-        title: 'Cancelled!',
-        text: 'Your file is safe.',
+        title: '{% trans "Cancelled!" %}',
+        text: '{% trans "Your project is safe." %}',
         type: 'error',
         showConfirmButton: false
        })

@@ -51,7 +51,7 @@ class VirTyperRequest(models.Model):
     LSTS_ID = models.CharField(max_length=50, blank=False)
     putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
     sample_name = models.CharField(max_length=50, blank=False)
-    subunit = models.IntegerField(max_length=3, null=True, blank=True)
+    subunit = models.PositiveIntegerField(max_length=3, null=True, blank=True)
     date_received = models.DateField(blank=False)
     analyst_name = models.CharField(max_length=50, blank=False)
 
