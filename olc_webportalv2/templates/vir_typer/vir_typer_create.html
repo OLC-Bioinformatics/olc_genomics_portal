@@ -51,6 +51,7 @@
 	</div>
 {% endfor %}
   <br>
+  <br>
   <button type="submit" class="btn btn-primary btn-lg">Create samples</button>
   </form>
 
@@ -60,8 +61,8 @@
    <script src="{% static 'js/jquery.formset.js' %}"></script>
    <script type="text/javascript"> // Allows adding and removal of formsets
         $('.sample_formset').formset({
-            addText: 'Add',
-            deleteText: 'Remove'
+            addText: '<i class="fas fa-plus"></i> Add New Sample',
+            deleteText: '<i class="fas fa-minus-circle"></i> Remove <br></br><br>'
     });
     </script>
 
