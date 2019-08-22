@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-08-21 19:34+0000\n"
+"POT-Creation-Date: 2019-08-22 14:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -422,6 +422,15 @@ msgstr "Créer les échantillons"
 msgid "Add New Sample"
 msgstr "Ajouter un échantillon"
 
+#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:8
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:22
+msgid "Edit Project"
+msgstr "Modifier le projet"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:20
+msgid "Update Project"
+msgstr "Réviser"
+
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:10
 msgid "Create A Virus Typer Query"
 msgstr "Créer une requête de Virus Typer"
@@ -443,10 +452,6 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
 msgid "Request Date"
 msgstr "Date de la demande"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:22
-msgid "Edit Project"
-msgstr "Modifier le projet"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
 msgid "Complete"
@@ -549,6 +554,105 @@ msgstr "Annulé!"
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:11
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:40
+msgid "Project:"
+msgstr "Projet:"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:15
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:44
+msgid "Report Issuance Date:"
+msgstr "Date d'émission du rapport:"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
+msgid "Laboratory"
+msgstr "Laboratoire"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
+msgid "Address"
+msgstr "Adresse"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:56
+msgid "Tel #"
+msgstr "Numéro de téléphone"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:31
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
+msgid "CFIA Burnaby"
+msgstr "ACIA Burnaby"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:36
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:66
+msgid "CFIA St. Hyacinthe"
+msgstr "ACIA St.Hyacinthe"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:47
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
+#: olc_webportalv2/vir_typer/forms.py:82
+msgid "Sample Name"
+msgstr "Échantillon"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:48
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
+#: olc_webportalv2/vir_typer/forms.py:84
+msgid "LSTS ID"
+msgstr "Identifiant SIESAL"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:49
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:81
+msgid "Date Received"
+msgstr "Date de réception"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:50
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:82
+msgid "Source"
+msgstr "Source"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:51
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:83
+msgid "Organism"
+msgstr "Organisme"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:52
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:84
+msgid "Identifier"
+msgstr "Identifiant"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:53
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:85
+msgid "Trimmed Sequence"
+msgstr "Séquence ajustée"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:54
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:86
+msgid "Allele"
+msgstr "Allèle"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:55
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:87
+msgid "Length"
+msgstr "Longueur"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:56
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:88
+msgid "Mismatches"
+msgstr "Discordances"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:91
+msgid "Create PDF Report"
+msgstr "Créer un rapport PDF"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:89
+msgid "Quality Mean"
+msgstr "Qualité moyenne"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:90
+msgid "Quality Stdev"
+msgstr "Qualité écart-type"
+
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:7
 msgid "Step 2 of 2: Upload Sequence Files and Begin Typing"
 msgstr ""
@@ -606,17 +710,9 @@ msgstr "Champs obligatoires"
 msgid "The project name must be unique"
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/vir_typer/forms.py:82
-msgid "Sample Name"
-msgstr "Échantillon"
-
 #: olc_webportalv2/vir_typer/forms.py:83
 msgid "Date received"
 msgstr "Date de réception"
-
-#: olc_webportalv2/vir_typer/forms.py:84
-msgid "LSTS ID"
-msgstr "Identifiant SIESAL"
 
 #: olc_webportalv2/vir_typer/forms.py:85
 msgid "Lab ID"
@@ -638,6 +734,6 @@ msgstr "Source de l'échantillon"
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
 
-#: olc_webportalv2/vir_typer/views.py:100
+#: olc_webportalv2/vir_typer/views.py:77
 msgid "You have created project "
 msgstr "Vous avez créé le projet "

@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.translation import ugettext_lazy as _
+# WeasyPrint
+from weasyprint import HTML, CSS
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -33,19 +35,6 @@ def vir_typer_home(request):
                   {
                       'vir_typer_projects': vir_typer_projects
                   })
-    # one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    # geneseekr_requests = GeneSeekrRequest.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
-    #
-    # if request.method == "POST":
-    #     if request.POST.get('delete'):
-    #         query = GeneSeekrRequest.objects.filter(pk=request.POST.get('delete'))
-    #         query.delete()
-    #
-    # return render(request,
-    #               'geneseekr/geneseekr_home.html',
-    #               {
-    #                   'geneseekr_requests': geneseekr_requests
-    #               })
 
 
 @login_required
@@ -63,8 +52,6 @@ def vir_typer_request(request):
 
             sample_data = list()
             for form in sample_form_set:
-                print(vars(form))
-                # sample_name, lsts_id = form.cleaned_data
                 sample_name = form.cleaned_data.get('sample_name')
                 date_received = form.cleaned_data.get('date_received')
                 lab_id = form.cleaned_data.get('lab_ID')
@@ -73,16 +60,8 @@ def vir_typer_request(request):
                 putative_classification = form.cleaned_data.get('putative_classification')
                 analyst_name = form.cleaned_data.get('analyst_name')
                 subunit = form.cleaned_data.get('subunit')
-                '''
-                lab_id = models.CharField(max_length=20, choices=LABS, default=STHY, blank=False)
-                isolate_source = models.CharField(max_length=50, blank=False)
-                lsts_id = models.CharField(max_length=50, blank=False)
-                putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
-                sample_name = models.CharField(max_length=50, blank=False)
-                date_received = models.DateTimeField(blank=False)
-                analyst_name 
-                '''
-                if sample_name and date_received:
+                if sample_name and date_received and lab_id and lsts_id and isolate_source and putative_classification\
+                        and analyst_name and subunit:
                     sample_data.append(VirTyperRequest(sample_name=sample_name,
                                                        project_name_id=vir_typer_project.pk,
                                                        date_received=date_received,
@@ -93,7 +72,7 @@ def vir_typer_request(request):
                                                        analyst_name=analyst_name,
                                                        subunit=subunit))
 
-            # with transaction.atomic():
+            #
             if sample_data:
                 vir_typer_project.save()
                 VirTyperRequest.objects.bulk_create(sample_data)
@@ -108,11 +87,7 @@ def vir_typer_request(request):
             for error in sample_form_set.errors:
                 for field, err in error.items():
                     out_str += '{field}: {err}\n'.format(field=field, err=err)
-                # out_str += '{key}: {value}\n'.format(key=key,
-                #                                      value=value)
             messages.error(request, sample_form_set.non_form_errors())
-        # else:
-        #     messages.error(request, tombstone_form.errors['project_name'])
     else:
         sample_form_set = SampleFormSet()
     return render(request,
@@ -130,13 +105,7 @@ def vir_typer_upload(request, vir_typer_pk):
     sample_names = list()
     for sample in vir_typer_samples:
         sample_names.append(str(sample.sample_name))
-    # file_form = VirTyperFileForm()
-    # return HttpResponse(vir_typer_project)
     if request.method == 'POST':
-        # , request.FILES
-        # file_form = VirTyperFileForm(request.POST, request.FILES)
-        # if file_form.is_valid():
-        # seq_files = file_form.cleaned_data
         seq_files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
         if seq_files:
             container_name = VirTyperProject.objects.get(pk=vir_typer_pk).container_namer()
@@ -168,12 +137,13 @@ def vir_typer_upload(request, vir_typer_pk):
                   })
 
 
-# @login_required
-# def vir_typer_processing(request, vir_typer_pk):
-#     return HttpResponse('Processing')
-
 def parse_report(vir_typer_json, vir_typer_samples):
-
+    """
+    Parse the supplied JSON-formatted report, and populate the database with the values
+    :param vir_typer_json:
+    :param vir_typer_samples:
+    :return:
+    """
     vir_typer_json = vir_typer_json.replace("\'", "\"")
     json_data = json.loads(vir_typer_json)
     for sample in vir_typer_samples:
@@ -194,8 +164,6 @@ def parse_report(vir_typer_json, vir_typer_samples):
                                               trimmed_quality_min=file_dict['trimmed_quality_min'],
                                               trimmed_quality_stdev=file_dict['trimmed_quality_stdev'])
                 vir_results.save()
-                # for key, value in file_dict.items():
-                #     print(key, value)
             except KeyError:
                 pass
 
@@ -220,7 +188,8 @@ def sequence_html_string(sequence, consensus_sequence):
             try:
                 html_code = consensus_span_dict[nt.upper()]
             except KeyError:
-                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>".format(nt=nt.upper())
+                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>"\
+                    .format(nt=nt.upper())
         else:
             variable_locations += 1
             try:
@@ -240,7 +209,6 @@ def sequence_consensus(sequence_list, vir_typer_pk):
     from Bio import AlignIO, SeqIO
     from Bio.Seq import Seq
     consensus = list()
-    prevalence_dict = dict()
     records = list()
     if len(sequence_list) >= 2:
         for sequence_dict in sequence_list:
@@ -266,34 +234,18 @@ def sequence_consensus(sequence_list, vir_typer_pk):
             # print(sequence_dict)
             for seq_code, sequence in sequence_dict.items():
                 consensus = sequence
-            # for i, nt in enumerate(sequence):
-            #     if i not in prevalence_dict:
-            #         prevalence_dict[i] = dict()
-            #     try:
-            #         prevalence_dict[i][nt] += 1
-            #     except KeyError:
-            #         prevalence_dict[i][nt] = 1
-    # for sequence in sequence_list:
-    #     for i, nt in enumerate(sequence):
-    #         print(i, nt, prevalence_dict[i][nt])
     return consensus
+
 
 @csrf_exempt
 @login_required
 def vir_typer_results(request, vir_typer_pk):
-    # from io import BytesIO
-    # from reportlab.pdfgen import canvas
     from django.core.files.storage import FileSystemStorage
     from django.http import HttpResponse
-    # from reportlab.lib.pagesizes import letter, landscape
-    # from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    # from reportlab.lib.styles import getSampleStyleSheet
-    # from reportlab.lib.units import inch
-
     from django.template.loader import render_to_string
     import datetime
     manager_codes = {
-        'NOV1': {
+        'NOVI': {
             'code': 'NOV1-SEQ',
             'comments_en': 'Norovirus genogroup I was confirmed by gene sequencing of the amplicon.',
             'comments_fr': 'Le séquençage de l\'amplicon confirme la présence du Norovirus génogroup I.'
@@ -310,7 +262,6 @@ def vir_typer_results(request, vir_typer_pk):
             'comments_fr': 'Le séquençage de l\'amplicon confirme la présence du Hepatitis A.'
         }
     }
-# def vir_typer(vir_typer_pk):
     vir_typer_project = get_object_or_404(VirTyperProject, pk=vir_typer_pk)
 
     vir_typer_samples = list(VirTyperRequest.objects.filter(project_name__pk=vir_typer_pk))
@@ -320,9 +271,10 @@ def vir_typer_results(request, vir_typer_pk):
         vir_files = list(VirTyperFiles.objects.filter(sample_name__pk=sample.pk))
         for vir_file in vir_files:
             try:
-                vir_typer_result.append(VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk))
+                vir_typer_result.append(VirTyperResults.objects.get(sequence_file__pk=vir_file.pk))
             except:
                 parse = True
+    # Parse the JSON report, and enter the results into the database if necessary
     if parse:
         parse_report(vir_typer_json=vir_typer_project.report,
                      vir_typer_samples=vir_typer_samples)
@@ -342,11 +294,8 @@ def vir_typer_results(request, vir_typer_pk):
             if sample.sample_name == sorted_sample:
                 sequences = list()
                 sample_dict = dict()
-                sample_list = list()
-                sn = sample.sample_name
                 sample_dict['sample_project'] = pn
                 sample_dict['sample_name'] = sample.sample_name
-                sample_list.append(sample.sample_name)
                 sample_dict['lsts'] = sample.LSTS_ID
                 sample_dict['date_received'] = '{:%Y-%m-%d}'.format(sample.date_received)
                 sample_dict['isolate_source'] = sample.isolate_source
@@ -372,84 +321,55 @@ def vir_typer_results(request, vir_typer_pk):
                     seq_identifier_num = os.path.splitext(vir_file.sequence_file)[0].split('_')[-1]
                     seq_identifier_code = '_'.join((seq_identifier_well, seq_identifier_num))
                     sample_dict['identifier'].append(seq_identifier_code + '\n')
-                    sample_list.append(seq_identifier_code)
-                    # sample_dict['sequence_file'].append(['_'.join(os.path.splitext(vir_file.sequence_file)[0])])
                     result = VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk)
                     for vir_typer_result in result:
                         sample_dict['allele'].append(vir_typer_result.allele + '\n')
                         alleles[sample.sample_name].add(vir_typer_result.allele)
-                        # html_string = sequence_html_string(vir_typer_result.trimmed_sequence)
-                        sequences.append({sample.sample_name + '_' + seq_identifier_code: vir_typer_result.trimmed_sequence})
-                        # sample_dict['sequence'].append(html_string)
+                        sequences.append({sample.sample_name + '_' + seq_identifier_code: vir_typer_result
+                                         .trimmed_sequence})
                         sample_dict['sequence_length'].append(vir_typer_result.trimmed_sequence_len + '\n')
                         sample_dict['mean_quality'].append(vir_typer_result.trimmed_quality_mean)
                         sample_dict['stdev_quality'].append(vir_typer_result.trimmed_quality_stdev)
-                    # sample_dict['sequence'].append('')
-                # print(sample.sample_name, len(sequences))
 
                 consensus_sequence = sequence_consensus(sequences, vir_typer_pk)
                 for vir_file in VirTyperFiles.objects.filter(sample_name__pk=sample.pk):
                     result = VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk)
                     for vir_typer_result in result:
-                        html_string, variable_locations = sequence_html_string(vir_typer_result.trimmed_sequence, consensus_sequence)
+                        html_string, variable_locations = sequence_html_string(vir_typer_result.trimmed_sequence,
+                                                                               consensus_sequence)
                         sample_dict['variable_locations'].append(variable_locations)
                         # print(sample.sample_name, vir_file, variable_locations)
                         sample_dict['sequence'].append(html_string + '\n')
                         # print(html_string)
                 full_results['data'].append(sample_dict)
                 outputs.append(sample_dict)
-
-
-
-        # sample_dict[sample] = list()
-        # sample_names.append(sample.sample_name)
-        # for vir_file in VirTyperFiles.objects.filter(sample_name__pk=sample.pk):
-            # sample_dict[sample].append(vir_file)
-            # results_dict[vir_file.pk] = VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk)
-    # for sample in vir_typer_samples:
-    #
-    #     vir_files.append(VirTyperFiles.objects.filter(sample_name__pk=sample.pk))
-    #     for vir_file in vir_files:
-    #         vir_typer_result.append(VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk))
-        # for vir_file in vir_files:
-        #     vir_typer_files = list(VirTyperFiles.objects.get(sequence_file__pk=vir_file.pk))
     json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
+    data_tables_path = '../../../../static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
     os.makedirs('olc_webportalv2/static/ajax/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
+    # Create the JSON-formatted output file
     with open(json_path, 'w') as json_out:
         json.dump(full_results, json_out)
     if request.method == 'POST':
-        # WeasyPrint
-        from weasyprint import HTML, CSS
-        from weasyprint.fonts import FontConfiguration
+        # Create a string of the HTML output using the appropriate template and variables
         html_string = render_to_string('vir_typer/vir_typer_results_to_pdf.html',
                                        {
-                      # 'vir_typer_results': results_dict,
-                      'vir_typer_project': vir_typer_project,
-                      'date': '{:%Y-%m-%d}'.format(datetime.datetime.now()),
-                      'codes': sorted(list(codes)),
+                                           'vir_typer_project': vir_typer_project,
+                                           'date': '{:%Y-%m-%d}'.format(datetime.datetime.now()),
+                                           'codes': sorted(list(codes)),
                                            'results': outputs,
-                      # 'json_results': json_path
-                      'vir_typer_samples': vir_typer_samples,
-                  })
-        # print(html_string)
+                                           'vir_typer_samples': vir_typer_samples,
+                                       })
+        # Create an HTML object from the HTML string
         html = HTML(string=html_string, base_url=request.build_absolute_uri())
-        """
-        font_config = FontConfiguration()
-        css = CSS(string='''
-            @font-face {
-                font-family: Gentium;
-                src: url(http://example.com/fonts/Gentium.otf);
-            }
-            h2 { font-family: courier }''', font_config=font_config)
-        """
+        # Set the links to the CSS files
         bootstrap_css = CSS(filename='olc_webportalv2/static/css/bootstrap.min.css')
         project_css = CSS(filename='olc_webportalv2/static/css/project.css')
         all_css = CSS(filename='olc_webportalv2/static/fonts/css/all.css')
+        # Create a custom CSS string to make the page letter sized, with landscape orientation
         page_css = CSS(string='@page { size: Letter landscape; margin: 1cm }')
-        # print(html)
-        # , stylesheets=[css],
-        #     font_config=font_config
-        html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport.pdf'.format(pk=vir_typer_pk), stylesheets=[bootstrap_css, project_css, all_css, page_css])
+        #
+        html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport.pdf'.format(pk=vir_typer_pk),
+                       stylesheets=[bootstrap_css, project_css, all_css, page_css])
         # Download
         fs = FileSystemStorage('olc_webportalv2/media/vir_typer/{pk}/'.format(pk=vir_typer_pk))
         with fs.open("VirusTyperReport.pdf") as pdf:
@@ -459,16 +379,13 @@ def vir_typer_results(request, vir_typer_pk):
     return render(request,
                   'vir_typer/vir_typer_results.html',
                   {
-                      # 'vir_typer_results': results_dict,
                       'vir_typer_project': vir_typer_project,
                       'date': '{:%Y-%m-%d}'.format(datetime.datetime.now()),
                       'codes': sorted(list(codes)),
-                      # 'json_results': json_path
+                      'json_results': data_tables_path,
                       'results': outputs,
                       'vir_typer_samples': vir_typer_samples,
-                      # 'sample_names': sample_names,
                       'vir_typer_files': vir_files,
-                      # 'vir_typer_result': results_dict
                   })
 
 

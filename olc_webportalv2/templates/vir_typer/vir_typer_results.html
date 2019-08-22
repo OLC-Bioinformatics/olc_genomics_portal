@@ -5,219 +5,70 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-{#<h2>Results for VirusTyper {{ vir_typer_project.project_name }}</h2>#}
-{##}
-{#{% if vir_typer_project.status == 'Complete' %}#}
-{#    <table>#}
-{#    <tr></tr>#}
-{#{% for sample, vir_files in vir_typer_samples.items %}#}
-{#    {{ sample.sample_name }}#}
-{#    {% for vir_file in vir_files %}#}
-{#        {% for pk, results_list in vir_typer_result.items %}#}
-{#            {% if vir_file.pk == pk %}#}
-{#                <td>{{ vir_file.sequence_file }} </td>#}
-{#                {% for result in results_list %}#}
-{#                    {{ result.allele }}#}
-{#                {% endfor %}#}
-{##}
-{##}
-{##}
-{#            {% endif %}#}
-{#        {% endfor %}#}
-{#    {% endfor %}#}
-{#<br>#}
-{#{% endfor %}#}
-{#    </table>#}
-{#{% endif %}#}
-{#<table id="" class="display compact nowrap" width="100%">#}
-{#    <thead>#}
-{#        <tr>#}
-{#            <th>Project Name</th>#}
-{#        </tr>#}
-{#    </thead>#}
 <table id="tombstone" style="font-size:120%;" class="display" width="100%">
     <thead>
             <tr>
-                <th colspan="2">Project: {{ vir_typer_project }}</th>
-            </tr>
-
-            <tr>
-                <th colspan="2">Report Issuance Date: {{ date }}</th>
+                <th colspan="2">{% trans "Project:" %} {{ vir_typer_project }}</th>
             </tr>
     </thead>
-</table>
-<br>
-
-<table id="lab-info" class="display" width="70%">
-    <thead>
-        <tr>
-            <th>Laboratory</th>
-            <th>Address</th>
-            <th>Tel #</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>CFIA-Burnaby</td>
-            <td>3155 Willington Green, Burnaby, BC, V5G 4P2</td>
-            <td>604-292-6028</td>
-        </tr>
-        <tr>
-            <td>ACIA-St. Hyacinthe</td>
-            <td>3400 Casavant Boul. Ouest, Saint-Hyacinthe, QC, J2S 8E3</td>
-            <td>450-768-6800</td>
-        </tr>
-    </tbody>
 </table>
 <br>
 
 <table id="results" style="font-size:90%;" class="display compact nowrap" width="100%">
     <thead>
             <tr>
-                <th>Sample Name</th>
-                <th>LSTS ID</th>
-                <th>Date Received</th>
-                <th>Source</th>
-                <th>Organism</th>
-                <th>Identifier</th>
-                <th>Trimmed Sequence</th>
-                <th>Allele</th>
-                <th>Length</th>
-                <th>Mismatches</th>
-{#                <th>Extn.</th>#}
-{#                <th>Start date</th>#}
-{#                <th>Salary</th>#}
+                <th>{% trans "Sample Name" %}</th>
+                <th>{% trans "LSTS ID" %}</th>
+                <th>{% trans "Date Received" %}</th>
+                <th>{% trans "Source" %}</th>
+                <th>{% trans "Organism" %}</th>
+                <th>{% trans "Identifier" %}</th>
+                <th>{% trans "Trimmed Sequence" %}</th>
+                <th>{% trans "Allele" %}</th>
+                <th>{% trans "Length" %}</th>
+                <th>{% trans "Mismatches" %}</th>
             </tr>
         </thead>
-{#        <tfoot>#}
-{#            <tr>#}
-{#                <th>Sample Name</th>#}
-{#                <th>Date Received</th>#}
-{#                <th>Isolate Source</th>#}
-{#                <th>Organism</th>#}
-{#                <th>Identifier</th>#}
-{#                <th>Trimmed Sequence</th>#}
-{#                <th>Allele</th>#}
-{#                <th>Extn.</th>#}
-{#                <th>Start date</th>#}
-{#                <th>Salary</th>#}
-{#            </tr>#}
-{#        </tfoot>#}
-</table>
-<br>
-
-<table id="footer">
-    <tbody>
-    <tr>
-        <td>The assay was performed according to the method ACIA-CRNVA-08 current version v01 (FVNRC Sequencing and Cloning Confirmation Methods / <br>
-            Méthode de confirmation des séquences génomiques amplifiées par épreuves moléculaires au CRNVA, au moyen des technique de clonage, de séquençage et d'analyse bioinformatiques). <br>
-            The sequencing was performed by: Plateforme de Séquençage et de génotypage (CRCHUL)</td>
-    </tr>
-    </tbody>
-</table>
-<br>
-
-<table id="codes">
-    <tbody>
-        {% for code in codes %}
-            <tr>
-                <td>Please use the following sample manager entry code: <strong> {{ code.1 }} </strong> </td>
-            </tr>
-            <tr>
-                <td>Add the following comments:</td>
-            </tr>
-            <tr>
-                <td><strong>{{ code.2 }}</strong></td>
-            </tr>
-            <tr>
-                <td><strong>{{ code.3 }}</strong></td>
-            </tr>
-        {% endfor %}
-    </tbody>
 </table>
 <br>
 
 <div>
    <form action='' enctype="multipart/form-data" method="post" novalidate>
-        <button type="submit" class="btn btn-primary btn-lg">Create PDF Report</button>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create PDF Report" %}</button>
     </form>
 </div>
-
-{##}
-{# <ul>#}
-{#      <li>The sequences are different from the sequences from the standard curve with insert or without insert</li>#}
-{#      <li>This sample has {{ codes }}</li>#}
-{#      <li></li>#}
-{#      <li></li>#}
-{#    </ul>#}
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css">
 <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
 <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/rowgroup/1.1.0/js/dataTables.rowGroup.min.js"></script>
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/dataTables.buttons.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.flash.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.html5.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.print.min.js"></script>#}
 <script type="text/javascript">
     $(document).ready( function () {
     $('#results').DataTable({
-        {#data: dataSet,#}
-        {#data: {{ json_results }},#}
-        {#"processing": true,#}
-        {#stateSave: true,#}
         "bInfo" : false,
         "paging": false,
         "searching": false,
-        {#"ordering": false,#}
-        {#"order": [],#}
-
-        {#order: [[{ "data": "sample_name" }, 'asc']],#}
         rowGroup: {
             dataSrc: { "data": "sample_name" },
         },
-        "ajax": '../../../../static/ajax/vir_typer/158/arrays.txt',
+        "ajax": "{{ json_results }}",
         columnDefs : [
     {
         targets: [-1, -2],
         className: 'dt-body-center'
     }
   ],
-        /*
-        dom: 'Bfrtip',
-
-        buttons: [
-            {
-            extend: 'pdf',
-            text: 'Create PDF report',
-            orientation: 'landscape',
-            filename: 'VirusTyperReport',
-            exportOptions: {
-                decodeEntities: false,
-                stripNewlines: false,
-            }
-        }
-        ],
-        , "orderable": false
-        */
         "columns": [
             { "data": "sample_name"},
             { "data": "lsts"},
             { "data": "date_received"},
             { "data": "isolate_source"},
             { "data": "organism"},
-            {#{ "data": "identifier", render: "[\<br>\]"},#}
             { "data": "identifier", render: "[\<br>\]"},
             { "data": 'sequence', render: "[\<br>\]"},
             { "data": "allele", render: "[\<br>\]"},
             { "data": "sequence_length", render: "[\<br>\]"},
             { "data": "variable_locations", render: "[\<br>\]"},
-            {#{ "data": "extn" },#}
-            {#{ "data": "start_date" },#}
-            {#{ "data": "salary" }#}
         ]
     });
 

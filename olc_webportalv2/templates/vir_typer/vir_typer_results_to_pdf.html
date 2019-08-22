@@ -29,32 +29,41 @@
 </head>
 <br>
 <body>
-    <div class="col-md-2">
-        <img src="{% static 'images/CFIA_logo.png' %}" alt="CFIA Logo" style="width: 15%;" >
+    <div>
+        <img src="{% static 'images/CFIA_logo.tif' %}" alt="CFIA Logo" style="width:30%;" >
     </div>
     <hr>
-    <div class="col-md-4">
-        <h6>Project: {{ vir_typer_project }}</h6>
-        <h6>Report Issuance Date: {{ date }}</h6>
-        <br>
+    <div class="col-md-6">
+        <table id="tombstone" style="font-size: 12px;" class="table-borderless table-sm">
+            <thead>
+                    <tr>
+                        <th>{% trans "Project:" %} {{ vir_typer_project }}</th>
+                    </tr>
+
+                    <tr>
+                        <th>{%  trans "Report Issuance Date:" %} {{ date }}</th>
+                    </tr>
+            </thead>
+        </table>
     </div>
+<br>
     <div class="col-md-6">
         <table id="lab-info" style="font-size: 12px;" class="table-borderless table-sm">
             <thead>
                 <tr>
-                    <th>Laboratory</th>
-                    <th>Address</th>
-                    <th>Tel #</th>
+                    <th>{% trans "Laboratory" %}</th>
+                    <th>{% trans "Address" %}</th>
+                    <th>{%  trans "Tel #" %}</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>CFIA-Burnaby</td>
+                    <td>{% trans "CFIA Burnaby" %}</td>
                     <td>3155 Willington Green, Burnaby, BC, V5G 4P2</td>
                     <td>604-292-6028</td>
                 </tr>
                 <tr>
-                    <td>ACIA-St. Hyacinthe</td>
+                    <td>{% trans "CFIA St. Hyacinthe" %}</td>
                     <td>3400 Casavant Boul. Ouest, Saint-Hyacinthe, QC, J2S 8E3</td>
                     <td>450-768-6800</td>
                 </tr>
@@ -67,19 +76,18 @@
         <table id="results" style="font-size: 9px;" cellpadding="5px;" class="table-sm table-striped">
             <thead>
                     <tr>
-                        <th>Sample Name</th>
-                        <th>LSTS ID</th>
-                        <th>Date Received</th>
-                        <th>Source</th>
-                        <th>Organism</th>
-                        <th>Identifier</th>
-                        <th>Trimmed Sequence</th>
-                        <th>Allele</th>
-                        <th>Length</th>
-                        <th>Mismatches</th>
-                        <th>MeanQuality</th>
-                        <th>StdDevQuality</th>
-
+                        <th>{% trans "Sample Name" %}</th>
+                        <th>{% trans "LSTS ID" %}</th>
+                        <th>{% trans "Date Received" %}</th>
+                        <th>{% trans "Source" %}</th>
+                        <th>{% trans "Organism" %}</th>
+                        <th>{% trans "Identifier" %}</th>
+                        <th>{% trans "Trimmed Sequence" %}</th>
+                        <th>{% trans "Allele" %}</th>
+                        <th>{% trans "Length" %}</th>
+                        <th>{% trans "Mismatches" %}</th>
+                        <th>{% trans "Quality Mean" %}</th>
+                        <th>{% trans "Quality Stdev" %}</th>
                     </tr>
             </thead>
             {% autoescape off %}
@@ -127,11 +135,6 @@
                             {{ stdev_quality }} <br>
                         {% endfor %}
                     </td>
-        {#        {% for key, value in sample_dict.items %}#}
-        {##}
-        {#                <td> {{ value }} </td>#}
-        {##}
-        {#        {% endfor %}#}
                 </tr>
             {% endfor %}
             </tbody>
@@ -145,7 +148,7 @@
             <tr>
                 <td>The assay was performed according to the method ACIA-CRNVA-08 current version v01 (FVNRC Sequencing and Cloning Confirmation Methods / <br>
                     Méthode de confirmation des séquences génomiques amplifiées par épreuves moléculaires au CRNVA, au moyen des technique de clonage, de séquençage et d'analyse bioinformatiques). <br>
-                    The sequencing was performed by / séquençage par: Plateforme de Séquençage et de génotypage (CRCHUL)</td>
+                    The sequencing was performed by / Le séquençage a été effectué par: Plateforme de Séquençage et de génotypage (CRCHUL)</td>
             </tr>
             </tbody>
         </table>
@@ -155,16 +158,16 @@
             <tbody>
                 {% for code in codes %}
                     <tr>
-                        <td>Please use the following sample manager entry code: <strong> {{ code.1 }} </strong> </td>
+                        <td>Please use the following sample manager entry code / Veuillez utiliser le code de saisie de gestionnaire d'échantillon suivant: <strong> {{ code.1 }} </strong> </td>
                     </tr>
                     <tr>
-                        <td>Add the following comments:</td>
+                        <td>Add the following comments / Ajouter les commentaires suivants:</td>
                     </tr>
                     <tr>
-                        <td><strong>{{ code.2 }}</strong></td>
+                        <td><strong>{{ code.2 }} {{ code.3 }} <br><br></strong></td>
                     </tr>
                     <tr>
-                        <td><strong>{{ code.3 }}</strong></td>
+                        <td><strong></strong></td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -172,24 +175,5 @@
         <br>
     </div>
 </body>
-{##}
-{# <ul>#}
-{#      <li>The sequences are different from the sequences from the standard curve with insert or without insert</li>#}
-{#      <li>This sample has {{ codes }}</li>#}
-{#      <li></li>#}
-{#      <li></li>#}
-{#    </ul>#}
-{#<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>#}
-{#<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">#}
-{#<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css">#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/rowgroup/1.1.0/js/dataTables.rowGroup.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/dataTables.buttons.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.flash.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.html5.min.js"></script>#}
-{#<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.5.6/js/buttons.print.min.js"></script>#}
 
 {% endblock %}
