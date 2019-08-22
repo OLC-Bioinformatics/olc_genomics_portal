@@ -90,62 +90,75 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <button class="btn btn-danger btn-block" disabled>{{ amr_request.status }}</button>
 <br>
 <p>Return to <a href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
+
+{#                         REQUEST IS COMPLETE                               #}
 {% elif amr_request.status == 'Complete' %}
 <button class="btn btn-success btn-block" disabled>{{ amr_request.status }} <i class="fas fa-check-circle"></i></button>
 <br>
 <p>These results will be available for 7 days.</p>
 <br>
-<form id='seqForm' method='post'>
-  {% csrf_token %}
-<!--hidden inputs that pass variables between Django and JS -->
-  <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq"/>
-  <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog"/>
-  
-  <ul class="nav">
-    {% for seq in amr_request.seqids %}
-    <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary
-      {% if selectedSeq == seq %}
-        active
-      {% endif%} " onclick="Func('{{seq}}');" id="{{seq}}">
-        {% for key, value in labidDict.items %}
-        {% if key == seq%}
-        {{key}}</a></li>
-    {% endif %}
-    {% endfor %}
-    {% endfor %}
-  </ul>
-</form>
-<br>
-<button class="btn btn-info btn-lg" id="toggle-vis" value='{{selectedTog}}' style="float: left" onclick='toggleFunc()'>Toggle</button>
-<br>
-<br>
-<br>
-<table id="datatable" class="table">
-  <thead>
-    <tr>
-      <th>Gene</th>
-      <th>Location</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% if selectedSeq != None%}
-    {% for i in amr_details%}
-    {% if i.seqid == selectedSeq%}
-    {% for key, value in i.amr_results.items %}
-    <tr>
-      <td>{{ key }}</td>
-      {% if value == "chromosome" %}
-      <td class="table-secondary">Chromosome</td>
-      {% else %}
-      <td class="table-info">Plasmid {{ value }}</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-  </tbody>
-</table>
+  <div class="dropdown">
+     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+       Select Sequence to View Results
+     </button>
+  <br>
+     <div class="dropdown-menu">
+       {% for amr_detail in amr_request.amrdetail.all %}
+          <a class="dropdown-item" href="{% url 'geneseekr:amr_detail' amr_detail_pk=amr_detail.pk %}">{{ amr_detail.seqid }}</a>
+       {% endfor %}
+     </div>
+  </div>
+{#<form id='seqForm' method='post'>#}
+{#  {% csrf_token %}#}
+{#<!--hidden inputs that pass variables between Django and JS -->#}
+{#  <input type="hidden" value="{{selectedSeq}}" id="seqID" name="selectedSeq"/>#}
+{#  <input type="hidden" value="{{selectedTog}}" id="toggle" name="selectedTog"/>#}
+{#  #}
+{#  <ul class="nav">#}
+{#    {% for seq in amr_request.seqids %}#}
+{#    <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary#}
+{#      {% if selectedSeq == seq %}#}
+{#        active#}
+{#      {% endif%} " onclick="Func('{{seq}}');" id="{{seq}}">#}
+{#        {% for key, value in labidDict.items %}#}
+{#        {% if key == seq%}#}
+{#        {{key}}</a></li>#}
+{#    {% endif %}#}
+{#    {% endfor %}#}
+{#    {% endfor %}#}
+{#  </ul>#}
+{#</form>#}
+{#<br>#}
+{#<button class="btn btn-info btn-lg" id="toggle-vis" value='{{selectedTog}}' style="float: left" onclick='toggleFunc()'>Toggle</button>#}
+{#<br>#}
+{#<br>#}
+{#<br>#}
+{#<table id="datatable" class="table">#}
+{#  <thead>#}
+{#    <tr>#}
+{#      <th>Gene</th>#}
+{#      <th>Location</th>#}
+{#    </tr>#}
+{#  </thead>#}
+{#  <tbody>#}
+{#    {% if selectedSeq != None %}#}
+{#    {% for i in amr_details%}#}
+{#    {% if i.seqid == selectedSeq%}#}
+{#    {% for key, value in i.amr_results.items %}#}
+{#    <tr>#}
+{#      <td>{{ key }}</td>#}
+{#      {% if value == "chromosome" %}#}
+{#      <td class="table-secondary">Chromosome</td>#}
+{#      {% else %}#}
+{#      <td class="table-info">Plasmid {{ value }}</td>#}
+{#      {% endif %}#}
+{#    </tr>#}
+{#    {% endfor %}#}
+{#    {% endif %}#}
+{#    {% endfor %}#}
+{#    {% endif %}#}
+{#  </tbody>#}
+{#</table>#}
 <br>
 <br>
 <br>

@@ -27,4 +27,4 @@ if __name__ == '__main__':
         elif 'mega_fasta' in blob.name:
             blob_client.get_blob_to_path(container_name='databases',
                                          blob_name=blob.name,
-                                         file_path=os.path.join('/data/sequences', blob.name))
+                                         file_path=os.path.join('/sequences', blob.name))

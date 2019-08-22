@@ -358,6 +358,8 @@ def check_amr_summary_tasks():
                         seqid = row['Strain']
                         gene = row['Gene']
                         location = row['Location']
+                        if seqid not in seq_amr_dict:
+                            seq_amr_dict[seqid] = dict()
                         seq_amr_dict[seqid][gene] = location
                 for seqid in seq_amr_dict:
                     AMRDetail.objects.create(amr_request=amr_task,
@@ -592,7 +594,10 @@ def clean_old_containers():
                                    account_key=settings.AZURE_ACCOUNT_KEY)
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
-    patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$', 'amrsummary-\d+$']
+    patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$', 'amrsummary-\d+$',
+                          '^amrsummary-\d+-output$', '^prokka-\d+$', '^parsnp-\d+$',
+                          '^prokka-\d+-output$', '^parsnp-\d+-output$', '^prokka-result-\d+$',
+                          '^tree-\d+$']
     generator = blob_client.list_containers(include_metadata=True)
     for container in generator:
         for pattern in patterns_to_search:

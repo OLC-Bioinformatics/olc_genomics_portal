@@ -24,22 +24,27 @@
   <tbody>
      {% for neighbor_request in neighbor_requests %}
      <tr id="row{{neighbor_request.pk}}" style="text-align:center">
-       <td>{{ neighbor_request.seqid }}</td>
-          {% if neighbor_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:neighbor_result' neighbor_request_pk=neighbor_request.pk %}" class="btn btn-success btn-block" role="button">{{ neighbor_request.status }} <i class="fas fa-check-circle"></i></a></td>
-          {% elif neighbor_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ neighbor_request.status }}</a></td>
-          {% elif neighbor_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ neighbor_request.status }}</a></td>
-          {% elif neighbor_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ neighbor_request.status }}</button></td>
-          {% endif %}
+       {% if neighbor_request.seqid != '' %}
+           <td>{{ neighbor_request.seqid }}</td>
+       {% else %}
+           <td>{{ neighbor_request.uploaded_file_name }}</td>
+       {% endif %}
 
-          {% if neighbor_request.status == 'Complete' %}
-            <td><a href="{{ neighbor_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
-          {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
-          {% endif %}
+      {% if neighbor_request.status == 'Complete' %}
+         <td><a href="{% url 'geneseekr:neighbor_result' neighbor_request_pk=neighbor_request.pk %}" class="btn btn-success btn-block" role="button">{{ neighbor_request.status }} <i class="fas fa-check-circle"></i></a></td>
+      {% elif neighbor_request.status == 'Processing' %}
+         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ neighbor_request.status }}</a></td>
+      {% elif neighbor_request.status == 'Error' %}
+         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ neighbor_request.status }}</a></td>
+      {% elif neighbor_request.status == 'Unprocessed' %}
+         <td><button class="btn-secondary btn-block" disabled>{{ neighbor_request.status }}</button></td>
+      {% endif %}
+
+      {% if neighbor_request.status == 'Complete' %}
+        <td><a href="{{ neighbor_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+      {% else %}
+        <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+      {% endif %}
 
         <td>{{ neighbor_request.created_at }}</td>
         {% if neighborr_request.status != 'Processing' and 'Unprocessed' %}
