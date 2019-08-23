@@ -32,7 +32,7 @@ class VirTyperRequest(models.Model):
     STHY = 'STH'
     BURNABY = 'BUR'
     LABS = [
-        (STHY, 'Ste-Hyacinthe'),
+        (STHY, 'St. Hyacinthe'),
         (BURNABY, 'Burnaby'),
     ]
 
@@ -51,7 +51,7 @@ class VirTyperRequest(models.Model):
     LSTS_ID = models.CharField(max_length=50, blank=False)
     putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
     sample_name = models.CharField(max_length=50, blank=False)
-    subunit = models.PositiveIntegerField(max_length=3, null=True, blank=True)
+    subunit = models.PositiveIntegerField(null=True, blank=True)
     date_received = models.DateField(blank=False)
     analyst_name = models.CharField(max_length=50, blank=False)
 
@@ -79,14 +79,6 @@ class VirTyperResults(models.Model):
     trimmed_quality_mean = models.CharField(max_length=50, blank=False)
     trimmed_quality_min = models.CharField(max_length=50, blank=False)
     trimmed_quality_stdev = models.CharField(max_length=50, blank=False)
-
-# class VirTyperBlobContainerName(models.Model):
-#     project_name = models.ForeignKey(VirTyperProject, on_delete=models.CASCADE, related_name='project_blob_container')
-#     container_name = models.CharField(max_length=64, blank=False)
-
-# class VirTyperReport(models.Model):
-#     request = models.ForeignKey(VirTyperRequest, on_delete=models.CASCADE, related_name='vir_typer_request')
-#     sample = models.ForeignKey(VirTyperSample, on_delete=models.CASCADE, related_name='vir_typer_sample')
 
 
 class VirTyperAzureRequest(models.Model):

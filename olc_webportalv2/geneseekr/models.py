@@ -7,8 +7,8 @@ from olc_webportalv2.users.models import User
 # Create your models here.
 class GeneSeekrRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
-    missing_seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
+    missing_seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     query_sequence = models.CharField(max_length=10000, blank=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     download_link = models.CharField(max_length=256, blank=True)
@@ -17,11 +17,11 @@ class GeneSeekrRequest(models.Model):
     geneseekr_type = models.CharField(max_length=48, default='BLASTN')
     # This will hold a dictionary of percent of isolates where gene/sequence was found for each gene:
     # In format (ish) {'gene1': 70, 'gene2: 80}
-    geneseekr_results = JSONField(default={}, blank=True, null=True)
-    gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=[])
+    geneseekr_results = JSONField(default=dict, blank=True, null=True)
+    gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=list)
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
    
 
 # This model doesn't actually get used any more - to be deleted.
@@ -35,7 +35,7 @@ class GeneSeekrDetail(models.Model):
     seqid = models.CharField(max_length=24, default='')
     # Pretty much identical to geneseekr request JSONField, but this one has percent ID for the value instead of percent
     # of times found.
-    geneseekr_results = JSONField(default={}, blank=True, null=True)
+    geneseekr_results = JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):
         return self.seqid
@@ -63,18 +63,18 @@ class TopBlastHit(models.Model):
 
 class ParsnpTree(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[], null=True)
-    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list()), null=True)
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
+    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
     newick_tree = models.CharField(max_length=10000, blank=True)
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     tree_program = models.CharField(max_length=10000,null=False, default="parsnp")
     number_diversitree_strains = models.IntegerField(blank=True, null=True)
-    seqids_diversitree = ArrayField(models.CharField(max_length=24), blank=True, default=[])
+    seqids_diversitree = ArrayField(models.CharField(max_length=24), blank=True, default=list)
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
 
 
 class ParsnpAzureRequest(models.Model):
@@ -84,20 +84,20 @@ class ParsnpAzureRequest(models.Model):
 
 class AMRSummary(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[], null=True)
-    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list()), null=True)
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
+    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
 
 
 class AMRDetail(models.Model):
     amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='amrdetail', null=True)
     seqid = models.CharField(max_length=24, default='')
-    amr_results = JSONField(default={}, blank=True, null=True)
+    amr_results = JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):
         return self.seqid
@@ -110,14 +110,14 @@ class AMRAzureRequest(models.Model):
 
 class ProkkaRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[], null=True)
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
-    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list()), null=True)
+    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
     status = models.CharField(max_length=64, default='Unprocessed')
 
     name = models.CharField(max_length=50, blank=True, null=True)
-    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
 
 
 class ProkkaAzureRequest(models.Model):

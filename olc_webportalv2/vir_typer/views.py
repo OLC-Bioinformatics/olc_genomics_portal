@@ -25,11 +25,7 @@ import os
 @csrf_exempt  # needed or IE explodes
 @login_required
 def vir_typer_home(request):
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    vir_typer_projects = VirTyperProject.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
-    if request.POST.get('delete'):
-        query = VirTyperProject.objects.filter(pk=request.POST.get('delete'))
-        query.delete()
+    vir_typer_projects = VirTyperProject.objects.filter(user=request.user)
     return render(request,
                   'vir_typer/vir_typer_home.html',
                   {
@@ -40,11 +36,11 @@ def vir_typer_home(request):
 @login_required
 def vir_typer_request(request):
     tombstone_form = VirTyperProjectForm()
-    # TableFormSet = formset_factory(CustomTableForm, formset=BaseSearchFormSet)
-    SampleFormSet = formset_factory(VirTyperSampleForm, formset=BaseVirTyperSampleFormSet, max_num=10)
+    # Create a sample form set using the sample form and formset_factory
+    sample_form_set_factory = formset_factory(VirTyperSampleForm, formset=BaseVirTyperSampleFormSet, max_num=10)
     if request.method == 'POST':
         tombstone_form = VirTyperProjectForm(request.POST)
-        sample_form_set = SampleFormSet(request.POST)
+        sample_form_set = sample_form_set_factory(request.POST)
         if tombstone_form.is_valid() and sample_form_set.is_valid():
             project_name = tombstone_form.cleaned_data.get('project_name')
             vir_typer_project = VirTyperProject.objects.create(project_name=project_name,
@@ -89,7 +85,7 @@ def vir_typer_request(request):
                     out_str += '{field}: {err}\n'.format(field=field, err=err)
             messages.error(request, sample_form_set.non_form_errors())
     else:
-        sample_form_set = SampleFormSet()
+        sample_form_set = sample_form_set_factory()
     return render(request,
                   'vir_typer/vir_typer_create.html',
                   {
@@ -345,6 +341,7 @@ def vir_typer_results(request, vir_typer_pk):
                 outputs.append(sample_dict)
     json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
     data_tables_path = '../../../../static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
+    print('path', json_path)
     os.makedirs('olc_webportalv2/static/ajax/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
     # Create the JSON-formatted output file
     with open(json_path, 'w') as json_out:

@@ -74,6 +74,6 @@ class SequenceData(models.Model):
 
 
 class MetaDataRequest(models.Model):
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=[])
-    criteria = JSONField(default={}, blank=True, null=True) 
+    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
+    criteria = JSONField(default=dict, blank=True, null=True)
 

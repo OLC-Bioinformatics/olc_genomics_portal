@@ -1,16 +1,9 @@
-from django import forms
-from django.forms.models import formset_factory
-from django.forms.widgets import DateInput
-from django.forms.formsets import BaseFormSet
-from Bio import SeqIO
-from io import StringIO
-import re
-from olc_webportalv2.metadata.models import SequenceData
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest
-from django.forms.widgets import EmailInput
-from django.forms import ModelForm
-from .models import VirTyperProject, VirTyperRequest
 from django.utils.translation import ugettext_lazy as _
+from django.forms.formsets import BaseFormSet
+from django.forms import ModelForm
+from django import forms
+
+from .models import VirTyperProject, VirTyperRequest
 
 
 class BaseVirTyperSampleFormSet(BaseFormSet):

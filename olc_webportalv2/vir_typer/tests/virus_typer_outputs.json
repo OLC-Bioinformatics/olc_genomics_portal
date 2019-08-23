@@ -1,0 +1,110 @@
+{
+    "P19954_2019_VI482_11_GI_B03_M13-R17_E10_072": {
+        "allele": "00069",
+        "cutadapt_cmd": "cutadapt -g file:/envs/virustyper/lib/python3.6/site-packages/virustyper/forward_typing_primers.fasta -a file:/envs/virustyper/lib/python3.6/site-packages/virustyper/reverse_typing_primers.fasta -n 2 /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.fastq -o /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072_trimmed.fastq 1> /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072_cutadapt_report.txt",
+        "cutadapt_err": "",
+        "cutadapt_out": "",
+        "cutadapt_report": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072_cutadapt_report.txt",
+        "fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.fastq",
+        "filepath": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.ab1",
+        "name": "P19954_2019_VI482_11_GI_B03_M13-R17_E10_072",
+        "orientation": "normal",
+        "primer_matches": {
+            "forward": {
+                "NOVGI_QNIF4_F": "CGCTGGATGCGNTTCCAT"
+            },
+            "reverse": {
+                "NOVGI_NV1LCR_R": "GTAAATGATGATGGCGTCTAAGG"
+            }
+        },
+        "raw_seq": "NNNNNNNNNNNNNCGGATCCNCTAGTAACGGCCGCCAGTGTGCTGGAATTCGCCCTTCGCTGGATGCGGTTCCATGACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTCGTAAATGATGATGGCGTCTAAGGAAGGGCGAATTCTGCAGATATCCATCACACTGGCGGCCGCTCGAGCATGCATCTAGAGGGCCCAATTCGCCCTATAGTGAGTCGTATTACAATTCACTGGCCGTCGTTTTACAN",
+        "rev_comp_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072_rev_comp.fastq",
+        "trimmed_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B03_M13-R17_E10_072_trimmed.fastq",
+        "trimmed_quality_max": "58",
+        "trimmed_quality_mean": "53.00",
+        "trimmed_quality_min": "29",
+        "trimmed_quality_stdev": "6.10",
+        "trimmed_seq": "GACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTC"
+    },
+    "P19954_2019_VI482_11_GI_B04_M13-R17_F10_070": {
+        "allele": "00057",
+        "cutadapt_cmd": "cutadapt -g file:/envs/virustyper/lib/python3.6/site-packages/virustyper/forward_typing_primers.fasta -a file:/envs/virustyper/lib/python3.6/site-packages/virustyper/reverse_typing_primers.fasta -n 2 /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.fastq -o /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070_trimmed.fastq 1> /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070_cutadapt_report.txt",
+        "cutadapt_err": "",
+        "cutadapt_out": "",
+        "cutadapt_report": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070_cutadapt_report.txt",
+        "fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.fastq",
+        "filepath": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.ab1",
+        "name": "P19954_2019_VI482_11_GI_B04_M13-R17_F10_070",
+        "orientation": "normal",
+        "primer_matches": {
+            "forward": {
+                "NOVGI_QNIF4_F": "CGCTGGATGCGNTTCCAT"
+            },
+            "reverse": {
+                "NOVGI_NV1LCR_R": "GTAAATGATGATGGCGTCTAAGG"
+            }
+        },
+        "raw_seq": "NNNNNNNNNNNNNAGTAACGGCCGCCAGTGTGCTGGAATTCGCCCTTCGTGGATGCGGTTCCATGACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAACTCGTAAATGATGATGGCGTCTAAGGAAGGGCGAATTCTGCAGATATCCATCACACTGGCGGCCGCTCGAGCATGCATCTAGAGGGCCCAATTCGCCCTATAGTGAGTCGTATTACAATTCACTGGCCGTCGTTTTACAN",
+        "rev_comp_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070_rev_comp.fastq",
+        "trimmed_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B04_M13-R17_F10_070_trimmed.fastq",
+        "trimmed_quality_max": "58",
+        "trimmed_quality_mean": "53.49",
+        "trimmed_quality_min": "26",
+        "trimmed_quality_stdev": "6.23",
+        "trimmed_seq": "GACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAACTC"
+    },
+    "P19954_2019_VI482_11_GI_B05_M13-R17_G10_068": {
+        "allele": "00069",
+        "cutadapt_cmd": "cutadapt -g file:/envs/virustyper/lib/python3.6/site-packages/virustyper/forward_typing_primers.fasta -a file:/envs/virustyper/lib/python3.6/site-packages/virustyper/reverse_typing_primers.fasta -n 2 /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.fastq -o /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068_trimmed.fastq 1> /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068_cutadapt_report.txt",
+        "cutadapt_err": "",
+        "cutadapt_out": "",
+        "cutadapt_report": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068_cutadapt_report.txt",
+        "fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.fastq",
+        "filepath": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.ab1",
+        "name": "P19954_2019_VI482_11_GI_B05_M13-R17_G10_068",
+        "orientation": "normal",
+        "primer_matches": {
+            "forward": {
+                "NOVGI_QNIF4_F": "CGCTGGATGCGNTTCCAT"
+            },
+            "reverse": {
+                "NOVGI_NV1LCR_R": "GTAAATGATGATGGCGTCTAAGG"
+            }
+        },
+        "raw_seq": "NNNNNNNCNNCNNGNAACGGCCGCCAGTGTGCTGGAATTCGCCCTTCGCTGGATGCGGTTCCATGACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTCGTAAATGATGATGGCGTCTAAGGAAGGGCGAATTCTGCAGATATCCATCACACTGGCGGCCGCTCGAGCATGCATCTAGAGGGCCCAATTCGCCCTATAGTGAGTCGTATTACAATTCACTGGCCGTCGTTTTACAA",
+        "rev_comp_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068_rev_comp.fastq",
+        "trimmed_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI482_11_GI_B05_M13-R17_G10_068_trimmed.fastq",
+        "trimmed_quality_max": "58",
+        "trimmed_quality_mean": "53.33",
+        "trimmed_quality_min": "36",
+        "trimmed_quality_stdev": "5.59",
+        "trimmed_seq": "GACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTC"
+    },
+    "P19954_2019_VI483_11_GI_B05_M13-R17_G10_074": {
+        "allele": "00069",
+        "cutadapt_cmd": "cutadapt -g file:/envs/virustyper/lib/python3.6/site-packages/virustyper/forward_typing_primers.fasta -a file:/envs/virustyper/lib/python3.6/site-packages/virustyper/reverse_typing_primers.fasta -n 2 /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.fastq -o /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074_trimmed.fastq 1> /mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074_cutadapt_report.txt",
+        "cutadapt_err": "",
+        "cutadapt_out": "",
+        "cutadapt_report": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074_cutadapt_report.txt",
+        "fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.fastq",
+        "filepath": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.ab1",
+        "name": "P19954_2019_VI483_11_GI_B05_M13-R17_G10_074",
+        "orientation": "normal",
+        "primer_matches": {
+            "forward": {
+                "NOVGI_QNIF4_F": "CGCTGGATGCGNTTCCAT"
+            },
+            "reverse": {
+                "NOVGI_NV1LCR_R": "GTAAATGATGATGGCGTCTAAGG"
+            }
+        },
+        "raw_seq": "NNNNNNNCNNCNNGNAACGGCCGCCAGTGTGCTGGAATTCGCCCTTCGCTGGATGCGGTTCCATGACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTCGTAAATGATGATGGCGTCTAAGGAAGGGCGAATTCTGCAGATATCCATCACACTGGCGGCCGCTCGAGCATGCATCTAGAGGGCCCAATTCGCCCTATAGTGAGTCGTATTACAATTCACTGGCCGTCGTTTTACAA",
+        "rev_comp_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074_rev_comp.fastq",
+        "trimmed_fastq": "/mnt/batch/tasks/workitems/vir-typer-185-2019-vir-0001/job-1/vir-typer-185-2019-vir-0001/wd/sequences/P19954_2019_VI483_11_GI_B05_M13-R17_G10_074_trimmed.fastq",
+        "trimmed_quality_max": "58",
+        "trimmed_quality_mean": "53.33",
+        "trimmed_quality_min": "36",
+        "trimmed_quality_stdev": "5.59",
+        "trimmed_seq": "GACCTTGGCCTGTGGACAGGAGATCGCAATCTCCTGCCCGAATTC"
+    }
+}
