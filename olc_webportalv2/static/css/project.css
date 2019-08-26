@@ -68,17 +68,10 @@ label.col-sm-2.control-label {
 .card-deck { 
   display: flex;
   }
-.card-deck > article {
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 20px;
-  margin: 15px;
-  width: 320px;
-  height: 315px;
-}
-.card-deck > article:hover {
-  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-}
+ 
+.card:hover{ 
+    box-shadow: 1px 8px 20px grey;
+ }
 
 /* Styling on Profile */
 .list-group{
