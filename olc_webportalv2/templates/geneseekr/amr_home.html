@@ -39,7 +39,7 @@
           {% elif amr_request.status == 'Error' %}
              <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ amr_request.status }}</a></td>
           {% elif amr_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ amr_request.status }}</button></td>
+             <td><button class="btn btn-secondary btn-block" disabled>{{ amr_request.status }}</button></td>
           {% endif %}
 
           {% if amr_request.status == 'Complete' %}

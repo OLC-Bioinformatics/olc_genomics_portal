@@ -37,7 +37,7 @@
       {% elif neighbor_request.status == 'Error' %}
          <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ neighbor_request.status }}</a></td>
       {% elif neighbor_request.status == 'Unprocessed' %}
-         <td><button class="btn-secondary btn-block" disabled>{{ neighbor_request.status }}</button></td>
+         <td><button class="btn btn-secondary btn-block" disabled>{{ neighbor_request.status }}</button></td>
       {% endif %}
 
       {% if neighbor_request.status == 'Complete' %}
