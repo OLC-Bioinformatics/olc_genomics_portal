@@ -31,7 +31,7 @@
           {% elif sequencing_run.status == 'UploadError' %} 
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning btn-block" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}
-          <td><button class="btn-secondary btn-block" disabled>Unprocessed</button></td>
+          <td><button class="btn btn-secondary btn-block" disabled>Unprocessed</button></td>
           {% endif %}
           <td>
           {% if sequencing_run.status == 'Complete' %}
