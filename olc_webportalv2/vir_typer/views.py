@@ -1,24 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils.translation import ugettext_lazy as _
-# WeasyPrint
-from weasyprint import HTML, CSS
-from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
-# Portal-specific things
-from .forms import VirTyperFileForm, VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
-from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
-from .tasks import run_vir_typer
-from .tasks import run_vir_typer
 from django.forms.formsets import formset_factory
-from django.db import IntegrityError, transaction
-from django.contrib import messages
-from django.urls import reverse
 from azure.storage.blob import BlockBlobService
+from django.contrib import messages
+from weasyprint import HTML, CSS
 from django.conf import settings
-import datetime
 import json
 import os
+
+# VirusTyper-specific code
+from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
+from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
+from .tasks import run_vir_typer
 
 
 # Vir_Typer Views
@@ -313,7 +308,7 @@ def vir_typer_results(request, vir_typer_pk):
                 alleles[sample.sample_name] = set()
                 for vir_file in VirTyperFiles.objects.filter(sample_name__pk=sample.pk):
                     vir_files.append(vir_file)
-                    seq_identifier_well = os.path.splitext(vir_file.sequence_file)[0].split('_')[-2]
+                    seq_identifier_well = str(os.path.splitext(vir_file.sequence_file)[0].split('_')[-2])
                     seq_identifier_num = os.path.splitext(vir_file.sequence_file)[0].split('_')[-1]
                     seq_identifier_code = '_'.join((seq_identifier_well, seq_identifier_num))
                     sample_dict['identifier'].append(seq_identifier_code + '\n')
@@ -341,7 +336,6 @@ def vir_typer_results(request, vir_typer_pk):
                 outputs.append(sample_dict)
     json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
     data_tables_path = '../../../../static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
-    print('path', json_path)
     os.makedirs('olc_webportalv2/static/ajax/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
     # Create the JSON-formatted output file
     with open(json_path, 'w') as json_out:
