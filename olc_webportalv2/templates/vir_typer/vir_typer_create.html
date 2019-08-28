@@ -13,7 +13,7 @@
     </div>
    {% endif %}
   {% csrf_token %}
-   <div class="col-3" style="padding-left:0;">
+   <div class="col-3" style="padding-left:0;" data-tooltip='tooltip' title='hi'>
       {{ tombstone_form.project_name|as_crispy_field }}
       </div>
 
@@ -21,30 +21,30 @@
 {% for sample_form in sample_formset %}
 	<div class="sample_formset">
 	 <div class="form-row">
-      <div class="form-group col-md-2 mb-0">
+      <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.sample_name|as_crispy_field }}
       </div>
-         <div class="form-group col-md-2 mb-0">
+         <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.LSTS_ID|as_crispy_field }}
       </div>
-         <div class="form-group col-md-2 mb-0">
+         <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.lab_ID|as_crispy_field }}
         </div>
-         <div class="form-group col-md-1 mb-0">
+         <div class="form-group col-md-1 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.subunit|as_crispy_field }}
         </div>
-         <div class="form-group col-md-3 mb-0">
+         <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.putative_classification|as_crispy_field }}
     </div>
      </div>
         <div class="form-row">
-         <div class="form-group col-md-3 mb-0">
+         <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.isolate_source|as_crispy_field }}
     </div>
-         <div class="form-group col-md-3 mb-0">
+         <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title='hi'>
         {{ sample_form.analyst_name|as_crispy_field }}
          </div>
-       <div class="form-group col-md-2 mb-0">
+       <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title='hi'>
           {{ sample_form.date_received|as_crispy_field }}
     </div>
     </div>
@@ -58,12 +58,28 @@
  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+   <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+   <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
    <script src="{% static 'js/jquery.formset.js' %}"></script>
    <script type="text/javascript"> // Allows adding and removal of formsets
         $('.sample_formset').formset({
             addText: '<i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
             deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %} <br></br><br>'
     });
+      $('.datepicker').datepicker({
+      format: "yyyy-mm-dd",
+      language: "{{LANGUAGE_CODE}}",
+      orientation: "bottom auto"
+      });
+    </script>
+    <script type="text/javascript">
+    $('.add-row').click(function(){
+      $('.datepicker').datepicker({
+      format: "yyyy-mm-dd",
+      language: "{{LANGUAGE_CODE}}",
+      orientation: "bottom auto"
+    });
+    })
     </script>
 
 {% endblock %}
