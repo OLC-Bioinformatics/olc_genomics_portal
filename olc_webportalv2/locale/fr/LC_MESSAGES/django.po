@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-08-22 14:40+0000\n"
+"POT-Creation-Date: 2019-08-28 20:13+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,7 +60,7 @@ msgid "Re-send Verification"
 msgstr ""
 
 #: olc_webportalv2/templates/account/email.html:41
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:65
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:67
 msgid "Remove"
 msgstr "Retirer"
 
@@ -202,7 +202,7 @@ msgstr ""
 
 #: olc_webportalv2/templates/account/signup.html:10
 #: olc_webportalv2/templates/account/signup.html:20
-#: olc_webportalv2/templates/base.html:106
+#: olc_webportalv2/templates/base.html:128
 msgid "Sign Up"
 msgstr ""
 
@@ -256,85 +256,85 @@ msgid ""
 "mail address</a>."
 msgstr ""
 
-#: olc_webportalv2/templates/base.html:7
+#: olc_webportalv2/templates/base.html:10
 msgid "CFIA FoodPort"
 msgstr "AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:30
+#: olc_webportalv2/templates/base.html:38
 msgid "  CFIA FoodPort"
 msgstr "  AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:35
+#: olc_webportalv2/templates/base.html:43
 msgid "Home "
 msgstr "Page d'accueil "
 
-#: olc_webportalv2/templates/base.html:39
+#: olc_webportalv2/templates/base.html:48
 msgid "Explore"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:41
+#: olc_webportalv2/templates/base.html:50
 msgid "Search "
 msgstr "Chercher "
 
-#: olc_webportalv2/templates/base.html:42
+#: olc_webportalv2/templates/base.html:52
 msgid "Browse "
 msgstr "Feuilleter "
 
-#: olc_webportalv2/templates/base.html:48
+#: olc_webportalv2/templates/base.html:59
 msgid "Retrieve "
 msgstr "Retrouver "
 
-#: olc_webportalv2/templates/base.html:52
+#: olc_webportalv2/templates/base.html:64
 msgid "Assembly "
 msgstr "Assemblage "
 
-#: olc_webportalv2/templates/base.html:55
+#: olc_webportalv2/templates/base.html:69
 msgid "Analyze"
 msgstr "Analyser"
 
-#: olc_webportalv2/templates/base.html:57
+#: olc_webportalv2/templates/base.html:71
 msgid "Find Genes "
 msgstr "Trouver des gènes "
 
-#: olc_webportalv2/templates/base.html:58
-#: olc_webportalv2/templates/base.html:179
+#: olc_webportalv2/templates/base.html:73
+#: olc_webportalv2/templates/base.html:215
 msgid "Create Tree "
 msgstr "Créer un arbre phylogénétique "
 
-#: olc_webportalv2/templates/base.html:59
+#: olc_webportalv2/templates/base.html:75
 msgid "Investigate AMR "
 msgstr "Enquêter sur la résistance antimicrobiens "
 
-#: olc_webportalv2/templates/base.html:60
+#: olc_webportalv2/templates/base.html:77
 msgid "Annotate "
 msgstr "Annoter "
 
-#: olc_webportalv2/templates/base.html:61
+#: olc_webportalv2/templates/base.html:79
 msgid "Find Near Neighbors "
 msgstr "Trouver les voisins proches "
 
-#: olc_webportalv2/templates/base.html:90
+#: olc_webportalv2/templates/base.html:109
 msgid "Profile"
 msgstr "Profile"
 
-#: olc_webportalv2/templates/base.html:95
+#: olc_webportalv2/templates/base.html:115
 msgid "Sign Out"
 msgstr "Se Déconnecter"
 
-#: olc_webportalv2/templates/base.html:101
+#: olc_webportalv2/templates/base.html:122
 msgid "Login"
 msgstr "S'identifier"
 
-#: olc_webportalv2/templates/base.html:130
+#: olc_webportalv2/templates/base.html:156
 msgid "Welcome to the CFIA FoodPort"
 msgstr "Bienvenue à AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:137
-#: olc_webportalv2/templates/base.html:142
+#: olc_webportalv2/templates/base.html:169
+#: olc_webportalv2/templates/base.html:173
 msgid "Explore Data"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:138
+#: olc_webportalv2/templates/base.html:172
 msgid ""
 "Identify sequences for analysis. Search based on genus/species/serotype/MLST "
 "and get a list of SeqIDs/LabIDs."
@@ -342,21 +342,21 @@ msgstr ""
 "Identifier les séquences pour l'analyse. Recherche basée sur genre/espèce/"
 "sérotype/MLST et obtenir une liste de SeqIDs/LabIDs."
 
-#: olc_webportalv2/templates/base.html:148
-#: olc_webportalv2/templates/base.html:150
+#: olc_webportalv2/templates/base.html:179
+#: olc_webportalv2/templates/base.html:183
 msgid "Get Data"
 msgstr "Retrouver"
 
-#: olc_webportalv2/templates/base.html:149
+#: olc_webportalv2/templates/base.html:182
 msgid "Retrieve copies of files stored at OLC to analyze locally."
 msgstr "Retrouver les assemblages chez LOC pour effectuer des analyses locales"
 
-#: olc_webportalv2/templates/base.html:155
-#: olc_webportalv2/templates/base.html:160
+#: olc_webportalv2/templates/base.html:189
+#: olc_webportalv2/templates/base.html:193
 msgid "Assembly"
 msgstr "Assemblage"
 
-#: olc_webportalv2/templates/base.html:156
+#: olc_webportalv2/templates/base.html:192
 msgid ""
 "For submission of raw sequence data for assembly. You can also use this to "
 "get reports and assemblies from previous runs."
@@ -364,32 +364,32 @@ msgstr ""
 "Pour la soumission des séquences pour l'assemblage. Vous pouvez également "
 "obtenir des rapports et des assemblages d'anciennes exécutions."
 
-#: olc_webportalv2/templates/base.html:165
-#: olc_webportalv2/templates/base.html:168
+#: olc_webportalv2/templates/base.html:201
+#: olc_webportalv2/templates/base.html:205
 msgid "Find Genes"
 msgstr "Trouver des gènes"
 
-#: olc_webportalv2/templates/base.html:166
+#: olc_webportalv2/templates/base.html:204
 msgid ""
 "Use GeneSeekr to search for any gene of interest in our assembly database."
 msgstr ""
 "Utilise GeneSeekr pour trouver des gènes dans notre base de données "
 "d'assemblage"
 
-#: olc_webportalv2/templates/base.html:173
+#: olc_webportalv2/templates/base.html:211
 msgid "Create a Tree"
 msgstr "Créer un arbre phylogénétique"
 
-#: olc_webportalv2/templates/base.html:174
+#: olc_webportalv2/templates/base.html:214
 msgid "Create phylogenetic trees of assemblies."
 msgstr "Créer des arbres phylogénétiques d'assemblages."
 
-#: olc_webportalv2/templates/base.html:184
-#: olc_webportalv2/templates/base.html:190
+#: olc_webportalv2/templates/base.html:221
+#: olc_webportalv2/templates/base.html:225
 msgid "Investigate AMR"
 msgstr "Enquêter sur la résistance antimicrobiens"
 
-#: olc_webportalv2/templates/base.html:185
+#: olc_webportalv2/templates/base.html:224
 msgid ""
 "Look for AMR genes in assemblies, and find out if they're present on mobile "
 "elements or the chromosome."
@@ -397,16 +397,16 @@ msgstr ""
 "Enquêter sur la résistance antimicrobiens dans les assemblages et déterminez "
 "leur emplacement"
 
-#: olc_webportalv2/templates/base.html:195
-#: olc_webportalv2/templates/base.html:201
+#: olc_webportalv2/templates/base.html:233
+#: olc_webportalv2/templates/base.html:237
 msgid "Annotate Genomes"
 msgstr "Annoter"
 
-#: olc_webportalv2/templates/base.html:196
+#: olc_webportalv2/templates/base.html:236
 msgid "Annotate assemblies with Prokka."
 msgstr "Annoter les assemblages avec Prokka"
 
-#: olc_webportalv2/templates/base.html:207
+#: olc_webportalv2/templates/base.html:246
 msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
 
@@ -414,11 +414,49 @@ msgstr "Caractériser les séquences virales"
 msgid "Sample Creation"
 msgstr "Création des échantillons"
 
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:16
+msgid "Select a unique name for this project"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:24
+msgid "Sample name e.g. VI0639"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:27
+msgid "LSTS ID e.g. 2019FPP00000475214"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:30
+msgid "Laboratory name (select from list)"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:33
+msgid "Sampling number (can be blank) e.g. 15"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:36
+msgid "Initial classification (select from list)"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:41
+msgid "Source of sample e.g. oyster"
+msgstr ""
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:44
+#, fuzzy
+#| msgid "Analyst name is required"
+msgid "Analyst name e.g. Jane Doe"
+msgstr "Le nom de l'analyste est obligatoire"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:47
+msgid "Date sample was received (select from calendar)"
+msgstr ""
+
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:55
 msgid "Create samples"
 msgstr "Créer les échantillons"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:64
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:66
 msgid "Add New Sample"
 msgstr "Ajouter un échantillon"
 
@@ -436,7 +474,7 @@ msgid "Create A Virus Typer Query"
 msgstr "Créer une requête de Virus Typer"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
-#: olc_webportalv2/vir_typer/forms.py:66
+#: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
 msgstr "Projet"
 
@@ -506,51 +544,57 @@ msgstr "entrées"
 msgid "Show "
 msgstr "Affiche "
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:76
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:75
+#, fuzzy
+#| msgid "Search "
+msgid "Search"
+msgstr "Chercher "
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:77
 msgid "First"
 msgstr "Premier"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:77
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:78
 msgid "Previous"
 msgstr "Précédente"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:78
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:79
 msgid "Next"
 msgstr "Prochaine"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:79
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:80
 msgid "Last"
 msgstr "Dernière"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:102
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:103
 msgid "Are you sure?"
 msgstr "Êtes-vous sûr?"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:103
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
 msgid "You will not be able to revert this!"
 msgstr "Vous ne pouvez pas reprendre ceci!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:106
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:107
 msgid "Cancel"
 msgstr "Annuler"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:108
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:109
 msgid "Yes, delete it!"
 msgstr "Supprime-le!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:113
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:114
 msgid "Deleted!"
 msgstr "Supprimé! "
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:114
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
 msgid "Your project has been deleted."
 msgstr "Votre projet a été supprimé."
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:132
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:133
 msgid "Cancelled!"
 msgstr "Annulé!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:133
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:134
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
@@ -559,91 +603,85 @@ msgstr "Votre projet est sûr."
 msgid "Project:"
 msgstr "Projet:"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:15
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:44
-msgid "Report Issuance Date:"
-msgstr "Date d'émission du rapport:"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
-msgid "Laboratory"
-msgstr "Laboratoire"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
-msgid "Address"
-msgstr "Adresse"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:56
-msgid "Tel #"
-msgstr "Numéro de téléphone"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:31
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
-msgid "CFIA Burnaby"
-msgstr "ACIA Burnaby"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:36
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:66
-msgid "CFIA St. Hyacinthe"
-msgstr "ACIA St.Hyacinthe"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:47
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
-#: olc_webportalv2/vir_typer/forms.py:82
+#: olc_webportalv2/vir_typer/forms.py:75
 msgid "Sample Name"
 msgstr "Échantillon"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:48
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:21
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
-#: olc_webportalv2/vir_typer/forms.py:84
+#: olc_webportalv2/vir_typer/forms.py:77
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:49
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:22
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:81
 msgid "Date Received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:50
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:23
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:82
 msgid "Source"
 msgstr "Source"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:51
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:83
 msgid "Organism"
 msgstr "Organisme"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:52
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:84
 msgid "Identifier"
 msgstr "Identifiant"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:53
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:85
 msgid "Trimmed Sequence"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:54
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:86
 msgid "Allele"
 msgstr "Allèle"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:55
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:87
 msgid "Length"
 msgstr "Longueur"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:56
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:29
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:88
 msgid "Mismatches"
 msgstr "Discordances"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:91
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:37
 msgid "Create PDF Report"
 msgstr "Créer un rapport PDF"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:44
+msgid "Report Issuance Date:"
+msgstr "Date d'émission du rapport:"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
+msgid "Laboratory"
+msgstr "Laboratoire"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
+msgid "Address"
+msgstr "Adresse"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:56
+msgid "Tel #"
+msgstr "Numéro de téléphone"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
+msgid "CFIA Burnaby"
+msgstr "ACIA Burnaby"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:66
+msgid "CFIA St. Hyacinthe"
+msgstr "ACIA St.Hyacinthe"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:89
 msgid "Quality Mean"
@@ -682,58 +720,74 @@ msgstr "Télécharger des fichiers de séquence"
 msgid "Name"
 msgstr "Nom"
 
-#: olc_webportalv2/vir_typer/forms.py:24
+#: olc_webportalv2/vir_typer/forms.py:17
 msgid "Sample name is required"
 msgstr "Le nom de l'échantillon est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:26
+#: olc_webportalv2/vir_typer/forms.py:19
 msgid "Reception date is required"
 msgstr "La date de réception est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:28
+#: olc_webportalv2/vir_typer/forms.py:21
 msgid "LSTS ID is required"
 msgstr "Identifiant SIESAL est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:30
+#: olc_webportalv2/vir_typer/forms.py:23
 msgid "Isolate source is required"
 msgstr "La source de l'échantillon est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:32
+#: olc_webportalv2/vir_typer/forms.py:25
 msgid "Analyst name is required"
 msgstr "Le nom de l'analyste est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:63
+#: olc_webportalv2/vir_typer/forms.py:56
 msgid "Required"
 msgstr "Champs obligatoires"
 
-#: olc_webportalv2/vir_typer/forms.py:70
+#: olc_webportalv2/vir_typer/forms.py:63
 msgid "The project name must be unique"
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/vir_typer/forms.py:83
+#: olc_webportalv2/vir_typer/forms.py:76
 msgid "Date received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/vir_typer/forms.py:85
+#: olc_webportalv2/vir_typer/forms.py:78
 msgid "Lab ID"
 msgstr "Identifiant labo"
 
-#: olc_webportalv2/vir_typer/forms.py:86
+#: olc_webportalv2/vir_typer/forms.py:79
 msgid "Subunit"
 msgstr "Sous-unité"
 
-#: olc_webportalv2/vir_typer/forms.py:87
+#: olc_webportalv2/vir_typer/forms.py:80
 msgid "Putative classification"
 msgstr "Classification putative"
 
-#: olc_webportalv2/vir_typer/forms.py:88
+#: olc_webportalv2/vir_typer/forms.py:81
 msgid "Isolate source"
 msgstr "Source de l'échantillon"
 
-#: olc_webportalv2/vir_typer/forms.py:89
+#: olc_webportalv2/vir_typer/forms.py:82
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
 
-#: olc_webportalv2/vir_typer/views.py:77
+#: olc_webportalv2/vir_typer/urls.py:11
+msgid "^create/"
+msgstr "^créer"
+
+#: olc_webportalv2/vir_typer/urls.py:12
+msgid "^upload/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^télécharger/(?P<vir_typer_pk>\\d+)/$"
+
+#: olc_webportalv2/vir_typer/urls.py:13
+msgid "^results/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^résultats/(?P<vir_typer_pk>\\d+)/$"
+
+#: olc_webportalv2/vir_typer/urls.py:14
+msgid "^edit/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
+
+#: olc_webportalv2/vir_typer/views.py:70
 msgid "You have created project "
 msgstr "Vous avez créé le projet "

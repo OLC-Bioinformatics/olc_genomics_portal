@@ -23,16 +23,17 @@ urlpatterns = [
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
+    url(r'^vir_typer/', include(('olc_webportalv2.vir_typer.urls', 'vir_typer'), namespace='vir_typer')),
     url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
     path('i18n/', include('django.conf.urls.i18n')),
     path('api-auth/', include('rest_framework.urls'))
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# Add locale
-urlpatterns += i18n_patterns(
-    path('vir_typer/', include('olc_webportalv2.vir_typer.urls'))
-) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# # Add locale
+# urlpatterns += i18n_patterns(
+#
+# ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Do not add the language prefix
 # urlpatterns += i18n_patterns(
