@@ -66,11 +66,20 @@
             addText: '<i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
             deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %} <br></br><br>'
     });
-    $('#datepicker').datepicker({
-    format: "yyyy-mm-dd",
-    language: "{{LANGUAGE_CODE}}",
-    orientation: "bottom auto"
-});
+      $('.datepicker').datepicker({
+      format: "yyyy-mm-dd",
+      language: "{{LANGUAGE_CODE}}",
+      orientation: "bottom auto"
+      });
+    </script>
+    <script type="text/javascript">
+    $('.add-row').click(function(){
+      $('.datepicker').datepicker({
+      format: "yyyy-mm-dd",
+      language: "{{LANGUAGE_CODE}}",
+      orientation: "bottom auto"
+    });
+    })
     </script>
 
 {% endblock %}
