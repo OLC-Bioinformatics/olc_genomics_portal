@@ -42,7 +42,7 @@ class BaseModelForm(ModelForm):
                 if field_name == 'date_received':
                     field.widget = forms.TextInput(
                         attrs={
-                            'type': 'date',
+                            'class': 'datepicker',
                         }
                     )
 
