@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.conf import settings
-
+from django.db.models import Q
 from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
     make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
 from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID, OLNID
@@ -162,11 +162,11 @@ def metadata_home(request):
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
-    labidDict = LabID_sync_SeqID(metadata_result.seqids)
+    idDict = id_sync(metadata_result)
     return render(request,
                   'metadata/metadata_results.html',
                   {
-                      'metadata_result': metadata_result, 'labidDict': labidDict
+                      'metadata_result': metadata_result, 'idDict': idDict
                   })
 
 
@@ -179,15 +179,20 @@ def metadata_browse(request):
                       'sequence_data': sequence_data
                   })
 
-
-# TODO: The optimization on this is horrendous. We're hitting the DB potentially thousands of times.
-def LabID_sync_SeqID(seqid_list):
-    labidDict = dict()
-    for item in seqid_list:
-        sequence_result = SequenceData.objects.get(seqid=item)
-        if sequence_result.labid is not None:
-            labid_result = LabID.objects.get(pk=sequence_result.labid.pk)
+def id_sync(metadata_result):
+    idDict = dict()
+    data_set = SequenceData.objects.filter(seqid__in=metadata_result.seqids)
+    for item in data_set:
+        if item.labid is not None:
+            labid_result = str(item.labid)
         else:
             labid_result = 'N/A'
-        labidDict.update({sequence_result.seqid: str(labid_result)})
-    return labidDict
+
+        if item.olnid is not None:
+            olnid_result = str(item.olnid)
+        else:
+            olnid_result = 'N/A'  
+
+        idDict.update({item.seqid:(labid_result,olnid_result)})
+    return idDict,
+    

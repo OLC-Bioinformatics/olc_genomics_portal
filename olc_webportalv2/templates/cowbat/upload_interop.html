@@ -6,7 +6,7 @@
 {% block content %}
   <h2>Step 2 of 3: Upload InterOp Files for Run {{ sequencing_run.run_name }}</h2>
   <br>
-  <form action={% url 'cowbat:upload_interop'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+  <form action={% url 'cowbat:upload_interop' sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
    <div class="dz-message needsclick">
         Drop files to upload or click here<br>
         <i class="fas fa-cloud-upload-alt fa-4x"></i>
