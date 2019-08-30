@@ -19,8 +19,9 @@
   <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">Copy SeqIDs</button>
   <br>
   <br>
+  <div class="alert alert-success" id="success" style="float:right;display:none">Copied to Clipboard!</div>
   <br>
-  <div class="alert alert-success" id="success" style="float:right;display:none">Copied to Clipboard</div>
+  <br>
   <br>
 
   <table class="table table-hover" id="table_results">
@@ -58,7 +59,7 @@
     document.body.removeChild(seqText);
     var success = document.getElementById("success");
     success.style.display ="initial";
-    $(success).fadeOut(2500);
+    $(success).fadeOut(1000);
   }
   </script>
 
