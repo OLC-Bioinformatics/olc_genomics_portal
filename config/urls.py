@@ -15,15 +15,15 @@ urlpatterns = [
     url(settings.ADMIN_URL, admin.site.urls),
 
     # User management
-    url(r'^users/', include(('olc_webportalv2.users.urls', 'users'), namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
 
     # Your stuff: custom urls includes go here
     path('i18n/', include('django.conf.urls.i18n')),
     path('api-auth/', include('rest_framework.urls'))
-
 ]
+# Allows for url translation
 urlpatterns += i18n_patterns(
+    url(r'^users/', include(('olc_webportalv2.users.urls', 'users'), namespace='users')),
     url(r'^cowbat/', include(('olc_webportalv2.cowbat.urls', 'cowbat'), namespace='cowbat')),
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
