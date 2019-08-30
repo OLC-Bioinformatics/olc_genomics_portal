@@ -12,7 +12,7 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, run_nearest_neighbors
 from olc_webportalv2.metadata.models import SequenceData
-from olc_webportalv2.metadata.views import LabID_sync_SeqID
+from olc_webportalv2.metadata.views import id_sync
 from azure.storage.blob import BlockBlobService
 import os
 # Task Management
@@ -117,7 +117,7 @@ def geneseekr_processing(request, geneseekr_request_pk):
 def geneseekr_results(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
-    labidDict = LabID_sync_SeqID(geneseekr_request.seqids)
+    idDict = id_sync(geneseekr_request)
     # Create dictionary where each gene gets its own top hits
     gene_top_hits = dict()
     for gene_name in geneseekr_request.gene_targets:
@@ -128,7 +128,7 @@ def geneseekr_results(request, geneseekr_request_pk):
                       'geneseekr_request': geneseekr_request,
                       'geneseekr_details': geneseekr_details,
                       'gene_top_hits': gene_top_hits,
-                      'labidDict': labidDict,
+                      'idDict': idDict,
                       # 'top_blast_hits': top_blast_hits
                   })
 
@@ -194,7 +194,7 @@ def tree_request(request):
 @login_required
 def tree_result(request, parsnp_request_pk):
     parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
-    labidDict = LabID_sync_SeqID(parsnp_request.seqids)
+    idDict = id_sync(parsnp_request)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
@@ -211,7 +211,7 @@ def tree_result(request, parsnp_request_pk):
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 'form': form, 'labidDict': labidDict,
+                      'parsnp_request': parsnp_request, 'form': form, 'idDict': idDict,
                   })
 
 @login_required
@@ -478,13 +478,13 @@ def neighbor_result(request, neighbor_request_pk):
         for neighbor_detail in neighbor_details:
             result_dict[neighbor_detail.seqid] = neighbor_detail.distance
 
-    lab_id_dict = LabID_sync_SeqID(list(result_dict.keys()))
+    idDict = id_sync(result_dict)
     return render(request,
                   'geneseekr/neighbor_result.html',
                   {
                       'neighbor_request': neighbor_request,
                       'results': result_dict,
-                      'labidDict': lab_id_dict
+                      'idDict': idDict
                   })
 
 @csrf_exempt
