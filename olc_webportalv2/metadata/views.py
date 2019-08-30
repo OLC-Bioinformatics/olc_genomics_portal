@@ -163,10 +163,11 @@ def metadata_home(request):
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
     idDict = id_sync(metadata_result)
+    idList = (str(list(idDict.keys()))).replace("'","").replace("[","").replace("]","").replace(","," ")
     return render(request,
                   'metadata/metadata_results.html',
                   {
-                      'metadata_result': metadata_result, 'idDict': idDict
+                      'metadata_result': metadata_result, 'idDict': idDict, 'idList':idList
                   })
 
 
@@ -194,5 +195,5 @@ def id_sync(metadata_result):
             olnid_result = 'N/A'  
 
         idDict.update({item.seqid:(labid_result,olnid_result)})
-    return idDict,
+    return idDict
     
