@@ -16,30 +16,30 @@
   <br>
   <br>
   <p id="insertbefore">Your search returned <strong>{{ metadata_result.seqids|length }}</strong> results.</p>
-  <button class="btn btn-primary" id='btnSeq' style="float: right" onclick=copyText(0)>Copy SeqIDs to clipboard</button>
-  <button class="btn btn-primary" id='btnLab' style="float: right; display:none;" onclick=copyText(1)>Copy LabIDs to clipboard</button>
-  <button class="btn btn-primary" id='btnBoth' style="float: right; display:none;"onclick=copyTable()>Copy IDs to clipboard</button>
+  <!--idList passed in from view -->
+  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">Copy SeqIDs</button>
   <br>
   <br>
-  <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" >View LabIDs</button>
-  <br>
+  <div class="alert alert-success" id="success" style="float:right;display:none">Copied to Clipboard!</div>
   <br>
   <br>
   <br>
-  <table class="table table-hover" id="seqid-table">
+  <table class="table table-hover" id="table_results">
   <thead>
     <tr>
       <th>SeqID</th>
       <th>LabID</th>
+      <th>OLNID</th>
     </tr>
   </thead>
   <tbody>
     {% for seqid in metadata_result.seqids %}
       <tr>
         <td>{{ seqid }}</td>
-        {% for key, value in labidDict.items %}
+        {% for key, value in idDict.items %}
         {% if key == seqid%}
-        <td>{{value}}</td>
+        <td>{{value.0}}</td>
+        <td>{{value.1}}</td>
       </tr>
       {% endif %}
     {% endfor %}
@@ -49,113 +49,19 @@
 
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+  <!--function for copying SeqIDs to Clipboard -->
   <script type="text/javascript">
-$(document).ready(function() {
-  //Default table display
-    var table = $('#seqid-table').DataTable( {
-      "paging": false,
-      "bFilter": false,
-      "bInfo": false
-      })
-      $('td:nth-child(2),th:nth-child(2)').hide();
-
-  $('#toggle-vis').on( 'click', function () {
-    //Toggle between column visibilities. 
-    var $this = $(this);
-       if ($this.val() === 'Lab') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').hide();
-        $this.val('Both');
-        $this.html('View Both');
-        $('#btnLab').show();
-        $('#btnBoth').hide();
-        $('#btnSeq').hide();
-    }else if ($this.val() === 'Both') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $this.val('Seq');
-        $this.html('View SeqIDs')
-        $('#btnBoth').show();
-        $('#btnSeq').hide();
-        $('#btnLab').hide();    
-    }else {
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $('td:nth-child(2),th:nth-child(2)').hide();
-        $this.val('Lab');
-        $this.html('View LabIDs')
-        $('#btnSeq').show();
-        $('#btnLab').hide();
-        $('#btnBoth').hide();
-         location.reload();
-    }
-    } );
-} )
-
-  function copyText(x) {
-      // First, iterate through table and grab all SeqIDs, put them into a string.
-      var seqid_string = '';
-      var table = document.getElementById('seqid-table');
-      for (var i=1; i<table.rows.length; i++) {
-
-        seqid_string += table.rows[i].cells[x].innerHTML + '\n'
-      }
-  // Then, use the handy code found at:  https://hackernoon.com/copying-text-to-clipboard-with-javascript-df4d4988697f
-  var el = document.createElement('textarea');  // Create a <textarea> element
-  el.value = seqid_string;                                 // Set its value to the string that you want copied
-  el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
-  el.style.position = 'absolute';
-  el.style.left = '-9999px';                      // Move outside the screen to make it invisible
-  document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
-  el.select();                                    // Select the <textarea> content
-  document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
-  document.body.removeChild(el);                  // Remove the <textarea> element
-  // Also create an alert to let people know that SeqIDs have been successfully copied.
-  // Also make it so that user can't create more than one of the notifications, as much fun as it would be.
-  var div = document.createElement('div');
-  div.id = 'alert-div';
-  div.classList.add('alert');
-  div.classList.add('alert-info');
-  div.innerHTML = 'Copied to clipboard!';
-  var insertbefore = document.getElementById('insertbefore');
-  if (document.getElementById('alert-div') === null) {
-    document.getElementById('insertbefore').insertBefore(div, insertbefore.firstChild)
+  function copySeq(text) {
+    var seqText = document.createElement("textarea");
+    document.body.appendChild(seqText);
+    seqText.value = text;
+    seqText.select();
+    document.execCommand("copy");
+    document.body.removeChild(seqText);
+    var success = document.getElementById("success");
+    success.style.display ="initial";
+    $(success).fadeOut(1000);
   }
-   $(".alert").fadeOut(2000);
-  }
-
-  function copyTable() {
-    //Copies entire table instead of one column
-      // First, iterate through table and grab all SeqIDs, put them into a string.
-      var seqid_string = '';
-      var table = document.getElementById('seqid-table');
-      for (var i=1; i<table.rows.length; i++) {
-        for (var b=0; b<table.rows[i].cells.length; b++){
-        seqid_string += ' ' + table.rows[i].cells[b].innerHTML
-      }
-      seqid_string += '\n'
-      }
-  var el = document.createElement('textarea');  // Create a <textarea> element
-  el.value = seqid_string;                                 // Set its value to the string that you want copied
-  el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
-  el.style.position = 'absolute';
-  el.style.left = '-9999px';                      // Move outside the screen to make it invisible
-  document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
-  el.select();                                    // Select the <textarea> content
-  document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
-  document.body.removeChild(el);                  // Remove the <textarea> element
-  // Also create an alert to let people know that SeqIDs have been successfully copied.
-  // Also make it so that user can't create more than one of the notifications, as much fun as it would be.
-  var div = document.createElement('div');
-  div.id = 'alert-div';
-  div.classList.add('alert');
-  div.classList.add('alert-info');
-  div.innerHTML = 'Copied to clipboard!';
-  var insertbefore = document.getElementById('insertbefore');
-  if (document.getElementById('alert-div') === null) {
-    document.getElementById('insertbefore').insertBefore(div, insertbefore.firstChild)
-  }
-   $(".alert").fadeOut(2000);
-  }
-
   </script>
-{% endblock %}
+
+  {% endblock %}
