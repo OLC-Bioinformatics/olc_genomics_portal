@@ -27,6 +27,7 @@ import azure.batch.models as batchmodels
 from strainchoosr import strainchoosr
 import re
 import ete3
+import json
 # Celery Task Management
 from celery import shared_task, task
 # Sentry
@@ -192,6 +193,40 @@ def cowbat_cleanup(sequencing_run_pk):
     #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(sequencing_run),sas_url),
     #                recipient=email)
 
+import re
+def escape_ansi(line):
+    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    return ansi_escape.sub('', line)
+
+
+def check_cowbat_progress(batch_client, job_id, sequencing_run):
+    """
+
+    :return:
+    """
+    node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
+    contents = dict()
+    for node_file in node_files:
+        # Stderr.txt file
+        if 'stderr' in node_file.name:
+            try:
+                contents[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                           file_path=node_file.name)
+            except:
+                pass
+    for file_name, content_object in contents.items():
+        for content_chunk in content_object:
+
+            # print(str(content_chunk.decode()))
+            try:
+                clean_line = escape_ansi(line=content_chunk.decode())
+                final_line = clean_line.split('\n')[-2]
+                status = ' '.join(final_line.split(' ')[2:])
+                sequencing_run.progress = status
+                sequencing_run.save()
+            except:
+                pass
+
 
 def check_cowbat_tasks():
     # Check for completed cowbat runs
@@ -208,7 +243,6 @@ def check_cowbat_tasks():
         for cloudtask in batch_client.task.list(batch_job_name):
             if cloudtask.state != batchmodels.TaskState.completed:
                 tasks_completed = False
-
         # Assuming that things have completed, check exit codes. Set status to error if any are non-zero.
         if tasks_completed:
             exit_codes_good = True
@@ -225,6 +259,8 @@ def check_cowbat_tasks():
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
             # Delete task so we don't have to keep checking up on it.
             AzureTask.objects.filter(id=task.id).delete()
+        else:
+            check_cowbat_progress(batch_client, batch_job_name, sequencing_run)
 
 
 def check_tree_tasks():
@@ -387,7 +423,7 @@ def check_vir_typer_tasks():
     """
     VirusTyper!
     """
-    import json
+
     vir_typer_tasks = VirTyperAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
@@ -561,7 +597,8 @@ def generate_download_link(blob_client, container_name, output_zipfile, expiry=8
                                       file_path=output_zipfile)
     sas_token = blob_client.generate_container_shared_access_signature(container_name=container_name,
                                                                        permission=BlobPermissions.READ,
-                                                                       expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry))
+                                                                       expiry=datetime.datetime.utcnow() + datetime
+                                                                       .timedelta(days=expiry))
     sas_url = blob_client.make_blob_url(container_name=container_name,
                                         blob_name=blob_name,
                                         sas_token=sas_token)
@@ -585,7 +622,6 @@ def download_container(blob_service, container_name, output_dir):
                 blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, head, tail))
         else:
             blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, blob.name))
-
 
 
 @shared_task

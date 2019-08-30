@@ -20,6 +20,7 @@ def get_interop_name(instance, filename):
 class SequencingRun(models.Model):
     run_name = models.CharField(max_length=64)
     status = models.CharField(max_length=64, default='Unprocessed')
+    progress = models.CharField(max_length=64, default='Unprocessed')
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     sample_plate = JSONField(default=dict, blank=True, null=True)
     realtime_strains = JSONField(default=dict, blank=True, null=True)
