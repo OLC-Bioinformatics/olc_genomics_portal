@@ -1,4 +1,5 @@
 from django.utils.translation import gettext_lazy as _
+from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls import url, include
 
 from olc_webportalv2.vir_typer import views

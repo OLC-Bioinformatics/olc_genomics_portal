@@ -95,7 +95,7 @@
               <div class="form-group">
                 <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
                   {% for language in LANGUAGES %}
-                  <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected" {% endif %}>
+                  <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected"{% endif %}>
                     {{ language.1 }}
                   </option>
                   {% endfor %}
