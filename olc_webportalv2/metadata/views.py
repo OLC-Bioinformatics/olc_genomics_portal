@@ -19,12 +19,10 @@ class LargeResultsPagination(pagination.PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 20000
 
-
 class OLNList(generics.ListCreateAPIView):
     queryset = OLNID.objects.all()
     serializer_class = OLNSerializer
     pagination_class = LargeResultsPagination
-
 
 class OLNDetail(generics.RetrieveAPIView):
     serializer_class = OLNSerializer
@@ -46,13 +44,11 @@ class OLNDetail(generics.RetrieveAPIView):
     def handle_exception(self, exc):
         return JsonResponse({'ERROR': str(exc)})
 
-
 class SequenceDataList(generics.ListCreateAPIView):
     queryset = SequenceData.objects.all()
     serializer_class = SequenceDataSerializer
     permission_classes = (permissions.IsAdminUser,)
     pagination_class = LargeResultsPagination
-
 
 class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = SequenceData.objects.all()
@@ -74,7 +70,6 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
         return JsonResponse({'id': primary_key,
                              'seqid': seqid,
                              'download_link': sas_url})
-
 
 class GenusAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
@@ -99,7 +94,6 @@ class MLSTAutoCompleter(autocomplete.Select2ListView):
 class RMLSTAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
         return make_rmlst_choice_list()
-
 
 # Create your views here.
 @login_required
@@ -158,7 +152,6 @@ def metadata_home(request):
                      'form': form
                   })
 
-
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
@@ -170,7 +163,6 @@ def metadata_results(request, metadata_request_pk):
                       'metadata_result': metadata_result, 'idDict': idDict, 'idList':idList
                   })
 
-
 @login_required
 def metadata_browse(request):
     sequence_data = SequenceData.objects.filter().select_related('labid')
@@ -179,7 +171,7 @@ def metadata_browse(request):
                   {
                       'sequence_data': sequence_data
                   })
-
+# Uses metadata_result to filter db, and then loop through queryset to compile dictionary
 def id_sync(metadata_result):
     idDict = dict()
     data_set = SequenceData.objects.filter(seqid__in=metadata_result.seqids)
