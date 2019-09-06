@@ -1,7 +1,9 @@
 {% load static i18n %}
 <!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
+{%if request.user.is_authenticated%}
 {% get_language_info for request.user.language as lang %}
+{%endif%}
 <html lang="{{LANGUAGE_CODE}}">
 
 <head>
