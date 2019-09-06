@@ -8,7 +8,7 @@
   <h2>{% trans "Sample Creation" %}</h2>
   <form action='' enctype="multipart/form-data" method="post" novalidate>
    {% if tombstone_form.errors %}
-     <div class="alert alert-danger" role="alert" align="center">
+     <div class="alert alert-danger" role="alert" align="center" style="display:none;">
      {{ tombstone_form.non_field_errors|escape }}
     </div>
    {% endif %}
