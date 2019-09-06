@@ -13,6 +13,8 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
         for form in self.forms:
             error_list = list()
             key_names = [key for key in form.cleaned_data]
+            if 'project_name' not in key_names:
+                error_list.append(_('Project name is required'))
             if 'sample_name' not in key_names:
                 error_list.append(_('Sample name is required'))
             if 'date_received' not in key_names:
