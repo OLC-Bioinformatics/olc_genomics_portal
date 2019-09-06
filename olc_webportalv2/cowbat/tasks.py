@@ -83,7 +83,7 @@ def run_cowbat_batch(sequencing_run_pk):
             # The CLARK part of the pipeline needs absolute path specified, so the $AZ_BATCH_TASK_WORKING_DIR has to
             # be specified as part of the command in order to have the absolute path of our sequences propagate to it.
             f.write('COMMAND:=source $CONDA/activate /envs/cowbat && assembly_pipeline.py '
-                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.3.4\n'.format(run_name=str(sequencing_run)))
+                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.8\n'.format(run_name=str(sequencing_run)))
 
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
