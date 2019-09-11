@@ -36,7 +36,7 @@
           {% elif vir_typer_project.status == 'Error' %}
              <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
           {% elif vir_typer_project.status == 'Unprocessed' %}
-             <td><button class="btn btn-outline-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
+             <td><button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
           {% endif %}
 
           {% if vir_typer_project.status == 'Complete' %}
