@@ -63,7 +63,6 @@ def vir_typer_request(request):
                                                        analyst_name=analyst_name,
                                                        subunit=subunit))
 
-            #
             if sample_data:
                 vir_typer_project.save()
                 VirTyperRequest.objects.bulk_create(sample_data)
@@ -73,12 +72,13 @@ def vir_typer_request(request):
 
                 return redirect('vir_typer:vir_typer_upload',
                                 vir_typer_pk=vir_typer_project.pk)
+# If forms aren't valid, error messages
         else:
             out_str = str()
-            for error in sample_form_set.errors:
-                for field, err in error.items():
-                    out_str += '{field}: {err}\n'.format(field=field, err=err)
-            messages.error(request, sample_form_set.non_form_errors())
+            if tombstone_form.cleaned_data.get('project_name') is None:
+                out_str += tombstone_form.errors['project_name']
+            out_str += sample_form_set.non_form_errors()
+            messages.error(request, out_str)
     else:
         sample_form_set = sample_form_set_factory()
     return render(request,

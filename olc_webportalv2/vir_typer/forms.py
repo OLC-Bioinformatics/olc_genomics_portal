@@ -13,18 +13,16 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
         for form in self.forms:
             error_list = list()
             key_names = [key for key in form.cleaned_data]
-            if 'project_name' not in key_names:
-                error_list.append(_('Project name is required'))
             if 'sample_name' not in key_names:
-                error_list.append(_('Sample name is required'))
-            if 'date_received' not in key_names:
-                error_list.append(_('Reception date is required'))
+                error_list.append(_('Sample Name is required'))
             if 'LSTS_ID' not in key_names:
                 error_list.append(_('LSTS ID is required'))
             if 'isolate_source' not in key_names:
-                error_list.append(_('Isolate source is required'))
+                error_list.append(_('Isolate Source is required'))
             if 'analyst_name' not in key_names:
-                error_list.append(_('Analyst name is required'))
+                error_list.append(_('Analyst Name is required'))
+            if 'date_received' not in key_names:
+                error_list.append(_('Reception Date is required'))
             if error_list:
                 raise forms.ValidationError(error_list)
 
@@ -62,7 +60,8 @@ class VirTyperProjectForm(ModelForm):
         }
         error_messages = {
             'project_name': {
-                'unique': _('The project name must be unique')
+                'unique': _('Project Name must be unique'),
+                'required': _('Project Name is required'),
             },
         }
 
