@@ -15,7 +15,6 @@ urlpatterns = [
     url(settings.ADMIN_URL, admin.site.urls),
 
     # User management
-    url(r'^users/', include(('olc_webportalv2.users.urls', 'users'), namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
 
     # Your stuff: custom urls includes go here
@@ -30,7 +29,7 @@ urlpatterns += i18n_patterns(
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
     url(r'^vir_typer/', include(('olc_webportalv2.vir_typer.urls', 'vir_typer'), namespace='vir_typer')),
-    url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
+    # url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
 ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

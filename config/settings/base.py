@@ -67,7 +67,7 @@ LOCAL_APPS = [
     'olc_webportalv2.data.apps.DataConfig',
     'olc_webportalv2.geneseekr.apps.GeneseekrConfig',
     'olc_webportalv2.metadata.apps.MetadataConfig',
-    'olc_webportalv2.api.apps.ApiConfig',
+    # 'olc_webportalv2.api.apps.ApiConfig',
     'olc_webportalv2.vir_typer.apps.VirTyperConfig',
 
 
