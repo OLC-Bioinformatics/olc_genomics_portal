@@ -21,6 +21,12 @@ from .tasks import run_vir_typer
 @login_required
 def vir_typer_home(request):
     vir_typer_projects = VirTyperProject.objects.filter(user=request.user)
+
+    if request.method == "POST":
+        if request.POST.get('delete'): 
+            query = VirTyperProject.objects.filter(pk=request.POST.get('delete'))
+            query.delete()
+
     return render(request,
                   'vir_typer/vir_typer_home.html',
                   {
