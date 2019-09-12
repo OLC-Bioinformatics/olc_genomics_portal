@@ -50,7 +50,7 @@ def run_cowbat_batch(sequencing_run_pk):
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
-        for seqid in sequencing_run.seqids:
+        for seqid in sequencing_run.seqids_to_upload:
             forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
             reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
             if len(forward_reads) != 1 or len(reverse_reads) != 1:

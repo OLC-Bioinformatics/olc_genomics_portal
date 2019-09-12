@@ -27,7 +27,7 @@
       <table id="files-required-table" class="table table-striped small compact">
         <thead>
         <tr>
-          <td> <strong>File</td> </strong>
+          <td> <strong>File</strong></td>
           <td style="text-align:center"> <strong>Forward Reads </strong></td>
           <td style="text-align:center"> <strong>Reverse Reads </strong></td>
         </tr>
@@ -36,8 +36,14 @@
         {% for seqid in sequencing_run.seqids %}
           <tr>
             <td>{{ seqid }}</td>
+            {% if seqid in sequencing_run.seqids_to_upload and seqid not in sequencing_run.uploaded_seqids%}
             <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
             <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+            {% endif %}
+            {% if seqid in sequencing_run.uploaded_seqids  %}
+            <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
+            <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
+            {% endif %}
           </tr>
         {% endfor %}
         </tbody>
@@ -107,7 +113,6 @@
                 var submitButton = document.querySelector("#submit");
                 var validateButton = document.querySelector("#validate");
                 var myDropzone = this;
-
                 // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
                 // has to keep getting pressed. This makes it so upload button only has to be pressed once.
                 this.on("complete", function () {
@@ -119,6 +124,23 @@
                 });
                 validateButton.addEventListener("click", function(e) {
                       var filesAccepted = myDropzone.getAcceptedFiles();
+                      var uploadedFiles = ['{{ sequencing_run.uploaded_seqids }}'];
+                      // Decode the extracted sample names from HTML
+                      var sampleString = '';
+		      // Iterate through the supplied sample names
+		      for(var i=0; i<uploadedFiles.length; i++) {
+			// Using logic from: https://stackoverflow.com/a/7394787
+			// Essentially, create an HTML element that can then have its value added to the list of cleaned names
+			var txt = document.createElement("textarea");
+			txt.innerHTML = uploadedFiles[i];
+			sampleString = sampleString.concat(txt.value);
+			}
+		     // Split the string on commas to create an array of the sample names
+                     var sampleNames = [];
+                     for(var i=0; i<sampleString.split(',').length; i++) {
+			// Strip off illegal characters, and trim to get rid of whitespace
+                         sampleNames.push(sampleString.split(',')[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim())
+                      }
                       var filesTable = document.getElementById('files-required-table');
                       var filesAcceptedNames = [];
                       // Get all the names put into array for validation.
@@ -151,7 +173,9 @@
                           filesTable.rows[i].cells[2].classList.add('table-success')
                         }
                         if(forward_read_found === false || reverse_read_found === false) {
-                          validated = false;
+				if(sampleNames.includes(seqid) === false) {                          
+					validated = false;
+				}
                         }
                       }
                       if(validated === true) {
