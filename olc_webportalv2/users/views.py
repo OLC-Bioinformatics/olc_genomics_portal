@@ -2,7 +2,7 @@ from django.urls import reverse
 from django.views.generic import DetailView, ListView, RedirectView, UpdateView
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils.translation import LANGUAGE_SESSION_KEY
+from django.utils import translation
 
 from .models import User
 
@@ -33,7 +33,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
     
     # send the user back to their own page after a successful update
     def get_success_url(self):
-        self.request.session[LANGUAGE_SESSION_KEY] = self.request.POST.get('language')
+        translation.activate(self.request.POST.get('language'))
         return reverse('users:detail',
                        kwargs={'username': self.request.user.username})
 
