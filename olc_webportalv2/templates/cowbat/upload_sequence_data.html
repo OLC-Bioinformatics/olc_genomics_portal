@@ -36,13 +36,17 @@
         {% for seqid in sequencing_run.seqids %}
           <tr>
             <td>{{ seqid }}</td>
-            {% if seqid in sequencing_run.seqids_to_upload and seqid not in sequencing_run.uploaded_seqids%}
-            <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
-            <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+            {% if seqid in sequencing_run.forward_reads_to_upload %}
+                <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
             {% endif %}
-            {% if seqid in sequencing_run.uploaded_seqids  %}
-            <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
-            <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
+            {% if seqid in sequencing_run.uploaded_forward_reads  %}
+                <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
+            {% endif %}
+            {% if seqid in sequencing_run.reverse_reads_to_upload %}
+                <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
+            {% endif %}
+            {% if seqid in sequencing_run.uploaded_reverse_reads  %}
+                <td class="table-success" align="center"><i class="fa fa-check-circle fa-1x"></i></td>
             {% endif %}
           </tr>
         {% endfor %}
@@ -110,79 +114,115 @@
     maxFiles: 200,
     timeout: 3600000,
      init : function() {
-                var submitButton = document.querySelector("#submit");
-                var validateButton = document.querySelector("#validate");
-                var myDropzone = this;
-                // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
-                // has to keep getting pressed. This makes it so upload button only has to be pressed once.
-                this.on("complete", function () {
-                  myDropzone.options.autoProcessQueue = true;
-                  console.log(myDropzone.getQueuedFiles().length);
-                  if (myDropzone.getQueuedFiles().length === 0) {
-                    window.location.replace("{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}");
-                  }
-                });
-                validateButton.addEventListener("click", function(e) {
-                      var filesAccepted = myDropzone.getAcceptedFiles();
-                      var uploadedFiles = ['{{ sequencing_run.uploaded_seqids }}'];
-                      // Decode the extracted sample names from HTML
-                      var sampleString = '';
-		      // Iterate through the supplied sample names
-		      for(var i=0; i<uploadedFiles.length; i++) {
-			// Using logic from: https://stackoverflow.com/a/7394787
-			// Essentially, create an HTML element that can then have its value added to the list of cleaned names
-			var txt = document.createElement("textarea");
-			txt.innerHTML = uploadedFiles[i];
-			sampleString = sampleString.concat(txt.value);
-			}
-		     // Split the string on commas to create an array of the sample names
-                     var sampleNames = [];
-                     for(var i=0; i<sampleString.split(',').length; i++) {
-			// Strip off illegal characters, and trim to get rid of whitespace
-                         sampleNames.push(sampleString.split(',')[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim())
-                      }
-                      var filesTable = document.getElementById('files-required-table');
-                      var filesAcceptedNames = [];
-                      // Get all the names put into array for validation.
-                      for(var i=0; i<filesAccepted.length; i++) {
-                        filesAcceptedNames.push(filesAccepted[i].name)
-                      }
-                      var validated = true;
-                      for(var i=1; i<filesTable.rows.length; i++) {
-                        var seqid = filesTable.rows[i].cells[0].innerHTML;
+        var submitButton = document.querySelector("#submit");
+        var validateButton = document.querySelector("#validate");
+        var myDropzone = this;
+        // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
+        // has to keep getting pressed. This makes it so upload button only has to be pressed once.
+        this.on("complete", function () {
+            myDropzone.options.autoProcessQueue = true;
+            if (myDropzone.getQueuedFiles().length === 0) {
+                window.location.replace("{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}");
+            }
+        });
+        validateButton.addEventListener("click", function(e) {
+            // Forward reads
+            var uploadedForward = ['{{ sequencing_run.uploaded_forward_reads }}'];
+            // Decode the extracted sample names from HTML
+            var forwardString = '';
+            // Iterate through the supplied sample names
+            for (var i = 0; i < uploadedForward.length; i++) {
+                // Using logic from: https://stackoverflow.com/a/7394787
+                // Essentially, create an HTML element that can then have its value added to the list of cleaned names
+                var ftxt = document.createElement("textarea");
+                ftxt.innerHTML = uploadedForward[i];
+                forwardString = forwardString.concat(ftxt.value);
+            }
+            // Split the string on commas to create an array of the sample names
+            var forwardReads = [];
+            for (var i = 0; i < forwardString.split(',').length; i++) {
+                // Strip off illegal characters, and trim to get rid of whitespace
+                forwardReads.push(forwardString.split(',')[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim())
+            }
+            // Reverse reads
+            var uploadedReverse = ['{{ sequencing_run.uploaded_reverse_reads }}'];
+            // Decode the extracted sample names from HTML
+            var reverseString = '';
+            // Iterate through the supplied sample names
+            for (var i = 0; i < uploadedReverse.length; i++) {
+                // Using logic from: https://stackoverflow.com/a/7394787
+                // Essentially, create an HTML element that can then have its value added to the list of cleaned names
+                var rtxt = document.createElement("textarea");
+                rtxt.innerHTML = uploadedReverse[i];
+                reverseString = reverseString.concat(rtxt.value);
+            }
+            // Split the string on commas to create an array of the sample names
+            var reverseReads = [];
+            for (var i = 0; i < reverseString.split(',').length; i++) {
+                // Strip off illegal characters, and trim to get rid of whitespace
+                reverseReads.push(reverseString.split(',')[i].replace(/[\[\]|&;$%@"<>()+,'\n]/g, "").trim())
+            }
+            var filesAccepted = myDropzone.getAcceptedFiles();
+            var filesTable = document.getElementById('files-required-table');
+            var validated = true;
+            if (filesAccepted.length === 0) {
+                validated = false;
+            }
+            for (var j = 1; j < filesTable.rows.length; j++) {
+                var seqid = filesTable.rows[j].cells[0].innerHTML;
+                for (var i = 0; i < filesAccepted.length; i++ ) {
+                    var forward_read_found = false;
+                    var reverse_read_found = false;
+                    var removeFile = false;
+                    if (filesAccepted[i].name.indexOf(seqid) !== -1) {
+                        console.log('!', seqid, filesAccepted[i].name);
                         // Check we have forward and reverse read files.
                         // This is horrendously inefficient, should get replaced with regex at some point.
-                        var forward_read_found = false;
-                        var reverse_read_found = false;
-                        for(var j=0; j<filesAcceptedNames.length; j++) {
-                          if(filesAcceptedNames[j].indexOf(seqid) !== -1 && filesAcceptedNames[j].indexOf('_R1') !== -1){
+
+                        if (filesAccepted[i].name.indexOf('_R1') !== -1) {
                             forward_read_found = true;
-                          }
-                          if(filesAcceptedNames[j].indexOf(seqid) !== -1 && filesAcceptedNames[j].indexOf('_R2') !== -1){
+                        }
+
+                        if (filesAccepted[i].name.indexOf('_R2') !== -1) {
                             reverse_read_found = true;
-                          }
                         }
-                        if(forward_read_found === true) {
-                          filesTable.rows[i].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                          filesTable.rows[i].cells[1].classList.remove('table-danger');
-                          filesTable.rows[i].cells[1].classList.add('table-success')
+
+                        if (forwardReads.includes(seqid) === true && filesAccepted[i].name.indexOf('_R1') !== -1) {
+                            forward_read_found = true;
+                            removeFile = true;
+
                         }
-                        if(reverse_read_found === true) {
-                          filesTable.rows[i].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                          filesTable.rows[i].cells[2].classList.remove('table-danger');
-                          filesTable.rows[i].cells[2].classList.add('table-success')
+                        if (reverseReads.includes(seqid) === true && filesAccepted[i].name.indexOf('_R2') !== -1) {
+                            reverse_read_found = true;
+                            removeFile = true;
+
                         }
-                        if(forward_read_found === false || reverse_read_found === false) {
-				if(sampleNames.includes(seqid) === false) {                          
-					validated = false;
-				}
-                        }
-                      }
-                      if(validated === true) {
-                        console.log(myDropzone.getQueuedFiles().length);
-                        $('#submit').prop('disabled', false);
-                      }
-                });
+                    }
+
+                    if (removeFile === true) {
+                        myDropzone.removeFile(filesAccepted[i])
+                    }
+
+                    if (forward_read_found === true) {
+                        filesTable.rows[j].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                        filesTable.rows[j].cells[1].classList.remove('table-danger');
+                        filesTable.rows[j].cells[1].classList.add('table-success')
+                    }
+                    if (reverse_read_found === true) {
+                        filesTable.rows[j].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                        filesTable.rows[j].cells[2].classList.remove('table-danger');
+                        filesTable.rows[j].cells[2].classList.add('table-success')
+                    }
+                }
+                if (forward_read_found === false || reverse_read_found === false) {
+                    validated = false;
+                }
+            }
+            if (validated === true) {
+                console.log(myDropzone.getQueuedFiles().length);
+                $('#submit').prop('disabled', false);
+            }
+        });
                 submitButton.addEventListener("click", function(e) {
                     e.preventDefault();
                     e.stopPropagation();

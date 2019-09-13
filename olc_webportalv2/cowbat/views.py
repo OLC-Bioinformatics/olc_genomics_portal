@@ -51,22 +51,33 @@ def check_uploaded_seqids(sequencing_run):
     blobs = blob_client.list_blobs(container_name=container_name)
     for blob in blobs:
         blob_filenames.append(blob.name)
-    seqids_to_upload = list()
-    uploaded_seqids = list()
+    # uploaded_seqids = list()
     for seqid in sequencing_run.seqids:
         forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
         reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
-        if len(forward_reads) == 1 and len(reverse_reads) == 1:
-            uploaded_seqids.append(seqid)
+        if len(forward_reads) == 1:
+            if seqid not in sequencing_run.uploaded_forward_reads:
+                sequencing_run.uploaded_forward_reads.append(seqid)
         else:
-            seqids_to_upload.append(seqid)
-    for seqid in seqids_to_upload:
-        if seqid not in sequencing_run.seqids_to_upload:
-            sequencing_run.seqids_to_upload.append(seqid)
-    for seqid in uploaded_seqids:
-        if seqid not in sequencing_run.uploaded_seqids:
-            sequencing_run.uploaded_seqids.append(seqid)
-    sequencing_run.save()
+            if seqid not in sequencing_run.forward_reads_to_upload:
+                sequencing_run.forward_reads_to_upload.append(seqid)
+        if len(reverse_reads) == 1:
+            if seqid not in sequencing_run.uploaded_reverse_reads:
+                sequencing_run.uploaded_reverse_reads.append(seqid)
+        else:
+            if seqid not in sequencing_run.reverse_reads_to_upload:
+                sequencing_run.reverse_reads_to_upload.append(seqid)
+        # if len(forward_reads) == 1 and len(reverse_reads) == 1:
+        #     sequencing_run.uploaded_seqids.append(seqid)
+        # else:
+        #     seqids_to_upload.append(seqid)
+    # for seqid in seqids_to_upload:
+    #     if seqid not in sequencing_run.seqids_to_upload:
+    #         sequencing_run.seqids_to_upload.append(seqid)
+    # for seqid in uploaded_seqids:
+    #     if seqid not in sequencing_run.uploaded_seqids:
+    #         sequencing_run.uploaded_seqids.append(seqid)
+        sequencing_run.save()
 
 
 # Create your views here.
@@ -262,6 +273,7 @@ def upload_sequence_data(request, sequencing_run_pk):
     check_uploaded_seqids(sequencing_run=sequencing_run)
     seqid_list = list()
     if request.method == 'POST':
+        check_uploaded_seqids(sequencing_run=sequencing_run)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)
