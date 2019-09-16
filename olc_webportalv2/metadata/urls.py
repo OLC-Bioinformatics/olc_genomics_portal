@@ -10,6 +10,7 @@ urlpatterns = [
     url(r'^metadata_home/', views.metadata_home, name='metadata_home'),
     url(r'^metadata_results/(?P<metadata_request_pk>\d+)/$', views.metadata_results, name='metadata_results'),
     url(r'^metadata_browse/', views.metadata_browse, name='metadata_browse'),
+    url(r'^metadata_submit/', views.metadata_submit, name='metadata_submit'),
 
     # Views for autocompletion
     url(r'^genus_autocompleter/$',

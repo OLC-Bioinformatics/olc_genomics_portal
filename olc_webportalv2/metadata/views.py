@@ -188,4 +188,8 @@ def id_sync(metadata_result):
 
         idDict.update({item.seqid:(labid_result,olnid_result)})
     return idDict
-    
+
+@login_required
+def metadata_submit(request):
+    return render(request,
+        'metadata/metadata_submit.html',)
