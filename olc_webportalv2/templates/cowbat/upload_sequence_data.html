@@ -117,6 +117,8 @@
         var submitButton = document.querySelector("#submit");
         var validateButton = document.querySelector("#validate");
         var myDropzone = this;
+        var forwardReadList = [];
+        var reverseReadList = [];
         // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
         // has to keep getting pressed. This makes it so upload button only has to be pressed once.
         this.on("complete", function () {
@@ -168,60 +170,98 @@
             if (filesAccepted.length === 0) {
                 validated = false;
             }
+            var fileList = [];
             for (var j = 1; j < filesTable.rows.length; j++) {
                 var seqid = filesTable.rows[j].cells[0].innerHTML;
+                var forward_read_found = false;
+                var forward_read_present = false;
+                var reverse_read_found = false;
+                var reverse_read_present = false;
                 for (var i = 0; i < filesAccepted.length; i++ ) {
-                    var forward_read_found = false;
-                    var reverse_read_found = false;
+
                     var removeFile = false;
                     if (filesAccepted[i].name.indexOf(seqid) !== -1) {
-                        console.log('!', seqid, filesAccepted[i].name);
+                        if (fileList.includes(filesAccepted[i].name) === false) {
+
+
+                        fileList.push(filesAccepted[i].name);
                         // Check we have forward and reverse read files.
                         // This is horrendously inefficient, should get replaced with regex at some point.
 
                         if (filesAccepted[i].name.indexOf('_R1') !== -1) {
                             forward_read_found = true;
+                            forward_read_present = true;
+                            forwardReadList.push(seqid)
                         }
 
                         if (filesAccepted[i].name.indexOf('_R2') !== -1) {
                             reverse_read_found = true;
+                            reverse_read_present = true;
+                            reverseReadList.push(seqid)
                         }
 
                         if (forwardReads.includes(seqid) === true && filesAccepted[i].name.indexOf('_R1') !== -1) {
                             forward_read_found = true;
+                            forward_read_present = true;
                             removeFile = true;
 
+                        }
+                        if (forwardReadList.includes(seqid) === true) {
+                            forward_read_found = true;
                         }
                         if (reverseReads.includes(seqid) === true && filesAccepted[i].name.indexOf('_R2') !== -1) {
                             reverse_read_found = true;
+                            reverse_read_present = true;
                             removeFile = true;
 
                         }
+                        if (reverseReadList.includes(seqid) === true) {
+                            reverse_read_found = true;
+                        }
+                        if (forward_read_found === true && forward_read_present === true) {
+                            filesTable.rows[j].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                            filesTable.rows[j].cells[1].classList.remove('table-danger');
+                            filesTable.rows[j].cells[1].classList.add('table-success');
+                        }
+                        if (forward_read_found === false || forward_read_present === false) {
+                            filesTable.rows[j].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                            filesTable.rows[j].cells[1].classList.remove('table-success');
+                            filesTable.rows[j].cells[1].classList.add('table-danger');
+                            forward_read_found = false;
+                        }
+                        if (reverse_read_found === true && reverse_read_present === true) {
+                            filesTable.rows[j].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                            filesTable.rows[j].cells[2].classList.remove('table-danger');
+                            filesTable.rows[j].cells[2].classList.add('table-success');
+                        }
+                        if (reverse_read_found === false || reverse_read_present === false) {
+                            filesTable.rows[j].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+                            filesTable.rows[j].cells[2].classList.remove('table-success');
+                            filesTable.rows[j].cells[2].classList.add('table-danger');
+                            reverse_read_found = false
+                        }
                     }
-
-                    if (removeFile === true) {
-                        myDropzone.removeFile(filesAccepted[i])
-                    }
-
-                    if (forward_read_found === true) {
-                        filesTable.rows[j].cells[1].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                        filesTable.rows[j].cells[1].classList.remove('table-danger');
-                        filesTable.rows[j].cells[1].classList.add('table-success')
-                    }
-                    if (reverse_read_found === true) {
-                        filesTable.rows[j].cells[2].innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                        filesTable.rows[j].cells[2].classList.remove('table-danger');
-                        filesTable.rows[j].cells[2].classList.add('table-success')
-                    }
+                    else {
+                        removeFile = true;
+                        }
                 }
-                if (forward_read_found === false || reverse_read_found === false) {
+
+
+                if (removeFile === true) {
+                    myDropzone.removeFile(filesAccepted[i])
+                }
+            }
+            if (forward_read_found === false || reverse_read_found === false || forward_read_present === false || reverse_read_present === false) {
                     validated = false;
-                }
             }
-            if (validated === true) {
-                console.log(myDropzone.getQueuedFiles().length);
-                $('#submit').prop('disabled', false);
-            }
+        }
+        if (validated === true) {
+            $('#submit').prop('disabled', false);
+            myDropzone.options.addRemoveLinks = false;
+        }
+        else {
+            $('#submit').prop('disabled', true);
+        }
         });
                 submitButton.addEventListener("click", function(e) {
                     e.preventDefault();
