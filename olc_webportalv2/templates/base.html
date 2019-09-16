@@ -4,6 +4,10 @@
 {%if request.user.is_authenticated%}
 {% get_language_info for request.user.language as lang %}
 {%endif%}
+
+{% comment %} {%if request.method == "POST"%}
+{% get_language_info for request.POST.get('language') as lang %}
+{%endif%} {% endcomment %}
 <html lang="{{LANGUAGE_CODE}}">
 
 <head>
@@ -104,6 +108,7 @@
                     {{ language.1 }}
                   </option>
                   {% endfor %}
+                  <option>sdfsdfsd</option>
                 </select>
               </div>
             </form>
