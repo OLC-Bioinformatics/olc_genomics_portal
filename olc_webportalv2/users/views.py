@@ -17,7 +17,7 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
     permanent = False
 
     def get_redirect_url(self):
-        lang =self.request.user.language
+        lang = self.request.user.language
         translation.activate(lang)
         self.request.session[translation.LANGUAGE_SESSION_KEY] = lang
         return reverse('users:detail',
