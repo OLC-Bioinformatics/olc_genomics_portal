@@ -17,9 +17,11 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
     permanent = False
 
     def get_redirect_url(self):
+        lang = self.request.user.language
+        translation.activate(lang)
+        self.request.session[translation.LANGUAGE_SESSION_KEY] = lang
         return reverse('users:detail',
                        kwargs={'username': self.request.user.username})
-
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
 
@@ -33,7 +35,9 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
     
     # send the user back to their own page after a successful update
     def get_success_url(self):
-        translation.activate(self.request.POST.get('language'))
+        lang =self.request.POST.get('language')
+        translation.activate(lang)
+        self.request.session[translation.LANGUAGE_SESSION_KEY] = lang
         return reverse('users:detail',
                        kwargs={'username': self.request.user.username})
 
