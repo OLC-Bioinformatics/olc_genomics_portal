@@ -62,16 +62,25 @@
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   function validateForm() {
+      var lang = document.documentElement.lang;
       var x = document.forms["file-form"]["run_name"].value;
       var external_regex = /\d{6}_[A-Z]+$/;
       var olc_regex = /\d{6}_M\d+$/;
       if (x === "") {
+        if (lang == "fr"){
+        Swal.fire({
+        title: 'Invalide',
+        text: "Le nom de la course ne peut pas être vide!",
+        type: 'warning',
+        showConfirmButton: false
+        })
+        }else{
         Swal.fire({
         title: 'Invalid',
         text: "Run name cannot be blank!",
         type: 'warning',
         showConfirmButton: false
-      });
+      });}
         return false
       }
       var found_external = x.match(external_regex);
@@ -253,14 +262,7 @@
   var dropzone = document.getElementById('myDropzone');
   $(dropzone).attr('data-tooltip','tooltip');
   $(dropzone).attr('title','Why here');
-  Dropzone.prototype.defaultOptions.dictDefaultMessage = "Your text";
   });
 
-  
-  /*if (document.documentElement.lang === 'fr') {
-  var removeList = document.getElementsByClassName('dz-remove');
-  for(var i=0; i<removeList.length; ++i)
-    removeList[i].text = 'Retirer';
-  }*/
   </script>
 {% endblock %}
