@@ -1,12 +1,9 @@
-language: python
-python:
-  - '3.7'
+language: minimal
 dist: xenial
 sudo: required
 services:
 - docker
 before_script:
-- sudo apt-get update && sudo apt install -y python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info && pip install weasyprint && pip install --no-cache-dir --force-reinstall cffi && pip install --no-cache-dir cairocffi
 - wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz
   && tar xf geckodriver-v0.24.0-linux64.tar.gz
 script:
