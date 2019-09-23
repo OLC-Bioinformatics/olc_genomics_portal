@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-23 13:20+0000\n"
+"POT-Creation-Date: 2019-09-23 14:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -427,11 +427,8 @@ msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:8
-#, fuzzy
-#| msgid "Step 2 of 2: Upload Sequence Files and Begin Typing"
 msgid "Step 1 of 3: Upload Metadata Files and Name Run"
 msgstr ""
-"Étape 2 sur 2: Télécharger des fichiers de séquence et commencer Virus Typer"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:9
 msgid ""
@@ -450,24 +447,61 @@ msgid "File"
 msgstr ""
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:55
-#, fuzzy
-#| msgid "Validate Sequence Files"
 msgid "Validate Metadata Files"
-msgstr "Valider les fichiers de séquence"
+msgstr ""
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:57
-#, fuzzy
-#| msgid "Upload Sequence Files"
 msgid "Upload Metadata Files"
-msgstr "Télécharger des fichiers de séquence"
+msgstr ""
 
-#: olc_webportalv2/templates/metadata/metadata_submit.html:13
+#: olc_webportalv2/templates/metadata/metadata_submit.html:11
+msgid "Metadata Forms"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:14
 msgid "English"
+msgstr "Anglais"
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:16
+msgid "French"
+msgstr "Français"
+
+#: olc_webportalv2/templates/users/user_detail.html:11
+msgid "Personal Info"
+msgstr "Informations Personnelles"
+
+#: olc_webportalv2/templates/users/user_detail.html:17
+msgid "Username"
+msgstr "Pseudonyme"
+
+#: olc_webportalv2/templates/users/user_detail.html:18
+#: olc_webportalv2/users/models.py:13
+msgid "Name"
+msgstr "Nom"
+
+#: olc_webportalv2/templates/users/user_detail.html:19
+msgid "Language"
+msgstr "Langue"
+
+#: olc_webportalv2/templates/users/user_detail.html:20
+msgid "Lab"
+msgstr "Labo"
+
+#: olc_webportalv2/templates/users/user_detail.html:21
+msgid "Rank"
 msgstr ""
 
-#: olc_webportalv2/templates/metadata/metadata_submit.html:15
-msgid "French"
+#: olc_webportalv2/templates/users/user_detail.html:27
+msgid "Update Info"
+msgstr "Réviser"
+
+#: olc_webportalv2/templates/users/user_detail.html:41
+msgid "Update Email"
 msgstr ""
+
+#: olc_webportalv2/templates/users/user_form.html:16
+msgid "Update"
+msgstr "Réviser"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:8
 msgid "Sample Creation"
@@ -771,13 +805,7 @@ msgstr "Valider les fichiers de séquence"
 msgid "Upload Sequence Files"
 msgstr "Télécharger des fichiers de séquence"
 
-#: olc_webportalv2/users/models.py:13
-msgid "Name"
-msgstr "Nom"
-
 #: olc_webportalv2/vir_typer/forms.py:17
-#, fuzzy
-#| msgid "Sample name is required"
 msgid "Sample Name is required"
 msgstr "Le nom de l'échantillon est obligatoire"
 
@@ -786,20 +814,14 @@ msgid "LSTS ID is required"
 msgstr "Identifiant SIESAL est obligatoire"
 
 #: olc_webportalv2/vir_typer/forms.py:21
-#, fuzzy
-#| msgid "Isolate source is required"
 msgid "Isolate Source is required"
 msgstr "La source de l'échantillon est obligatoire"
 
 #: olc_webportalv2/vir_typer/forms.py:23
-#, fuzzy
-#| msgid "Analyst name is required"
 msgid "Analyst Name is required"
 msgstr "Le nom de l'analyste est obligatoire"
 
 #: olc_webportalv2/vir_typer/forms.py:25
-#, fuzzy
-#| msgid "Reception date is required"
 msgid "Reception Date is required"
 msgstr "La date de réception est obligatoire"
 
@@ -808,8 +830,6 @@ msgid "Required"
 msgstr "Champs obligatoires"
 
 #: olc_webportalv2/vir_typer/forms.py:63
-#, fuzzy
-#| msgid "The project name must be unique"
 msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
