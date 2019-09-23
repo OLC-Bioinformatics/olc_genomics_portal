@@ -4,15 +4,15 @@ import re
 from olc_webportalv2.cowbat.models import SequencingRun
 from django.forms.widgets import EmailInput
 
+from django.utils.translation import ugettext_lazy as _
 
 class RunNameForm(forms.Form):
-    run_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': 'YYMMDD_LAB'}))
-
+    run_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': 'YYMMDD_LAB'}),label=(_('Run Name: ')))
     def clean_run_name(self):
         run_name = self.cleaned_data['run_name']
         # Cover both external lab names (123456_LAB) and olc names(123456_M01234)
         if not (re.match('\d{6}_[A-Z]+', run_name) or re.match('\d{6}_M\d+', run_name)):
-            raise forms.ValidationError('Invalid run name. Format must be YYMMDD_LAB', code='BadRunName')
+            raise forms.ValidationError(_('Invalid run name. Format must be YYMMDD_LAB', code='BadRunName'))
         return run_name
 
 
@@ -22,7 +22,7 @@ class EmailForm(forms.Form):
 
 def validate_no_comma(value):
     if ',' in value:
-        raise forms.ValidationError('Strain names cannot have commas in them!')
+        raise forms.ValidationError(_('Strain names cannot have commas in them!'))
 
 
 class RealTimeForm(forms.ModelForm):
