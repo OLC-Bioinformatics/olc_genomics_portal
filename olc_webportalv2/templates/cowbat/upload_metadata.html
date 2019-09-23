@@ -55,7 +55,7 @@
   <div class="btnVal"><button id="validate" class="btn btn-primary">{% trans "Validate Metadata Files"%}</button></div>
   <br>
   <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Metadata Files"%}</button>
-  
+
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
   <script src={% static 'js/dropzone.js' %}></script>
@@ -63,16 +63,25 @@
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   function validateForm() {
+      var lang = document.documentElement.lang;
       var x = document.forms["file-form"]["run_name"].value;
       var external_regex = /\d{6}_[A-Z]+$/;
       var olc_regex = /\d{6}_M\d+$/;
       if (x === "") {
+        if (lang == "fr"){
+        Swal.fire({
+        title: 'Invalide',
+        text: "Le nom de la course ne peut pas être vide!",
+        type: 'warning',
+        showConfirmButton: false
+        })
+        }else{
         Swal.fire({
         title: 'Invalid',
         text: "Run name cannot be blank!",
         type: 'warning',
         showConfirmButton: false
-      });
+      });}
         return false
       }
       var found_external = x.match(external_regex);
