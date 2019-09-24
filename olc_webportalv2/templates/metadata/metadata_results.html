@@ -4,9 +4,9 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Metadata Results</h2>
+  <h2>{% trans 'Metadata Results'%}</h2>
   <br>
-  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">View Search Criteria</button>
+  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">{% trans 'View Search Criteria'%}</button>
   <div id="criteria" class="collapse">
   <br>
   {% for criteria, value in metadata_result.criteria.items %}
@@ -27,9 +27,9 @@
   <table class="table table-hover" id="table_results">
   <thead>
     <tr>
-      <th>SeqID</th>
-      <th>LabID</th>
-      <th>OLNID</th>
+      <th>{% trans 'SeqID'%}</th>
+      <th>{% trans 'LabID'%}</th>
+      <th>{% trans 'OLNID'%}</th>
     </tr>
   </thead>
   <tbody>

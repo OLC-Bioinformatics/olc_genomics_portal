@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-23 18:45+0000\n"
+"POT-Creation-Date: 2019-09-24 18:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,52 +20,82 @@ msgstr ""
 
 #: olc_webportalv2/cowbat/forms.py:16
 msgid "Invalid run name. Format must be YYMMDD_LAB"
-msgstr ""
+msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 
 #: olc_webportalv2/cowbat/forms.py:26
 msgid "Strain names cannot have commas in them!"
+msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
+
+#: olc_webportalv2/metadata/forms.py:7
+msgid "Pass"
+msgstr "Passe"
+
+#: olc_webportalv2/metadata/forms.py:7
+msgid "All sequences except for low quality or contaminated sequences."
 msgstr ""
+"Toutes les séquences à l'exception des séquences de faible qualité ou "
+"contaminées."
+
+#: olc_webportalv2/metadata/forms.py:8
+msgid "Reference"
+msgstr "Référence"
+
+#: olc_webportalv2/metadata/forms.py:8
+msgid "Highest quality, gold standard sequences."
+msgstr "Des séquences de qualité supérieure, des séquences étalons or."
+
+#: olc_webportalv2/metadata/forms.py:9
+msgid "Fail"
+msgstr "Raté"
+
+#: olc_webportalv2/metadata/forms.py:9
+msgid ""
+"All sequences - may include contaminated or otherwise very low quality "
+"sequences. Use with caution."
+msgstr ""
+"Toutes les séquences - peuvent inclure des séquences contaminées ou de très "
+"mauvaise qualité. Utiliser avec prudence."
 
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
 msgid "Account Inactive"
-msgstr ""
+msgstr "Compte Inactif"
 
 #: olc_webportalv2/templates/account/account_inactive.html:10
 msgid "This account is inactive."
-msgstr ""
+msgstr "Ce compte est inactif."
 
 #: olc_webportalv2/templates/account/email.html:7
 msgid "Account"
-msgstr ""
+msgstr "Compte"
 
 #: olc_webportalv2/templates/account/email.html:12
 msgid "E-mail Addresses"
-msgstr ""
+msgstr "Adresses E-mail"
 
 #: olc_webportalv2/templates/account/email.html:15
 msgid "The following e-mail addresses are associated with your account:"
-msgstr ""
+msgstr "Les adresses e-mail suivantes sont associées à votre compte :"
 
 #: olc_webportalv2/templates/account/email.html:29
 msgid "Verified"
-msgstr ""
+msgstr "Vérifié"
 
 #: olc_webportalv2/templates/account/email.html:31
 msgid "Unverified"
-msgstr ""
+msgstr "Non Vérifié"
 
 #: olc_webportalv2/templates/account/email.html:33
 msgid "Primary"
-msgstr ""
+msgstr "Primaire"
 
 #: olc_webportalv2/templates/account/email.html:39
 msgid "Make Primary"
-msgstr ""
+msgstr "Faire du Primaire"
 
 #: olc_webportalv2/templates/account/email.html:40
 msgid "Re-send Verification"
-msgstr ""
+msgstr "Renvoyer la Vérification"
 
 #: olc_webportalv2/templates/account/email.html:43
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:67
@@ -74,30 +104,35 @@ msgstr "Retirer"
 
 #: olc_webportalv2/templates/account/email.html:50
 msgid "Warning:"
-msgstr ""
+msgstr "Avertissement:"
 
 #: olc_webportalv2/templates/account/email.html:50
 msgid ""
 "You currently do not have any e-mail address set up. You should really add "
 "an e-mail address so you can receive notifications, reset your password, etc."
 msgstr ""
+"Vous n'avez actuellement aucune adresse e-mail configurée. Vous devriez "
+"vraiment ajouter une adresse e-mail pour pouvoir recevoir des notifications, "
+"réinitialiser votre mot de passe, etc."
 
 #: olc_webportalv2/templates/account/email.html:55
+#, fuzzy
+#| msgid "E-mail Addresses"
 msgid "Add E-mail Address"
-msgstr ""
+msgstr "Adresses E-mail"
 
 #: olc_webportalv2/templates/account/email.html:60
 msgid "Add E-mail"
-msgstr ""
+msgstr "Ajouter une adresse E-mail"
 
 #: olc_webportalv2/templates/account/email.html:70
 msgid "Do you really want to remove the selected e-mail address?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer l'adresse e-mail sélectionnée?"
 
 #: olc_webportalv2/templates/account/email_confirm.html:6
 #: olc_webportalv2/templates/account/email_confirm.html:11
 msgid "Confirm E-mail Address"
-msgstr ""
+msgstr "Confirmer l'adresse E-mail"
 
 #: olc_webportalv2/templates/account/email_confirm.html:17
 #, python-format
@@ -105,10 +140,12 @@ msgid ""
 "Please confirm that <a href=\"mailto:%(email)s\">%(email)s</a> is an e-mail "
 "address for user %(user_display)s."
 msgstr ""
+"Veuillez confirmer que <a href=\"mailto:%(email)s\">%(email)s</a> est une "
+"adresse e-mail pour user %(user_display)s."
 
 #: olc_webportalv2/templates/account/email_confirm.html:21
 msgid "Confirm"
-msgstr ""
+msgstr "Confirmer"
 
 #: olc_webportalv2/templates/account/email_confirm.html:28
 #, python-format
@@ -116,29 +153,32 @@ msgid ""
 "This e-mail confirmation link expired or is invalid. Please <a href="
 "\"%(email_url)s\">issue a new e-mail confirmation request</a>."
 msgstr ""
+"Ce lien de confirmation par e-mail a expiré ou est invalide.Veuillez <a href="
+"\"%(email_url)s\">émettre une nouvelle demande de confirmation par e-mail</"
+"a>."
 
 #: olc_webportalv2/templates/account/login.html:7
 #: olc_webportalv2/templates/account/login.html:12
 #: olc_webportalv2/templates/account/login.html:44
 msgid "Sign In"
-msgstr ""
+msgstr "S'identifier"
 
 #: olc_webportalv2/templates/account/login.html:46
 msgid "Forgot Password?"
-msgstr ""
+msgstr "Mot de passe oublié ?"
 
 #: olc_webportalv2/templates/account/logout.html:5
 #: olc_webportalv2/templates/account/logout.html:9
 msgid "Logout"
-msgstr ""
+msgstr "Déconnexion"
 
 #: olc_webportalv2/templates/account/logout.html:11
 msgid "Are you sure you want to sign out?"
-msgstr ""
+msgstr "Vous êtes sûr de vouloir vous déconnecter ?"
 
 #: olc_webportalv2/templates/account/logout.html:18
 msgid "Sign out"
-msgstr ""
+msgstr "Déconnexion"
 
 #: olc_webportalv2/templates/account/password_change.html:6
 #: olc_webportalv2/templates/account/password_change.html:9
@@ -148,38 +188,45 @@ msgstr ""
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:4
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:8
 msgid "Change Password"
-msgstr ""
+msgstr "Changer le mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:7
 #: olc_webportalv2/templates/account/password_reset.html:11
 #: olc_webportalv2/templates/account/password_reset_done.html:6
 #: olc_webportalv2/templates/account/password_reset_done.html:9
 msgid "Password Reset"
-msgstr ""
+msgstr "Réinitialisation du mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:16
 msgid ""
 "Forgotten your password? Enter your e-mail address below, and we'll send you "
 "an e-mail allowing you to reset it."
 msgstr ""
+"Vous avez oublié votre mot de passe ? Entrez votre adresse e-mail ci-"
+"dessous, et nous vous enverrons un e-mail vous permettant de la "
+"réinitialiser."
 
 #: olc_webportalv2/templates/account/password_reset.html:21
 msgid "Reset My Password"
-msgstr ""
+msgstr "Réinitialiser mon mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:24
 msgid "Please contact us if you have any trouble resetting your password."
 msgstr ""
+"Veuillez nous contacter si vous avez des difficultés à réinitialiser votre "
+"mot de passe."
 
 #: olc_webportalv2/templates/account/password_reset_done.html:15
 msgid ""
 "We have sent you an e-mail. Please contact us if you do not receive it "
 "within a few minutes."
 msgstr ""
+"Nous vous avons envoyé un e-mail. Veuillez nous contacter si vous ne le "
+"recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:8
 msgid "Bad Token"
-msgstr ""
+msgstr "Mauvais Jeton"
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:12
 #, python-format
@@ -188,6 +235,9 @@ msgid ""
 "used.  Please request a <a href=\"%(passwd_reset_url)s\">new password reset</"
 "a>."
 msgstr ""
+"Le lien de réinitialisation du mot de passe n'était pas valide, peut-être "
+"parce qu'il a déjà été utilisé.  Veuillez demander un <a href="
+"\"%(passwd_reset_url)s\">new password reset reset</a>."
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:18
 msgid "change password"
@@ -202,17 +252,14 @@ msgstr ""
 #: olc_webportalv2/templates/account/password_set.html:9
 #: olc_webportalv2/templates/account/password_set.html:14
 msgid "Set Password"
-msgstr ""
+msgstr "Définir le mot de passe"
 
 #: olc_webportalv2/templates/account/signup.html:6
-msgid "Signup"
-msgstr ""
-
 #: olc_webportalv2/templates/account/signup.html:10
 #: olc_webportalv2/templates/account/signup.html:20
 #: olc_webportalv2/templates/base.html:133
 msgid "Sign Up"
-msgstr ""
+msgstr "S'inscrire"
 
 #: olc_webportalv2/templates/account/signup.html:12
 #, python-format
@@ -290,7 +337,7 @@ msgstr "Feuilleter "
 
 #: olc_webportalv2/templates/base.html:57
 msgid "Forms "
-msgstr ""
+msgstr "Les Fiches"
 
 #: olc_webportalv2/templates/base.html:64
 msgid "Retrieve "
@@ -444,11 +491,105 @@ msgstr "Fichier"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:55
 msgid "Validate Metadata Files"
-msgstr ""
+msgstr "Valider les fichiers de métadonnées"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:57
 msgid "Upload Metadata Files"
+msgstr "Télécharger des fichiers de métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:7
+msgid "Metadata Browse"
+msgstr "Parcourir les métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:11
+#: olc_webportalv2/templates/metadata/metadata_results.html:30
+msgid "SeqID"
 msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:12
+#: olc_webportalv2/templates/metadata/metadata_results.html:31
+msgid "LabID"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:13
+msgid "Genus"
+msgstr "Genre"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:14
+msgid "Species"
+msgstr "Espèce"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:15
+msgid "Serotype"
+msgstr "Sérotype"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:16
+msgid "MLST"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:17
+msgid "rMLST"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:18
+msgid "Assembly Quality"
+msgstr "Qualité de l'assemblage "
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:10
+msgid "Metadata Search"
+msgstr "Recherche de métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:19
+msgid "Enter your genus of interest:"
+msgstr "Entrez votre genre d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:21
+#: olc_webportalv2/templates/metadata/metadata_home.html:22
+#: olc_webportalv2/templates/metadata/metadata_home.html:23
+#: olc_webportalv2/templates/metadata/metadata_home.html:24
+#: olc_webportalv2/templates/metadata/metadata_home.html:25
+msgid "hi"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:21
+msgid "Enter your species of interest:"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:22
+msgid "Enter your serotype of interest:"
+msgstr "Entrez votre espèce d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:23
+msgid "Enter your MLST of interest:"
+msgstr "Entrez votre MLST d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:24
+msgid "Enter your rMLST of interest:"
+msgstr "Entrez votre rMLSTR d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:25
+msgid "Choose your desired assembly quality:"
+msgstr "Choisissez la qualité de montage souhaitée:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:28
+msgid "Get SeqIDs"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:7
+msgid "Metadata Results"
+msgstr "Résultats des métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:9
+msgid "View Search Criteria"
+msgstr "Voir les critères de recherche"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:32
+msgid "OLNID"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:10
+msgid "Metadata Forms"
+msgstr "Fiches de métadonnées"
 
 #: olc_webportalv2/templates/metadata/metadata_submit.html:13
 msgid "English"
@@ -481,7 +622,7 @@ msgstr "Labo"
 
 #: olc_webportalv2/templates/users/user_detail.html:21
 msgid "Rank"
-msgstr ""
+msgstr "Rang"
 
 #: olc_webportalv2/templates/users/user_detail.html:27
 msgid "Update Info"
@@ -489,11 +630,9 @@ msgstr "Réviser"
 
 #: olc_webportalv2/templates/users/user_detail.html:41
 msgid "Update Email"
-msgstr ""
+msgstr "Mise à jour Email"
 
 #: olc_webportalv2/templates/users/user_form.html:16
-#, fuzzy
-#| msgid "Update Project"
 msgid "Update"
 msgstr "Réviser"
 
@@ -503,39 +642,39 @@ msgstr "Création des échantillons"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:16
 msgid "Select a unique name for this project"
-msgstr ""
+msgstr "Sélectionnez un nom unique pour ce projet"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:24
 msgid "Sample name e.g. VI0639"
-msgstr ""
+msgstr "Nom de l'échantillon p.ex. VI0639"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:27
 msgid "LSTS ID e.g. 2019FPP00000475214"
-msgstr ""
+msgstr "LSTS ID p. ex. 2019FPP0000000475214"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:30
 msgid "Laboratory name (select from list)"
-msgstr ""
+msgstr "Nom du laboratoire (choisir dans la liste)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:33
 msgid "Sampling number (can be blank) e.g. 15"
-msgstr ""
+msgstr "Numéro d'échantillon (peut être blanc) p. ex. 15"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:36
 msgid "Initial classification (select from list)"
-msgstr ""
+msgstr "Classification initiale (choisir dans la liste)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:41
 msgid "Source of sample e.g. oyster"
-msgstr ""
+msgstr "Source de l'échantillon, p. ex. huître"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:44
 msgid "Analyst name e.g. Jane Doe"
-msgstr ""
+msgstr "Nom de l'analyste, p. ex. Jane Doe"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:47
 msgid "Date sample was received (select from calendar)"
-msgstr ""
+msgstr "Date de réception de l'échantillon (choisir dans le calendrier)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:55
 msgid "Create samples"
@@ -561,7 +700,7 @@ msgstr "Créer une requête de Virus Typer"
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
 #: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
-msgstr "Projet"
+msgstr "Nom du projet"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 msgid "Status"
@@ -597,8 +736,10 @@ msgid "Not Available"
 msgstr "Indisponible"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
+#, fuzzy
+#| msgid "Delete"
 msgid "Delete "
-msgstr "Effacer "
+msgstr "Effacer"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:71
 msgid "No data available in table"
@@ -630,8 +771,6 @@ msgid "Show "
 msgstr "Affiche "
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:75
-#, fuzzy
-#| msgid "Search "
 msgid "Search"
 msgstr "Chercher "
 
