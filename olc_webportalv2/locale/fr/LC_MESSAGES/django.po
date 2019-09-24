@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-24 18:29+0000\n"
+"POT-Creation-Date: 2019-09-24 19:15+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -504,12 +504,12 @@ msgstr "Parcourir les métadonnées"
 #: olc_webportalv2/templates/metadata/metadata_browse.html:11
 #: olc_webportalv2/templates/metadata/metadata_results.html:30
 msgid "SeqID"
-msgstr ""
+msgstr "SeqID"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:12
 #: olc_webportalv2/templates/metadata/metadata_results.html:31
 msgid "LabID"
-msgstr ""
+msgstr "LabID"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:13
 msgid "Genus"
@@ -525,11 +525,11 @@ msgstr "Sérotype"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:16
 msgid "MLST"
-msgstr ""
+msgstr "MLST"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:17
 msgid "rMLST"
-msgstr ""
+msgstr "rMLST"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:18
 msgid "Assembly Quality"
@@ -553,11 +553,11 @@ msgstr ""
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:21
 msgid "Enter your species of interest:"
-msgstr ""
+msgstr "Entrez votre espèce d'intérêt:"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:22
 msgid "Enter your serotype of interest:"
-msgstr "Entrez votre espèce d'intérêt:"
+msgstr "Entrez le sérotype qui vous intéresse :"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:23
 msgid "Enter your MLST of interest:"
@@ -573,7 +573,7 @@ msgstr "Choisissez la qualité de montage souhaitée:"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:28
 msgid "Get SeqIDs"
-msgstr ""
+msgstr "Obtenir les SeqIDs"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:7
 msgid "Metadata Results"
@@ -583,9 +583,21 @@ msgstr "Résultats des métadonnées"
 msgid "View Search Criteria"
 msgstr "Voir les critères de recherche"
 
+#: olc_webportalv2/templates/metadata/metadata_results.html:18
+msgid "Your search returned"
+msgstr "Votre recherche a retourné"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:18
+msgid "results."
+msgstr "résultats."
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:20
+msgid "Copy SeqIDs"
+msgstr "Copier les SeqIDs"
+
 #: olc_webportalv2/templates/metadata/metadata_results.html:32
 msgid "OLNID"
-msgstr ""
+msgstr "OLNID"
 
 #: olc_webportalv2/templates/metadata/metadata_submit.html:10
 msgid "Metadata Forms"
@@ -1011,3 +1023,10 @@ msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 #: olc_webportalv2/vir_typer/views.py:75
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
+
+#~ msgid ""
+#~ " Your search returned <strong>%(metadata_result.seqids|length)s</strong> "
+#~ "results."
+#~ msgstr ""
+#~ "Votre recherche retourne <strong>%(metadata_result.seqids|length)s</"
+#~ "strong> résultats."

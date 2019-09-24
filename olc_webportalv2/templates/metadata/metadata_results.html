@@ -15,9 +15,9 @@
   </div>
   <br>
   <br>
-  <p id="insertbefore">Your search returned <strong>{{ metadata_result.seqids|length }}</strong> results.</p>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ metadata_result.seqids|length }}</strong> {% trans 'results.'%}</p>
   <!--idList passed in from view -->
-  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">Copy SeqIDs</button>
+  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">{% trans 'Copy SeqIDs'%}</button>
   <br>
   <br>
   <div class="alert alert-success" id="success" style="float:right;display:none">Copied to Clipboard!</div>
@@ -49,6 +49,7 @@
 
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+
   <!--function for copying SeqIDs to Clipboard -->
   <script type="text/javascript">
   function copySeq(text) {
