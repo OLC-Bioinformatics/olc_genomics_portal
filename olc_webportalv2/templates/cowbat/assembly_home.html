@@ -51,7 +51,11 @@
   <script type="text/javascript">
     //Sorting of page based on first column descending.
     $(document).ready(function () {
-        var table = $('#assembly-table').DataTable();
+        var table = $('#assembly-table').DataTable({
+                 language : {
+        url: getLanguage()
+    }
+        });
         table
         .column( '0:visible' )
         .order( 'desc' )

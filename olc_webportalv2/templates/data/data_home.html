@@ -69,7 +69,11 @@
   <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
   <script type="text/javascript">
     $(document).ready(function () {
-        var table = $('#data-request-table').DataTable();
+        var table = $('#data-request-table').DataTable({
+                 language : {
+        url: getLanguage()
+    }
+        });
         table
         .order([3,"desc"], [1,"asc"])
         .draw();

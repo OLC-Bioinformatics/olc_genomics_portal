@@ -76,7 +76,11 @@
   <script type="text/javascript">
   $(document).ready(function () {
     //Default order of table on page load
-    var table = $('#geneseekr-request-table').DataTable(); 
+    var table = $('#geneseekr-request-table').DataTable({
+      language : {
+        url: getLanguage()
+    }
+    }); 
         table
         .order([3,"desc"], [1,"asc"])
         .draw();

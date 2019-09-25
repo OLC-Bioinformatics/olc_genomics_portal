@@ -288,6 +288,12 @@
       document.getElementById("leafy").style.height = "50px";
       document.getElementsByClassName('card-deck')[0].style.display = 'inline';
     }
+    function getLanguage() {
+    var lang = document.documentElement.lang;
+    if (lang=== "fr"){
+      return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+    }
+  }
   </script>
   
   {% endblock javascript %}

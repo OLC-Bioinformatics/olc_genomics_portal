@@ -39,7 +39,10 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
   $(document).ready(function () {
-    $('#metadata-browse-table').DataTable({ "lengthMenu": [[100, -1], ['100', 'All']]});
+    $('#metadata-browse-table').DataTable({ "lengthMenu": [[100, -1], ['100', 'All']],
+           language : {
+        url: getLanguage()
+    }});
   });
   </script>
 {% endblock %}
