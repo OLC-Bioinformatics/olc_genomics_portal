@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-24 19:15+0000\n"
+"POT-Creation-Date: 2019-09-25 19:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,14 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: olc_webportalv2/cowbat/forms.py:10
+msgid "YYMMDD_LAB"
+msgstr "AAMMJJ_LAB"
+
+#: olc_webportalv2/cowbat/forms.py:10
+msgid "Run Name"
+msgstr "Nom de l'exécution"
 
 #: olc_webportalv2/cowbat/forms.py:16
 msgid "Invalid run name. Format must be YYMMDD_LAB"
@@ -116,10 +124,8 @@ msgstr ""
 "réinitialiser votre mot de passe, etc."
 
 #: olc_webportalv2/templates/account/email.html:55
-#, fuzzy
-#| msgid "E-mail Addresses"
 msgid "Add E-mail Address"
-msgstr "Adresses E-mail"
+msgstr "Ajouter une adresse e-mail"
 
 #: olc_webportalv2/templates/account/email.html:60
 msgid "Add E-mail"
@@ -374,7 +380,7 @@ msgstr "Trouver les voisins proches "
 
 #: olc_webportalv2/templates/base.html:114
 msgid "Profile"
-msgstr "Profile"
+msgstr "Profil"
 
 #: olc_webportalv2/templates/base.html:120
 msgid "Sign Out"
@@ -471,7 +477,7 @@ msgstr "Caractériser les séquences virales"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:8
 msgid "Step 1 of 3: Upload Metadata Files and Name Run"
-msgstr ""
+msgstr "Étape 1 de 3 : Télécharger les fichiers de métadonnées et le nom de l'exécution"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:9
 msgid ""
@@ -479,6 +485,9 @@ msgid ""
 "to upload. Once all files have been uploaded,\n"
 "  you can proceed to the next page. "
 msgstr ""
+"Entrez un nom d'exécution et glissez-déposez les fichiers trouvés dans le "
+"tableau suivant pour les télécharger. Une fois que tous les fichiers ont été "
+"téléchargés, vous pouvez passer à la page suivante."
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:15
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
@@ -489,6 +498,11 @@ msgstr "Déposer des fichiers à télécharger ou cliquez ici"
 msgid "File"
 msgstr "Fichier"
 
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
+msgid "Status"
+msgstr "Statut"
+
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:55
 msgid "Validate Metadata Files"
 msgstr "Valider les fichiers de métadonnées"
@@ -496,6 +510,19 @@ msgstr "Valider les fichiers de métadonnées"
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:57
 msgid "Upload Metadata Files"
 msgstr "Télécharger des fichiers de métadonnées"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:71
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:82
+msgid "Invalid"
+msgstr "Invalide"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:72
+msgid "Run name cannot be blank!"
+msgstr "Le nom de la course ne peut pas être vide!"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:83
+msgid "Run name must be in YYMMDD_LAB format!"
+msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
@@ -594,6 +621,10 @@ msgstr "résultats."
 #: olc_webportalv2/templates/metadata/metadata_results.html:20
 msgid "Copy SeqIDs"
 msgstr "Copier les SeqIDs"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:23
+msgid "Copied to clipboard!"
+msgstr "Copié dans le presse-papiers!"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:32
 msgid "OLNID"
@@ -714,10 +745,6 @@ msgstr "Créer une requête de Virus Typer"
 msgid "Project Name"
 msgstr "Nom du projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
-msgid "Status"
-msgstr "Statut"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
 msgid "Download"
@@ -748,89 +775,38 @@ msgid "Not Available"
 msgstr "Indisponible"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
-#, fuzzy
-#| msgid "Delete"
 msgid "Delete "
 msgstr "Effacer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:71
-msgid "No data available in table"
-msgstr "Aucune donnée disponible dans le tableau"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:72
-msgid "Showing 0 to 0 of 0 entries"
-msgstr "Affiche 0 à 0 de 0 entrées"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "Showing "
-msgstr "Affiche "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "to "
-msgstr "à "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "of "
-msgstr "de "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:74
-msgid "entries"
-msgstr "entrées"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:74
-msgid "Show "
-msgstr "Affiche "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:75
-msgid "Search"
-msgstr "Chercher "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:77
-msgid "First"
-msgstr "Premier"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:78
-msgid "Previous"
-msgstr "Précédente"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:79
-msgid "Next"
-msgstr "Prochaine"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:80
-msgid "Last"
-msgstr "Dernière"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:103
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
 msgid "Are you sure?"
 msgstr "Êtes-vous sûr?"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
 msgid "You will not be able to revert this!"
 msgstr "Vous ne pouvez pas reprendre ceci!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:107
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
 msgid "Cancel"
 msgstr "Annuler"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:109
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
 msgid "Yes, delete it!"
 msgstr "Supprime-le!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:114
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
 msgid "Deleted!"
 msgstr "Supprimé! "
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:105
 msgid "Your project has been deleted."
 msgstr "Votre projet a été supprimé."
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:133
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
 msgid "Cancelled!"
 msgstr "Annulé!"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:134
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:124
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
@@ -1023,6 +999,42 @@ msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 #: olc_webportalv2/vir_typer/views.py:75
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
+
+#~ msgid "No data available in table"
+#~ msgstr "Aucune donnée disponible dans le tableau"
+
+#~ msgid "Showing 0 to 0 of 0 entries"
+#~ msgstr "Affiche 0 à 0 de 0 entrées"
+
+#~ msgid "Showing "
+#~ msgstr "Affiche "
+
+#~ msgid "to "
+#~ msgstr "à "
+
+#~ msgid "of "
+#~ msgstr "de "
+
+#~ msgid "entries"
+#~ msgstr "entrées"
+
+#~ msgid "Show "
+#~ msgstr "Affiche "
+
+#~ msgid "Search"
+#~ msgstr "Chercher "
+
+#~ msgid "First"
+#~ msgstr "Premier"
+
+#~ msgid "Previous"
+#~ msgstr "Précédente"
+
+#~ msgid "Next"
+#~ msgstr "Prochaine"
+
+#~ msgid "Last"
+#~ msgstr "Dernière"
 
 #~ msgid ""
 #~ " Your search returned <strong>%(metadata_result.seqids|length)s</strong> "

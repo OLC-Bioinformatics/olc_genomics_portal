@@ -21,7 +21,7 @@
     <thead>
         <tr style="font-size: 1.25rem">
           <td><strong>{% trans "File"%}</strong</td>
-          <td style="text-align:center"><strong>Status<strong></td>
+          <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
           </tr>
     </thead>
     <tbody>
@@ -67,28 +67,20 @@
       var external_regex = /\d{6}_[A-Z]+$/;
       var olc_regex = /\d{6}_M\d+$/;
       if (x === "") {
-        if (lang == "fr"){
         Swal.fire({
-        title: 'Invalide',
-        text: "Le nom de la course ne peut pas être vide!",
+        title: "{% trans 'Invalid' %}",
+        text: "{% trans 'Run name cannot be blank!' %}",
         type: 'warning',
         showConfirmButton: false
         })
-        }else{
-        Swal.fire({
-        title: 'Invalid',
-        text: "Run name cannot be blank!",
-        type: 'warning',
-        showConfirmButton: false
-      });}
         return false
       }
       var found_external = x.match(external_regex);
       var found_olc = x.match(olc_regex);
       if (found_external === null && found_olc === null) {
         Swal.fire({
-        title: 'Invalid',
-        text: "Run name must be in YYMMDD_LAB format!",
+        title: "{% trans 'Invalid' %}",
+        text: "{% trans 'Run name cannot be blank!' %}",
         type: 'warning',
         showConfirmButton: false
       });
