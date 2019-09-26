@@ -4,11 +4,11 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Step 2 of 3: Upload InterOp Files for Run {{ sequencing_run.run_name }}</h2>
+  <h2>{% trans "Step 2 of 3: Upload InterOp Files for Run" %} {{ sequencing_run.run_name }}</h2>
   <br>
   <form action={% url 'cowbat:upload_interop' sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
    <div class="dz-message needsclick">
-        Drop files to upload or click here<br>
+        {% trans "Drop files to upload or click here" %}<br>
         <i class="fas fa-cloud-upload-alt fa-4x"></i>
         </div>
   {% csrf_token %}
@@ -16,8 +16,8 @@
   <table id="files-required-table" class="table table-striped compact small">
     <thead>
         <tr style="font-size: 1.25rem">
-          <td><strong>File</strong</td>
-          <td style="text-align:center"><strong>Status<strong></td>
+        <td><strong>{% trans "File"%}</strong></td>
+          <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
           </tr>
     </thead>
     <tbody>
@@ -53,8 +53,9 @@
   </table>
   <br>
 
-  <button id="validate" class="btn btn-primary">Validate InterOp Files</button><br><br>
-  <button id="submit" class="btn btn-lg btn-success" disabled>Upload InterOp Files</button>
+  <button id="validate" class="btn btn-primary">{% trans "Validate InterOp Files" %}</button><br><br>
+  <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload InterOp Files" %}</button>
+
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
   <script src={% static 'js/dropzone.js' %}></script>

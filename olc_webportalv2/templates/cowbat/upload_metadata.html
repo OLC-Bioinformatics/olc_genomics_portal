@@ -20,7 +20,7 @@
   <table id="files-required-table" class="table table-striped compact small">
     <thead>
         <tr style="font-size: 1.25rem">
-          <td><strong>{% trans "File"%}</strong</td>
+          <td><strong>{% trans "File"%}</strong></td>
           <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
           </tr>
     </thead>
@@ -80,7 +80,7 @@
       if (found_external === null && found_olc === null) {
         Swal.fire({
         title: "{% trans 'Invalid' %}",
-        text: "{% trans 'Run name cannot be blank!' %}",
+        text: "{% trans 'Run name must be in YYMMDD_LAB format!' %}",
         type: 'warning',
         showConfirmButton: false
       });

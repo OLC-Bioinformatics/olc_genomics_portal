@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-25 19:59+0000\n"
+"POT-Creation-Date: 2019-09-26 18:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -475,9 +475,42 @@ msgstr "Annoter les assemblages avec Prokka"
 msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
 
+#: olc_webportalv2/templates/cowbat/upload_interop.html:7
+msgid "Step 2 of 3: Upload InterOp Files for Run"
+msgstr "Etape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:11
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:15
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:12
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
+msgid "Drop files to upload or click here"
+msgstr "Déposer des fichiers à télécharger ou cliquez ici"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:19
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:23
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:29
+msgid "File"
+msgstr "Fichier"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:20
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
+msgid "Status"
+msgstr "Statut"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:56
+msgid "Validate InterOp Files"
+msgstr "Valider les fichiers InterOp"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:57
+msgid "Upload InterOp Files"
+msgstr "Télécharger des fichiers InterOp"
+
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:8
 msgid "Step 1 of 3: Upload Metadata Files and Name Run"
-msgstr "Étape 1 de 3 : Télécharger les fichiers de métadonnées et le nom de l'exécution"
+msgstr ""
+"Étape 1 de 3 : Télécharger les fichiers de métadonnées et le nom de "
+"l'exécution"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:9
 msgid ""
@@ -488,20 +521,6 @@ msgstr ""
 "Entrez un nom d'exécution et glissez-déposez les fichiers trouvés dans le "
 "tableau suivant pour les télécharger. Une fois que tous les fichiers ont été "
 "téléchargés, vous pouvez passer à la page suivante."
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:15
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
-msgid "Drop files to upload or click here"
-msgstr "Déposer des fichiers à télécharger ou cliquez ici"
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:23
-msgid "File"
-msgstr "Fichier"
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:24
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
-msgid "Status"
-msgstr "Statut"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:55
 msgid "Validate Metadata Files"
@@ -518,11 +537,37 @@ msgstr "Invalide"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:72
 msgid "Run name cannot be blank!"
-msgstr "Le nom de la course ne peut pas être vide!"
+msgstr "Le nom de l'exécution ne peut pas être vide !"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:83
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:6
+msgid "Step 3 of 3: Upload Sequence Files and Begin Assembly"
+msgstr ""
+"Etape 3 de 3 : Charger les fichiers de séquence et commencer l'assemblage"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:18
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
+msgid "Validate Sequence Files"
+msgstr "Valider les fichiers de séquence"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:19
+msgid "Required Files"
+msgstr "Fichiers requis"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:22
+msgid "Upload Sequence Files and Begin Assembly"
+msgstr "Télécharger les fichiers de séquence et commencer l'assemblage"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:30
+msgid "Forward Reads"
+msgstr ""
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
+msgid "Reverse Reads"
+msgstr ""
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
@@ -915,10 +960,6 @@ msgstr "Échantillon"
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:25
 msgid "Sequence Files "
 msgstr "Fichiers de séquence "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
-msgid "Validate Sequence Files"
-msgstr "Valider les fichiers de séquence"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:40
 msgid "Upload Sequence Files"
