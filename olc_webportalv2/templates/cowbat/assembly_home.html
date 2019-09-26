@@ -5,17 +5,17 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i><strong> Upload a New Run</strong></a>
+  <a href="{% url 'cowbat:upload_metadata' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i><strong> {% trans "Upload a New Run"%}</strong></a>
   <br>
-  <h2>Assembly Home</h2>
+  <h2>{% trans "Assembly Home"%}</h2>
   <br>
   <br>
   <table id="assembly-table" class="table table-hover">
       <thead>
           <tr style="text-align:center">
-            <th>Run Name</th>
-            <th>Run Status</th>
-            <th>Report Download</th>
+            <th>{% trans "Run Name"%}</th>
+            <th>{% trans "Run Status"%}</th>
+            <th>{% trans "Report Download"%}</th>
           </tr>
       </thead>
       <tbody>
@@ -31,13 +31,13 @@
           {% elif sequencing_run.status == 'UploadError' %} 
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning btn-block" role="button">{{ sequencing_run.status }}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}
-          <td><button class="btn btn-secondary btn-block" disabled>Unprocessed</button></td>
+          <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
           {% endif %}
           <td>
           {% if sequencing_run.status == 'Complete' %}
-            <a href="{{ sequencing_run.download_link }}" class="btn btn-dark btn-block" style="padding-left:3px;" role="button">Download <i class="fas fa-download"></i></a>
+            <a href="{{ sequencing_run.download_link }}" class="btn btn-dark btn-block" style="padding-left:3px;" role="button">{% trans "Download"%} <i class="fas fa-download"></i></a>
           {% else %}
-          <button class="btn btn-dark btn-block" disabled>Not Available</button>
+          <button class="btn btn-dark btn-block" disabled>{% trans "Not Available"%}</button>
           {% endif %}
           </td>
         </tr>

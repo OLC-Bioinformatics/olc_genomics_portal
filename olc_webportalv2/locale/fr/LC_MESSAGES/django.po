@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-26 18:04+0000\n"
+"POT-Creation-Date: 2019-09-26 18:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,6 +23,7 @@ msgid "YYMMDD_LAB"
 msgstr "AAMMJJ_LAB"
 
 #: olc_webportalv2/cowbat/forms.py:10
+#: olc_webportalv2/templates/cowbat/assembly_home.html:16
 msgid "Run Name"
 msgstr "Nom de l'exécution"
 
@@ -475,6 +476,38 @@ msgstr "Annoter les assemblages avec Prokka"
 msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
 
+#: olc_webportalv2/templates/cowbat/assembly_home.html:8
+msgid "Upload a New Run"
+msgstr "Télécharger une nouvelle exécution"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:10
+msgid "Assembly Home"
+msgstr "Page d'accueil de l'assemblage "
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:17
+msgid "Run Status"
+msgstr "Statut d'exécution"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:18
+msgid "Report Download"
+msgstr "Téléchargement du rapport"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:34
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
+msgid "Unprocessed"
+msgstr "Non traité"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:38
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
+msgid "Download"
+msgstr "Télécharger"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:40
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
+msgid "Not Available"
+msgstr "Indisponible"
+
 #: olc_webportalv2/templates/cowbat/upload_interop.html:7
 msgid "Step 2 of 3: Upload InterOp Files for Run"
 msgstr "Etape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
@@ -790,11 +823,6 @@ msgstr "Créer une requête de Virus Typer"
 msgid "Project Name"
 msgstr "Nom du projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
-msgid "Download"
-msgstr "Télécharger"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
 msgid "Request Date"
 msgstr "Date de la demande"
@@ -810,14 +838,6 @@ msgstr "En traitement"
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
 msgid "Error"
 msgstr "Erreur"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
-msgid "Unprocessed"
-msgstr "Non traité"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
-msgid "Not Available"
-msgstr "Indisponible"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
 msgid "Delete "
