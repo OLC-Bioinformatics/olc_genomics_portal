@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-26 18:38+0000\n"
+"POT-Creation-Date: 2019-10-01 14:31+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -493,24 +493,28 @@ msgid "Report Download"
 msgstr "Téléchargement du rapport"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:34
+#: olc_webportalv2/templates/data/data_home.html:46
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
 msgid "Unprocessed"
 msgstr "Non traité"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:38
+#: olc_webportalv2/templates/data/data_home.html:20
+#: olc_webportalv2/templates/data/data_home.html:50
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
 msgid "Download"
 msgstr "Télécharger"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:40
+#: olc_webportalv2/templates/data/data_home.html:52
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Not Available"
 msgstr "Indisponible"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:7
 msgid "Step 2 of 3: Upload InterOp Files for Run"
-msgstr "Etape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
+msgstr "Étape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:11
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:15
@@ -527,6 +531,7 @@ msgstr "Fichier"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:20
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:24
+#: olc_webportalv2/templates/data/data_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 msgid "Status"
 msgstr "Statut"
@@ -579,7 +584,7 @@ msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:6
 msgid "Step 3 of 3: Upload Sequence Files and Begin Assembly"
 msgstr ""
-"Etape 3 de 3 : Charger les fichiers de séquence et commencer l'assemblage"
+"Étape 3 de 3 : Charger les fichiers de séquence et commencer l'assemblage"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
@@ -601,6 +606,55 @@ msgstr ""
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
 msgid "Reverse Reads"
 msgstr ""
+
+#: olc_webportalv2/templates/data/data_home.html:9
+msgid "Get Processed (FASTA) Data "
+msgstr "Obtenir les données traitées (FASTA)"
+
+#: olc_webportalv2/templates/data/data_home.html:11
+msgid "Data Collection"
+msgstr "Collecte des données"
+
+#: olc_webportalv2/templates/data/data_home.html:13
+msgid ""
+"Data requests made in the last 7 days are visible. Afterwards, to reacquire "
+"the files, data requests will need to be re-run."
+msgstr ""
+"Les demandes de données effectuées au cours des 7 derniers jours sont "
+"visibles. Par la suite, pour récupérer les fichiers, les demandes de données "
+"devront être réexécutées."
+
+#: olc_webportalv2/templates/data/data_home.html:21
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
+msgid "Request Date"
+msgstr "Date de la demande"
+
+#: olc_webportalv2/templates/data/data_home.html:33
+msgid "...and"
+msgstr "...et"
+
+#: olc_webportalv2/templates/data/data_home.html:33
+msgid "more"
+msgstr "de plus"
+
+#: olc_webportalv2/templates/data/data_home.html:38
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+msgid "Complete"
+msgstr "Complet"
+
+#: olc_webportalv2/templates/data/data_home.html:40
+msgid "Warning"
+msgstr "Avertissement"
+
+#: olc_webportalv2/templates/data/data_home.html:42
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
+msgid "Processing"
+msgstr "En traitement"
+
+#: olc_webportalv2/templates/data/data_home.html:44
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
+msgid "Error"
+msgstr "Erreur"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
@@ -822,22 +876,6 @@ msgstr "Créer une requête de Virus Typer"
 #: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
 msgstr "Nom du projet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
-msgid "Request Date"
-msgstr "Date de la demande"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
-msgid "Complete"
-msgstr "Complet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
-msgid "Processing"
-msgstr "En traitement"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
-msgid "Error"
-msgstr "Erreur"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
 msgid "Delete "

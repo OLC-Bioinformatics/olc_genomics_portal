@@ -6,19 +6,19 @@
 {% block content %}
 <br>
 {#  <a href="{% url 'data:raw_data' %}" class="btn btn-secondary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>Get Raw (FASTQ) Data </strong></a>#}
-<a href="{% url 'data:assembled_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>Get Processed (FASTA) Data</strong></a>
+<a href="{% url 'data:assembled_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>{% trans "Get Processed (FASTA) Data "%}</strong></a>
 <br>
-  <h2>Data Collection</h2>
+  <h2>{% trans "Data Collection" %}</h2>
   <br>
-  <p>Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data requests will need to be re-run.</p>
+  <p>{% trans "Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data requests will need to be re-run." %}</p>
 
   <table id="data-request-table" class="table table-hover">
   <thead>
     <tr style="text-align:center">
        <th>SEQIDs</th>
-       <th>Status</th>
-       <th>Download</th>
-       <th>Request Date</th>
+       <th>{% trans "Status" %}</th>
+       <th>{% trans "Download" %}</th>
+       <th>{% trans "Request Date" %}</th>
        <th>Type</th>
     </tr>
   </thead>
@@ -30,26 +30,26 @@
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
           {% if data_request.seqids|length > 3 %}
-              <p style="font-size:14px">...and {{ data_request.seqids|length|add:'-3' }} more</p>
+              <p style="font-size:14px">{% trans "...and"%} {{ data_request.seqids|length|add:'-3' }} {% trans "more"%}</p>
           {% endif %}
         </td>
 
          {% if data_request.status == 'Complete' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-success btn-block" role="button">{{ data_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-success btn-block" role="button">{% trans 'Complete'%} <i class="fas fa-check-circle"></i></a></td>
          {% elif data_request.status == 'Warning' %}
-          <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning btn-block" role="button">{{ data_request.status }}</a></td>
+          <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-warning btn-block" role="button">{% trans 'Warning'%}</a></td>
           {% elif data_request.status == 'Processing' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans 'Processing'%}</a></td>
           {% elif data_request.status == 'Error' %}
-             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ data_request.status }}</a></td>
+             <td><a href="{% url 'data:data_download' data_request_pk=data_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{% trans 'Error'%}</a></td>
           {% elif data_request.status == 'Unprocessed' %}
-             <td><button class="btn btn-secondary btn-block" disabled>{{ data_request.status }}</button></td>
+             <td><button class="btn btn-secondary btn-block" disabled>{% trans 'Unprocessed'%}</button></td>
           {% endif %}
 
           {% if data_request.status == 'Complete' or data_request.status == 'Warning' %}
-            <td><a href="{{ data_request.download_link }}" class="btn btn-dark btn-block" role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ data_request.download_link }}" class="btn btn-dark btn-block" role="button">{% trans 'Download'%} <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>{% trans 'Not Available'%}</button></td>
           {% endif %}
 
         <td>{{ data_request.created_at }}</td>
