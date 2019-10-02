@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-02 13:59+0000\n"
+"POT-Creation-Date: 2019-10-02 14:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -521,21 +521,21 @@ msgid "Report Download"
 msgstr "Téléchargement du rapport"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:34
-#: olc_webportalv2/templates/data/data_home.html:46
+#: olc_webportalv2/templates/data/data_home.html:45
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
 msgid "Unprocessed"
 msgstr "Non traité"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:38
-#: olc_webportalv2/templates/data/data_home.html:20
-#: olc_webportalv2/templates/data/data_home.html:50
+#: olc_webportalv2/templates/data/data_home.html:19
+#: olc_webportalv2/templates/data/data_home.html:49
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
 msgid "Download"
 msgstr "Télécharger"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:40
-#: olc_webportalv2/templates/data/data_home.html:52
+#: olc_webportalv2/templates/data/data_home.html:51
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Not Available"
 msgstr "Indisponible"
@@ -559,7 +559,7 @@ msgstr "Fichier"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:20
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:24
-#: olc_webportalv2/templates/data/data_home.html:19
+#: olc_webportalv2/templates/data/data_home.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 msgid "Status"
 msgstr "Statut"
@@ -654,15 +654,80 @@ msgstr "Obtenir des fichiers"
 msgid "Why here"
 msgstr ""
 
-#: olc_webportalv2/templates/data/data_home.html:9
+#: olc_webportalv2/templates/data/data_download.html:7
+msgid "Download Data"
+msgstr "Télécharger les données"
+
+#: olc_webportalv2/templates/data/data_download.html:11
+msgid "The following SEQIDs were not found:"
+msgstr "Les SEQID suivantes n'ont pas été trouvées :"
+
+#: olc_webportalv2/templates/data/data_download.html:15
+#: olc_webportalv2/templates/data/data_home.html:41
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
+msgid "Processing"
+msgstr "En traitement"
+
+#: olc_webportalv2/templates/data/data_download.html:17
+msgid "This page will automatically refresh."
+msgstr "Cette page se rafraîchit automatiquement."
+
+#: olc_webportalv2/templates/data/data_download.html:18
+msgid "You don't have to remain on this page - this request will be visible on"
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande sera visible "
+"le"
+
+#: olc_webportalv2/templates/data/data_download.html:18
+#: olc_webportalv2/templates/data/data_download.html:46
+msgid "Data Home"
+msgstr "Accueil des données"
+
+#: olc_webportalv2/templates/data/data_download.html:20
+#: olc_webportalv2/templates/data/data_home.html:37
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+msgid "Complete"
+msgstr "Complet"
+
+#: olc_webportalv2/templates/data/data_download.html:22
+#: olc_webportalv2/templates/data/data_download.html:34
+msgid "These files will be available for 7 days."
+msgstr "Ces fichiers seront disponibles pendant 7 jours."
+
+#: olc_webportalv2/templates/data/data_download.html:25
+#: olc_webportalv2/templates/data/data_download.html:37
+msgid "Download Assemblies"
+msgstr "Télécharger les assemblages"
+
+#: olc_webportalv2/templates/data/data_download.html:29
+#: olc_webportalv2/templates/data/data_download.html:41
+msgid "Shareable link:"
+msgstr "Lien partageable:"
+
+#: olc_webportalv2/templates/data/data_download.html:32
+#: olc_webportalv2/templates/data/data_home.html:39
+msgid "Warning"
+msgstr "Avertissement"
+
+#: olc_webportalv2/templates/data/data_download.html:44
+#: olc_webportalv2/templates/data/data_home.html:43
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
+msgid "Error"
+msgstr "Erreur"
+
+#: olc_webportalv2/templates/data/data_download.html:46
+msgid "Return to "
+msgstr "Retourner à"
+
+#: olc_webportalv2/templates/data/data_home.html:8
 msgid "Get Processed (FASTA) Data "
 msgstr "Obtenir les données traitées (FASTA)"
 
-#: olc_webportalv2/templates/data/data_home.html:11
+#: olc_webportalv2/templates/data/data_home.html:10
 msgid "Data Collection"
 msgstr "Collecte des données"
 
-#: olc_webportalv2/templates/data/data_home.html:13
+#: olc_webportalv2/templates/data/data_home.html:12
 msgid ""
 "Data requests made in the last 7 days are visible. Afterwards, to reacquire "
 "the files, data requests will need to be re-run."
@@ -671,37 +736,18 @@ msgstr ""
 "visibles. Par la suite, pour récupérer les fichiers, les demandes de données "
 "devront être réexécutées."
 
-#: olc_webportalv2/templates/data/data_home.html:21
+#: olc_webportalv2/templates/data/data_home.html:20
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
 msgid "Request Date"
 msgstr "Date de la demande"
 
-#: olc_webportalv2/templates/data/data_home.html:33
+#: olc_webportalv2/templates/data/data_home.html:32
 msgid "...and"
 msgstr "...et"
 
-#: olc_webportalv2/templates/data/data_home.html:33
+#: olc_webportalv2/templates/data/data_home.html:32
 msgid "more"
 msgstr "de plus"
-
-#: olc_webportalv2/templates/data/data_home.html:38
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
-msgid "Complete"
-msgstr "Complet"
-
-#: olc_webportalv2/templates/data/data_home.html:40
-msgid "Warning"
-msgstr "Avertissement"
-
-#: olc_webportalv2/templates/data/data_home.html:42
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
-msgid "Processing"
-msgstr "En traitement"
-
-#: olc_webportalv2/templates/data/data_home.html:44
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
-msgid "Error"
-msgstr "Erreur"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
