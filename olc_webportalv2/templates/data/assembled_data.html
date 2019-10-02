@@ -5,8 +5,8 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Assembled Data Request</h2>
-  <p>Enter the SEQIDs you want to retrieve FASTA files for below, one per line.</p>
+  <h2>{% trans "Assembled Data Request"%}</h2>
+  <p>{% trans "Enter the SEQIDs you want to retrieve FASTA files for below, one per line."%}</p>
   <br>
 <form action='' enctype="multipart/form-data" method="post">
    {% if form.seqids.errors %}
@@ -17,7 +17,7 @@
   {% csrf_token %}
   {{ form.seqids|as_crispy_field }}
     <br>
-  <button type="submit" class="btn btn-primary btn-lg">Get Files</button>
+  <button type="submit" class="btn btn-primary btn-lg">{% trans "Get Files"%}</button>
   </form>
   
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
@@ -26,7 +26,7 @@
   //add tooltips
   var seqids = document.getElementById('div_id_seqids');
   $(seqids).attr('data-tooltip','tooltip');
-  $(seqids).attr('title','Why here');
+  $(seqids).attr('title',{% trans 'Why here' %});
   });
   </script>
 {% endblock %}

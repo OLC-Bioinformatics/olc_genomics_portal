@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-01 14:31+0000\n"
+"POT-Creation-Date: 2019-10-02 13:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,34 @@ msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 #: olc_webportalv2/cowbat/forms.py:26
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
+
+#: olc_webportalv2/data/forms.py:8
+msgid "YYYY-LAB-####"
+msgstr "AAAA-LAB-####"
+
+#: olc_webportalv2/data/forms.py:13
+msgid "Cannot be blank"
+msgstr "Ne peut pas être vide!"
+
+#: olc_webportalv2/data/forms.py:20
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not formatted correctly. Correct "
+"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
+"line. Invalid SEQIDS: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été formatées "
+"correctement. Le format correct est AAAA-LAB-####. Assurez-vous également "
+"d'avoir saisi une SEQID par ligne. SEQIDS invalide: %s"
+
+#: olc_webportalv2/data/forms.py:34
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not found in our database. SEQIDs "
+"not found: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été trouvées dans "
+"notre base de données. SEQIDs non trouvés : %s"
 
 #: olc_webportalv2/metadata/forms.py:7
 msgid "Pass"
@@ -605,6 +633,25 @@ msgstr ""
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
 msgid "Reverse Reads"
+msgstr ""
+
+#: olc_webportalv2/templates/data/assembled_data.html:8
+msgid "Assembled Data Request"
+msgstr "Demande de données assemblées"
+
+#: olc_webportalv2/templates/data/assembled_data.html:9
+msgid ""
+"Enter the SEQIDs you want to retrieve FASTA files for below, one per line."
+msgstr ""
+"Entrez les SEQIDs pour lesquels vous voulez récupérer les fichiers FASTA ci-"
+"dessous, un par ligne."
+
+#: olc_webportalv2/templates/data/assembled_data.html:20
+msgid "Get Files"
+msgstr "Obtenir des fichiers"
+
+#: olc_webportalv2/templates/data/assembled_data.html:29
+msgid "Why here"
 msgstr ""
 
 #: olc_webportalv2/templates/data/data_home.html:9

@@ -1,23 +1,26 @@
 from django import forms
 from olc_webportalv2.metadata.models import SequenceData
 import re
+from django.utils.translation import ugettext_lazy as _
 
 
 class DataRequestForm(forms.Form):
-    seqids = forms.CharField(max_length=2048, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='')
+    seqids = forms.CharField(required=False,max_length=2048, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='')
 
     def clean_seqids(self):
         seqid_input = self.cleaned_data['seqids']
+        if seqid_input == "":
+            raise forms.ValidationError(_('Cannot be blank'))
         seqid_list = seqid_input.split()
         bad_seqids = list()
         for seqid in seqid_list:
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not formatted correctly. '
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
                                         'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line.\n'
-                                        'Invalid SEQIDS: {}'.format(bad_seqids))
+                                        'SEQID per line.'
+                                        ' Invalid SEQIDS: %s')% bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()
         seqids_in_database = list()
@@ -28,6 +31,6 @@ class DataRequestForm(forms.Form):
             if seqid not in seqids_in_database:
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
-                                        'SEQIDs not found: {}'.format(bad_seqids))
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database.'
+                                        ' SEQIDs not found: %s')% bad_seqids)
         return seqid_input
