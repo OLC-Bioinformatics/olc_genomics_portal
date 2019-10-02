@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-02 14:27+0000\n"
+"POT-Creation-Date: 2019-10-02 14:34+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -276,12 +276,12 @@ msgstr ""
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:18
 msgid "change password"
-msgstr ""
+msgstr "changer le mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:22
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:9
 msgid "Your password is now changed."
-msgstr ""
+msgstr "Votre mot de passe est maintenant changé."
 
 #: olc_webportalv2/templates/account/password_set.html:6
 #: olc_webportalv2/templates/account/password_set.html:9
@@ -305,46 +305,46 @@ msgstr ""
 #: olc_webportalv2/templates/account/signup_closed.html:5
 #: olc_webportalv2/templates/account/signup_closed.html:8
 msgid "Sign Up Closed"
-msgstr ""
+msgstr "Inscription fermée"
 
 #: olc_webportalv2/templates/account/signup_closed.html:10
 msgid "We are sorry, but the sign up is currently closed."
-msgstr ""
+msgstr "Nous sommes désolés, mais l'inscription est actuellement fermée."
 
 #: olc_webportalv2/templates/account/verification_sent.html:5
 #: olc_webportalv2/templates/account/verification_sent.html:9
 #: olc_webportalv2/templates/account/verified_email_required.html:5
 #: olc_webportalv2/templates/account/verified_email_required.html:8
 msgid "Verify Your E-mail Address"
-msgstr ""
+msgstr "Vérifiez votre adresse e-mail"
 
 #: olc_webportalv2/templates/account/verification_sent.html:11
 msgid ""
 "We have sent an e-mail to you for verification. Follow the link provided to "
 "finalize the signup process. Please contact us if you do not receive it "
 "within a few minutes."
-msgstr ""
+msgstr "Nous vous avons envoyé un e-mail pour vérification. Suivez le lien fourni pour finaliser le processus d'inscription. Veuillez nous contacter si vous ne le recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:12
 msgid ""
 "This part of the site requires us to verify that\n"
 "you are who you claim to be. For this purpose, we require that you\n"
 "verify ownership of your e-mail address. "
-msgstr ""
+msgstr "Cette partie du site nous oblige à vérifier que vous êtes bien celui que vous prétendez être. À cette fin, nous vous demandons de vérifier la propriété de votre adresse e-mail. "
 
 #: olc_webportalv2/templates/account/verified_email_required.html:16
 msgid ""
 "We have sent an e-mail to you for\n"
 "verification. Please click on the link inside this e-mail. Please\n"
 "contact us if you do not receive it within a few minutes."
-msgstr ""
+msgstr "Nous vous avons envoyé un e-mail pour vérification. Veuillez cliquer sur le lien à l'intérieur de cet e-mail. Veuillez nous contacter si vous ne le recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:20
 #, python-format
 msgid ""
 "<strong>Note:</strong> you can still <a href=\"%(email_url)s\">change your e-"
 "mail address</a>."
-msgstr ""
+msgstr "<strong>Note:</strong>vous pouvez toujours <a href=\"%(email_url)s\">changer votre adresse e-mail</a>."
 
 #: olc_webportalv2/templates/base.html:13
 msgid "CFIA FoodPort"
@@ -647,10 +647,12 @@ msgstr ""
 "dessous, un par ligne."
 
 #: olc_webportalv2/templates/data/assembled_data.html:20
+#: olc_webportalv2/templates/data/raw_data.html:20
 msgid "Get Files"
 msgstr "Obtenir des fichiers"
 
 #: olc_webportalv2/templates/data/assembled_data.html:29
+#: olc_webportalv2/templates/data/raw_data.html:29
 msgid "Why here"
 msgstr ""
 
@@ -748,6 +750,17 @@ msgstr "...et"
 #: olc_webportalv2/templates/data/data_home.html:32
 msgid "more"
 msgstr "de plus"
+
+#: olc_webportalv2/templates/data/raw_data.html:8
+msgid "Raw Data Request"
+msgstr "Demande de données brutes"
+
+#: olc_webportalv2/templates/data/raw_data.html:9
+msgid ""
+"Enter the SEQIDs you want to retrieve FASTQ files for below, one per line."
+msgstr ""
+"Entrez les SEQIDs pour lesquels vous voulez récupérer les fichiers FASTA ci-"
+"dessous, un par ligne."
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
