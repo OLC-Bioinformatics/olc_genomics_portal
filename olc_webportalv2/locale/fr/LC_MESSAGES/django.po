@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-02 14:34+0000\n"
+"POT-Creation-Date: 2019-10-03 14:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -64,6 +64,7 @@ msgstr ""
 "notre base de données. SEQIDs non trouvés : %s"
 
 #: olc_webportalv2/metadata/forms.py:7
+#: olc_webportalv2/templates/metadata/metadata_browse.html:33
 msgid "Pass"
 msgstr "Passe"
 
@@ -74,6 +75,7 @@ msgstr ""
 "contaminées."
 
 #: olc_webportalv2/metadata/forms.py:8
+#: olc_webportalv2/templates/metadata/metadata_browse.html:35
 msgid "Reference"
 msgstr "Référence"
 
@@ -82,6 +84,7 @@ msgid "Highest quality, gold standard sequences."
 msgstr "Des séquences de qualité supérieure, des séquences étalons or."
 
 #: olc_webportalv2/metadata/forms.py:9
+#: olc_webportalv2/templates/metadata/metadata_browse.html:37
 msgid "Fail"
 msgstr "Raté"
 
@@ -323,28 +326,39 @@ msgid ""
 "We have sent an e-mail to you for verification. Follow the link provided to "
 "finalize the signup process. Please contact us if you do not receive it "
 "within a few minutes."
-msgstr "Nous vous avons envoyé un e-mail pour vérification. Suivez le lien fourni pour finaliser le processus d'inscription. Veuillez nous contacter si vous ne le recevez pas dans quelques minutes."
+msgstr ""
+"Nous vous avons envoyé un e-mail pour vérification. Suivez le lien fourni "
+"pour finaliser le processus d'inscription. Veuillez nous contacter si vous "
+"ne le recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:12
 msgid ""
 "This part of the site requires us to verify that\n"
 "you are who you claim to be. For this purpose, we require that you\n"
 "verify ownership of your e-mail address. "
-msgstr "Cette partie du site nous oblige à vérifier que vous êtes bien celui que vous prétendez être. À cette fin, nous vous demandons de vérifier la propriété de votre adresse e-mail. "
+msgstr ""
+"Cette partie du site nous oblige à vérifier que vous êtes bien celui que "
+"vous prétendez être. À cette fin, nous vous demandons de vérifier la "
+"propriété de votre adresse e-mail. "
 
 #: olc_webportalv2/templates/account/verified_email_required.html:16
 msgid ""
 "We have sent an e-mail to you for\n"
 "verification. Please click on the link inside this e-mail. Please\n"
 "contact us if you do not receive it within a few minutes."
-msgstr "Nous vous avons envoyé un e-mail pour vérification. Veuillez cliquer sur le lien à l'intérieur de cet e-mail. Veuillez nous contacter si vous ne le recevez pas dans quelques minutes."
+msgstr ""
+"Nous vous avons envoyé un e-mail pour vérification. Veuillez cliquer sur le "
+"lien à l'intérieur de cet e-mail. Veuillez nous contacter si vous ne le "
+"recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:20
 #, python-format
 msgid ""
 "<strong>Note:</strong> you can still <a href=\"%(email_url)s\">change your e-"
 "mail address</a>."
-msgstr "<strong>Note:</strong>vous pouvez toujours <a href=\"%(email_url)s\">changer votre adresse e-mail</a>."
+msgstr ""
+"<strong>Note:</strong>vous pouvez toujours <a href=\"%(email_url)s\">changer "
+"votre adresse e-mail</a>."
 
 #: olc_webportalv2/templates/base.html:13
 msgid "CFIA FoodPort"
