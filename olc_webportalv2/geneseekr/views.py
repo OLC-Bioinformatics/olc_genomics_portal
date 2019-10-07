@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import datetime
 # Portal-specific things
@@ -96,17 +97,20 @@ def geneseekr_processing(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
 
     form = EmailForm()
-    if request.method == 'POST':
+    if request.method == 'POST':    
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email not in geneseekr_request.emails_array:
-                geneseekr_request.emails_array.append(Email)
-                geneseekr_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
+            if Email == "":
+                messages.error(request, _("Email cannot be blank"))
+            else:    
+                if Email not in geneseekr_request.emails_array:
+                    geneseekr_request.emails_array.append(Email)
+                    geneseekr_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
+                else:
+                    messages.error(request, _('Email has already been saved'))
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
@@ -204,9 +208,9 @@ def tree_result(request, parsnp_request_pk):
                 parsnp_request.emails_array.append(Email)
                 parsnp_request.save()
                 form = EmailForm()
-                messages.success(request, 'Email saved')
+                messages.success(request, _('Email saved'))
             else:
-                messages.error(request, 'Email has already been saved')
+                messages.error(request, _('Email has already been saved'))
             
     return render(request,
                   'geneseekr/tree_result.html',
@@ -306,9 +310,9 @@ def amr_result(request, amr_request_pk):
                 amr_request.emails_array.append(Email)
                 amr_request.save()
                 form = EmailForm()
-                messages.success(request, 'Email saved')
+                messages.success(request, _('Email saved'))
             else:
-                messages.error(request, 'Email has already been saved')
+                messages.error(request, _('Email has already been saved'))
 
     return render(request,
                   'geneseekr/amr_result.html',
@@ -401,9 +405,9 @@ def prokka_result(request, prokka_request_pk):
                 prokka_request.emails_array.append(Email)
                 prokka_request.save()
                 form = EmailForm()
-                messages.success(request, 'Email saved')
+                messages.success(request, _('Email saved'))
             else:
-                messages.error(request, 'Email has already been saved')
+                messages.error(request, _('Email has already been saved'))
         
     return render(request,
                   'geneseekr/prokka_result.html',

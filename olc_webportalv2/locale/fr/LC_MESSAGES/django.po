@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-03 18:39+0000\n"
+"POT-Creation-Date: 2019-10-07 17:23+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,7 +35,10 @@ msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
 
-#: olc_webportalv2/data/forms.py:8
+#: olc_webportalv2/data/forms.py:8 olc_webportalv2/geneseekr/forms.py:46
+#: olc_webportalv2/geneseekr/forms.py:153
+#: olc_webportalv2/geneseekr/forms.py:217
+#: olc_webportalv2/geneseekr/forms.py:268
 msgid "YYYY-LAB-####"
 msgstr "AAAA-LAB-####"
 
@@ -43,6 +46,7 @@ msgstr "AAAA-LAB-####"
 msgid "Cannot be blank"
 msgstr "Ne peut pas être vide!"
 
+# python-format
 #: olc_webportalv2/data/forms.py:20
 #, python-format
 msgid ""
@@ -54,7 +58,9 @@ msgstr ""
 "correctement. Le format correct est AAAA-LAB-####. Assurez-vous également "
 "d'avoir saisi une SEQID par ligne. SEQIDS invalide: %s"
 
-#: olc_webportalv2/data/forms.py:34
+#: olc_webportalv2/data/forms.py:34 olc_webportalv2/geneseekr/forms.py:81
+#: olc_webportalv2/geneseekr/forms.py:254
+#: olc_webportalv2/geneseekr/forms.py:306
 #, python-format
 msgid ""
 "One or more of the SEQIDs you entered was not found in our database. SEQIDs "
@@ -62,6 +68,189 @@ msgid ""
 msgstr ""
 "Une ou plusieurs des SEQID que vous avez saisies n'ont pas été trouvées dans "
 "notre base de données. SEQIDs non trouvés : %s"
+
+#: olc_webportalv2/geneseekr/forms.py:13
+msgid "Name: "
+msgstr "Nom"
+
+#: olc_webportalv2/geneseekr/forms.py:16
+msgid "Number neighbors: "
+msgstr "Nombre de voisins: "
+
+#: olc_webportalv2/geneseekr/forms.py:31
+msgid "Must enter at least one of SeqID or uploaded file."
+msgstr "Vous devez saisir au moins un SeqID ou un fichier téléchargé."
+
+#: olc_webportalv2/geneseekr/forms.py:33
+msgid "Only enter one of SeqID and uploaded file."
+msgstr ""
+
+#: olc_webportalv2/geneseekr/forms.py:36
+msgid "Uploaded file must be in FASTA format and filename must end with .fasta"
+msgstr "N'entrez qu'un seul SeqID et le fichier téléchargé."
+
+#: olc_webportalv2/geneseekr/forms.py:38
+msgid ""
+"Requested SEQID is not in the database. Correct format for SeqID is YYYY-LAB-"
+"####. Please check your SEQID and try again."
+msgstr ""
+"La SEQID demandée n'est pas dans la base de données. Le format correct pour "
+"SeqID est AAAA-LAB-#####. Veuillez vérifier votre SEQID et réessayer."
+
+#: olc_webportalv2/geneseekr/forms.py:41
+msgid ""
+"Invalid number of nearest neighbors requested. Valid values are from 1 to "
+"250."
+msgstr ""
+"Le nombre de voisins les plus proches n'est pas valide. Les valeurs valides "
+"vont de 1 à 250."
+
+#: olc_webportalv2/geneseekr/forms.py:47
+msgid ""
+">Gene \n"
+" ACGTACGT"
+msgstr ""
+">Gène \n"
+" ACGTACGT"
+
+#: olc_webportalv2/geneseekr/forms.py:67 olc_webportalv2/geneseekr/forms.py:187
+#: olc_webportalv2/geneseekr/forms.py:240
+#: olc_webportalv2/geneseekr/forms.py:292
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not formatted correctly. Correct "
+"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
+"line. Invalid SEQIDs: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été formatées "
+"correctement. Le format correct est AAAA-LAB-####. Assurez-vous également "
+"d'avoir saisi une SEQID par ligne. SEQID invalides : %s"
+
+#: olc_webportalv2/geneseekr/forms.py:98
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:101
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences NOT from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences NON issues du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:107
+msgid ""
+"No input found! You must submit a FASTA sequence by pasting it into the text "
+"box or uploading a FASTA file."
+msgstr ""
+"Aucune entrée trouvée ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléchargeant un fichier FASTA."
+
+#: olc_webportalv2/geneseekr/forms.py:110
+msgid ""
+"Multiple inputs found! You must submit a FASTA sequence by pasting it into "
+"the text box or uploading a FASTA file, but not both."
+msgstr ""
+"Entrées multiples trouvées ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléchargeant un fichier FASTA, mais pas "
+"les deux."
+
+#: olc_webportalv2/geneseekr/forms.py:122
+#: olc_webportalv2/geneseekr/forms.py:139
+msgid ""
+"Your FASTA sequence contains invalid characters. Sequence should only "
+"contain valid nucleotides (A, C, T, G, N)."
+msgstr ""
+"Votre séquence FASTA contient des caractères non valides. La séquence ne "
+"doit contenir que des nucléotides valides (A, C, T, G, N)."
+
+#: olc_webportalv2/geneseekr/forms.py:126
+#: olc_webportalv2/geneseekr/forms.py:143
+msgid ""
+"Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA"
+msgstr ""
+"Séquence FASTA invalide saisie. Le format correct est: >nomdeséquence  "
+"ACTGATCGA"
+
+#: olc_webportalv2/geneseekr/forms.py:146
+#, python-format
+msgid ""
+"FASTA sequence length maximum is 10000 bases. Your input sequence had %s "
+"bases."
+msgstr ""
+"La longueur maximale de la séquence FASTA est de 10000 bases. Votre séquence "
+"d'entrée avait des %s bases"
+
+#: olc_webportalv2/geneseekr/forms.py:152
+#: olc_webportalv2/geneseekr/forms.py:216
+#: olc_webportalv2/geneseekr/forms.py:267
+#: olc_webportalv2/geneseekr/forms.py:318
+msgid "Optional"
+msgstr "Facultatif"
+
+#: olc_webportalv2/geneseekr/forms.py:156
+msgid "Which tree program? "
+msgstr "Quel programme d'arborescence ?"
+
+#: olc_webportalv2/geneseekr/forms.py:165
+#: olc_webportalv2/geneseekr/forms.py:226
+#: olc_webportalv2/geneseekr/forms.py:277
+msgid "Input cannot be only whitespace"
+msgstr "L'entrée ne peut pas être seulement vide."
+
+#: olc_webportalv2/geneseekr/forms.py:206
+#, python-format
+msgid "Too many Diversitree strains selected, must be %s or less"
+msgstr "Trop de souches Diversitree sélectionnées, doivent être en %s ou moins"
+
+#: olc_webportalv2/geneseekr/forms.py:209
+#: olc_webportalv2/geneseekr/forms.py:259
+#: olc_webportalv2/geneseekr/forms.py:312
+msgid "All files uploaded must be in FASTA format with the extension .fasta"
+msgstr ""
+"Tous les fichiers téléchargés doivent être au format FASTA avec l'extension ."
+"fasta"
+
+#: olc_webportalv2/geneseekr/forms.py:211
+msgid "At least 2 input sequences must be given."
+msgstr "Au moins 2 séquences d'entrée doivent être données."
+
+#: olc_webportalv2/geneseekr/forms.py:262
+msgid "At least 1 input sequence must be given."
+msgstr "Au moins 1 séquence d'entrée doit être donnée."
+
+#: olc_webportalv2/geneseekr/forms.py:309
+msgid "Must enter at least one SeqID or upload at least one file."
+msgstr ""
+"Vous devez saisir au moins un SeqID ou télécharger au moins un fichier."
+
+#: olc_webportalv2/geneseekr/forms.py:318
+msgid "Name "
+msgstr "Nom"
+
+#: olc_webportalv2/geneseekr/views.py:105
+msgid "Email cannot be blank"
+msgstr "Le courriel ne peut pas être vide!"
+
+#: olc_webportalv2/geneseekr/views.py:111
+#: olc_webportalv2/geneseekr/views.py:211
+#: olc_webportalv2/geneseekr/views.py:313
+#: olc_webportalv2/geneseekr/views.py:408
+msgid "Email saved"
+msgstr "Email enregistré"
+
+#: olc_webportalv2/geneseekr/views.py:113
+#: olc_webportalv2/geneseekr/views.py:213
+#: olc_webportalv2/geneseekr/views.py:315
+#: olc_webportalv2/geneseekr/views.py:410
+msgid "Email has already been saved"
+msgstr "Le courriel a déjà été sauvegardé"
 
 #: olc_webportalv2/metadata/forms.py:7
 #: olc_webportalv2/templates/metadata/metadata_browse.html:33
@@ -165,7 +354,7 @@ msgstr "Ajouter une adresse E-mail"
 
 #: olc_webportalv2/templates/account/email.html:70
 msgid "Do you really want to remove the selected e-mail address?"
-msgstr "Voulez-vous vraiment supprimer l'adresse e-mail sélectionnée?"
+msgstr "Voulez-vous vraiment effacer l'adresse e-mail sélectionnée ?"
 
 #: olc_webportalv2/templates/account/email_confirm.html:6
 #: olc_webportalv2/templates/account/email_confirm.html:11
@@ -304,6 +493,8 @@ msgstr "S'inscrire"
 msgid ""
 "Already have an account? Then please <a href=\"%(login_url)s\">sign in</a>."
 msgstr ""
+"Vous avez déjà un compte ? Alors s'il vous plaît <a href=\"%(login_url)s"
+"\">sign in</a>"
 
 #: olc_webportalv2/templates/account/signup_closed.html:5
 #: olc_webportalv2/templates/account/signup_closed.html:8
@@ -339,7 +530,7 @@ msgid ""
 msgstr ""
 "Cette partie du site nous oblige à vérifier que vous êtes bien celui que "
 "vous prétendez être. À cette fin, nous vous demandons de vérifier la "
-"propriété de votre adresse e-mail. "
+"propriété de votre adresse électronique."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:16
 msgid ""
@@ -537,6 +728,7 @@ msgstr "Téléchargement du rapport"
 #: olc_webportalv2/templates/cowbat/assembly_home.html:34
 #: olc_webportalv2/templates/data/data_home.html:45
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:43
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:80
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
 msgid "Unprocessed"
 msgstr "Non traité"
@@ -603,9 +795,9 @@ msgid ""
 "to upload. Once all files have been uploaded,\n"
 "  you can proceed to the next page. "
 msgstr ""
-"Entrez un nom d'exécution et glissez-déposez les fichiers trouvés dans le "
+" Entrez un nom d'exécution et glissez-déposez les fichiers trouvés dans le "
 "tableau suivant pour les télécharger. Une fois que tous les fichiers ont été "
-"téléchargés, vous pouvez passer à la page suivante."
+"téléchargés, vous pouvez passer à la page suivante. "
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:55
 msgid "Validate Metadata Files"
@@ -648,11 +840,11 @@ msgstr "Télécharger les fichiers de séquence et commencer l'assemblage"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:30
 msgid "Forward Reads"
-msgstr ""
+msgstr "Brins en avant"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
 msgid "Reverse Reads"
-msgstr ""
+msgstr "Brins inverses"
 
 #: olc_webportalv2/templates/data/assembled_data.html:8
 msgid "Assembled Data Request"
@@ -686,6 +878,7 @@ msgstr "Les SEQID suivantes n'ont pas été trouvées :"
 #: olc_webportalv2/templates/data/data_download.html:15
 #: olc_webportalv2/templates/data/data_home.html:41
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:12
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
 msgid "Processing"
 msgstr "En traitement"
@@ -708,6 +901,7 @@ msgstr "Accueil des données"
 #: olc_webportalv2/templates/data/data_download.html:20
 #: olc_webportalv2/templates/data/data_home.html:37
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:88
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
 msgid "Complete"
 msgstr "Complet"
@@ -724,6 +918,7 @@ msgstr "Télécharger les assemblages"
 
 #: olc_webportalv2/templates/data/data_download.html:29
 #: olc_webportalv2/templates/data/data_download.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:101
 msgid "Shareable link:"
 msgstr "Lien partageable:"
 
@@ -735,11 +930,13 @@ msgstr "Avertissement"
 #: olc_webportalv2/templates/data/data_download.html:44
 #: olc_webportalv2/templates/data/data_home.html:43
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:83
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
 msgid "Error"
 msgstr "Erreur"
 
 #: olc_webportalv2/templates/data/data_download.html:46
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:85
 msgid "Return to "
 msgstr "Retourner à"
 
@@ -792,6 +989,7 @@ msgid "Create A GeneSeekr Query"
 msgstr "Créer une requête GeneSeekr"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:10
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:15
 msgid "GeneSeekr Home"
 msgstr "GeneSeekr Accueil"
 
@@ -804,6 +1002,160 @@ msgstr "Nom"
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:61
 msgid "Delete"
 msgstr "Effacer"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:102
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
+msgid "Are you sure?"
+msgstr "Êtes-vous sûr?"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:103
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
+msgid "You will not be able to revert this!"
+msgstr "Vous ne pouvez pas reprendre ceci!"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:107
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:108
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
+msgid "Yes, delete it!"
+msgstr "Oui, effacez-le !"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:113
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
+msgid "Deleted!"
+msgstr "Effacé"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:114
+msgid "Your file has been deleted."
+msgstr "Votre fichier a été effacé."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:132
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
+msgid "Cancelled!"
+msgstr "Annulé!"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:133
+msgid "Your file is safe."
+msgstr "Votre dossier est sûr."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:8
+msgid "GeneSeekr Results"
+msgstr "Résultats GeneSeekr"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:14
+msgid ""
+"This page will automatically refresh. Your GeneSeekr request should be "
+"complete in a minute or two."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande GeneSeekr devrait "
+"être complète dans une minute ou deux."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:15
+msgid ""
+"You don't have to remain on this page - this GeneSeekr request will be "
+"visible on"
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette requête GeneSeekr "
+"sera visible sur"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:27
+msgid "Your email is already on the list to be notified."
+msgstr "Votre email est déjà sur la liste pour être notifié."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:28
+msgid "Would you like to add another email?"
+msgstr "Souhaitez-vous ajouter un autre courriel ?"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:33
+msgid "Save Email"
+msgstr "Enregistrer le courriel"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:56
+msgid "Would you like an email upon completion?"
+msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:60
+msgid "Save"
+msgstr "Enregistrer"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:66
+msgid "Email Recipients"
+msgstr "Destinataires des courriels"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:70
+msgid "No users have signed up to receive an email for this run."
+msgstr ""
+"Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
+"exécution."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:85
+msgid "Geneseekr Home"
+msgstr "GeneSeekr Accueil"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:90
+msgid "These results will be available for 7 days."
+msgstr "Ces résultats seront disponibles pendant 7 jours."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:93
+msgid "Download BLAST Report "
+msgstr "Télécharger le rapport BLAST"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:95
+msgid "Download Sequence-By-Sequence Report"
+msgstr "Télécharger le rapport séquence par séquence"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:97
+msgid "View Results"
+msgstr "Voir les résultats"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:8
+msgid "GeneSeekr Query"
+msgstr "Requête GeneSeekr"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:16
+msgid "Enter your query sequence, in FASTA format (or upload a file below):"
+msgstr ""
+"Entrez votre séquence de recherche, au format FASTA (ou téléchargez un "
+"fichier ci-dessous) :"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:25
+msgid "Choose Genus to Search"
+msgstr "Choisir le genre à rechercher"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:29
+msgid ""
+"Enter the genus you want to search. If you want to search all sequences, "
+"leave this blank."
+msgstr ""
+"Entrez le genre que vous voulez rechercher. Si vous voulez rechercher toutes "
+"les séquences, laissez ce champ vide."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:30
+msgid "Enter your genus of interest: "
+msgstr "Entrez votre genre d'intérêt:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "Return all sequences"
+msgstr "Retourne toutes les séquences"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "except for"
+msgstr "à l'exception de"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "selected genus:"
+msgstr "le genre sélectionné:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:38
+msgid "Choose SeqIDs to Search"
+msgstr "Choisissez SeqIDs à rechercher"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:43
+msgid "Search the following SeqIDs:"
+msgstr "Recherchez les SeqID suivantes:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:51
+msgid "Run Query"
+msgstr "Exécuter une requête"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:7
 msgid "Metadata Browse"
@@ -1025,33 +1377,13 @@ msgstr "Nom du projet"
 msgid "Delete "
 msgstr "Effacer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
-msgid "Are you sure?"
-msgstr "Êtes-vous sûr?"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
-msgid "You will not be able to revert this!"
-msgstr "Vous ne pouvez pas reprendre ceci!"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
 msgid "Cancel"
 msgstr "Annuler"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
-msgid "Yes, delete it!"
-msgstr "Supprime-le!"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
-msgid "Deleted!"
-msgstr "Supprimé! "
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:105
 msgid "Your project has been deleted."
-msgstr "Votre projet a été supprimé."
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
-msgid "Cancelled!"
-msgstr "Annulé!"
+msgstr "Votre projet a été effacé."
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:124
 msgid "Your project is safe."

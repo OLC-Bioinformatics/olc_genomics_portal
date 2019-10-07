@@ -99,18 +99,19 @@
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
       Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
+      title: '{% trans "Are you sure?" %}',
+      text: '{% trans "You will not be able to revert this!" %}',
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: '{% trans "Yes, delete it!"%}',
+      confirmButtonText: '{% trans "Yes, delete it!"%}',
       reverseButtons: true
      }).then(function(result) {
       if (result.value == true) {
        Swal.fire({
-        title: 'Deleted!',
-        text: 'Your file has been deleted.',
+        title: '{% trans "Deleted!" %}',
+        text: '{% trans "Your file has been deleted."%}',
         type: 'success',
         showConfirmButton: false
        }).then(function(cont) {
@@ -128,8 +129,8 @@
        })
       } else {
        Swal.fire({
-        title: 'Cancelled!',
-        text: 'Your file is safe.',
+        title: '{% trans "Cancelled!" %}',
+        text: '{% trans "Your file is safe."%}',
         type: 'error',
         showConfirmButton: false
        })
