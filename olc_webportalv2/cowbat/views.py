@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import messages
+from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import logging
 import fnmatch
@@ -104,9 +105,9 @@ def cowbat_processing(request, sequencing_run_pk):
                 sequencing_run.emails_array.append(Email)
                 sequencing_run.save()
                 form = EmailForm()
-                messages.success(request, 'Email saved')
+                messages.success(request, _('Email saved'))
             else:
-                messages.error(request, 'Email has already been saved')
+                messages.error(request, _('Email has already been saved'))
             
     return render(request,
                   'cowbat/cowbat_processing.html',

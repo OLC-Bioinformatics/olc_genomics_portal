@@ -28,14 +28,7 @@
           <td>{{ sequence.serotype }}</td>
           <td>{{ sequence.mlst }}</td>
           <td>{{ sequence.rmlst }}</td>
-          <td>
-          {% if sequence.quality  == "Pass"%}
-            {% trans "Pass" %}
-          {% elif sequence.quality  == "Reference" %}
-            {% trans "Reference" %}
-          {%else%}
-           {% trans "Fail" %} 
-          {%endif%}
+          <td>{% trans sequence.quality %}
           </td>
         </tr>
       {% endfor %}

@@ -10,7 +10,7 @@
   <div id="criteria" class="collapse">
   <br>
   {% for criteria, value in metadata_result.criteria.items %}
-    <p><strong>{{ criteria }}:</strong> {{ value }}</p>
+    <p><strong>{% trans criteria %}:</strong> {% trans value %}</p>
   {% endfor %}
   </div>
   <br>

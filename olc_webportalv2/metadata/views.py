@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination, views, parsers, response
 from azure.storage.blob import BlockBlobService, BlobPermissions
+from django.utils.translation import ugettext_lazy as _
 
 
 # Not sure where to put this - create pagination.py?
@@ -127,12 +128,17 @@ def metadata_home(request):
             if genus != '':
                 sequence_data_matching_query = sequence_data_matching_query.filter(genus__iexact=genus)
                 criteria_dict['genus'] = genus
+
+            # Unused but are essential for translation on results page since dict is JSON
+            pr = _('Pass + Reference')
+            r = _('Reference')
+            a = _('All')
             
             # Deal with quality.
-            if quality == 'Pass':
+            if quality == _('Pass'):
                 sequence_data_matching_query = sequence_data_matching_query.exclude(quality='Fail')
-                criteria_dict['quality'] = 'Pass + Reference'
-            elif quality == 'Reference':
+                criteria_dict['quality'] = "Pass + Reference"
+            elif quality == _('Reference'):
                 sequence_data_matching_query = sequence_data_matching_query.filter(quality='Reference')
                 criteria_dict['quality'] = 'Reference'
             else:

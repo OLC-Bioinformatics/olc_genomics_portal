@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-07 17:23+0000\n"
+"POT-Creation-Date: 2019-10-08 14:37+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,20 @@ msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 #: olc_webportalv2/cowbat/forms.py:26
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
+
+#: olc_webportalv2/cowbat/views.py:108 olc_webportalv2/geneseekr/views.py:111
+#: olc_webportalv2/geneseekr/views.py:211
+#: olc_webportalv2/geneseekr/views.py:313
+#: olc_webportalv2/geneseekr/views.py:408
+msgid "Email saved"
+msgstr "Email enregistré"
+
+#: olc_webportalv2/cowbat/views.py:110 olc_webportalv2/geneseekr/views.py:113
+#: olc_webportalv2/geneseekr/views.py:213
+#: olc_webportalv2/geneseekr/views.py:315
+#: olc_webportalv2/geneseekr/views.py:410
+msgid "Email has already been saved"
+msgstr "Le courriel a déjà été sauvegardé"
 
 #: olc_webportalv2/data/forms.py:8 olc_webportalv2/geneseekr/forms.py:46
 #: olc_webportalv2/geneseekr/forms.py:153
@@ -238,22 +252,8 @@ msgstr "Nom"
 msgid "Email cannot be blank"
 msgstr "Le courriel ne peut pas être vide!"
 
-#: olc_webportalv2/geneseekr/views.py:111
-#: olc_webportalv2/geneseekr/views.py:211
-#: olc_webportalv2/geneseekr/views.py:313
-#: olc_webportalv2/geneseekr/views.py:408
-msgid "Email saved"
-msgstr "Email enregistré"
-
-#: olc_webportalv2/geneseekr/views.py:113
-#: olc_webportalv2/geneseekr/views.py:213
-#: olc_webportalv2/geneseekr/views.py:315
-#: olc_webportalv2/geneseekr/views.py:410
-msgid "Email has already been saved"
-msgstr "Le courriel a déjà été sauvegardé"
-
-#: olc_webportalv2/metadata/forms.py:7
-#: olc_webportalv2/templates/metadata/metadata_browse.html:33
+#: olc_webportalv2/metadata/forms.py:7 olc_webportalv2/metadata/models.py:9
+#: olc_webportalv2/metadata/views.py:136
 msgid "Pass"
 msgstr "Passe"
 
@@ -263,8 +263,8 @@ msgstr ""
 "Toutes les séquences à l'exception des séquences de faible qualité ou "
 "contaminées."
 
-#: olc_webportalv2/metadata/forms.py:8
-#: olc_webportalv2/templates/metadata/metadata_browse.html:35
+#: olc_webportalv2/metadata/forms.py:8 olc_webportalv2/metadata/models.py:10
+#: olc_webportalv2/metadata/views.py:133 olc_webportalv2/metadata/views.py:139
 msgid "Reference"
 msgstr "Référence"
 
@@ -272,8 +272,7 @@ msgstr "Référence"
 msgid "Highest quality, gold standard sequences."
 msgstr "Des séquences de qualité supérieure, des séquences étalons or."
 
-#: olc_webportalv2/metadata/forms.py:9
-#: olc_webportalv2/templates/metadata/metadata_browse.html:37
+#: olc_webportalv2/metadata/forms.py:9 olc_webportalv2/metadata/models.py:8
 msgid "Fail"
 msgstr "Raté"
 
@@ -284,6 +283,30 @@ msgid ""
 msgstr ""
 "Toutes les séquences - peuvent inclure des séquences contaminées ou de très "
 "mauvaise qualité. Utiliser avec prudence."
+
+#: olc_webportalv2/metadata/models.py:29
+msgid "genus"
+msgstr "genre"
+
+#: olc_webportalv2/metadata/models.py:36
+msgid "species"
+msgstr "espèce"
+
+#: olc_webportalv2/metadata/models.py:43
+msgid "serotype"
+msgstr "sérotype"
+
+#: olc_webportalv2/metadata/models.py:65
+msgid "quality"
+msgstr "qualité"
+
+#: olc_webportalv2/metadata/views.py:132
+msgid "Pass + Reference"
+msgstr "Passe + Référence"
+
+#: olc_webportalv2/metadata/views.py:134
+msgid "All"
+msgstr "Tous"
 
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
@@ -1499,6 +1522,10 @@ msgstr "Fichiers de séquence "
 msgid "Upload Sequence Files"
 msgstr "Télécharger des fichiers de séquence"
 
+#: olc_webportalv2/users/admin.py:17
+msgid "This username has already been taken."
+msgstr "Ce nom d'utilisateur a déjà été pris"
+
 #: olc_webportalv2/vir_typer/forms.py:17
 msgid "Sample Name is required"
 msgstr "Le nom de l'échantillon est obligatoire"
@@ -1529,7 +1556,7 @@ msgstr "Le nom du projet doit être unique"
 
 #: olc_webportalv2/vir_typer/forms.py:64
 msgid "Project Name is required"
-msgstr "Le nom de l'échantillon est obligatoire"
+msgstr "Le nom du projet est requis"
 
 #: olc_webportalv2/vir_typer/forms.py:77
 msgid "Date received"
@@ -1575,45 +1602,7 @@ msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
 
-#~ msgid "No data available in table"
-#~ msgstr "Aucune donnée disponible dans le tableau"
-
-#~ msgid "Showing 0 to 0 of 0 entries"
-#~ msgstr "Affiche 0 à 0 de 0 entrées"
-
-#~ msgid "Showing "
-#~ msgstr "Affiche "
-
-#~ msgid "to "
-#~ msgstr "à "
-
-#~ msgid "of "
-#~ msgstr "de "
-
-#~ msgid "entries"
-#~ msgstr "entrées"
-
-#~ msgid "Show "
-#~ msgstr "Affiche "
-
-#~ msgid "Search"
-#~ msgstr "Chercher "
-
-#~ msgid "First"
-#~ msgstr "Premier"
-
-#~ msgid "Previous"
-#~ msgstr "Précédente"
-
-#~ msgid "Next"
-#~ msgstr "Prochaine"
-
-#~ msgid "Last"
-#~ msgstr "Dernière"
-
-#~ msgid ""
-#~ " Your search returned <strong>%(metadata_result.seqids|length)s</strong> "
-#~ "results."
-#~ msgstr ""
-#~ "Votre recherche retourne <strong>%(metadata_result.seqids|length)s</"
-#~ "strong> résultats."
+#: olc_webportalv2/vir_typer/views.py:401
+#, python-format
+msgid "Project %s updated"
+msgstr "Projet %s mis à jour"
