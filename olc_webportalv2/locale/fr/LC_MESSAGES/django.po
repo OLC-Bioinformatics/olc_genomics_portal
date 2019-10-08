@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-08 17:30+0000\n"
+"POT-Creation-Date: 2019-10-08 18:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,14 +35,18 @@ msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
 
-#: olc_webportalv2/cowbat/views.py:108 olc_webportalv2/geneseekr/views.py:111
+#: olc_webportalv2/cowbat/views.py:105 olc_webportalv2/geneseekr/views.py:105
+msgid "Email cannot be blank"
+msgstr "Le courriel ne peut pas être vide!"
+
+#: olc_webportalv2/cowbat/views.py:111 olc_webportalv2/geneseekr/views.py:111
 #: olc_webportalv2/geneseekr/views.py:211
 #: olc_webportalv2/geneseekr/views.py:313
 #: olc_webportalv2/geneseekr/views.py:408
 msgid "Email saved"
 msgstr "Email enregistré"
 
-#: olc_webportalv2/cowbat/views.py:110 olc_webportalv2/geneseekr/views.py:113
+#: olc_webportalv2/cowbat/views.py:113 olc_webportalv2/geneseekr/views.py:113
 #: olc_webportalv2/geneseekr/views.py:213
 #: olc_webportalv2/geneseekr/views.py:315
 #: olc_webportalv2/geneseekr/views.py:410
@@ -247,10 +251,6 @@ msgstr ""
 #: olc_webportalv2/geneseekr/forms.py:318
 msgid "Name "
 msgstr "Nom"
-
-#: olc_webportalv2/geneseekr/views.py:105
-msgid "Email cannot be blank"
-msgstr "Le courriel ne peut pas être vide!"
 
 #: olc_webportalv2/metadata/forms.py:7 olc_webportalv2/metadata/models.py:9
 #: olc_webportalv2/metadata/views.py:138
@@ -737,6 +737,8 @@ msgid "Upload a New Run"
 msgstr "Télécharger une nouvelle exécution"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:10
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:16
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:40
 msgid "Assembly Home"
 msgstr "Page d'accueil de l'assemblage "
 
@@ -749,6 +751,7 @@ msgid "Report Download"
 msgstr "Téléchargement du rapport"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:34
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:12
 #: olc_webportalv2/templates/data/data_home.html:45
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:43
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:80
@@ -772,6 +775,122 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Not Available"
 msgstr "Indisponible"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:8
+msgid "COWBAT Status for"
+msgstr "Statut COWBAT pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:14
+#: olc_webportalv2/templates/data/data_download.html:44
+#: olc_webportalv2/templates/data/data_home.html:43
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:83
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
+msgid "Error"
+msgstr "Erreur"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:16
+msgid "Return to"
+msgstr "Retourner à"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:18
+msgid "Upload Error"
+msgstr "Erreur de téléchargement"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:20
+msgid ""
+" It looks like one or more of your files did not upload successfully. Click "
+"the button below to retry upload of\n"
+"  your sequence data. You'll only have to upload files that did not "
+"successfully upload. "
+msgstr ""
+"Il semble qu'un ou plusieurs de vos fichiers n'ont pas été téléchargés avec "
+"succès. Cliquez sur le bouton ci-dessous pour réessayer le téléchargement de "
+"vos données de séquence. Vous n'aurez qu'à télécharger les fichiers qui "
+"n'ont pas réussi à le faire."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:25
+#, fuzzy
+#| msgid "Retry Sequence Upload For"
+msgid "Retry Sequence Upload For "
+msgstr "Réessayer le téléchargement de séquence pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:28
+#: olc_webportalv2/templates/data/data_download.html:15
+#: olc_webportalv2/templates/data/data_home.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:12
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
+msgid "Processing"
+msgstr "En traitement"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:31
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:107
+msgid "Run Progress"
+msgstr "Progression de l'exécution"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:39
+msgid ""
+"This page will automatically refresh. An assembly run usually takes at least "
+"4-5 hours."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Un cycle de montage prend "
+"généralement au moins 4 à 5 heures."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:40
+msgid ""
+"You don't have to remain on this page - this assembly request will be "
+"visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande d'assemblage "
+"sera visible sur"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:57
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:33
+msgid "Save Email"
+msgstr "Enregistrer le courriel"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:80
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:56
+msgid "Would you like an email upon completion?"
+msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:84
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:60
+msgid "Save"
+msgstr "Enregistrer"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:90
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:66
+msgid "Email Recipients"
+msgstr "Destinataires des courriels"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:94
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:70
+msgid "No users have signed up to receive an email for this run."
+msgstr ""
+"Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
+"exécution."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:104
+#: olc_webportalv2/templates/data/data_download.html:20
+#: olc_webportalv2/templates/data/data_home.html:37
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:88
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+msgid "Complete"
+msgstr "Complet"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:116
+msgid "Download Reports and Assemblies for"
+msgstr "Télécharger les rapports et assemblages pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:120
+#: olc_webportalv2/templates/data/data_download.html:29
+#: olc_webportalv2/templates/data/data_download.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:101
+msgid "Shareable link:"
+msgstr "Lien partageable:"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:7
 msgid "Step 2 of 3: Upload InterOp Files for Run"
@@ -938,14 +1057,6 @@ msgstr "Télécharger les données"
 msgid "The following SEQIDs were not found:"
 msgstr "Les SEQID suivantes n'ont pas été trouvées :"
 
-#: olc_webportalv2/templates/data/data_download.html:15
-#: olc_webportalv2/templates/data/data_home.html:41
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:12
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
-msgid "Processing"
-msgstr "En traitement"
-
 #: olc_webportalv2/templates/data/data_download.html:17
 msgid "This page will automatically refresh."
 msgstr "Cette page se rafraîchit automatiquement."
@@ -961,14 +1072,6 @@ msgstr ""
 msgid "Data Home"
 msgstr "Accueil des données"
 
-#: olc_webportalv2/templates/data/data_download.html:20
-#: olc_webportalv2/templates/data/data_home.html:37
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:88
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
-msgid "Complete"
-msgstr "Complet"
-
 #: olc_webportalv2/templates/data/data_download.html:22
 #: olc_webportalv2/templates/data/data_download.html:34
 msgid "These files will be available for 7 days."
@@ -979,24 +1082,10 @@ msgstr "Ces fichiers seront disponibles pendant 7 jours."
 msgid "Download Assemblies"
 msgstr "Télécharger les assemblages"
 
-#: olc_webportalv2/templates/data/data_download.html:29
-#: olc_webportalv2/templates/data/data_download.html:41
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:101
-msgid "Shareable link:"
-msgstr "Lien partageable:"
-
 #: olc_webportalv2/templates/data/data_download.html:32
 #: olc_webportalv2/templates/data/data_home.html:39
 msgid "Warning"
 msgstr "Avertissement"
-
-#: olc_webportalv2/templates/data/data_download.html:44
-#: olc_webportalv2/templates/data/data_home.html:43
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:83
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
-msgid "Error"
-msgstr "Erreur"
 
 #: olc_webportalv2/templates/data/data_download.html:46
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:85
@@ -1127,28 +1216,6 @@ msgstr "Votre email est déjà sur la liste pour être notifié."
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:28
 msgid "Would you like to add another email?"
 msgstr "Souhaitez-vous ajouter un autre courriel ?"
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:33
-msgid "Save Email"
-msgstr "Enregistrer le courriel"
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:56
-msgid "Would you like an email upon completion?"
-msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:60
-msgid "Save"
-msgstr "Enregistrer"
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:66
-msgid "Email Recipients"
-msgstr "Destinataires des courriels"
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:70
-msgid "No users have signed up to receive an email for this run."
-msgstr ""
-"Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
-"exécution."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:85
 msgid "Geneseekr Home"

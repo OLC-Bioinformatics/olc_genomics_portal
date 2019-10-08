@@ -101,13 +101,16 @@ def cowbat_processing(request, sequencing_run_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email not in sequencing_run.emails_array:
-                sequencing_run.emails_array.append(Email)
-                sequencing_run.save()
-                form = EmailForm()
-                messages.success(request, _('Email saved'))
-            else:
-                messages.error(request, _('Email has already been saved'))
+            if Email == "":
+                messages.error(request, _("Email cannot be blank"))
+            else :
+                if Email not in sequencing_run.emails_array:
+                    sequencing_run.emails_array.append(Email)
+                    sequencing_run.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
+                else:
+                    messages.error(request, _('Email has already been saved'))
             
     return render(request,
                   'cowbat/cowbat_processing.html',

@@ -18,7 +18,7 @@ class RunNameForm(forms.Form):
 
 
 class EmailForm(forms.Form):
-    email = forms.EmailField(max_length=50, label='Email ')
+    email = forms.EmailField(max_length=50, label='Email ',required=False)
 
 
 def validate_no_comma(value):
