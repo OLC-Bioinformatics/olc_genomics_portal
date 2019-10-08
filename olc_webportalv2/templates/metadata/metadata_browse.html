@@ -28,8 +28,7 @@
           <td>{{ sequence.serotype }}</td>
           <td>{{ sequence.mlst }}</td>
           <td>{{ sequence.rmlst }}</td>
-          <td>{% trans sequence.quality %}
-          </td>
+          <td>{% trans sequence.quality %}</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -40,10 +39,16 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
   $(document).ready(function () {
-    $('#metadata-browse-table').DataTable({ "lengthMenu": [[100, -1], ['100', 'All']],
-           language : {
+    var lang = document.documentElement.lang;
+    var i = 'All';
+    if (lang == "fr"){
+      var i = 'Tout';
+    }
+    $('#metadata-browse-table').DataTable(
+      {language : {
         url: getLanguage()
-    }});
+    }, "lengthMenu": [[100, -1], ['100', i]],
+    });
   });
   </script>
 {% endblock %}
