@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-08 14:37+0000\n"
+"POT-Creation-Date: 2019-10-08 17:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -253,7 +253,7 @@ msgid "Email cannot be blank"
 msgstr "Le courriel ne peut pas être vide!"
 
 #: olc_webportalv2/metadata/forms.py:7 olc_webportalv2/metadata/models.py:9
-#: olc_webportalv2/metadata/views.py:136
+#: olc_webportalv2/metadata/views.py:138
 msgid "Pass"
 msgstr "Passe"
 
@@ -264,7 +264,7 @@ msgstr ""
 "contaminées."
 
 #: olc_webportalv2/metadata/forms.py:8 olc_webportalv2/metadata/models.py:10
-#: olc_webportalv2/metadata/views.py:133 olc_webportalv2/metadata/views.py:139
+#: olc_webportalv2/metadata/views.py:134 olc_webportalv2/metadata/views.py:141
 msgid "Reference"
 msgstr "Référence"
 
@@ -300,11 +300,11 @@ msgstr "sérotype"
 msgid "quality"
 msgstr "qualité"
 
-#: olc_webportalv2/metadata/views.py:132
+#: olc_webportalv2/metadata/views.py:133
 msgid "Pass + Reference"
 msgstr "Passe + Référence"
 
-#: olc_webportalv2/metadata/views.py:134
+#: olc_webportalv2/metadata/views.py:135
 msgid "All"
 msgstr "Tous"
 
@@ -868,6 +868,46 @@ msgstr "Brins en avant"
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
 msgid "Reverse Reads"
 msgstr "Brins inverses"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:9
+msgid "Select ROGA Strains for and verify Strain Names for"
+msgstr ""
+"Sélectionnez les souches ROGA pour et vérifiez les noms de souches pour"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:11
+msgid ""
+" Strains thought to need ROGAs based on your SampleSheet are already checked "
+"off. Please verify that these\n"
+"  strains do in fact need ROGAs and that you haven't missed any other "
+"strains. Also, please make sure\n"
+"  that the strain names for each sample are correct, and modify the text box "
+"for each as necessary. "
+msgstr ""
+"Les souches dont on pense qu'elles ont besoin d'un ROGA basé sur votre "
+"SampleSheet sont déjà cochées. Veuillez vérifier que cesont en fait besoin "
+"de ROGA et que vous n'avez manqué aucune autre souche. De plus, veuillez "
+"vous assurer queque les noms des souches pour chaque échantillon sont "
+"corrects et modifiez la zone de texte pour chacun d'eux si nécessaire. "
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:32
+msgid "Verify ROGA Strains"
+msgstr "Vérifier les souches ROGA"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:51
+msgid "No strains selected"
+msgstr "Aucune souche sélectionnée"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:52
+msgid "Are you sure no strains need ROGAs?"
+msgstr "Vous êtes sûr qu'aucune souche n'a besoin de ROGA ?"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:57
+msgid "Yes, I am sure!"
+msgstr "Oui, j'en suis sûr!"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:58
+msgid "No, take me back!"
+msgstr "Non, ramenez-moi!"
 
 #: olc_webportalv2/templates/data/assembled_data.html:8
 msgid "Assembled Data Request"
