@@ -166,7 +166,7 @@
   //add tooltips
   var dropzone = document.getElementById('myDropzone');
   $(dropzone).attr('data-tooltip','tooltip');
-  $(dropzone).attr('title','Why here');
+  $(dropzone).attr('title',"{% trans 'Why here' $}");
   });
   </script>
 {% endblock %}
