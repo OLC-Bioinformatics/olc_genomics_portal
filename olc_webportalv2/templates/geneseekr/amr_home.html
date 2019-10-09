@@ -5,19 +5,19 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:amr_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>Create A New Summary</strong></a>
+  <a href="{% url 'geneseekr:amr_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>{% trans "Create A New Summary"%}</strong></a>
 <br>
-<h2>AMR Home</h2>
+<h2>{% trans "AMR Home"%}</h2>
  <br>
   <table id="amr-request-table" class="table table-hover">
   <thead>
     <tr style="text-align:center">
        <th>SEQIDs</th>
-       <th>Status</th>
-       <th>Download</th>
-       <th>Request Date</th>
+       <th>{% trans "Status"%}</th>
+       <th>{% trans "Download"%}</th>
+       <th>{% trans "Request Date"%}</th>
        <th data-orderable="false">       </th>
-       <th>Name</th>
+       <th>{% trans "Name"%}</th>
 {#       <th>Type</th>#}
     </tr>
   </thead>
@@ -29,30 +29,30 @@
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
          {% if amr_request.seqids|length > 3 %}
-           <p style="font-size:14px">...and {{ amr_request.seqids|length|add:'-3' }} more</p>
+           <p style="font-size:14px">{% trans "...and"%} {{ amr_request.seqids|length|add:'-3' }} {% trans "more"%}</p>
          {% endif %}
        </td>
           {% if amr_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-success btn-block" role="button">{{ amr_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-success btn-block" role="button">{% trans "Complete"%} <i class="fas fa-check-circle"></i></a></td>
           {% elif amr_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ amr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans "Processing"%}</a></td>
           {% elif amr_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ amr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:amr_result' amr_request_pk=amr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{% trans "Error"%}</a></td>
           {% elif amr_request.status == 'Unprocessed' %}
-             <td><button class="btn btn-secondary btn-block" disabled>{{ amr_request.status }}</button></td>
+             <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
           {% endif %}
 
           {% if amr_request.status == 'Complete' %}
-            <td><a href="{{ amr_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ amr_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download"%}<i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available"%}</button></td>
           {% endif %}
       
           <td style="text-indent: 5px">{{ amr_request.created_at }}</td>
 
         {% if amr_request.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{amr_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{amr_request.pk}}" name="delete" value={{amr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{amr_request.pk}}" name="delete" value={{amr_request.pk}}> {% trans "Delete"%} <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{amr_request.pk}}" name="delete" value={{amr_request.pk}}>
           </form>
         {% else %}
@@ -93,18 +93,19 @@
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
       Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
+      title: '{% trans "Are you sure?" %}',
+      text: '{% trans "You will not be able to revert this!" %}',
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: '{% trans "Yes, delete it!"%}',
+      cancelButtonText:'{% trans "Cancel"%}',
       reverseButtons: true
      }).then(function(result) {
       if (result.value == true) {
        Swal.fire({
-        title: 'Deleted!',
-        text: 'Your file has been deleted.',
+        title: '{% trans "Deleted!" %}',
+        text: '{% trans "Your file has been deleted."%}',
         type: 'success',
         showConfirmButton: false
        }).then(function(cont) {
@@ -122,8 +123,8 @@
        })
       } else {
        Swal.fire({
-        title: 'Cancelled!',
-        text: 'Your file is safe.',
+        title: '{% trans "Cancelled!" %}',
+        text: '{% trans "Your file is safe."%}',
         type: 'error',
         showConfirmButton: false
        })

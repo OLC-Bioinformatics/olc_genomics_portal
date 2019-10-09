@@ -204,13 +204,16 @@ def tree_result(request, parsnp_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email not in parsnp_request.emails_array:
-                parsnp_request.emails_array.append(Email)
-                parsnp_request.save()
-                form = EmailForm()
-                messages.success(request, _('Email saved'))
+            if Email == "":
+                messages.error(request, _("Email cannot be blank"))
             else:
-                messages.error(request, _('Email has already been saved'))
+                if Email not in parsnp_request.emails_array:
+                    parsnp_request.emails_array.append(Email)
+                    parsnp_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
+                else:
+                    messages.error(request, _('Email has already been saved'))
             
     return render(request,
                   'geneseekr/tree_result.html',
@@ -306,13 +309,16 @@ def amr_result(request, amr_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email not in amr_request.emails_array:
-                amr_request.emails_array.append(Email)
-                amr_request.save()
-                form = EmailForm()
-                messages.success(request, _('Email saved'))
+            if Email == "":
+                messages.error(request, _("Email cannot be blank"))
             else:
-                messages.error(request, _('Email has already been saved'))
+                if Email not in amr_request.emails_array:
+                    amr_request.emails_array.append(Email)
+                    amr_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
+                else:
+                    messages.error(request, _('Email has already been saved'))
 
     return render(request,
                   'geneseekr/amr_result.html',

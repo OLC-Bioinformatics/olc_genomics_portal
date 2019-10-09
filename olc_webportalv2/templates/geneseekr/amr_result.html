@@ -6,34 +6,26 @@
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
-<h2>AMR Summary Results</h2>
+<h2>{%trans "AMR Summary Results"%}</h2>
 <br>
 {% if amr_request.status == 'Processing' %}
 <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated"
-  disabled>{{ amr_request.status }}</button>
+  disabled>{% trans "Processing"%}</button>
 <br>
-<p>This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested
-  many SeqIDs).</p>
-<p>You don't have to remain on this page - this AMR request will be visible on <a
-    href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
+<p>{% blocktrans %} This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested
+  many SeqIDs). {%endblocktrans%} </p>
+<p>{% trans "You don't have to remain on this page - this AMR request will be visible on "%}<a
+    href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
 
 <!--Email Block-->
-{% if messages %}
-<ul class="messages">
-  {% for message in messages %}
-  <li class="{{ message.tags }}">{{ message }}</li>
-  {% endfor %}
-</ul>
-{% endif %}
-
 {% if request.user.email in amr.emails_array %}
-<p>Your email is already on the list to be notified. </p>
-Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+<p>{% trans "Your email is already on the list to be notified."%} </p>
+{% trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
 
 <form method="Post" id='addEmail'>
   {% csrf_token %}
   {{form}}
-  <button type="submit">Save Email</button>
+  <button type="submit">{% trans "Save Email"%}</button>
   <br>
   <br>
 </form>
@@ -59,22 +51,22 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 </script>
 
 {% else %}
-<p>Would you like an email upon completion?</p>
+<p>{% trans "Would you like an email upon completion?"%}</p>
 <form method="Post">
   {% csrf_token %}
   {{form}}
-  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
+  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">{% trans "Save"%}</button>
   <br>
   <br>
 </form>
 {% endif %}
 
 <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i
-    class="far fa-envelope"></i> Email Recipients</button>
+    class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
 <div id="emails-button" class="collapse">
   <br>
   {% if amr_request.emails_array|length == 0 %}
-  <p>No users have signed up to receive an email for this run.</p>
+  <p>{% trans "No users have signed up to receive an email for this run."%}</p>
   {% else %}
   {% for email in amr_request.emails_array %}
   <p>{{ email }}</p>
@@ -84,22 +76,22 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <!-- End Email Block-->
 
 {% elif amr_request.status == 'Unprocessed' %}
-<button class="btn btn-info btn-block progress-bar-striped" disabled>{{ amr_request.status }}</button>
+<button class="btn btn-info btn-block progress-bar-striped" disabled>{% trans "Unprocessed"%}</button>
 <br>
 {% elif amr_request.status == 'Error' %}
-<button class="btn btn-danger btn-block" disabled>{{ amr_request.status }}</button>
+<button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
 <br>
-<p>Return to <a href="{% url 'geneseekr:amr_home' %}">AMR Home</a> </p>
+<p>{% trans "Return to"%}<a href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
 
 {#                         REQUEST IS COMPLETE                               #}
 {% elif amr_request.status == 'Complete' %}
-<button class="btn btn-success btn-block" disabled>{{ amr_request.status }} <i class="fas fa-check-circle"></i></button>
+<button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
 <br>
-<p>These results will be available for 7 days.</p>
+<p>{% trans "These results will be available for 7 days."%}</p>
 <br>
   <div class="dropdown">
      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-       Select Sequence to View Results
+       {% trans "Select Sequence to View Results"%}
      </button>
   <br>
      <div class="dropdown-menu">
@@ -164,11 +156,11 @@ Would you like to add another email? <input type='checkbox' id='cbx' onclick="cb
 <br>
 <div style="text-align: center">
   <a href="{{ amr_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i>
-    Download Summary</a>
+    {% trans "Download Summary"%}</a>
   <br>
   <br>
   <div class="alert alert-primary" role="alert" align="center">
-    <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> Shareable link:</b> {{ amr_request.download_link }}</p>
+    <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {% trans "Shareable link:"%}</b> {{ amr_request.download_link }}</p>
   </div>
 </div>
 {% endif %}

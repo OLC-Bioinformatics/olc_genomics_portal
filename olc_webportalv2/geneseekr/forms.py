@@ -149,12 +149,12 @@ class GeneSeekrForm(forms.Form):
 
 
 class ParsnpForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
 
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
     tree_program = forms.ChoiceField(label=_('Which tree program? '), initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
-    number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
+    number_diversitree_strains = forms.IntegerField(label= _('Number of diversitree strains'), min_value=0,required=False)
 
     def clean(self):
         super().clean()
@@ -208,12 +208,12 @@ class ParsnpForm(forms.Form):
             if not other_file.name.endswith('.fasta'):
                 raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
         if len(seqid_list) + len(other_files) < 2:
-            raise forms.ValidationError(_('At least 2 input sequences must be given.'))
+            raise forms.ValidationError(_('At least two input sequences must be given.'))
         return seqid_list, name, tree_program, number_diversitree_strains, other_files
 
 
 class AMRForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
@@ -259,12 +259,12 @@ class AMRForm(forms.Form):
                 raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
 
         if len(seqid_list) + len(other_files) == 0:
-            raise forms.ValidationError(_('At least 1 input sequence must be given.'))
+            raise forms.ValidationError(_('At least one input sequence must be given.'))
         return seqid_list, name, other_files
 
 
 class ProkkaForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
