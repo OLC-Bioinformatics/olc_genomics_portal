@@ -15,14 +15,6 @@
       <p>{%trans "You don't have to remain on this page - this GeneSeekr request will be visible on"%} <a href="{% url 'geneseekr:geneseekr_home' %}">{%trans "GeneSeekr Home"%}</a> </p>
    
     <!--Email Block--> 
-      {% if messages %}
-        <ul class="messages">
-        {% for message in messages %}
-        <li class="{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-
       {% if request.user.email in geneseekr_request.emails_array %}
       <p>{%trans "Your email is already on the list to be notified."%} </p>
       {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
