@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-09 19:32+0000\n"
+"POT-Creation-Date: 2019-10-10 18:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -814,6 +814,7 @@ msgstr "Erreur"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:16
 #: olc_webportalv2/templates/geneseekr/amr_result.html:84
+#: olc_webportalv2/templates/geneseekr/tree_result.html:79
 msgid "Return to"
 msgstr "Retourner à"
 
@@ -930,7 +931,7 @@ msgstr "Télécharger les rapports et assemblages pour"
 #: olc_webportalv2/templates/geneseekr/amr_detail.html:52
 #: olc_webportalv2/templates/geneseekr/amr_result.html:163
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:93
-#: olc_webportalv2/templates/geneseekr/tree_result.html:122
+#: olc_webportalv2/templates/geneseekr/tree_result.html:120
 msgid "Shareable link:"
 msgstr "Lien partageable:"
 
@@ -1306,8 +1307,9 @@ msgstr "Renommer le résumé de la AMR"
 
 #: olc_webportalv2/templates/geneseekr/amr_name.html:14
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:14
+#: olc_webportalv2/templates/geneseekr/tree_name.html:14
 msgid "Previous Name:"
-msgstr "Nom du projet"
+msgstr "Nom du projet:"
 
 #: olc_webportalv2/templates/geneseekr/amr_request.html:8
 msgid "AMR Summary Request"
@@ -1372,10 +1374,12 @@ msgid "GeneSeekr Run Rename"
 msgstr "GeneSeekr Renommer l'exécution"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/tree_name.html:16
 msgid "Back"
 msgstr "Retour"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/tree_name.html:16
 msgid "Save Changes"
 msgstr "Enregistrer les modifications"
 
@@ -1474,102 +1478,98 @@ msgstr ""
 "un fichier ci-dessous."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:12
-#, python-format
-msgid "%% Sequences Query Found"
-msgstr ""
+msgid "Sequences Query Found"
+msgstr "Séquences Requêtes trouvées"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:13
-#, fuzzy
-#| msgid "Download Sequence-By-Sequence Report"
 msgid "Sequence By Sequence"
-msgstr "Télécharger le rapport séquence par séquence"
+msgstr "Séquence par séquence"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:14
-msgid "Top Blast Hits"
-msgstr ""
+msgid "Top BLAST Hits"
+msgstr "Meilleurs résultats BLAST"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:19
 msgid ""
 "This graph shows the percentage of sequences in which each query gene was "
 "found."
 msgstr ""
+"Ce graphique montre le pourcentage de séquences dans lesquelles chaque gène "
+"d'interrogation a été trouvé."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:21
-#, fuzzy
-#| msgid "View LabIDs"
 msgid "View Table"
-msgstr "Afficher les LabIDs"
+msgstr "Afficher le tableau"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:27
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:166
-#, python-format
-msgid "%% sequences where gene was found"
-msgstr ""
+msgid "sequences where gene was found"
+msgstr "les séquences où le gène a été trouvé"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:43
 msgid ""
 "This table shows the percent identity for each sequence for each query gene."
 msgstr ""
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:94
-msgid "View LabIDs"
-msgstr "Afficher les LabIDs"
+"Ce tableau montre le pourcentage d'identité de chaque séquence pour chaque "
+"gène d'interrogation."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
 msgid "Name of the contig that the target sequence was found on."
-msgstr ""
+msgstr "Nom du contig sur lequel la séquence cible a été trouvée."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
 msgid "Contig"
-msgstr ""
+msgstr "Contig"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
 msgid "Percentage of the query sequence that was found."
-msgstr ""
+msgstr "Pourcentage de la séquence de requêtes trouvée."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:227
 msgid "Query Coverage"
-msgstr ""
+msgstr "Protection des requêtes"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
 msgid ""
 "How similar the query and target sequence were. 100 means completely "
 "identical, 0 means not at all."
 msgstr ""
+"À quel point la requête et la séquence cible étaient similaires. 100 "
+"signifie complètement identique, 0 signifie pas du tout."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
 msgid "Percent Identity"
-msgstr ""
+msgstr "Pourcentage Identité"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
 msgid "Where on the contig the target gene was found."
-msgstr ""
+msgstr "Où sur le contig le gène cible a été trouvé."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
 msgid "Subject Start Position"
-msgstr ""
+msgstr "Position de départ du sujet"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
 msgid "Subject End Position"
-msgstr ""
+msgstr "Position finale du sujet"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:107
 msgid "E Value"
-msgstr ""
+msgstr "E Valeur"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:125
 msgid "This gene had no BLAST hits."
-msgstr ""
+msgstr "Ce gène n'a pas été touché par BLAST."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:138
 msgid "GeneSeekr request not completed."
-msgstr ""
+msgstr "Demande de GeneSeekr non complétée."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:210
 msgid "BLAST Hits for {{ gene }}: Query Length "
-msgstr ""
+msgstr "BLAST Hits pour {{ gene }} : Longueur de la requête "
 
 #: olc_webportalv2/templates/geneseekr/tree_home.html:8
 msgid "Create A New Tree"
@@ -1580,6 +1580,10 @@ msgstr "Créer un nouvel arbre"
 #: olc_webportalv2/templates/geneseekr/tree_result.html:79
 msgid "Tree Home"
 msgstr "Arbre Accueil"
+
+#: olc_webportalv2/templates/geneseekr/tree_name.html:8
+msgid "Tree Rename"
+msgstr "Arbre Renommer"
 
 #: olc_webportalv2/templates/geneseekr/tree_request.html:8
 msgid "Tree Query"
@@ -1654,11 +1658,11 @@ msgstr "Souhaitez-vous ajouter un autre courriel ?"
 msgid " Email Recipients"
 msgstr "Destinataires des courriels"
 
-#: olc_webportalv2/templates/geneseekr/tree_result.html:94
+#: olc_webportalv2/templates/geneseekr/tree_result.html:92
 msgid "Most Diverse Strains"
 msgstr "Les souches les plus diverses"
 
-#: olc_webportalv2/templates/geneseekr/tree_result.html:118
+#: olc_webportalv2/templates/geneseekr/tree_result.html:116
 msgid "Download Tree"
 msgstr "Télécharger l'arbre"
 

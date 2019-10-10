@@ -9,9 +9,9 @@
   <br>
   {% if geneseekr_request.status == 'Complete' %}
     <ul class="nav nav-tabs nav-justified">
-      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">{%trans "% Sequences Query Found"%}</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% {%trans "Sequences Query Found"%}</a></li>
       <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">{%trans "Sequence By Sequence"%}</a></li>
-      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top Blast Hits"%}</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top BLAST Hits"%}</a></li>
     </ul>
     <div class="tab-content">
         <div id="overall" class="tab-pane fade">
@@ -24,7 +24,7 @@
               <thead>
                 <tr>
                   <th>{%trans "Gene"%}</th>
-                  <th>{%trans "% sequences where gene was found"%}</th>
+                  <th>% {%trans "sequences where gene was found"%}</th>
                 </tr>
               </thead>
               <tbody>
@@ -42,7 +42,6 @@
            <br>
            <p>{%trans "This table shows the percent identity for each sequence for each query gene."%}</p>
            <br>
-          <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" >View LabIDs</button>
           <br>
           <br>
           <br>
@@ -91,7 +90,7 @@
            {% for gene in geneseekr_request.gene_targets %}
            <div id="{{ gene|slugify }}" class="tab-pane fade gene">
            <br>
-            <button class="btn btn-info btn-lg" id="toggle-vis-table" value='Lab' style="float: left" onclick="myfunc(this)">{%trans "View LabIDs"%}</button>
+            {% comment %} <button class="btn btn-info btn-lg" id="toggle-vis-table" value='Lab' style="float: left" onclick="myfunc(this)">{%trans "View LabIDs"%}</button> {% endcomment %}
             <br>
             <br><br>
              <div id="{{ gene|slugify }}-chart" style="height: 500px"></div>
@@ -163,7 +162,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
             min: 0,
             max: 100,
             title: {
-                text: "{%trans '% sequences where gene was found' %}"
+                text:"%{%trans 'sequences where gene was found' %}"
             },
         },
         colors: ['#191b80'],
@@ -248,39 +247,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         var seq = table_items[j].innerHTML.split('_');
         table_items[j].classList.add(seq[0],'table');
         }
-    }
-  // Default display for seq-seq table
-  $('td:nth-child(2),th:nth-child(2)').hide();
-  // Toggle for seq-seq table
-  $('#toggle-vis').on( 'click', function () {
-    var $this = $(this);
-       if ($this.val() === 'Lab') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').hide();
-        $this.val('Both');
-        $this.html('View Both');
-        $('#btnLab').show();
-        $('#btnBoth').hide();
-        $('#btnSeq').hide();
-    }else if ($this.val() === 'Both') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $this.val('Seq');
-        $this.html('View SeqIDs');
-        $('#btnBoth').show();
-        $('#btnSeq').hide();
-        $('#btnLab').hide();    
-    }else {
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $('td:nth-child(2),th:nth-child(2)').hide();
-        $this.val('Lab');
-        $this.html('View LabIDs');
-        $('#btnSeq').show();
-        $('#btnLab').hide();
-        $('#btnBoth').hide();
-    }
-    } );
-    
+    }  
     {% for gene, top_blast_hits in gene_top_hits.items %}
       var table = $('#{{ gene|slugify }}-table').DataTable({
         "pageLength": 50
@@ -288,84 +255,5 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
       table.order([5, 'asc'], [2, 'desc'], [1, 'desc']).draw();
     {% endfor %}
   });
-// Toggle function for Top Blast Hits, changes table and chart 
-// Finds which gene is selected, find that page's text items and change accordingly
-  function myfunc(x) {
-    var btn = x;
-    var selected = $($('div.tab-content').find('div .active.show.gene'));
-    var index = selected.index();
-    var txt_gph_items = selected[0].getElementsByTagName('text');
-    var table_items = selected[0].getElementsByClassName('contig');
-    //First Click
-    if (btn.value === 'Lab') {
-        btn.value ='Both';
-        btn.innerHTML='View Both';
-        for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (text[0] =='{{key}}' ){
-          var replace = obj.innerHTML.replace(text[0], '{{value}}')
-          obj.innerHTML = replace;}
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (txt[0] == '{{key}}'){
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{value}}')
-          table_items[i].innerHTML = replace;
-          }
-          {% endfor %}
-        }
-    //Second Click
-    }else if (btn.value === 'Both') {
-        btn.value ='Seq';
-        btn.innerHTML='View SeqIDs';
-         for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (obj.classList[0]== ("{{key}}") && obj.classList[1]== ("graph") ) {
-          var replace = obj.innerHTML.replace(text[0], '{{key}} {{value}}')
-          obj.innerHTML = replace;
-          }
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          var obj = table_items[i];
-          {% for key,value in labidDict.items%}
-          if (obj.classList[1]== ("{{key}}") && obj.classList[2]== ("table") ) {
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}} {{value}}')
-          table_items[i].innerHTML = replace;
-          }
-
-          {% endfor %}
-        }
-    //Third Click
-    }else {
-        btn.value ='Lab';
-        btn.innerHTML ='View LabIDs';
-         for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (text[0] =='{{key}} {{value}}' ){
-          var replace = obj.innerHTML.replace(text[0], '{{key}}')
-          obj.innerHTML = replace;}
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (txt[0] == '{{key}} {{value}}'){
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}}')
-          table_items[i].innerHTML = replace;
-          }
-          {% endfor %}
-        }
-    }
-  }
   </script>
 {% endblock %}
