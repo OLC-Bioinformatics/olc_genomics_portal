@@ -161,7 +161,7 @@ def metadata_home(request):
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
-    idDict = id_sync(metadata_result)
+    idDict = id_sync(metadata_result.seqids)
     idList = (str(list(idDict.keys()))).replace("'","").replace("[","").replace("]","").replace(","," ")
     return render(request,
                   'metadata/metadata_results.html',
@@ -178,9 +178,9 @@ def metadata_browse(request):
                       'sequence_data': sequence_data
                   })
 # Uses metadata_result to filter db, and then loop through queryset to compile dictionary
-def id_sync(metadata_result):
+def id_sync(x):
     idDict = dict()
-    data_set = SequenceData.objects.filter(seqid__in=metadata_result.seqids)
+    data_set = SequenceData.objects.filter(seqid__in=x)
     for item in data_set:
         if item.labid is not None:
             labid_result = str(item.labid)

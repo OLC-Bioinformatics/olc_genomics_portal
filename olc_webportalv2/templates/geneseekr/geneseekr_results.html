@@ -51,7 +51,7 @@
                 <th>SeqID</th>
                 <th>LabID</th>
                 {% for key, value in geneseekr_request.geneseekr_results.items %}
-                  <td>{{ key }}</td>
+                  <th>{{ key }}</th>
                 {% endfor %}
               </tr>
             </thead>
@@ -59,11 +59,11 @@
             {% for geneseekr_detail in geneseekr_details %}
               <tr>
               <td>{{ geneseekr_detail.seqid }}</td>
-                    {% for key, value in labidDict.items %}
-                    {% if key == geneseekr_detail.seqid%}
-                    <td>{{value}}</td>
-                  {% endif %}
-                {% endfor %}
+              {% for key, value in idDict.items %}
+               {% if key == geneseekr_detail.seqid%}
+                   <td>{{value.0}}</td>
+               {% endif %}
+             {% endfor %} 
               {% for gene, percent_id in geneseekr_detail.geneseekr_results.items %}
                 {% if percent_id == 0.0 %}
                   <td style="color: #800f16">{{ percent_id }}</td>

@@ -121,7 +121,7 @@ def geneseekr_processing(request, geneseekr_request_pk):
 def geneseekr_results(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
-    idDict = id_sync(geneseekr_request)
+    idDict = id_sync(geneseekr_request.seqids)
     # Create dictionary where each gene gets its own top hits
     gene_top_hits = dict()
     for gene_name in geneseekr_request.gene_targets:
@@ -198,7 +198,7 @@ def tree_request(request):
 @login_required
 def tree_result(request, parsnp_request_pk):
     parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
-    idDict = id_sync(parsnp_request)
+    idDict = id_sync(parsnp_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
@@ -491,13 +491,13 @@ def neighbor_result(request, neighbor_request_pk):
         for neighbor_detail in neighbor_details:
             result_dict[neighbor_detail.seqid] = neighbor_detail.distance
 
-    idDict = id_sync(result_dict)
+    # idDict = id_sync(result_dict)
     return render(request,
                   'geneseekr/neighbor_result.html',
                   {
                       'neighbor_request': neighbor_request,
                       'results': result_dict,
-                      'idDict': idDict
+                    #   'idDict': idDict
                   })
 
 @csrf_exempt
