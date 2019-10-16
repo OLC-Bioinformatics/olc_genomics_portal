@@ -5,7 +5,7 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Nearest Neighbor</h2>
+  <h2>{%trans "Nearest Neighbor"%}</h2>
   <form action='' enctype="multipart/form-data" method="post">
    {% if form.errors %}
      <div class="alert alert-danger" role="alert" align="center">
@@ -17,7 +17,7 @@
       {{form.name|as_crispy_field }}
       </div>
   <br>
-      <p>Enter the SeqID you want to use, or choose a .fasta file to upload.</p>
+      <p>{%trans "Enter the SeqID you want to use, or choose a .fasta file to upload."%}</p>
     <div class="col-3" style="padding-left:0;">
           {{ form.seqid|as_crispy_field }}
           {{ form.uploaded_file|as_crispy_field }}
@@ -28,6 +28,6 @@
       {{form.number_neighbors|as_crispy_field }}
       </div>
     
-  <button type="submit" class="btn btn-primary btn-lg">Submit Request</button>
+  <button type="submit" class="btn btn-primary btn-lg">{%trans "Submit Request"%}</button>
   </form>
 {% endblock %}

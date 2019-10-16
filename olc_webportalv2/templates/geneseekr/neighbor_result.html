@@ -8,17 +8,17 @@
 {% block content %}
 
   {% if neighbor_request.seqid != '' %}
-      <h2>Nearest Neighbor Results for {{ neighbor_request.seqid }}</h2>
+      <h2>{%trans "Nearest Neighbor Results for"%} {{ neighbor_request.seqid }}</h2>
   {% else %}
-    <h2>Nearest Neighbor Results for {{ neighbor_request.uploaded_file_name }}</h2>
+    <h2>{%trans "Nearest Neighbor Results for "%}{{ neighbor_request.uploaded_file_name }}</h2>
   {% endif %}
   <br>
 
   {% if neighbor_request.status == 'Processing' %}
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ neighbor_request.status }}</button>
       <br>
-      <p>This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes.</p>
-      <p>You don't have to remain on this page - this request will be visible on <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
+      <p>{%trans "This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes."%}</p>
+      <p>{%trans "You don't have to remain on this page - this request will be visible on "%}<a href="{% url 'geneseekr:neighbor_home' %}">{%trans "Neighbor Home"%}</a> </p>
 
       {% if messages %}
         <ul class="messages">
@@ -35,18 +35,18 @@
   {% elif neighbor_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{{ neighbor_request.status }}</button>
     <br>
-    <p>Return to <a href="{% url 'geneseekr:neighbor_home' %}">Neighbor Home</a> </p>
+    <p>Return to <a href="{% url 'geneseekr:neighbor_home' %}">{%trans "Neighbor Home"%}</a> </p>
   {% elif neighbor_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{{ neighbor_request.status }} <i class="fas fa-check-circle"></i></button>
     <br>
-    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
+    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">{%trans "View LabIDs"%}</button>
     <br><br><br>
     <table id="distance-table" class="table table-hover">
       <thead>
         <tr>
           <th>SeqID</th>
           <th>LabID</th>
-          <th>Distance</th>
+          <th>{%trans "Distance"%}</th>
         </tr>
       </thead>
       <tbody>
@@ -64,15 +64,15 @@
       </tbody>
     </table>
     <br>
-    <p>These results will be available for 7 days.</p>
+    <p>{%trans "These results will be available for 7 days."%}</p>
     <br>
     <br>
     <div style="text-align: center">
-        <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Full Results</a>
+        <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "Download Full Results"%}</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ neighbor_request.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{%trans "Shareable link:"%} </b> {{ neighbor_request.download_link }}</p>
     </div>
     </div>
   {% endif %}

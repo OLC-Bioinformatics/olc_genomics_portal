@@ -407,13 +407,16 @@ def prokka_result(request, prokka_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email not in prokka_request.emails_array:
-                prokka_request.emails_array.append(Email)
-                prokka_request.save()
-                form = EmailForm()
-                messages.success(request, _('Email saved'))
-            else:
-                messages.error(request, _('Email has already been saved'))
+            if Email == "":
+                messages.error(request, _("Email cannot be blank"))
+            else:    
+                if Email not in prokka_request.emails_array:
+                    prokka_request.emails_array.append(Email)
+                    prokka_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
+                else:
+                    messages.error(request, _('Email has already been saved'))
         
     return render(request,
                   'geneseekr/prokka_result.html',

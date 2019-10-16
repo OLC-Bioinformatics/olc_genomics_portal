@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-10 18:16+0000\n"
+"POT-Creation-Date: 2019-10-16 13:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,20 +38,21 @@ msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
 #: olc_webportalv2/cowbat/views.py:105 olc_webportalv2/geneseekr/views.py:105
 #: olc_webportalv2/geneseekr/views.py:208
 #: olc_webportalv2/geneseekr/views.py:313
+#: olc_webportalv2/geneseekr/views.py:411
 msgid "Email cannot be blank"
 msgstr "Le courriel ne peut pas être vide!"
 
 #: olc_webportalv2/cowbat/views.py:111 olc_webportalv2/geneseekr/views.py:111
 #: olc_webportalv2/geneseekr/views.py:214
 #: olc_webportalv2/geneseekr/views.py:319
-#: olc_webportalv2/geneseekr/views.py:414
+#: olc_webportalv2/geneseekr/views.py:417
 msgid "Email saved"
 msgstr "Email enregistré"
 
 #: olc_webportalv2/cowbat/views.py:113 olc_webportalv2/geneseekr/views.py:113
 #: olc_webportalv2/geneseekr/views.py:216
 #: olc_webportalv2/geneseekr/views.py:321
-#: olc_webportalv2/geneseekr/views.py:416
+#: olc_webportalv2/geneseekr/views.py:419
 msgid "Email has already been saved"
 msgstr "Le courriel a déjà été sauvegardé"
 
@@ -766,6 +767,9 @@ msgstr "Téléchargement du rapport"
 #: olc_webportalv2/templates/geneseekr/amr_result.html:79
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:43
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:72
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:40
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:42
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:74
 #: olc_webportalv2/templates/geneseekr/tree_home.html:42
 #: olc_webportalv2/templates/geneseekr/tree_result.html:74
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
@@ -779,6 +783,10 @@ msgstr "Non traité"
 #: olc_webportalv2/templates/geneseekr/amr_home.html:46
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:17
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:47
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:17
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:44
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:17
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:46
 #: olc_webportalv2/templates/geneseekr/tree_home.html:17
 #: olc_webportalv2/templates/geneseekr/tree_home.html:46
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
@@ -790,6 +798,8 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/data/data_home.html:51
 #: olc_webportalv2/templates/geneseekr/amr_home.html:48
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:49
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:46
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:48
 #: olc_webportalv2/templates/geneseekr/tree_home.html:48
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Not Available"
@@ -806,6 +816,9 @@ msgstr "Statut COWBAT pour"
 #: olc_webportalv2/templates/geneseekr/amr_result.html:82
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:75
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:38
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:40
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:77
 #: olc_webportalv2/templates/geneseekr/tree_home.html:40
 #: olc_webportalv2/templates/geneseekr/tree_result.html:77
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
@@ -814,6 +827,7 @@ msgstr "Erreur"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:16
 #: olc_webportalv2/templates/geneseekr/amr_result.html:84
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:79
 #: olc_webportalv2/templates/geneseekr/tree_result.html:79
 msgid "Return to"
 msgstr "Retourner à"
@@ -845,6 +859,9 @@ msgstr "Réessayer le téléchargement de séquence pour"
 #: olc_webportalv2/templates/geneseekr/amr_result.html:13
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:12
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:36
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:38
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:14
 #: olc_webportalv2/templates/geneseekr/tree_home.html:38
 #: olc_webportalv2/templates/geneseekr/tree_result.html:14
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
@@ -875,6 +892,7 @@ msgstr ""
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:57
 #: olc_webportalv2/templates/geneseekr/amr_result.html:28
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:25
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:27
 #: olc_webportalv2/templates/geneseekr/tree_result.html:27
 msgid "Save Email"
 msgstr "Enregistrer le courriel"
@@ -882,6 +900,7 @@ msgstr "Enregistrer le courriel"
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:80
 #: olc_webportalv2/templates/geneseekr/amr_result.html:54
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:48
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:50
 #: olc_webportalv2/templates/geneseekr/tree_result.html:50
 msgid "Would you like an email upon completion?"
 msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
@@ -889,6 +908,7 @@ msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:84
 #: olc_webportalv2/templates/geneseekr/amr_result.html:58
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:52
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:54
 #: olc_webportalv2/templates/geneseekr/tree_result.html:54
 msgid "Save"
 msgstr "Enregistrer"
@@ -896,12 +916,14 @@ msgstr "Enregistrer"
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:90
 #: olc_webportalv2/templates/geneseekr/amr_result.html:65
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:58
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:60
 msgid "Email Recipients"
 msgstr "Destinataires des courriels"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:94
 #: olc_webportalv2/templates/geneseekr/amr_result.html:69
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:62
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:64
 #: olc_webportalv2/templates/geneseekr/tree_result.html:64
 msgid "No users have signed up to receive an email for this run."
 msgstr ""
@@ -915,6 +937,9 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/amr_result.html:88
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:80
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:34
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:36
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:81
 #: olc_webportalv2/templates/geneseekr/tree_home.html:36
 #: olc_webportalv2/templates/geneseekr/tree_result.html:81
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
@@ -931,6 +956,7 @@ msgstr "Télécharger les rapports et assemblages pour"
 #: olc_webportalv2/templates/geneseekr/amr_detail.html:52
 #: olc_webportalv2/templates/geneseekr/amr_result.html:163
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:93
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:90
 #: olc_webportalv2/templates/geneseekr/tree_result.html:120
 msgid "Shareable link:"
 msgstr "Lien partageable:"
@@ -957,6 +983,8 @@ msgstr "Fichier"
 #: olc_webportalv2/templates/data/data_home.html:18
 #: olc_webportalv2/templates/geneseekr/amr_home.html:16
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:16
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:16
 #: olc_webportalv2/templates/geneseekr/tree_home.html:16
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 msgid "Status"
@@ -1158,6 +1186,8 @@ msgstr ""
 #: olc_webportalv2/templates/data/data_home.html:20
 #: olc_webportalv2/templates/geneseekr/amr_home.html:18
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:18
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:18
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:18
 #: olc_webportalv2/templates/geneseekr/tree_home.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
 msgid "Request Date"
@@ -1166,6 +1196,7 @@ msgstr "Date de la demande"
 #: olc_webportalv2/templates/data/data_home.html:32
 #: olc_webportalv2/templates/geneseekr/amr_home.html:32
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:33
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:32
 #: olc_webportalv2/templates/geneseekr/tree_home.html:32
 msgid "...and"
 msgstr "...et"
@@ -1173,6 +1204,7 @@ msgstr "...et"
 #: olc_webportalv2/templates/data/data_home.html:32
 #: olc_webportalv2/templates/geneseekr/amr_home.html:32
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:33
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:32
 #: olc_webportalv2/templates/geneseekr/tree_home.html:32
 msgid "more"
 msgstr "de plus"
@@ -1195,6 +1227,7 @@ msgstr "Sommaire des résultats de la AMR pour"
 #: olc_webportalv2/templates/geneseekr/amr_detail.html:10
 #: olc_webportalv2/templates/geneseekr/amr_result.html:90
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:82
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:83
 #: olc_webportalv2/templates/geneseekr/tree_result.html:83
 msgid "These results will be available for 7 days."
 msgstr "Ces résultats seront disponibles pendant 7 jours."
@@ -1235,6 +1268,8 @@ msgstr "Accueil AMR"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:20
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:20
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:20
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:20
 #: olc_webportalv2/templates/geneseekr/tree_home.html:20
 #: olc_webportalv2/templates/users/user_detail.html:18
 #: olc_webportalv2/users/models.py:13
@@ -1243,12 +1278,16 @@ msgstr "Nom"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:55
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:61
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:52
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:55
 #: olc_webportalv2/templates/geneseekr/tree_home.html:55
 msgid "Delete"
 msgstr "Effacer"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:96
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:102
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:91
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:96
 #: olc_webportalv2/templates/geneseekr/tree_home.html:96
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
 msgid "Are you sure?"
@@ -1256,6 +1295,8 @@ msgstr "Êtes-vous sûr?"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:97
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:103
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:92
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:97
 #: olc_webportalv2/templates/geneseekr/tree_home.html:97
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
 msgid "You will not be able to revert this!"
@@ -1263,6 +1304,8 @@ msgstr "Vous ne pouvez pas reprendre ceci!"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:101
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:107
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:96
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:101
 #: olc_webportalv2/templates/geneseekr/tree_home.html:101
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
 msgid "Yes, delete it!"
@@ -1270,6 +1313,8 @@ msgstr "Oui, effacez-le !"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:102
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:108
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:97
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:102
 #: olc_webportalv2/templates/geneseekr/tree_home.html:102
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
 msgid "Cancel"
@@ -1277,6 +1322,8 @@ msgstr "Annuler"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:107
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:113
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:102
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:107
 #: olc_webportalv2/templates/geneseekr/tree_home.html:107
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
 msgid "Deleted!"
@@ -1284,12 +1331,16 @@ msgstr "Effacé"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:108
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:114
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:103
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:108
 #: olc_webportalv2/templates/geneseekr/tree_home.html:108
 msgid "Your file has been deleted."
 msgstr "Votre fichier a été effacé."
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:126
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:132
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:121
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:126
 #: olc_webportalv2/templates/geneseekr/tree_home.html:126
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
 msgid "Cancelled!"
@@ -1297,6 +1348,8 @@ msgstr "Annulé!"
 
 #: olc_webportalv2/templates/geneseekr/amr_home.html:127
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:133
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:122
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:127
 #: olc_webportalv2/templates/geneseekr/tree_home.html:127
 msgid "Your file is safe."
 msgstr "Votre dossier est sûr."
@@ -1307,9 +1360,10 @@ msgstr "Renommer le résumé de la AMR"
 
 #: olc_webportalv2/templates/geneseekr/amr_name.html:14
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:14
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:14
 #: olc_webportalv2/templates/geneseekr/tree_name.html:14
 msgid "Previous Name:"
-msgstr "Nom du projet:"
+msgstr "Nom précédent:"
 
 #: olc_webportalv2/templates/geneseekr/amr_request.html:8
 msgid "AMR Summary Request"
@@ -1357,6 +1411,7 @@ msgstr "Votre email est déjà sur la liste pour être notifié."
 
 #: olc_webportalv2/templates/geneseekr/amr_result.html:23
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:20
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:22
 msgid "Would you like to add another email?"
 msgstr "Souhaitez-vous ajouter un autre courriel ?"
 
@@ -1374,11 +1429,13 @@ msgid "GeneSeekr Run Rename"
 msgstr "GeneSeekr Renommer l'exécution"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:16
 #: olc_webportalv2/templates/geneseekr/tree_name.html:16
 msgid "Back"
 msgstr "Retour"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:16
 #: olc_webportalv2/templates/geneseekr/tree_name.html:16
 msgid "Save Changes"
 msgstr "Enregistrer les modifications"
@@ -1571,6 +1628,75 @@ msgstr "Demande de GeneSeekr non complétée."
 msgid "BLAST Hits for {{ gene }}: Query Length "
 msgstr "BLAST Hits pour {{ gene }} : Longueur de la requête "
 
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:10
+msgid "Neighbor Home"
+msgstr "Voisin Accueil"
+
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:8
+msgid "New Prokka Annotation"
+msgstr "Nouvelle annotation Prokka"
+
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:10
+msgid "Annotate Home"
+msgstr "Annoter Accueil"
+
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:8
+msgid "Annotation Rename"
+msgstr "Annotation Renommer"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:8
+msgid "Annotation Request"
+msgstr "Requête d'annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:19
+msgid "Enter SeqIDs to Annotate"
+msgstr "Entrez les SeqIDs à annoter"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:23
+msgid "Create Annotation"
+msgstr "Créer une annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:31
+msgid "Enter SeqIDs you want to create annotation files for here."
+msgstr ""
+"Entrez ici les SeqIDs pour lesquels vous voulez créer des fichiers "
+"d'annotation."
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:10
+msgid "Annotation Results"
+msgstr "Résultats de l'annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:16
+msgid ""
+"This page will automatically refresh. Your Annotation request should be "
+"complete in 1-3 minutes per sample (more if you requested many SeqIDs)."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande d'annotation devrait "
+"être complète en 1 à 3 minutes par échantillon (plus si vous avez demandé "
+"plusieurs SeqIDs)."
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:17
+msgid ""
+"You don't have to remain on this page - this Annotation request will be "
+"visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande d'annotation "
+"sera visible sur"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:17
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:79
+msgid "Annotation Home"
+msgstr "Annoter Accueil"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:21
+#: olc_webportalv2/templates/geneseekr/tree_result.html:21
+msgid "Your email is already on the list to be notified. "
+msgstr "Votre email est déjà sur la liste pour être notifié. "
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:86
+msgid "Download Annotation"
+msgstr "Télécharger l'annotation"
+
 #: olc_webportalv2/templates/geneseekr/tree_home.html:8
 msgid "Create A New Tree"
 msgstr "Créer un nouvel arbre"
@@ -1645,10 +1771,6 @@ msgid ""
 msgstr ""
 "Vous n'avez pas besoin de rester sur cette page - cette demande d'Arbre sera "
 "visible sur "
-
-#: olc_webportalv2/templates/geneseekr/tree_result.html:21
-msgid "Your email is already on the list to be notified. "
-msgstr "Votre email est déjà sur la liste pour être notifié. "
 
 #: olc_webportalv2/templates/geneseekr/tree_result.html:22
 msgid "Would you like to add another email? "
@@ -2088,3 +2210,6 @@ msgstr "Vous avez créé le projet "
 #, python-format
 msgid "Project %s updated"
 msgstr "Projet %s mis à jour"
+
+#~ msgid "Download "
+#~ msgstr "Télécharger"
