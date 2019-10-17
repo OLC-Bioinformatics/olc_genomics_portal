@@ -491,13 +491,13 @@ def neighbor_result(request, neighbor_request_pk):
         for neighbor_detail in neighbor_details:
             result_dict[neighbor_detail.seqid] = neighbor_detail.distance
 
-    # idDict = id_sync(result_dict)
+    idDict = id_sync(result_dict.keys())
     return render(request,
                   'geneseekr/neighbor_result.html',
                   {
                       'neighbor_request': neighbor_request,
                       'results': result_dict,
-                    #   'idDict': idDict
+                      'idDict': idDict
                   })
 
 @csrf_exempt

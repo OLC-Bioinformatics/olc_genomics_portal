@@ -74,7 +74,7 @@
   {% elif geneseekr_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
     <br>
-    <p>{%trans "Return to "%} <a href="{% url 'geneseekr:geneseekr_home' %}">{%trans "Geneseekr Home"%}</a> </p>
+    <p>{%trans "Return to "%} <a href="{% url 'geneseekr:geneseekr_home' %}">{%trans "GeneSeekr Home"%}</a> </p>
 
   {% elif geneseekr_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
