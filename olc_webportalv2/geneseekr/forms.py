@@ -6,6 +6,7 @@ from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -315,8 +316,16 @@ class ProkkaForm(forms.Form):
 
 
 class NameForm(forms.Form):
-    name = forms.CharField(label=_('Name '), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
-
+    name = forms.CharField(label=_('Name'), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
 
 class EmailForm(forms.Form):
-    email = forms.EmailField(max_length=50,label= "Email ", required=False)
+    email = forms.CharField(max_length=50,label= "Email ", required=False)
+
+    def clean(self):
+        super().clean()
+        email = self.cleaned_data.get('email')
+        EMAIL_REGEX = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+        if len(email) <1:
+            raise forms.ValidationError(_('Cannot be blank'))
+        if email and not re.match(EMAIL_REGEX, email):
+            raise forms.ValidationError(_('Must be in proper email format'))

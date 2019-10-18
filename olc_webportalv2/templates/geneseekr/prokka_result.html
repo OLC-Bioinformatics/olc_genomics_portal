@@ -10,6 +10,12 @@
   <h2>{%trans "Annotation Results" %}</h2>
   <br>
 
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+  {{ form.non_field_errors|escape }}
+  </div>
+  {% endif %}
+
   {% if prokka_request.status == 'Processing' %}
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing" %}</button>
       <br>
@@ -18,13 +24,17 @@
 
       <!--Email Block-->
       {% if request.user.email in prokka_request.emails_array %}
-      <p>{%trans "Your email is already on the list to be notified. " %}</p>
-      {%trans "Would you like to add another email?" %} <input type='checkbox' id='cbx' onclick="cbxCheck()">
-
-      <form method="Post" id='addEmail'>
+      <p>{%trans "Your email is already on the list to be notified."%} </p>
+      {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+      {% else %}
+      <p>{%trans "Would you like an email upon completion?"%}</p>
+      {% endif %}
+      
+      <form method="post" id='addEmail'>
         {% csrf_token %}
-        {{form}}
-        <button class='btn btn-success' type="submit">{%trans "Save Email" %}</button>
+        {{form.email.label_tag}}
+        {{form.email}}
+        <button class='btn btn-success' type="submit">{%trans "Save" %}</button>
         <br>
         <br>
       </form>
@@ -46,17 +56,6 @@
           }
     </script>
 
-      {% else %}
-      <p>{%trans "Would you like an email upon completion?" %}</p>
-      <form method="Post">
-      {% csrf_token %}
-      {{form}}
-      <button class='btn btn-success' style='padding: .15rem .5rem;'type="submit">{%trans "Save" %}</button>
-      <br>
-      <br>
-      </form>
-      {% endif %}
-
       <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {%trans "Email Recipients" %}</button>
       <div id="emails-button" class="collapse">
         <br>
@@ -73,10 +72,12 @@
   {% elif prokka_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed" %}</button>
     <br>
+  
   {% elif prokka_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{%trans "Error" %}</button>
     <br>
     <p>{%trans "Return to" %} <a href="{% url 'geneseekr:prokka_home' %}">{%trans "Annotation Home" %}</a> </p>
+ 
   {% elif prokka_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{%trans "Complete" %} <i class="fas fa-check-circle"></i></button>
     <br>

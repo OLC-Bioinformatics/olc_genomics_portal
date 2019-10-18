@@ -3,29 +3,36 @@
 {% load staticfiles %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
+
 <h2>{%trans "AMR Summary Results"%}</h2>
 <br>
+
+{% if form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+{{ form.non_field_errors|escape }}
+</div>
+{% endif %} 
+
 {% if amr_request.status == 'Processing' %}
-<button class="btn btn-info btn-block progress-bar-striped progress-bar-animated"
-  disabled>{% trans "Processing"%}</button>
+<button class="btn btn-info btn-block progress-bar-striped progress-bar-animated"disabled>{% trans "Processing"%}</button>
 <br>
-<p>{% blocktrans %} This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested
-  many SeqIDs). {%endblocktrans%} </p>
-<p>{% trans "You don't have to remain on this page - this AMR request will be visible on "%}<a
-    href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
+<p>{% blocktrans %} This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested many SeqIDs). {%endblocktrans%} </p>
+<p>{% trans "You don't have to remain on this page - this AMR request will be visible on "%}<a href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
 
 <!--Email Block-->
 {% if request.user.email in amr.emails_array %}
-<p>{% trans "Your email is already on the list to be notified."%} </p>
-{% trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+<p>{%trans "Your email is already on the list to be notified."%} </p>
+{%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+{% else %}
+<p>{%trans "Would you like an email upon completion?"%}</p>
+{% endif %}
 
-<form method="Post" id='addEmail'>
+<form method="post" id='addEmail'>
   {% csrf_token %}
-  {{form}}
-  <button type="submit">{% trans "Save Email"%}</button>
+  {{form.email.label_tag}}
+  {{form.email}}
+  <button class='btn btn-success' type="submit">{%trans "Save"%}</button>
   <br>
   <br>
 </form>
@@ -38,7 +45,6 @@
   } else {
     form.style.visibility = "visible";
   }
-
   function cbxCheck() {
     var checkbox = document.getElementById('cbx').checked;
     var form = document.getElementById('addEmail');
@@ -49,17 +55,6 @@
     }
   }
 </script>
-
-{% else %}
-<p>{% trans "Would you like an email upon completion?"%}</p>
-<form method="Post">
-  {% csrf_token %}
-  {{form}}
-  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">{% trans "Save"%}</button>
-  <br>
-  <br>
-</form>
-{% endif %}
 
 <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i
     class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
@@ -83,7 +78,7 @@
 <br>
 <p>{% trans "Return to"%}<a href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
 
-{#                         REQUEST IS COMPLETE                               #}
+<!--                   REQUEST IS COMPLETE                              -->
 {% elif amr_request.status == 'Complete' %}
 <button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
 <br>
@@ -166,44 +161,7 @@
 {% endif %}
 
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script type="text/javascript">
-var toggle = document.getElementById('toggle');
- // If page load is post, change sequence titles to toggle of choice
-  $(document).ready(function () {
-    if ((document.getElementById('seqID').value) != 'None'){
-    toggleFunc(toggle);
-    }
-  });
-  // Finds Toggle button, checks value, changes button value + display then alters list of sequences displays
-  function toggleFunc () {
-      var btn = document.getElementById('toggle-vis');
-      if (btn.value === 'Lab') {
-        toggle.value = 'Lab';
-        btn.value= 'Both';
-        btn.innerHTML ='View Both';
-        {% for key,value in labidDict.items%}
-         var i = document.getElementById('{{key}}');
-         i.innerHTML = '{{value}}';
-        {% endfor%};
-      } else if (btn.value === 'Both') {
-        toggle.value = 'Both';
-        btn.value ='Seq';
-        btn.innerHTML ='View SeqIDs';
-        {% for key,value in labidDict.items%}
-         var i = document.getElementById('{{key}}');
-         i.innerHTML = '{{key}} {{value}}';
-        {% endfor%};
-      } else {
-        toggle.value = 'Seq';
-        btn.value ='Lab';
-        btn.innerHTML ='View LabIDs';
-        {% for key,value in labidDict.items%}
-        var i = document.getElementById('{{key}}');
-        i.innerHTML = '{{key}}';
-        {% endfor%};
-      }
-    };
-  
+<script type="text/javascript">  
   setInterval(function () {
     {% if amr_request.status == 'Processing' %}
     window.location = window.location.href; 

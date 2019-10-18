@@ -17,10 +17,6 @@ class RunNameForm(forms.Form):
         return run_name
 
 
-class EmailForm(forms.Form):
-    email = forms.EmailField(max_length=50, label='Email ',required=False)
-
-
 def validate_no_comma(value):
     if ',' in value:
         raise forms.ValidationError(_('Strain names cannot have commas in them!'))

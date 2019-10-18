@@ -7,85 +7,124 @@
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
 
-  {% if neighbor_request.seqid != '' %}
-      <h2>{%trans "Nearest Neighbor Results for"%} {{ neighbor_request.seqid }}</h2>
-  {% else %}
-    <h2>{%trans "Nearest Neighbor Results for"%}{{ neighbor_request.uploaded_file_name }}</h2>
-  {% endif %}
+{% if form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+{{ form.non_field_errors|escape }}
+</div>
+{% endif %}
+
+{% if neighbor_request.seqid != '' %}
+    <h2>{%trans "Nearest Neighbor Results for"%} {{ neighbor_request.seqid }}</h2>
+{% else %}
+  <h2>{%trans "Nearest Neighbor Results for"%}{{ neighbor_request.uploaded_file_name }}</h2>
+{% endif %}
+<br>
+
+{% if neighbor_request.status == 'Processing' %}
+    <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
+    <br>
+    <p>{%trans "This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes."%}</p>
+    <p>{%trans "You don't have to remain on this page - this request will be visible on "%}<a href="{% url 'geneseekr:neighbor_home' %}"> {%trans "Neighbor Home"%}</a> </p>
+
+<!--Email Block--> 
+      {% if request.user.email in neighbor_request.emails_array %}
+      <p>{%trans "Your email is already on the list to be notified."%} </p>
+      {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+      {% else %}
+      <p>{%trans "Would you like an email upon completion?"%}</p>
+      {% endif %}
+
+      <form method="post" id='addEmail'>
+        {% csrf_token %}
+        {{form.email.label_tag}}
+        {{form.email}}
+        <button class='btn btn-success' type="submit">{%trans "Save"%}</button>
+        <br>
+        <br>
+      </form>
+
+      <script>
+        var checkbox = document.getElementById('cbx').checked;
+        var form = document.getElementById('addEmail');
+        if (checkbox != true){
+          form.style.visibility ="hidden";}
+        else {
+            form.style.visibility ="visible";}
+        function cbxCheck(){
+          var checkbox = document.getElementById('cbx').checked;
+          var form = document.getElementById('addEmail');
+          if (checkbox == true){
+            form.style.visibility ="visible";}
+          else{
+            form.style.visibility ="hidden";} 
+            }
+      </script>
+      
+    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
+    <div id="emails-button" class="collapse">
+      <br>
+      {% if neighbor_request.emails_array|length == 0 %}
+        <p>{%trans "No users have signed up to receive an email for this run."%}</p>
+      {% else %}
+          {% for email in neighbor_request.emails_array %}
+            <p>{{ email }}</p>
+          {% endfor %}
+      {% endif %}
+    </div>
+    <!--End Email Block--> 
+
+{% elif neighbor_request.status == 'Unprocessed' %}
+  <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
   <br>
 
-  {% if neighbor_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
-      <br>
-      <p>{%trans "This page will automatically refresh. Your nearest neighbor request should be complete in a few minutes."%}</p>
-      <p>{%trans "You don't have to remain on this page - this request will be visible on "%}<a href="{% url 'geneseekr:neighbor_home' %}"> {%trans "Neighbor Home"%}</a> </p>
+{% elif neighbor_request.status == 'Error' %}
+  <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
+  <br>
+  <p>{%trans "Return to"%} <a href="{% url 'geneseekr:neighbor_home' %}">{%trans "Neighbor Home"%}</a> </p>
 
-      {% comment %} {% if messages %}
-        <ul class="messages">
-        {% for message in messages %}
-        <li class="{{ message.tags }}">{{ message }}</li>
+{% elif neighbor_request.status == 'Complete' %}
+  <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+  <br>
+  <br><br><br>
+  <table id="distance-table" class="table table-hover">
+    <thead>
+      <tr>
+        <th>SeqID</th>
+        <th>LabID</th>
+        <th>Distance</th>
+      </tr>
+    </thead>
+    <tbody>
+        {% for seqid, distance in results.items %}
+          <tr>
+            <td>{{ seqid }}</td>
+            {% for key, value in idDict.items %}
+              {% if key == seqid%}
+                  <td>{{value.0}}</td>
+              {% endif %}
+            {% endfor %}
+            <td>{{ distance }}</td>
+          </tr>
         {% endfor %}
-        </ul>
-      {% endif %} {% endcomment %}
+    </tbody>
+  </table>
+  <br>
+  <p>{%trans "These results will be available for 7 days."%}</p>
+  <br>
+  <br>
+  <div style="text-align: center">
+      <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "Download Full Results"%}</a>
+      <br>
+      <br>
+  <div class="alert alert-primary" role="alert" align="center">
+      <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{%trans "Shareable link:"%} </b> {{ neighbor_request.download_link }}</p>
+  </div>
+  </div>
+{% endif %}
 
-
-  {% elif neighbor_request.status == 'Unprocessed' %}
-    <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
-    <br>
-  {% elif neighbor_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
-    <br>
-    <p>{%trans "Return to"%} <a href="{% url 'geneseekr:neighbor_home' %}">{%trans "Neighbor Home"%}</a> </p>
-  {% elif neighbor_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
-    <br>
-    <br><br><br>
-    <table id="distance-table" class="table table-hover">
-      <thead>
-        <tr>
-          <th>SeqID</th>
-          <th>LabID</th>
-          <th>Distance</th>
-        </tr>
-      </thead>
-      <tbody>
-         {% for seqid, distance in results.items %}
-           <tr>
-             <td>{{ seqid }}</td>
-             {% for key, value in idDict.items %}
-               {% if key == seqid%}
-                   <td>{{value.0}}</td>
-               {% endif %}
-             {% endfor %}
-             <td>{{ distance }}</td>
-           </tr>
-         {% endfor %}
-      </tbody>
-    </table>
-    <br>
-    <p>{%trans "These results will be available for 7 days."%}</p>
-    <br>
-    <br>
-    <div style="text-align: center">
-        <a href="{{ neighbor_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "Download Full Results"%}</a>
-        <br>
-        <br>
-    <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{%trans "Shareable link:"%} </b> {{ neighbor_request.download_link }}</p>
-    </div>
-    </div>
-  {% endif %}
-
-  <script type="text/javascript">
-    setInterval(function () {
-      {% if neighbor_request.status == 'Processing' %}
-        window.location = window.location.href;
-      {% endif %}
-    }, 45000)  // Refresh every 45 seconds
-   </script>
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/datatables.min.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+<script src="{% static 'js/datatables.min.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
 <script type="text/javascript">
   $(document).ready(function () {
     var lang = document.documentElement.lang;
@@ -99,5 +138,11 @@
         url: getLanguage()
     }, "lengthMenu": [[-1], [i]]}).order([2, 'asc']).draw();
     });
+
+    setInterval(function () {
+      {% if neighbor_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    }, 45000)  // Refresh every 45 seconds
   </script>
 {% endblock %}

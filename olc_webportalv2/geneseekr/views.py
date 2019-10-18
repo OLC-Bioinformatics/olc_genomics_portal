@@ -52,7 +52,8 @@ def geneseekr_name(request, geneseekr_request_pk):
     return render(request,
                   'geneseekr/geneseekr_name.html',
                   {
-                      'geneseekr_request': geneseekr_request,  'form': form
+                      'geneseekr_request': geneseekr_request,  
+                      'form': form
                   })
                   
 @login_required
@@ -89,7 +90,8 @@ def geneseekr_query(request):
     return render(request,
                   'geneseekr/geneseekr_query.html',
                   {
-                     'form': form, 'formName':formName,
+                     'form': form, 
+                     'formName':formName,
                   })
 
 @login_required
@@ -101,20 +103,16 @@ def geneseekr_processing(request, geneseekr_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email == "":
-                messages.error(request, _("Email cannot be blank"))
-            else:    
-                if Email not in geneseekr_request.emails_array:
-                    geneseekr_request.emails_array.append(Email)
-                    geneseekr_request.save()
-                    form = EmailForm()
-                    messages.success(request, _('Email saved'))
-                else:
-                    messages.error(request, _('Email has already been saved'))
+            if Email not in geneseekr_request.emails_array:
+                geneseekr_request.emails_array.append(Email)
+                geneseekr_request.save()
+                form = EmailForm()
+                messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
-                     'geneseekr_request': geneseekr_request, "form": form
+                     'geneseekr_request': geneseekr_request, 
+                     'form': form
                   })
 
 @login_required
@@ -204,21 +202,17 @@ def tree_result(request, parsnp_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email == "":
-                messages.error(request, _("Email cannot be blank"))
-            else:
-                if Email not in parsnp_request.emails_array:
+            if Email not in parsnp_request.emails_array:
                     parsnp_request.emails_array.append(Email)
                     parsnp_request.save()
                     form = EmailForm()
                     messages.success(request, _('Email saved'))
-                else:
-                    messages.error(request, _('Email has already been saved'))
-            
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 'form': form, 'idDict': idDict,
+                      'parsnp_request': parsnp_request, 
+                      'form': form, 
+                      'idDict': idDict,
                   })
 
 @login_required
@@ -235,7 +229,8 @@ def tree_name(request, parsnp_request_pk):
     return render(request,
                   'geneseekr/tree_name.html',
                   {
-                      'parsnp_request': parsnp_request,  'form': form
+                      'parsnp_request': parsnp_request,  
+                      'form': form
                   })
 
 # AMR Summary Views--------------------------------------------------------------------------------------------
@@ -309,17 +304,11 @@ def amr_result(request, amr_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email == "":
-                messages.error(request, _("Email cannot be blank"))
-            else:
-                if Email not in amr_request.emails_array:
+            if Email not in amr_request.emails_array:
                     amr_request.emails_array.append(Email)
                     amr_request.save()
                     form = EmailForm()
                     messages.success(request, _('Email saved'))
-                else:
-                    messages.error(request, _('Email has already been saved'))
-
     return render(request,
                   'geneseekr/amr_result.html',
                   {
@@ -341,7 +330,8 @@ def amr_name(request, amr_request_pk):
     return render(request,
                   'geneseekr/amr_name.html',
                   {
-                      'amr_request': amr_request,  'form': form
+                      'amr_request': amr_request,  
+                      'form': form
                   })
 
 
@@ -407,21 +397,16 @@ def prokka_result(request, prokka_request_pk):
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
-            if Email == "":
-                messages.error(request, _("Email cannot be blank"))
-            else:    
-                if Email not in prokka_request.emails_array:
+            if Email not in prokka_request.emails_array:
                     prokka_request.emails_array.append(Email)
                     prokka_request.save()
                     form = EmailForm()
                     messages.success(request, _('Email saved'))
-                else:
-                    messages.error(request, _('Email has already been saved'))
-        
     return render(request,
                   'geneseekr/prokka_result.html',
                   {
-                      'prokka_request': prokka_request, 'form': form,
+                      'prokka_request': prokka_request, 
+                      'form': form,
                   })
 
 @login_required
@@ -438,7 +423,8 @@ def prokka_name(request, prokka_request_pk):
     return render(request,
                   'geneseekr/prokka_name.html',
                   {
-                      'prokka_request': prokka_request,  'form': form
+                      'prokka_request': prokka_request,  
+                      'form': form
                   })
 
 
@@ -492,12 +478,24 @@ def neighbor_result(request, neighbor_request_pk):
             result_dict[neighbor_detail.seqid] = neighbor_detail.distance
 
     idDict = id_sync(result_dict.keys())
+
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in neighbor_request.emails_array:
+                    neighbor_request.emails_array.append(Email)
+                    neighbor_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/neighbor_result.html',
                   {
                       'neighbor_request': neighbor_request,
                       'results': result_dict,
-                      'idDict': idDict
+                      'idDict': idDict,
+                      'form' : form
                   })
 
 @csrf_exempt
@@ -531,7 +529,8 @@ def neighbor_name(request, neighbor_request_pk):
     return render(request,
                   'geneseekr/neighbor_name.html',
                   {
-                      'neighbor_request': neighbor_request,  'form': form
+                      'neighbor_request': neighbor_request,  
+                      'form': form
                   })
 
 
