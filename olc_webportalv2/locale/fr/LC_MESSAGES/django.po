@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-18 17:57+0000\n"
+"POT-Creation-Date: 2019-10-18 19:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,34 @@ msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 #: olc_webportalv2/cowbat/forms.py:22
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
+
+#: olc_webportalv2/cowbat/urls.py:6
+msgid "^cowbat_processing/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^transformation/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:7
+msgid "^assembly_home/"
+msgstr "^assemblée/"
+
+#: olc_webportalv2/cowbat/urls.py:8
+msgid "^upload_metadata/"
+msgstr "^métadonnées/"
+
+#: olc_webportalv2/cowbat/urls.py:9
+msgid "^verify_realtime/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^en_temps_réel/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:10
+msgid "^upload_interop/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^interop/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:11
+msgid "^upload_sequence_data/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^données_séquentielles/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:12
+msgid "^retry_sequence_data_upload/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^réessayer/(?P<sequencing_run_pk>\\d+)/$"
 
 #: olc_webportalv2/cowbat/views.py:109 olc_webportalv2/geneseekr/views.py:110
 #: olc_webportalv2/geneseekr/views.py:209
@@ -76,6 +104,22 @@ msgid ""
 msgstr ""
 "Une ou plusieurs des SEQID que vous avez saisies n'ont pas été trouvées dans "
 "notre base de données. SEQIDs non trouvés : %s"
+
+#: olc_webportalv2/data/urls.py:6
+msgid "^data_home/"
+msgstr "^données/"
+
+#: olc_webportalv2/data/urls.py:7
+msgid "^raw_data/"
+msgstr "^données_brutes/"
+
+#: olc_webportalv2/data/urls.py:8
+msgid "^assembled_data/"
+msgstr "^assemblé/"
+
+#: olc_webportalv2/data/urls.py:9
+msgid "^data_download/(?P<data_request_pk>\\d+)/$"
+msgstr "^télécharger/(?P<data_request_pk>\\d+)/$"
 
 #: olc_webportalv2/geneseekr/forms.py:14 olc_webportalv2/geneseekr/forms.py:153
 #: olc_webportalv2/geneseekr/forms.py:217
@@ -261,6 +305,94 @@ msgstr "Nom"
 msgid "Must be in proper email format"
 msgstr "Doit être dans le bon format de courriel"
 
+#: olc_webportalv2/geneseekr/urls.py:7
+msgid "^geneseekr_home/"
+msgstr "^geneseekr_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:8
+msgid "^geneseekr_query/"
+msgstr "^geneseekr_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:9
+msgid "^geneseekr_processing/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_transformation/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:10
+msgid "^geneseekr_results/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_résultats/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:11
+msgid "^geneseekr_name/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_nom/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:14
+msgid "^tree_home/"
+msgstr "^arbre_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:15
+msgid "^tree_request/"
+msgstr "^arbre_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:16
+msgid "^tree_result/(?P<parsnp_request_pk>\\d+)/$"
+msgstr "^arbre_résultats/(?P<parsnp_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:17
+msgid "^tree_name/(?P<parsnp_request_pk>\\d+)/$"
+msgstr "^arbre_nom/(?P<parsnp_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:20
+msgid "^amr_home/"
+msgstr "^amr_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:21
+msgid "^amr_request/"
+msgstr "^amr_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:22
+msgid "^amr_result/(?P<amr_request_pk>\\d+)/"
+msgstr "^amr_résultats/(?P<amr_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:23
+msgid "^amr_name/(?P<amr_request_pk>\\d+)/"
+msgstr "^amr_nom/(?P<amr_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:24
+msgid "^amr_detail/(?P<amr_detail_pk>\\d+)/"
+msgstr "^amr_détails/(?P<amr_detail_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:27
+msgid "^prokka_home/"
+msgstr "^prokka_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:28
+msgid "^prokka_request/"
+msgstr "^prokka_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:29
+msgid "^prokka_result/(?P<prokka_request_pk>\\d+)/"
+msgstr "^prokka_résultats/(?P<prokka_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:30
+msgid "^prokka_name/(?P<prokka_request_pk>\\d+)/"
+msgstr "^prokka_nom/(?P<prokka_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:33
+msgid "^neighbor_home/"
+msgstr "^voisine_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:34
+msgid "^neighbor_request"
+msgstr "^voisine_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:35
+msgid "^neighbor_result/(?P<neighbor_request_pk>\\d+)/$"
+msgstr "^voisine_résultats/(?P<neighbor_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:36
+msgid "^neighbor_name/(?P<neighbor_request_pk>\\d+)/"
+msgstr "^voisine_nom/(?P<neighbor_request_pk>\\d+)/"
+
 #: olc_webportalv2/metadata/forms.py:7 olc_webportalv2/metadata/models.py:9
 #: olc_webportalv2/metadata/views.py:138
 msgid "Pass"
@@ -308,6 +440,22 @@ msgstr "sérotype"
 #: olc_webportalv2/metadata/models.py:65
 msgid "quality"
 msgstr "qualité"
+
+#: olc_webportalv2/metadata/urls.py:11
+msgid "^metadata_home/"
+msgstr "^accueil/"
+
+#: olc_webportalv2/metadata/urls.py:12
+msgid "^metadata_results/(?P<metadata_request_pk>\\d+)/$"
+msgstr "^résultats/(?P<metadata_request_pk>\\d+)/$"
+
+#: olc_webportalv2/metadata/urls.py:13
+msgid "^metadata_browse/"
+msgstr "^parcourir/"
+
+#: olc_webportalv2/metadata/urls.py:14
+msgid "^metadata_submit/"
+msgstr "^soumettre/"
 
 #: olc_webportalv2/metadata/views.py:133
 msgid "Pass + Reference"
@@ -1401,11 +1549,6 @@ msgid "AMR Summary Results"
 msgstr "Sommaire des résultats de la AMR"
 
 #: olc_webportalv2/templates/geneseekr/amr_result.html:20
-#, fuzzy
-#| msgid ""
-#| " This page will automatically refresh. Your AMR request should be "
-#| "complete in 5 to 10 minutes (more if you requested\n"
-#| "  many SeqIDs). "
 msgid ""
 " This page will automatically refresh. Your AMR request should be complete "
 "in 5 to 10 minutes (more if you requested many SeqIDs). "

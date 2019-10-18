@@ -3,14 +3,15 @@ from django.conf.urls import url, include
 from django.urls import path
 from rest_framework.urlpatterns import format_suffix_patterns
 from rest_framework.schemas import get_schema_view
+from django.utils.translation import gettext_lazy as _
 
 schema_view = get_schema_view(title='Metadata API')
 
 urlpatterns = [
-    url(r'^metadata_home/', views.metadata_home, name='metadata_home'),
-    url(r'^metadata_results/(?P<metadata_request_pk>\d+)/$', views.metadata_results, name='metadata_results'),
-    url(r'^metadata_browse/', views.metadata_browse, name='metadata_browse'),
-    url(r'^metadata_submit/', views.metadata_submit, name='metadata_submit'),
+    url(_(r'^metadata_home/'), views.metadata_home, name='metadata_home'),
+    url(_(r'^metadata_results/(?P<metadata_request_pk>\d+)/$'), views.metadata_results, name='metadata_results'),
+    url(_(r'^metadata_browse/'), views.metadata_browse, name='metadata_browse'),
+    url(_(r'^metadata_submit/'), views.metadata_submit, name='metadata_submit'),
 
     # Views for autocompletion
     url(r'^genus_autocompleter/$',
