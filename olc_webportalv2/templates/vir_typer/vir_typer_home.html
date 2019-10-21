@@ -48,7 +48,7 @@
         <td>{{ vir_typer_project.created_at }}</td>
         {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{vir_typer_project.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %}<i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
           </form>
         {% else %}
@@ -65,27 +65,17 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
   $(document).ready(function () {
-    //Default order of table on page load
+    var lang = document.documentElement.lang;
     var table = $('#vir_typer-request-table').DataTable({
-            language: {
-                emptyTable: '{% trans "No data available in table" %}',
-                infoEmpty: '{% trans "Showing 0 to 0 of 0 entries" %}',
-                info: '{% trans "Showing " %} _START_ {% trans "to " %} _END_ {% trans "of " %}  _TOTAL_ {% trans "entries" %}',
-                lengthMenu: '{% trans "Show " %} _MENU_ {% trans "entries" %}',
-                search: '{% trans "Search" %}',
-                paginate: {
-                    first: '{% trans "First" %}',
-                    previous: '{% trans "Previous" %}',
-                    next: '{% trans "Next" %}',
-                    last: '{% trans "Last" %}'
-                },
-            }
-        }
-    );
+       language : {
+        url: getLanguage()
+    }
+    });
+        //Default order of table on page load
         table
         .order([3,"desc"], [1,"asc"])
         .draw();
-    });
+});
   setInterval(function () {
     {% for vir_typer_project in vir_typer_projects %}
       {% if vir_typer_project.status == 'Processing' %}

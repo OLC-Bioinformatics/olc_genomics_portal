@@ -398,7 +398,7 @@ def vir_typer_rename(request, vir_typer_pk):
             # vir_typer_project.save()
             tombstone_form.save()
             messages.success(request,
-                             'Project {p_name} updated'.format(p_name=vir_typer_project.project_name))
+                             _('Project %s updated')% vir_typer_project.project_name)
             return redirect('vir_typer:vir_typer_home')
         else:
             messages.error(request, tombstone_form.errors.as_json())

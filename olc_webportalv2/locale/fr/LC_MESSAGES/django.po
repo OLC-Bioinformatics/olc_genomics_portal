@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-08-28 20:13+0000\n"
+"POT-Creation-Date: 2019-10-18 19:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,78 +18,528 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+#: olc_webportalv2/cowbat/forms.py:10
+msgid "YYMMDD_LAB"
+msgstr "AAMMJJ_LAB"
+
+#: olc_webportalv2/cowbat/forms.py:10
+#: olc_webportalv2/templates/cowbat/assembly_home.html:16
+msgid "Run Name"
+msgstr "Nom de l'exécution"
+
+#: olc_webportalv2/cowbat/forms.py:16
+msgid "Invalid run name. Format must be YYMMDD_LAB"
+msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
+
+#: olc_webportalv2/cowbat/forms.py:22
+msgid "Strain names cannot have commas in them!"
+msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
+
+#: olc_webportalv2/cowbat/urls.py:6
+msgid "^cowbat_processing/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^transformation/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:7
+msgid "^assembly_home/"
+msgstr "^assemblée/"
+
+#: olc_webportalv2/cowbat/urls.py:8
+msgid "^upload_metadata/"
+msgstr "^métadonnées/"
+
+#: olc_webportalv2/cowbat/urls.py:9
+msgid "^verify_realtime/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^en_temps_réel/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:10
+msgid "^upload_interop/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^interop/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:11
+msgid "^upload_sequence_data/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^données_séquentielles/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/urls.py:12
+msgid "^retry_sequence_data_upload/(?P<sequencing_run_pk>\\d+)/$"
+msgstr "^réessayer/(?P<sequencing_run_pk>\\d+)/$"
+
+#: olc_webportalv2/cowbat/views.py:109 olc_webportalv2/geneseekr/views.py:110
+#: olc_webportalv2/geneseekr/views.py:209
+#: olc_webportalv2/geneseekr/views.py:311
+#: olc_webportalv2/geneseekr/views.py:404
+#: olc_webportalv2/geneseekr/views.py:491
+msgid "Email saved"
+msgstr "Email enregistré"
+
+#: olc_webportalv2/data/forms.py:8 olc_webportalv2/geneseekr/forms.py:47
+#: olc_webportalv2/geneseekr/forms.py:154
+#: olc_webportalv2/geneseekr/forms.py:218
+#: olc_webportalv2/geneseekr/forms.py:269
+msgid "YYYY-LAB-####"
+msgstr "AAAA-LAB-####"
+
+#: olc_webportalv2/data/forms.py:13 olc_webportalv2/geneseekr/forms.py:329
+msgid "Cannot be blank"
+msgstr "Ne peut pas être vide!"
+
+# python-format
+#: olc_webportalv2/data/forms.py:20
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not formatted correctly. Correct "
+"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
+"line. Invalid SEQIDS: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été formatées "
+"correctement. Le format correct est AAAA-LAB-####. Assurez-vous également "
+"d'avoir saisi une SEQID par ligne. SEQIDS invalide: %s"
+
+#: olc_webportalv2/data/forms.py:34 olc_webportalv2/geneseekr/forms.py:82
+#: olc_webportalv2/geneseekr/forms.py:255
+#: olc_webportalv2/geneseekr/forms.py:307
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not found in our database. SEQIDs "
+"not found: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été trouvées dans "
+"notre base de données. SEQIDs non trouvés : %s"
+
+#: olc_webportalv2/data/urls.py:6
+msgid "^data_home/"
+msgstr "^données/"
+
+#: olc_webportalv2/data/urls.py:7
+msgid "^raw_data/"
+msgstr "^données_brutes/"
+
+#: olc_webportalv2/data/urls.py:8
+msgid "^assembled_data/"
+msgstr "^assemblé/"
+
+#: olc_webportalv2/data/urls.py:9
+msgid "^data_download/(?P<data_request_pk>\\d+)/$"
+msgstr "^télécharger/(?P<data_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/forms.py:14 olc_webportalv2/geneseekr/forms.py:153
+#: olc_webportalv2/geneseekr/forms.py:217
+#: olc_webportalv2/geneseekr/forms.py:268
+msgid "Name: "
+msgstr "Nom: "
+
+#: olc_webportalv2/geneseekr/forms.py:17
+msgid "Number neighbors: "
+msgstr "Nombre de voisins: "
+
+#: olc_webportalv2/geneseekr/forms.py:32
+msgid "Must enter at least one of SeqID or uploaded file."
+msgstr "Vous devez saisir au moins un SeqID ou un fichier téléchargé."
+
+#: olc_webportalv2/geneseekr/forms.py:34
+msgid "Only enter one of SeqID and uploaded file."
+msgstr "Saisissez un seul SeqID et le fichier téléchargé."
+
+#: olc_webportalv2/geneseekr/forms.py:37
+msgid "Uploaded file must be in FASTA format and filename must end with .fasta"
+msgstr ""
+"Le fichier téléchargé doit être au format FASTA et le nom du fichier doit se "
+"terminer par .fasta."
+
+#: olc_webportalv2/geneseekr/forms.py:39
+msgid ""
+"Requested SEQID is not in the database. Correct format for SeqID is YYYY-LAB-"
+"####. Please check your SEQID and try again."
+msgstr ""
+"La SEQID demandée n'est pas dans la base de données. Le format correct pour "
+"SeqID est AAAA-LAB-#####. Veuillez vérifier votre SEQID et réessayer."
+
+#: olc_webportalv2/geneseekr/forms.py:42
+msgid ""
+"Invalid number of nearest neighbors requested. Valid values are from 1 to "
+"250."
+msgstr ""
+"Le nombre de voisins les plus proches n'est pas valide. Les valeurs valides "
+"vont de 1 à 250."
+
+#: olc_webportalv2/geneseekr/forms.py:48
+msgid ""
+">Gene \n"
+" ACGTACGT"
+msgstr ""
+">Gène \n"
+" ACGTACGT"
+
+#: olc_webportalv2/geneseekr/forms.py:68 olc_webportalv2/geneseekr/forms.py:188
+#: olc_webportalv2/geneseekr/forms.py:241
+#: olc_webportalv2/geneseekr/forms.py:293
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not formatted correctly. Correct "
+"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
+"line. Invalid SEQIDs: %s"
+msgstr ""
+"Une ou plusieurs des SEQID que vous avez saisies n'ont pas été formatées "
+"correctement. Le format correct est AAAA-LAB-####. Assurez-vous également "
+"d'avoir saisi une SEQID par ligne. SEQID invalides : %s"
+
+#: olc_webportalv2/geneseekr/forms.py:99
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:102
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences NOT from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences NON issues du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:108
+msgid ""
+"No input found! You must submit a FASTA sequence by pasting it into the text "
+"box or uploading a FASTA file."
+msgstr ""
+"Aucune entrée trouvée ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléchargeant un fichier FASTA."
+
+#: olc_webportalv2/geneseekr/forms.py:111
+msgid ""
+"Multiple inputs found! You must submit a FASTA sequence by pasting it into "
+"the text box or uploading a FASTA file, but not both."
+msgstr ""
+"Entrées multiples trouvées ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléchargeant un fichier FASTA, mais pas "
+"les deux."
+
+#: olc_webportalv2/geneseekr/forms.py:123
+#: olc_webportalv2/geneseekr/forms.py:140
+msgid ""
+"Your FASTA sequence contains invalid characters. Sequence should only "
+"contain valid nucleotides (A, C, T, G, N)."
+msgstr ""
+"Votre séquence FASTA contient des caractères non valides. La séquence ne "
+"doit contenir que des nucléotides valides (A, C, T, G, N)."
+
+#: olc_webportalv2/geneseekr/forms.py:127
+#: olc_webportalv2/geneseekr/forms.py:144
+msgid ""
+"Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA"
+msgstr ""
+"Séquence FASTA invalide saisie. Le format correct est: >nomdeséquence  "
+"ACTGATCGA"
+
+#: olc_webportalv2/geneseekr/forms.py:147
+#, python-format
+msgid ""
+"FASTA sequence length maximum is 10000 bases. Your input sequence had %s "
+"bases."
+msgstr ""
+"La longueur maximale de la séquence FASTA est de 10000 bases. Votre séquence "
+"d'entrée avait des %s bases"
+
+#: olc_webportalv2/geneseekr/forms.py:153
+#: olc_webportalv2/geneseekr/forms.py:217
+#: olc_webportalv2/geneseekr/forms.py:268
+#: olc_webportalv2/geneseekr/forms.py:319
+msgid "Optional"
+msgstr "Facultatif"
+
+#: olc_webportalv2/geneseekr/forms.py:157
+msgid "Which tree program? "
+msgstr "Quel programme d'arborescence ?"
+
+#: olc_webportalv2/geneseekr/forms.py:158
+msgid "Number of diversitree strains"
+msgstr "Nombre de souches de diversitree"
+
+#: olc_webportalv2/geneseekr/forms.py:166
+#: olc_webportalv2/geneseekr/forms.py:227
+#: olc_webportalv2/geneseekr/forms.py:278
+msgid "Input cannot be only whitespace"
+msgstr "L'entrée ne peut pas être seulement vide."
+
+#: olc_webportalv2/geneseekr/forms.py:207
+#, python-format
+msgid "Too many Diversitree strains selected, must be %s or less"
+msgstr "Trop de souches Diversitree sélectionnées, doivent être en %s ou moins"
+
+#: olc_webportalv2/geneseekr/forms.py:210
+#: olc_webportalv2/geneseekr/forms.py:260
+#: olc_webportalv2/geneseekr/forms.py:313
+msgid "All files uploaded must be in FASTA format with the extension .fasta"
+msgstr ""
+"Tous les fichiers téléchargés doivent être au format FASTA avec l'extension ."
+"fasta"
+
+#: olc_webportalv2/geneseekr/forms.py:212
+msgid "At least two input sequences must be given."
+msgstr "Au moins deux séquences d'entrée doivent être données."
+
+#: olc_webportalv2/geneseekr/forms.py:263
+msgid "At least one input sequence must be given."
+msgstr "Au moins une séquence d'entrée doit être donnée."
+
+#: olc_webportalv2/geneseekr/forms.py:310
+msgid "Must enter at least one SeqID or upload at least one file."
+msgstr ""
+"Vous devez saisir au moins un SeqID ou télécharger au moins un fichier."
+
+#: olc_webportalv2/geneseekr/forms.py:319
+#: olc_webportalv2/templates/geneseekr/amr_home.html:20
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:20
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:20
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:20
+#: olc_webportalv2/templates/geneseekr/tree_home.html:20
+#: olc_webportalv2/templates/users/user_detail.html:18
+#: olc_webportalv2/users/models.py:13
+msgid "Name"
+msgstr "Nom"
+
+#: olc_webportalv2/geneseekr/forms.py:331
+msgid "Must be in proper email format"
+msgstr "Doit être dans le bon format de courriel"
+
+#: olc_webportalv2/geneseekr/urls.py:7
+msgid "^geneseekr_home/"
+msgstr "^geneseekr_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:8
+msgid "^geneseekr_query/"
+msgstr "^geneseekr_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:9
+msgid "^geneseekr_processing/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_transformation/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:10
+msgid "^geneseekr_results/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_résultats/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:11
+msgid "^geneseekr_name/(?P<geneseekr_request_pk>\\d+)/$"
+msgstr "^geneseekr_nom/(?P<geneseekr_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:14
+msgid "^tree_home/"
+msgstr "^arbre_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:15
+msgid "^tree_request/"
+msgstr "^arbre_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:16
+msgid "^tree_result/(?P<parsnp_request_pk>\\d+)/$"
+msgstr "^arbre_résultats/(?P<parsnp_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:17
+msgid "^tree_name/(?P<parsnp_request_pk>\\d+)/$"
+msgstr "^arbre_nom/(?P<parsnp_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:20
+msgid "^amr_home/"
+msgstr "^amr_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:21
+msgid "^amr_request/"
+msgstr "^amr_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:22
+msgid "^amr_result/(?P<amr_request_pk>\\d+)/"
+msgstr "^amr_résultats/(?P<amr_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:23
+msgid "^amr_name/(?P<amr_request_pk>\\d+)/"
+msgstr "^amr_nom/(?P<amr_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:24
+msgid "^amr_detail/(?P<amr_detail_pk>\\d+)/"
+msgstr "^amr_détails/(?P<amr_detail_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:27
+msgid "^prokka_home/"
+msgstr "^prokka_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:28
+msgid "^prokka_request/"
+msgstr "^prokka_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:29
+msgid "^prokka_result/(?P<prokka_request_pk>\\d+)/"
+msgstr "^prokka_résultats/(?P<prokka_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:30
+msgid "^prokka_name/(?P<prokka_request_pk>\\d+)/"
+msgstr "^prokka_nom/(?P<prokka_request_pk>\\d+)/"
+
+#: olc_webportalv2/geneseekr/urls.py:33
+msgid "^neighbor_home/"
+msgstr "^voisine_accueil/"
+
+#: olc_webportalv2/geneseekr/urls.py:34
+msgid "^neighbor_request"
+msgstr "^voisine_requête/"
+
+#: olc_webportalv2/geneseekr/urls.py:35
+msgid "^neighbor_result/(?P<neighbor_request_pk>\\d+)/$"
+msgstr "^voisine_résultats/(?P<neighbor_request_pk>\\d+)/$"
+
+#: olc_webportalv2/geneseekr/urls.py:36
+msgid "^neighbor_name/(?P<neighbor_request_pk>\\d+)/"
+msgstr "^voisine_nom/(?P<neighbor_request_pk>\\d+)/"
+
+#: olc_webportalv2/metadata/forms.py:7 olc_webportalv2/metadata/models.py:9
+#: olc_webportalv2/metadata/views.py:138
+msgid "Pass"
+msgstr "Passe"
+
+#: olc_webportalv2/metadata/forms.py:7
+msgid "All sequences except for low quality or contaminated sequences."
+msgstr ""
+"Toutes les séquences à l'exception des séquences de faible qualité ou "
+"contaminées."
+
+#: olc_webportalv2/metadata/forms.py:8 olc_webportalv2/metadata/models.py:10
+#: olc_webportalv2/metadata/views.py:134 olc_webportalv2/metadata/views.py:141
+msgid "Reference"
+msgstr "Référence"
+
+#: olc_webportalv2/metadata/forms.py:8
+msgid "Highest quality, gold standard sequences."
+msgstr "Des séquences de qualité supérieure, des séquences étalons or."
+
+#: olc_webportalv2/metadata/forms.py:9 olc_webportalv2/metadata/models.py:8
+msgid "Fail"
+msgstr "Raté"
+
+#: olc_webportalv2/metadata/forms.py:9
+msgid ""
+"All sequences - may include contaminated or otherwise very low quality "
+"sequences. Use with caution."
+msgstr ""
+"Toutes les séquences - peuvent inclure des séquences contaminées ou de très "
+"mauvaise qualité. Utiliser avec prudence."
+
+#: olc_webportalv2/metadata/models.py:29
+msgid "genus"
+msgstr "genre"
+
+#: olc_webportalv2/metadata/models.py:36
+msgid "species"
+msgstr "espèce"
+
+#: olc_webportalv2/metadata/models.py:43
+msgid "serotype"
+msgstr "sérotype"
+
+#: olc_webportalv2/metadata/models.py:65
+msgid "quality"
+msgstr "qualité"
+
+#: olc_webportalv2/metadata/urls.py:11
+msgid "^metadata_home/"
+msgstr "^accueil/"
+
+#: olc_webportalv2/metadata/urls.py:12
+msgid "^metadata_results/(?P<metadata_request_pk>\\d+)/$"
+msgstr "^résultats/(?P<metadata_request_pk>\\d+)/$"
+
+#: olc_webportalv2/metadata/urls.py:13
+msgid "^metadata_browse/"
+msgstr "^parcourir/"
+
+#: olc_webportalv2/metadata/urls.py:14
+msgid "^metadata_submit/"
+msgstr "^soumettre/"
+
+#: olc_webportalv2/metadata/views.py:133
+msgid "Pass + Reference"
+msgstr "Passe + Référence"
+
+#: olc_webportalv2/metadata/views.py:135
+msgid "All"
+msgstr "Tous"
+
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
 msgid "Account Inactive"
-msgstr ""
+msgstr "Compte Inactif"
 
 #: olc_webportalv2/templates/account/account_inactive.html:10
 msgid "This account is inactive."
-msgstr ""
+msgstr "Ce compte est inactif."
 
 #: olc_webportalv2/templates/account/email.html:7
 msgid "Account"
-msgstr ""
+msgstr "Compte"
 
 #: olc_webportalv2/templates/account/email.html:12
 msgid "E-mail Addresses"
-msgstr ""
+msgstr "Adresses E-mail"
 
 #: olc_webportalv2/templates/account/email.html:15
 msgid "The following e-mail addresses are associated with your account:"
-msgstr ""
+msgstr "Les adresses e-mail suivantes sont associées à votre compte :"
 
 #: olc_webportalv2/templates/account/email.html:29
 msgid "Verified"
-msgstr ""
+msgstr "Vérifié"
 
 #: olc_webportalv2/templates/account/email.html:31
 msgid "Unverified"
-msgstr ""
+msgstr "Non Vérifié"
 
 #: olc_webportalv2/templates/account/email.html:33
 msgid "Primary"
-msgstr ""
+msgstr "Primaire"
 
 #: olc_webportalv2/templates/account/email.html:39
 msgid "Make Primary"
-msgstr ""
+msgstr "Faire du Primaire"
 
 #: olc_webportalv2/templates/account/email.html:40
 msgid "Re-send Verification"
-msgstr ""
+msgstr "Renvoyer la Vérification"
 
-#: olc_webportalv2/templates/account/email.html:41
+#: olc_webportalv2/templates/account/email.html:43
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:67
 msgid "Remove"
 msgstr "Retirer"
 
-#: olc_webportalv2/templates/account/email.html:48
+#: olc_webportalv2/templates/account/email.html:50
 msgid "Warning:"
-msgstr ""
+msgstr "Avertissement:"
 
-#: olc_webportalv2/templates/account/email.html:48
+#: olc_webportalv2/templates/account/email.html:50
 msgid ""
 "You currently do not have any e-mail address set up. You should really add "
 "an e-mail address so you can receive notifications, reset your password, etc."
 msgstr ""
+"Vous n'avez actuellement aucune adresse e-mail configurée. Vous devriez "
+"vraiment ajouter une adresse e-mail pour pouvoir recevoir des notifications, "
+"réinitialiser votre mot de passe, etc."
 
-#: olc_webportalv2/templates/account/email.html:53
+#: olc_webportalv2/templates/account/email.html:55
 msgid "Add E-mail Address"
-msgstr ""
+msgstr "Ajouter une adresse e-mail"
 
-#: olc_webportalv2/templates/account/email.html:58
+#: olc_webportalv2/templates/account/email.html:60
 msgid "Add E-mail"
-msgstr ""
+msgstr "Ajouter une adresse E-mail"
 
-#: olc_webportalv2/templates/account/email.html:68
+#: olc_webportalv2/templates/account/email.html:70
 msgid "Do you really want to remove the selected e-mail address?"
-msgstr ""
+msgstr "Voulez-vous vraiment effacer l'adresse e-mail sélectionnée ?"
 
 #: olc_webportalv2/templates/account/email_confirm.html:6
 #: olc_webportalv2/templates/account/email_confirm.html:11
 msgid "Confirm E-mail Address"
-msgstr ""
+msgstr "Confirmer l'adresse E-mail"
 
 #: olc_webportalv2/templates/account/email_confirm.html:17
 #, python-format
@@ -97,10 +547,12 @@ msgid ""
 "Please confirm that <a href=\"mailto:%(email)s\">%(email)s</a> is an e-mail "
 "address for user %(user_display)s."
 msgstr ""
+"Veuillez confirmer que <a href=\"mailto:%(email)s\">%(email)s</a> est une "
+"adresse e-mail pour user %(user_display)s."
 
 #: olc_webportalv2/templates/account/email_confirm.html:21
 msgid "Confirm"
-msgstr ""
+msgstr "Confirmer"
 
 #: olc_webportalv2/templates/account/email_confirm.html:28
 #, python-format
@@ -108,29 +560,32 @@ msgid ""
 "This e-mail confirmation link expired or is invalid. Please <a href="
 "\"%(email_url)s\">issue a new e-mail confirmation request</a>."
 msgstr ""
+"Ce lien de confirmation par e-mail a expiré ou est invalide.Veuillez <a href="
+"\"%(email_url)s\">émettre une nouvelle demande de confirmation par e-mail</"
+"a>."
 
 #: olc_webportalv2/templates/account/login.html:7
 #: olc_webportalv2/templates/account/login.html:12
 #: olc_webportalv2/templates/account/login.html:44
 msgid "Sign In"
-msgstr ""
+msgstr "S'identifier"
 
 #: olc_webportalv2/templates/account/login.html:46
 msgid "Forgot Password?"
-msgstr ""
+msgstr "Mot de passe oublié ?"
 
 #: olc_webportalv2/templates/account/logout.html:5
 #: olc_webportalv2/templates/account/logout.html:9
 msgid "Logout"
-msgstr ""
+msgstr "Déconnexion"
 
 #: olc_webportalv2/templates/account/logout.html:11
 msgid "Are you sure you want to sign out?"
-msgstr ""
+msgstr "Vous êtes sûr de vouloir vous déconnecter ?"
 
 #: olc_webportalv2/templates/account/logout.html:18
 msgid "Sign out"
-msgstr ""
+msgstr "Déconnexion"
 
 #: olc_webportalv2/templates/account/password_change.html:6
 #: olc_webportalv2/templates/account/password_change.html:9
@@ -140,38 +595,45 @@ msgstr ""
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:4
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:8
 msgid "Change Password"
-msgstr ""
+msgstr "Changer le mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:7
 #: olc_webportalv2/templates/account/password_reset.html:11
 #: olc_webportalv2/templates/account/password_reset_done.html:6
 #: olc_webportalv2/templates/account/password_reset_done.html:9
 msgid "Password Reset"
-msgstr ""
+msgstr "Réinitialisation du mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:16
 msgid ""
 "Forgotten your password? Enter your e-mail address below, and we'll send you "
 "an e-mail allowing you to reset it."
 msgstr ""
+"Vous avez oublié votre mot de passe ? Saisissez votre adresse e-mail ci-"
+"dessous, et nous vous enverrons un e-mail vous permettant de la "
+"réinitialiser."
 
 #: olc_webportalv2/templates/account/password_reset.html:21
 msgid "Reset My Password"
-msgstr ""
+msgstr "Réinitialiser mon mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset.html:24
 msgid "Please contact us if you have any trouble resetting your password."
 msgstr ""
+"Veuillez nous contacter si vous avez des difficultés à réinitialiser votre "
+"mot de passe."
 
 #: olc_webportalv2/templates/account/password_reset_done.html:15
 msgid ""
 "We have sent you an e-mail. Please contact us if you do not receive it "
 "within a few minutes."
 msgstr ""
+"Nous vous avons envoyé un e-mail. Veuillez nous contacter si vous ne le "
+"recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:8
 msgid "Bad Token"
-msgstr ""
+msgstr "Mauvais Jeton"
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:12
 #, python-format
@@ -180,53 +642,55 @@ msgid ""
 "used.  Please request a <a href=\"%(passwd_reset_url)s\">new password reset</"
 "a>."
 msgstr ""
+"Le lien de réinitialisation du mot de passe n'était pas valide, peut-être "
+"parce qu'il a déjà été utilisé.  Veuillez demander un <a href="
+"\"%(passwd_reset_url)s\">new password reset reset</a>."
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:18
 msgid "change password"
-msgstr ""
+msgstr "changer le mot de passe"
 
 #: olc_webportalv2/templates/account/password_reset_from_key.html:22
 #: olc_webportalv2/templates/account/password_reset_from_key_done.html:9
 msgid "Your password is now changed."
-msgstr ""
+msgstr "Votre mot de passe est maintenant changé."
 
 #: olc_webportalv2/templates/account/password_set.html:6
 #: olc_webportalv2/templates/account/password_set.html:9
 #: olc_webportalv2/templates/account/password_set.html:14
 msgid "Set Password"
-msgstr ""
+msgstr "Définir le mot de passe"
 
 #: olc_webportalv2/templates/account/signup.html:6
-msgid "Signup"
-msgstr ""
-
 #: olc_webportalv2/templates/account/signup.html:10
 #: olc_webportalv2/templates/account/signup.html:20
-#: olc_webportalv2/templates/base.html:128
+#: olc_webportalv2/templates/base.html:133
 msgid "Sign Up"
-msgstr ""
+msgstr "S'inscrire"
 
 #: olc_webportalv2/templates/account/signup.html:12
 #, python-format
 msgid ""
 "Already have an account? Then please <a href=\"%(login_url)s\">sign in</a>."
 msgstr ""
+"Vous avez déjà un compte ? Alors s'il vous plaît <a href=\"%(login_url)s"
+"\">sign in</a>"
 
 #: olc_webportalv2/templates/account/signup_closed.html:5
 #: olc_webportalv2/templates/account/signup_closed.html:8
 msgid "Sign Up Closed"
-msgstr ""
+msgstr "Inscription fermée"
 
 #: olc_webportalv2/templates/account/signup_closed.html:10
 msgid "We are sorry, but the sign up is currently closed."
-msgstr ""
+msgstr "Nous sommes désolés, mais l'inscription est actuellement fermée."
 
 #: olc_webportalv2/templates/account/verification_sent.html:5
 #: olc_webportalv2/templates/account/verification_sent.html:9
 #: olc_webportalv2/templates/account/verified_email_required.html:5
 #: olc_webportalv2/templates/account/verified_email_required.html:8
 msgid "Verify Your E-mail Address"
-msgstr ""
+msgstr "Vérifiez votre adresse e-mail"
 
 #: olc_webportalv2/templates/account/verification_sent.html:11
 msgid ""
@@ -234,6 +698,9 @@ msgid ""
 "finalize the signup process. Please contact us if you do not receive it "
 "within a few minutes."
 msgstr ""
+"Nous vous avons envoyé un e-mail pour vérification. Suivez le lien fourni "
+"pour finaliser le processus d'inscription. Veuillez nous contacter si vous "
+"ne le recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:12
 msgid ""
@@ -241,6 +708,9 @@ msgid ""
 "you are who you claim to be. For this purpose, we require that you\n"
 "verify ownership of your e-mail address. "
 msgstr ""
+"Cette partie du site nous oblige à vérifier que vous êtes bien celui que "
+"vous prétendez être. À cette fin, nous vous demandons de vérifier la "
+"propriété de votre adresse électronique."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:16
 msgid ""
@@ -248,6 +718,9 @@ msgid ""
 "verification. Please click on the link inside this e-mail. Please\n"
 "contact us if you do not receive it within a few minutes."
 msgstr ""
+"Nous vous avons envoyé un e-mail pour vérification. Veuillez cliquer sur le "
+"lien à l'intérieur de cet e-mail. Veuillez nous contacter si vous ne le "
+"recevez pas dans quelques minutes."
 
 #: olc_webportalv2/templates/account/verified_email_required.html:20
 #, python-format
@@ -255,86 +728,93 @@ msgid ""
 "<strong>Note:</strong> you can still <a href=\"%(email_url)s\">change your e-"
 "mail address</a>."
 msgstr ""
+"<strong>Note:</strong>vous pouvez toujours <a href=\"%(email_url)s\">changer "
+"votre adresse e-mail</a>."
 
-#: olc_webportalv2/templates/base.html:10
+#: olc_webportalv2/templates/base.html:13
 msgid "CFIA FoodPort"
 msgstr "AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:38
+#: olc_webportalv2/templates/base.html:41
 msgid "  CFIA FoodPort"
 msgstr "  AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:43
+#: olc_webportalv2/templates/base.html:46
 msgid "Home "
 msgstr "Page d'accueil "
 
-#: olc_webportalv2/templates/base.html:48
+#: olc_webportalv2/templates/base.html:51
 msgid "Explore"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:50
+#: olc_webportalv2/templates/base.html:53
 msgid "Search "
 msgstr "Chercher "
 
-#: olc_webportalv2/templates/base.html:52
+#: olc_webportalv2/templates/base.html:55
 msgid "Browse "
 msgstr "Feuilleter "
 
-#: olc_webportalv2/templates/base.html:59
+#: olc_webportalv2/templates/base.html:57
+msgid "Forms "
+msgstr "Les Fiches"
+
+#: olc_webportalv2/templates/base.html:64
 msgid "Retrieve "
 msgstr "Retrouver "
 
-#: olc_webportalv2/templates/base.html:64
+#: olc_webportalv2/templates/base.html:69
 msgid "Assembly "
 msgstr "Assemblage "
 
-#: olc_webportalv2/templates/base.html:69
+#: olc_webportalv2/templates/base.html:74
 msgid "Analyze"
 msgstr "Analyser"
 
-#: olc_webportalv2/templates/base.html:71
+#: olc_webportalv2/templates/base.html:76
 msgid "Find Genes "
 msgstr "Trouver des gènes "
 
-#: olc_webportalv2/templates/base.html:73
-#: olc_webportalv2/templates/base.html:215
+#: olc_webportalv2/templates/base.html:78
+#: olc_webportalv2/templates/base.html:220
+#: olc_webportalv2/templates/geneseekr/tree_request.html:28
 msgid "Create Tree "
 msgstr "Créer un arbre phylogénétique "
 
-#: olc_webportalv2/templates/base.html:75
+#: olc_webportalv2/templates/base.html:80
 msgid "Investigate AMR "
 msgstr "Enquêter sur la résistance antimicrobiens "
 
-#: olc_webportalv2/templates/base.html:77
+#: olc_webportalv2/templates/base.html:82
 msgid "Annotate "
 msgstr "Annoter "
 
-#: olc_webportalv2/templates/base.html:79
+#: olc_webportalv2/templates/base.html:84
 msgid "Find Near Neighbors "
 msgstr "Trouver les voisins proches "
 
-#: olc_webportalv2/templates/base.html:109
+#: olc_webportalv2/templates/base.html:114
 msgid "Profile"
-msgstr "Profile"
+msgstr "Profil"
 
-#: olc_webportalv2/templates/base.html:115
+#: olc_webportalv2/templates/base.html:120
 msgid "Sign Out"
 msgstr "Se Déconnecter"
 
-#: olc_webportalv2/templates/base.html:122
+#: olc_webportalv2/templates/base.html:127
 msgid "Login"
 msgstr "S'identifier"
 
-#: olc_webportalv2/templates/base.html:156
+#: olc_webportalv2/templates/base.html:161
 msgid "Welcome to the CFIA FoodPort"
 msgstr "Bienvenue à AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:169
-#: olc_webportalv2/templates/base.html:173
+#: olc_webportalv2/templates/base.html:174
+#: olc_webportalv2/templates/base.html:178
 msgid "Explore Data"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:172
+#: olc_webportalv2/templates/base.html:177
 msgid ""
 "Identify sequences for analysis. Search based on genus/species/serotype/MLST "
 "and get a list of SeqIDs/LabIDs."
@@ -342,21 +822,21 @@ msgstr ""
 "Identifier les séquences pour l'analyse. Recherche basée sur genre/espèce/"
 "sérotype/MLST et obtenir une liste de SeqIDs/LabIDs."
 
-#: olc_webportalv2/templates/base.html:179
-#: olc_webportalv2/templates/base.html:183
+#: olc_webportalv2/templates/base.html:184
+#: olc_webportalv2/templates/base.html:188
 msgid "Get Data"
 msgstr "Retrouver"
 
-#: olc_webportalv2/templates/base.html:182
+#: olc_webportalv2/templates/base.html:187
 msgid "Retrieve copies of files stored at OLC to analyze locally."
 msgstr "Retrouver les assemblages chez LOC pour effectuer des analyses locales"
 
-#: olc_webportalv2/templates/base.html:189
-#: olc_webportalv2/templates/base.html:193
+#: olc_webportalv2/templates/base.html:194
+#: olc_webportalv2/templates/base.html:198
 msgid "Assembly"
 msgstr "Assemblage"
 
-#: olc_webportalv2/templates/base.html:192
+#: olc_webportalv2/templates/base.html:197
 msgid ""
 "For submission of raw sequence data for assembly. You can also use this to "
 "get reports and assemblies from previous runs."
@@ -364,32 +844,32 @@ msgstr ""
 "Pour la soumission des séquences pour l'assemblage. Vous pouvez également "
 "obtenir des rapports et des assemblages d'anciennes exécutions."
 
-#: olc_webportalv2/templates/base.html:201
-#: olc_webportalv2/templates/base.html:205
+#: olc_webportalv2/templates/base.html:206
+#: olc_webportalv2/templates/base.html:210
 msgid "Find Genes"
 msgstr "Trouver des gènes"
 
-#: olc_webportalv2/templates/base.html:204
+#: olc_webportalv2/templates/base.html:209
 msgid ""
 "Use GeneSeekr to search for any gene of interest in our assembly database."
 msgstr ""
 "Utilise GeneSeekr pour trouver des gènes dans notre base de données "
 "d'assemblage"
 
-#: olc_webportalv2/templates/base.html:211
+#: olc_webportalv2/templates/base.html:216
 msgid "Create a Tree"
 msgstr "Créer un arbre phylogénétique"
 
-#: olc_webportalv2/templates/base.html:214
+#: olc_webportalv2/templates/base.html:219
 msgid "Create phylogenetic trees of assemblies."
 msgstr "Créer des arbres phylogénétiques d'assemblages."
 
-#: olc_webportalv2/templates/base.html:221
-#: olc_webportalv2/templates/base.html:225
+#: olc_webportalv2/templates/base.html:226
+#: olc_webportalv2/templates/base.html:230
 msgid "Investigate AMR"
 msgstr "Enquêter sur la résistance antimicrobiens"
 
-#: olc_webportalv2/templates/base.html:224
+#: olc_webportalv2/templates/base.html:229
 msgid ""
 "Look for AMR genes in assemblies, and find out if they're present on mobile "
 "elements or the chromosome."
@@ -397,18 +877,1252 @@ msgstr ""
 "Enquêter sur la résistance antimicrobiens dans les assemblages et déterminez "
 "leur emplacement"
 
-#: olc_webportalv2/templates/base.html:233
-#: olc_webportalv2/templates/base.html:237
+#: olc_webportalv2/templates/base.html:238
+#: olc_webportalv2/templates/base.html:242
 msgid "Annotate Genomes"
 msgstr "Annoter"
 
-#: olc_webportalv2/templates/base.html:236
+#: olc_webportalv2/templates/base.html:241
 msgid "Annotate assemblies with Prokka."
 msgstr "Annoter les assemblages avec Prokka"
 
-#: olc_webportalv2/templates/base.html:246
+#: olc_webportalv2/templates/base.html:251
 msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:8
+msgid "Upload a New Run"
+msgstr "Télécharger une nouvelle exécution"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:10
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:50
+msgid "Assembly Home"
+msgstr "Accueil de l'Assemblée"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:17
+msgid "Run Status"
+msgstr "Statut d'exécution"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:18
+msgid "Report Download"
+msgstr "Téléchargement du rapport"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:34
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:17
+#: olc_webportalv2/templates/data/data_home.html:45
+#: olc_webportalv2/templates/geneseekr/amr_home.html:42
+#: olc_webportalv2/templates/geneseekr/amr_result.html:74
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:43
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:70
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:39
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:77
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:42
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:73
+#: olc_webportalv2/templates/geneseekr/tree_home.html:42
+#: olc_webportalv2/templates/geneseekr/tree_result.html:72
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
+msgid "Unprocessed"
+msgstr "Non traité"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:38
+#: olc_webportalv2/templates/data/data_home.html:19
+#: olc_webportalv2/templates/data/data_home.html:49
+#: olc_webportalv2/templates/geneseekr/amr_home.html:17
+#: olc_webportalv2/templates/geneseekr/amr_home.html:46
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:17
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:47
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:17
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:43
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:17
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:46
+#: olc_webportalv2/templates/geneseekr/tree_home.html:17
+#: olc_webportalv2/templates/geneseekr/tree_home.html:46
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
+msgid "Download"
+msgstr "Télécharger"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:40
+#: olc_webportalv2/templates/data/data_home.html:51
+#: olc_webportalv2/templates/geneseekr/amr_home.html:48
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:49
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:45
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:48
+#: olc_webportalv2/templates/geneseekr/tree_home.html:48
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
+msgid "Not Available"
+msgstr "Indisponible"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:8
+msgid "COWBAT Status for"
+msgstr "Statut COWBAT pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:20
+#: olc_webportalv2/templates/data/data_download.html:44
+#: olc_webportalv2/templates/data/data_home.html:43
+#: olc_webportalv2/templates/geneseekr/amr_home.html:40
+#: olc_webportalv2/templates/geneseekr/amr_result.html:77
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:73
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:37
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:81
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:40
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:77
+#: olc_webportalv2/templates/geneseekr/tree_home.html:40
+#: olc_webportalv2/templates/geneseekr/tree_result.html:75
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
+msgid "Error"
+msgstr "Erreur"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
+#: olc_webportalv2/templates/geneseekr/amr_result.html:79
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:83
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:79
+#: olc_webportalv2/templates/geneseekr/tree_result.html:77
+msgid "Return to"
+msgstr "Retourner à"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:25
+msgid "Upload Error"
+msgstr "Erreur de téléchargement"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:27
+msgid ""
+" It looks like one or more of your files did not upload successfully. Click "
+"the button below to retry upload of\n"
+"  your sequence data. You'll only have to upload files that did not "
+"successfully upload. "
+msgstr ""
+"Il semble qu'un ou plusieurs de vos fichiers n'ont pas été téléchargés avec "
+"succès. Cliquez sur le bouton ci-dessous pour réessayer le téléchargement de "
+"vos données de séquence. Vous n'aurez qu'à télécharger les fichiers qui "
+"n'ont pas réussi à le faire."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:33
+msgid "Retry Sequence Upload For "
+msgstr "Réessayer le téléchargement de séquence pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:37
+#: olc_webportalv2/templates/data/data_download.html:15
+#: olc_webportalv2/templates/data/data_home.html:41
+#: olc_webportalv2/templates/geneseekr/amr_home.html:38
+#: olc_webportalv2/templates/geneseekr/amr_result.html:18
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:17
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:35
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:24
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:38
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:20
+#: olc_webportalv2/templates/geneseekr/tree_home.html:38
+#: olc_webportalv2/templates/geneseekr/tree_result.html:19
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
+msgid "Processing"
+msgstr "En traitement"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:40
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:103
+msgid "Run Progress"
+msgstr "Progression de l'exécution"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:49
+msgid ""
+"This page will automatically refresh. An assembly run usually takes at least "
+"4-5 hours."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Un cycle de montage prend "
+"généralement au moins 4 à 5 heures."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:50
+msgid ""
+"You don't have to remain on this page - this assembly request will be "
+"visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande d'assemblage "
+"sera visible sur"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:54
+#: olc_webportalv2/templates/geneseekr/amr_result.html:25
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:24
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:31
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:27
+#: olc_webportalv2/templates/geneseekr/tree_result.html:26
+msgid "Your email is already on the list to be notified."
+msgstr "Votre email est déjà sur la liste pour être notifié."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:55
+#: olc_webportalv2/templates/geneseekr/amr_result.html:26
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:25
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:32
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:28
+#: olc_webportalv2/templates/geneseekr/tree_result.html:27
+msgid "Would you like to add another email?"
+msgstr "Souhaitez-vous ajouter un autre courriel ?"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:57
+#: olc_webportalv2/templates/geneseekr/amr_result.html:28
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:27
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:34
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:30
+#: olc_webportalv2/templates/geneseekr/tree_result.html:29
+msgid "Would you like an email upon completion?"
+msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:64
+#: olc_webportalv2/templates/geneseekr/amr_result.html:35
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:34
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:41
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:37
+#: olc_webportalv2/templates/geneseekr/tree_result.html:36
+msgid "Save"
+msgstr "Enregistrer"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:86
+#: olc_webportalv2/templates/geneseekr/amr_result.html:60
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:56
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:63
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:59
+msgid "Email Recipients"
+msgstr "Destinataires des courriels"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:90
+#: olc_webportalv2/templates/geneseekr/amr_result.html:64
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:60
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:67
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:63
+#: olc_webportalv2/templates/geneseekr/tree_result.html:62
+msgid "No users have signed up to receive an email for this run."
+msgstr ""
+"Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
+"exécution."
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:100
+#: olc_webportalv2/templates/data/data_download.html:20
+#: olc_webportalv2/templates/data/data_home.html:37
+#: olc_webportalv2/templates/geneseekr/amr_home.html:36
+#: olc_webportalv2/templates/geneseekr/amr_result.html:83
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:78
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:33
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:86
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:36
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:82
+#: olc_webportalv2/templates/geneseekr/tree_home.html:36
+#: olc_webportalv2/templates/geneseekr/tree_result.html:79
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+msgid "Complete"
+msgstr "Complet"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:112
+msgid "Download Reports and Assemblies for"
+msgstr "Télécharger les rapports et assemblages pour"
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:116
+#: olc_webportalv2/templates/data/data_download.html:29
+#: olc_webportalv2/templates/data/data_download.html:41
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:53
+#: olc_webportalv2/templates/geneseekr/amr_result.html:158
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:91
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:120
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:91
+#: olc_webportalv2/templates/geneseekr/tree_result.html:118
+msgid "Shareable link:"
+msgstr "Lien partageable:"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:7
+msgid "Step 2 of 3: Upload InterOp Files for Run"
+msgstr "Étape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:11
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:15
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:12
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
+msgid "Drop files to upload or click here"
+msgstr "Déposer des fichiers à télécharger ou cliquez ici"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:19
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:23
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:29
+msgid "File"
+msgstr "Fichier"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:20
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:24
+#: olc_webportalv2/templates/data/data_home.html:18
+#: olc_webportalv2/templates/geneseekr/amr_home.html:16
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:16
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:16
+#: olc_webportalv2/templates/geneseekr/tree_home.html:16
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
+msgid "Status"
+msgstr "Statut"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:56
+msgid "Validate InterOp Files"
+msgstr "Valider les fichiers InterOp"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:57
+msgid "Upload InterOp Files"
+msgstr "Télécharger des fichiers InterOp"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:8
+msgid "Step 1 of 3: Upload Metadata Files and Name Run"
+msgstr ""
+"Étape 1 de 3 : Télécharger les fichiers de métadonnées et le nom de "
+"l'exécution"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:9
+msgid ""
+" Enter a run name and drag and drop the files found in the following table "
+"to upload. Once all files have been uploaded,\n"
+"  you can proceed to the next page. "
+msgstr ""
+" Saisissez un nom d'exécution et glissez-déposez les fichiers trouvés dans "
+"le tableau suivant pour les télécharger. Une fois que tous les fichiers ont "
+"été téléchargés, vous pouvez passer à la page suivante. "
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:55
+msgid "Validate Metadata Files"
+msgstr "Valider les fichiers de métadonnées"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:57
+msgid "Upload Metadata Files"
+msgstr "Télécharger des fichiers de métadonnées"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:71
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:82
+msgid "Invalid"
+msgstr "Invalide"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:72
+msgid "Run name cannot be blank!"
+msgstr "Le nom de l'exécution ne peut pas être vide !"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:83
+msgid "Run name must be in YYMMDD_LAB format!"
+msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:256
+#: olc_webportalv2/templates/data/assembled_data.html:29
+#: olc_webportalv2/templates/data/raw_data.html:29
+msgid "Why here"
+msgstr ""
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:6
+msgid "Step 3 of 3: Upload Sequence Files and Begin Assembly"
+msgstr ""
+"Étape 3 de 3 : Charger les fichiers de séquence et commencer l'assemblage"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:18
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
+msgid "Validate Sequence Files"
+msgstr "Valider les fichiers de séquence"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:19
+msgid "Required Files"
+msgstr "Fichiers requis"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:22
+msgid "Upload Sequence Files and Begin Assembly"
+msgstr "Télécharger les fichiers de séquence et commencer l'assemblage"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:30
+msgid "Forward Reads"
+msgstr "Brins en avant"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
+msgid "Reverse Reads"
+msgstr "Brins inverses"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:9
+msgid "Select ROGA Strains for and verify Strain Names for"
+msgstr ""
+"Sélectionnez les souches ROGA pour et vérifiez les noms de souches pour"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:11
+msgid ""
+" Strains thought to need ROGAs based on your SampleSheet are already checked "
+"off. Please verify that these\n"
+"  strains do in fact need ROGAs and that you haven't missed any other "
+"strains. Also, please make sure\n"
+"  that the strain names for each sample are correct, and modify the text box "
+"for each as necessary. "
+msgstr ""
+"Les souches dont on pense qu'elles ont besoin d'un ROGA basé sur votre "
+"SampleSheet sont déjà cochées. Veuillez vérifier que cesont en fait besoin "
+"de ROGA et que vous n'avez manqué aucune autre souche. De plus, veuillez "
+"vous assurer queque les noms des souches pour chaque échantillon sont "
+"corrects et modifiez la zone de texte pour chacun d'eux si nécessaire. "
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:32
+msgid "Verify ROGA Strains"
+msgstr "Vérifier les souches ROGA"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:51
+msgid "No strains selected"
+msgstr "Aucune souche sélectionnée"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:52
+msgid "Are you sure no strains need ROGAs?"
+msgstr "Vous êtes sûr qu'aucune souche n'a besoin de ROGA ?"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:57
+msgid "Yes, I am sure!"
+msgstr "Oui, j'en suis sûr!"
+
+#: olc_webportalv2/templates/cowbat/verify_realtime.html:58
+msgid "No, take me back!"
+msgstr "Non, ramenez-moi!"
+
+#: olc_webportalv2/templates/data/assembled_data.html:8
+msgid "Assembled Data Request"
+msgstr "Demande de données assemblées"
+
+#: olc_webportalv2/templates/data/assembled_data.html:9
+msgid ""
+"Enter the SEQIDs you want to retrieve FASTA files for below, one per line."
+msgstr ""
+"Saisissez les SEQIDs pour lesquels vous voulez récupérer les fichiers FASTA "
+"ci-dessous, un par ligne."
+
+#: olc_webportalv2/templates/data/assembled_data.html:20
+#: olc_webportalv2/templates/data/raw_data.html:20
+msgid "Get Files"
+msgstr "Obtenir des fichiers"
+
+#: olc_webportalv2/templates/data/data_download.html:7
+msgid "Download Data"
+msgstr "Télécharger les données"
+
+#: olc_webportalv2/templates/data/data_download.html:11
+msgid "The following SEQIDs were not found:"
+msgstr "Les SEQID suivantes n'ont pas été trouvées :"
+
+#: olc_webportalv2/templates/data/data_download.html:17
+msgid "This page will automatically refresh."
+msgstr "Cette page se rafraîchit automatiquement."
+
+#: olc_webportalv2/templates/data/data_download.html:18
+msgid "You don't have to remain on this page - this request will be visible on"
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande sera visible "
+"le"
+
+#: olc_webportalv2/templates/data/data_download.html:18
+#: olc_webportalv2/templates/data/data_download.html:46
+msgid "Data Home"
+msgstr "Accueil des données"
+
+#: olc_webportalv2/templates/data/data_download.html:22
+#: olc_webportalv2/templates/data/data_download.html:34
+msgid "These files will be available for 7 days."
+msgstr "Ces fichiers seront disponibles pendant 7 jours."
+
+#: olc_webportalv2/templates/data/data_download.html:25
+#: olc_webportalv2/templates/data/data_download.html:37
+msgid "Download Assemblies"
+msgstr "Télécharger les assemblages"
+
+#: olc_webportalv2/templates/data/data_download.html:32
+#: olc_webportalv2/templates/data/data_home.html:39
+msgid "Warning"
+msgstr "Avertissement"
+
+#: olc_webportalv2/templates/data/data_download.html:46
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:75
+msgid "Return to "
+msgstr "Retourner à"
+
+#: olc_webportalv2/templates/data/data_home.html:8
+msgid "Get Processed (FASTA) Data "
+msgstr "Obtenir les données traitées (FASTA)"
+
+#: olc_webportalv2/templates/data/data_home.html:10
+msgid "Data Collection"
+msgstr "Collecte des données"
+
+#: olc_webportalv2/templates/data/data_home.html:12
+msgid ""
+"Data requests made in the last 7 days are visible. Afterwards, to reacquire "
+"the files, data requests will need to be re-run."
+msgstr ""
+"Les demandes de données effectuées au cours des 7 derniers jours sont "
+"visibles. Par la suite, pour récupérer les fichiers, les demandes de données "
+"devront être réexécutées."
+
+#: olc_webportalv2/templates/data/data_home.html:20
+#: olc_webportalv2/templates/geneseekr/amr_home.html:18
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:18
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:18
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:18
+#: olc_webportalv2/templates/geneseekr/tree_home.html:18
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
+msgid "Request Date"
+msgstr "Date de la demande"
+
+#: olc_webportalv2/templates/data/data_home.html:32
+#: olc_webportalv2/templates/geneseekr/amr_home.html:32
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:33
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:32
+#: olc_webportalv2/templates/geneseekr/tree_home.html:32
+msgid "...and"
+msgstr "...et"
+
+#: olc_webportalv2/templates/data/data_home.html:32
+#: olc_webportalv2/templates/geneseekr/amr_home.html:32
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:33
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:32
+#: olc_webportalv2/templates/geneseekr/tree_home.html:32
+msgid "more"
+msgstr "de plus"
+
+#: olc_webportalv2/templates/data/raw_data.html:8
+msgid "Raw Data Request"
+msgstr "Demande de données brutes"
+
+#: olc_webportalv2/templates/data/raw_data.html:9
+msgid ""
+"Enter the SEQIDs you want to retrieve FASTQ files for below, one per line."
+msgstr ""
+"Saisissez les SEQIDs pour lesquels vous voulez récupérer les fichiers FASTA "
+"ci-dessous, un par ligne."
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:8
+msgid "AMR Summary Results for "
+msgstr "Sommaire des résultats de la AMR pour"
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:9
+#: olc_webportalv2/templates/geneseekr/amr_result.html:85
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:80
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:112
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:84
+#: olc_webportalv2/templates/geneseekr/tree_result.html:81
+msgid "These results will be available for 7 days."
+msgstr "Ces résultats seront disponibles pendant 7 jours."
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:14
+#: olc_webportalv2/templates/geneseekr/amr_result.html:89
+msgid "Select Sequence to View Results"
+msgstr "Sélectionnez Séquence pour voir les résultats"
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:27
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:26
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:158
+msgid "Gene"
+msgstr "Gène"
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:28
+msgid "Location"
+msgstr "Lieu"
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:38
+msgid "Plasmid"
+msgstr "Plasmide"
+
+#: olc_webportalv2/templates/geneseekr/amr_detail.html:48
+#: olc_webportalv2/templates/geneseekr/amr_result.html:154
+msgid "Download Summary"
+msgstr "Télécharger le résumé"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:8
+msgid "Create A New Summary"
+msgstr "Créer un nouveau résumé"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:10
+#: olc_webportalv2/templates/geneseekr/amr_result.html:21
+#: olc_webportalv2/templates/geneseekr/amr_result.html:79
+msgid "AMR Home"
+msgstr "Accueil AMR"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:55
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:61
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:51
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:55
+#: olc_webportalv2/templates/geneseekr/tree_home.html:55
+msgid "Delete"
+msgstr "Effacer"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:96
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:102
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:90
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:96
+#: olc_webportalv2/templates/geneseekr/tree_home.html:96
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
+msgid "Are you sure?"
+msgstr "Êtes-vous sûr?"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:97
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:103
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:91
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:97
+#: olc_webportalv2/templates/geneseekr/tree_home.html:97
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
+msgid "You will not be able to revert this!"
+msgstr "Vous ne pouvez pas reprendre ceci!"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:101
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:107
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:95
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:101
+#: olc_webportalv2/templates/geneseekr/tree_home.html:101
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
+msgid "Yes, delete it!"
+msgstr "Oui, effacez-le !"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:102
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:108
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:96
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:102
+#: olc_webportalv2/templates/geneseekr/tree_home.html:102
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
+msgid "Cancel"
+msgstr "Annuler"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:107
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:113
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:101
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:107
+#: olc_webportalv2/templates/geneseekr/tree_home.html:107
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
+msgid "Deleted!"
+msgstr "Effacé"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:108
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:114
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:102
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:108
+#: olc_webportalv2/templates/geneseekr/tree_home.html:108
+msgid "Your file has been deleted."
+msgstr "Votre fichier a été effacé."
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:126
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:132
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:120
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:126
+#: olc_webportalv2/templates/geneseekr/tree_home.html:126
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
+msgid "Cancelled!"
+msgstr "Annulé!"
+
+#: olc_webportalv2/templates/geneseekr/amr_home.html:127
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:133
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:121
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:127
+#: olc_webportalv2/templates/geneseekr/tree_home.html:127
+msgid "Your file is safe."
+msgstr "Votre dossier est sûr."
+
+#: olc_webportalv2/templates/geneseekr/amr_name.html:8
+msgid "AMR Summary Rename"
+msgstr "Renommer le résumé de la AMR"
+
+#: olc_webportalv2/templates/geneseekr/amr_name.html:14
+#: olc_webportalv2/templates/geneseekr/geneseekr_name.html:14
+#: olc_webportalv2/templates/geneseekr/neighbor_name.html:14
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:14
+#: olc_webportalv2/templates/geneseekr/tree_name.html:14
+msgid "Previous Name:"
+msgstr "Nom précédent:"
+
+#: olc_webportalv2/templates/geneseekr/amr_request.html:8
+msgid "AMR Summary Request"
+msgstr "Demande sommaire de la AMR"
+
+#: olc_webportalv2/templates/geneseekr/amr_request.html:19
+msgid "Enter SeqIDs to build a summary"
+msgstr "Saisissez les SEQIDs pour construire un résumé"
+
+#: olc_webportalv2/templates/geneseekr/amr_request.html:22
+msgid "Create Summary"
+msgstr "Créer un résumé"
+
+#: olc_webportalv2/templates/geneseekr/amr_request.html:31
+msgid ""
+"Enter SeqIDs you want to look for mobile AMR genes on here, one per line."
+msgstr ""
+"Saisissez ici les SeqIDs sur lesquels vous souhaitez rechercher des gènes "
+"AMR mobiles, un par ligne."
+
+#: olc_webportalv2/templates/geneseekr/amr_result.html:8
+msgid "AMR Summary Results"
+msgstr "Sommaire des résultats de la AMR"
+
+#: olc_webportalv2/templates/geneseekr/amr_result.html:20
+msgid ""
+" This page will automatically refresh. Your AMR request should be complete "
+"in 5 to 10 minutes (more if you requested many SeqIDs). "
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande AMR devrait être "
+"complète en 5 à 10 minutes (plus si vous avez demandé plusieurs SeqID)."
+
+#: olc_webportalv2/templates/geneseekr/amr_result.html:21
+msgid ""
+"You don't have to remain on this page - this AMR request will be visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande AMR sera "
+"visible sur"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:8
+msgid "Create A GeneSeekr Query"
+msgstr "Créer une requête GeneSeekr"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:10
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:20
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:75
+msgid "GeneSeekr Home"
+msgstr "GeneSeekr Accueil"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_name.html:8
+msgid "GeneSeekr Run Rename"
+msgstr "GeneSeekr Renommer l'exécution"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/neighbor_name.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:16
+#: olc_webportalv2/templates/geneseekr/tree_name.html:16
+msgid "Back"
+msgstr "Retour"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_name.html:16
+#: olc_webportalv2/templates/geneseekr/neighbor_name.html:16
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:16
+#: olc_webportalv2/templates/geneseekr/tree_name.html:16
+msgid "Save Changes"
+msgstr "Enregistrer les modifications"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:8
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:8
+msgid "GeneSeekr Results"
+msgstr "Résultats GeneSeekr"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:19
+msgid ""
+"This page will automatically refresh. Your GeneSeekr request should be "
+"complete in a minute or two."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande GeneSeekr devrait "
+"être complète dans une minute ou deux."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:20
+msgid ""
+"You don't have to remain on this page - this GeneSeekr request will be "
+"visible on"
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette requête GeneSeekr "
+"sera visible sur"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:83
+msgid "Download BLAST Report "
+msgstr "Télécharger le rapport BLAST"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:85
+msgid "Download Sequence-By-Sequence Report"
+msgstr "Télécharger le rapport séquence par séquence"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:87
+msgid "View Results"
+msgstr "Voir les résultats"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:8
+msgid "GeneSeekr Query"
+msgstr "Requête GeneSeekr"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:16
+msgid "Enter your query sequence, in FASTA format (or upload a file below):"
+msgstr ""
+"Saisissez votre séquence de recherche, au format FASTA (ou téléchargez un "
+"fichier ci-dessous) :"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:25
+msgid "Choose Genus to Search"
+msgstr "Choisir le genre à rechercher"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:29
+msgid ""
+"Enter the genus you want to search. If you want to search all sequences, "
+"leave this blank."
+msgstr ""
+"Saisissez le genre que vous voulez rechercher. Si vous voulez rechercher "
+"toutes les séquences, laissez ce champ vide."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:30
+msgid "Enter your genus of interest: "
+msgstr "Saisissez votre genre d'intérêt:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "Return all sequences"
+msgstr "Retourne toutes les séquences"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "except for"
+msgstr "à l'exception de"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
+msgid "selected genus:"
+msgstr "le genre sélectionné:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:38
+msgid "Choose SeqIDs to Search"
+msgstr "Choisissez SeqIDs à rechercher"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:43
+msgid "Search the following SeqIDs:"
+msgstr "Recherchez les SeqID suivantes:"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:51
+msgid "Run Query"
+msgstr "Exécuter une requête"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:59
+msgid ""
+"Enter one or more query sequences in FASTA format, or upload a file below."
+msgstr ""
+"Saisissez une ou plusieurs séquences de requêtes au format FASTA ou "
+"téléchargez un fichier ci-dessous."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:12
+msgid "Sequences Query Found"
+msgstr "Séquences Requêtes trouvées"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:13
+msgid "Sequence By Sequence"
+msgstr "Séquence par séquence"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:14
+msgid "Top BLAST Hits"
+msgstr "Meilleurs résultats BLAST"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:19
+msgid ""
+"This graph shows the percentage of sequences in which each query gene was "
+"found."
+msgstr ""
+"Ce graphique montre le pourcentage de séquences dans lesquelles chaque gène "
+"d'interrogation a été trouvé."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:21
+msgid "View Table"
+msgstr "Afficher le tableau"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:27
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:166
+msgid "sequences where gene was found"
+msgstr "les séquences où le gène a été trouvé"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:43
+msgid ""
+"This table shows the percent identity for each sequence for each query gene."
+msgstr ""
+"Ce tableau montre le pourcentage d'identité de chaque séquence pour chaque "
+"gène d'interrogation."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
+msgid "Name of the contig that the target sequence was found on."
+msgstr "Nom du contig sur lequel la séquence cible a été trouvée."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
+msgid "Contig"
+msgstr "Contig"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
+msgid "Percentage of the query sequence that was found."
+msgstr "Pourcentage de la séquence de requêtes trouvée."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:227
+msgid "Query Coverage"
+msgstr "Protection des requêtes"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
+msgid ""
+"How similar the query and target sequence were. 100 means completely "
+"identical, 0 means not at all."
+msgstr ""
+"À quel point la requête et la séquence cible étaient similaires. 100 "
+"signifie complètement identique, 0 signifie pas du tout."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
+msgid "Percent Identity"
+msgstr "Pourcentage Identité"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
+msgid "Where on the contig the target gene was found."
+msgstr "Où sur le contig le gène cible a été trouvé."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
+msgid "Subject Start Position"
+msgstr "Position de départ du sujet"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
+msgid "Subject End Position"
+msgstr "Position finale du sujet"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:107
+msgid "E Value"
+msgstr "E Valeur"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:125
+msgid "This gene had no BLAST hits."
+msgstr "Ce gène n'a pas été touché par BLAST."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:138
+msgid "GeneSeekr request not completed."
+msgstr "Demande de GeneSeekr non complétée."
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:210
+msgid "BLAST Hits for {{ gene }}: Query Length "
+msgstr "BLAST Hits pour {{ gene }} : Longueur de la requête "
+
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:8
+msgid "Create A Neighbor Query"
+msgstr "Créer une requête du voisin"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:10
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:27
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:83
+msgid "Neighbor Home"
+msgstr "Voisin Accueil"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_name.html:8
+msgid "Near Neighbor Rename"
+msgstr "Près de Neighbor Renommer"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_request.html:9
+msgid "Nearest Neighbor"
+msgstr "Voisin le plus proche"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_request.html:22
+msgid "Enter the SeqID you want to use, or choose a .fasta file to upload."
+msgstr ""
+"Saisissez le SeqID que vous voulez utiliser ou choisissez un fichier.fasta à "
+"télécharger."
+
+#: olc_webportalv2/templates/geneseekr/neighbor_request.html:33
+msgid "Submit Request"
+msgstr "Soumettre une requête"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:17
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:19
+msgid "Nearest Neighbor Results for"
+msgstr "Résultats du voisin le plus proche pour"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:26
+msgid ""
+"This page will automatically refresh. Your nearest neighbor request should "
+"be complete in a few minutes."
+msgstr ""
+"Cette page se rafraîchit automatiquement. La requête de votre voisin le plus "
+"proche devrait être complète en quelques minutes."
+
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:27
+msgid ""
+"You don't have to remain on this page - this request will be visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande sera visible "
+"le"
+
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:116
+msgid "Download Full Results"
+msgstr "Télécharger les résultats complets"
+
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:8
+msgid "New Prokka Annotation"
+msgstr "Nouvelle annotation Prokka"
+
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:10
+msgid "Annotate Home"
+msgstr "Annoter Accueil"
+
+#: olc_webportalv2/templates/geneseekr/prokka_name.html:8
+msgid "Annotation Rename"
+msgstr "Annotation Renommer"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:8
+msgid "Annotation Request"
+msgstr "Requête d'annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:19
+msgid "Enter SeqIDs to Annotate"
+msgstr "Saisissez les SeqIDs à annoter"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:23
+msgid "Create Annotation"
+msgstr "Créer une annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_request.html:31
+msgid "Enter SeqIDs you want to create annotation files for here."
+msgstr ""
+"Saisissez ici les SeqIDs pour lesquels vous voulez créer des fichiers "
+"d'annotation."
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:10
+msgid "Annotation Results"
+msgstr "Résultats de l'annotation"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:22
+msgid ""
+"This page will automatically refresh. Your Annotation request should be "
+"complete in 1-3 minutes per sample (more if you requested many SeqIDs)."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande d'annotation devrait "
+"être complète en 1 à 3 minutes par échantillon (plus si vous avez demandé "
+"plusieurs SeqIDs)."
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:23
+msgid ""
+"You don't have to remain on this page - this Annotation request will be "
+"visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande d'annotation "
+"sera visible sur"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:23
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:79
+msgid "Annotation Home"
+msgstr "Annoter Accueil"
+
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:87
+msgid "Download Annotation"
+msgstr "Télécharger l'annotation"
+
+#: olc_webportalv2/templates/geneseekr/tree_home.html:8
+msgid "Create A New Tree"
+msgstr "Créer un nouvel arbre"
+
+#: olc_webportalv2/templates/geneseekr/tree_home.html:10
+#: olc_webportalv2/templates/geneseekr/tree_result.html:22
+#: olc_webportalv2/templates/geneseekr/tree_result.html:77
+msgid "Tree Home"
+msgstr "Accueil Arbre"
+
+#: olc_webportalv2/templates/geneseekr/tree_name.html:8
+msgid "Tree Rename"
+msgstr "Arbre Renommer"
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:8
+msgid "Tree Query"
+msgstr "Requête sur les arbres"
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:19
+msgid "Enter SeqIDs to use to build your tree:"
+msgstr "Saisissez les SeqIDs à utiliser pour construire votre arbre :"
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:37
+msgid ""
+"Mashtree makes trees very quickly, but will not provide very good resolution "
+"on closely related strains."
+msgstr ""
+"Mashtree produit des arbres très rapidement, mais n'offre pas une très bonne "
+"résolution sur les souches étroitement apparentées."
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:39
+msgid ""
+"Parsnp is slower than mashtree but more capable of discriminating between "
+"closely related strains. It does not work if your strains are not closely "
+"related (keep it to the same species!)"
+msgstr ""
+"Parsnp est plus lent que le mashtree mais plus capable de distinguer les "
+"souches étroitement apparentées. Il ne fonctionne pas si vos souches ne sont "
+"pas étroitement apparentées (gardez-les dans la même espèce !)"
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:43
+msgid ""
+"If you want to choose a subset of strains that contain the most phylogenetic "
+"diversity possible, enter the number of strains you want chosen here."
+msgstr ""
+"Si vous voulez choisir un sous-ensemble de souches qui contiennent le plus "
+"de diversité phylogénétique possible, saisissez ici le nombre de souches que "
+"vous voulez choisir."
+
+#: olc_webportalv2/templates/geneseekr/tree_request.html:47
+msgid "Enter SeqIDs you want to build a tree from here, one per line."
+msgstr ""
+"Saisissez les SeqIDs que vous voulez construire un arbre à partir d'ici, un "
+"par ligne."
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:10
+msgid "Treesults"
+msgstr "Résultats des arbres"
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:21
+msgid ""
+"This page will automatically refresh. Your Tree request should be complete "
+"in 10 to 15 minutes (more if you requested many SeqIDs)."
+msgstr ""
+"Cette page se rafraîchit automatiquement. Votre demande d'arborescence "
+"devrait être complète en 10 à 15 minutes (plus si vous avez demandé "
+"plusieurs SeqID)."
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:22
+msgid ""
+"You don't have to remain on this page - this Tree request will be visible on "
+msgstr ""
+"Vous n'avez pas besoin de rester sur cette page - cette demande d'Arbre sera "
+"visible sur "
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:58
+msgid " Email Recipients"
+msgstr "Destinataires des courriels"
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:90
+msgid "Most Diverse Strains"
+msgstr "Les souches les plus diverses"
+
+#: olc_webportalv2/templates/geneseekr/tree_result.html:114
+msgid "Download Tree"
+msgstr "Télécharger l'arbre"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:7
+msgid "Metadata Browse"
+msgstr "Parcourir les métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:11
+#: olc_webportalv2/templates/metadata/metadata_results.html:30
+msgid "SeqID"
+msgstr "SeqID"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:12
+#: olc_webportalv2/templates/metadata/metadata_results.html:31
+msgid "LabID"
+msgstr "LabID"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:13
+msgid "Genus"
+msgstr "Genre"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:14
+msgid "Species"
+msgstr "Espèce"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:15
+msgid "Serotype"
+msgstr "Sérotype"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:16
+msgid "MLST"
+msgstr "MLST"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:17
+msgid "rMLST"
+msgstr "rMLST"
+
+#: olc_webportalv2/templates/metadata/metadata_browse.html:18
+msgid "Assembly Quality"
+msgstr "Qualité de l'assemblage "
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:10
+msgid "Metadata Search"
+msgstr "Recherche de métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:19
+msgid "Enter your genus of interest:"
+msgstr "Saisissez votre genre d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:21
+#: olc_webportalv2/templates/metadata/metadata_home.html:22
+#: olc_webportalv2/templates/metadata/metadata_home.html:23
+#: olc_webportalv2/templates/metadata/metadata_home.html:24
+#: olc_webportalv2/templates/metadata/metadata_home.html:25
+msgid "hi"
+msgstr ""
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:21
+msgid "Enter your species of interest:"
+msgstr "Saisissez votre espèce d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:22
+msgid "Enter your serotype of interest:"
+msgstr "Saisissez le sérotype qui vous intéresse :"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:23
+msgid "Enter your MLST of interest:"
+msgstr "Saisissez votre MLST d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:24
+msgid "Enter your rMLST of interest:"
+msgstr "Saisissez votre rMLSTR d'intérêt:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:25
+msgid "Choose your desired assembly quality:"
+msgstr "Choisissez la qualité de montage souhaitée:"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:28
+msgid "Get SeqIDs"
+msgstr "Obtenir les SeqIDs"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:7
+msgid "Metadata Results"
+msgstr "Résultats des métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:9
+msgid "View Search Criteria"
+msgstr "Voir les critères de recherche"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:18
+msgid "Your search returned"
+msgstr "Votre recherche a retourné"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:18
+msgid "results."
+msgstr "résultats."
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:20
+msgid "Copy SeqIDs"
+msgstr "Copier les SeqIDs"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:23
+msgid "Copied to clipboard!"
+msgstr "Copié dans le presse-papiers!"
+
+#: olc_webportalv2/templates/metadata/metadata_results.html:32
+msgid "OLNID"
+msgstr "OLNID"
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:10
+msgid "Metadata Forms"
+msgstr "Fiches de métadonnées"
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:13
+msgid "English"
+msgstr "Anglais"
+
+#: olc_webportalv2/templates/metadata/metadata_submit.html:15
+msgid "French"
+msgstr "Français"
+
+#: olc_webportalv2/templates/users/user_detail.html:11
+msgid "Personal Info"
+msgstr "Informations Personnelles"
+
+#: olc_webportalv2/templates/users/user_detail.html:17
+msgid "Username"
+msgstr "Pseudonyme"
+
+#: olc_webportalv2/templates/users/user_detail.html:19
+msgid "Language"
+msgstr "Langue"
+
+#: olc_webportalv2/templates/users/user_detail.html:20
+msgid "Lab"
+msgstr "Labo"
+
+#: olc_webportalv2/templates/users/user_detail.html:21
+msgid "Rank"
+msgstr "Rang"
+
+#: olc_webportalv2/templates/users/user_detail.html:27
+msgid "Update Info"
+msgstr "Réviser"
+
+#: olc_webportalv2/templates/users/user_detail.html:41
+msgid "Update Email"
+msgstr "Mise à jour Email"
+
+#: olc_webportalv2/templates/users/user_form.html:16
+msgid "Update"
+msgstr "Réviser"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:8
 msgid "Sample Creation"
@@ -416,41 +2130,39 @@ msgstr "Création des échantillons"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:16
 msgid "Select a unique name for this project"
-msgstr ""
+msgstr "Sélectionnez un nom unique pour ce projet"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:24
 msgid "Sample name e.g. VI0639"
-msgstr ""
+msgstr "Nom de l'échantillon p.ex. VI0639"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:27
 msgid "LSTS ID e.g. 2019FPP00000475214"
-msgstr ""
+msgstr "LSTS ID p. ex. 2019FPP0000000475214"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:30
 msgid "Laboratory name (select from list)"
-msgstr ""
+msgstr "Nom du laboratoire (choisir dans la liste)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:33
 msgid "Sampling number (can be blank) e.g. 15"
-msgstr ""
+msgstr "Numéro d'échantillon (peut être blanc) p. ex. 15"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:36
 msgid "Initial classification (select from list)"
-msgstr ""
+msgstr "Classification initiale (choisir dans la liste)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:41
 msgid "Source of sample e.g. oyster"
-msgstr ""
+msgstr "Source de l'échantillon, p. ex. huître"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:44
-#, fuzzy
-#| msgid "Analyst name is required"
 msgid "Analyst name e.g. Jane Doe"
-msgstr "Le nom de l'analyste est obligatoire"
+msgstr "Nom de l'analyste, p. ex. Jane Doe"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:47
 msgid "Date sample was received (select from calendar)"
-msgstr ""
+msgstr "Date de réception de l'échantillon (choisir dans le calendrier)"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:55
 msgid "Create samples"
@@ -476,125 +2188,17 @@ msgstr "Créer une requête de Virus Typer"
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
 #: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
-msgstr "Projet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
-msgid "Status"
-msgstr "Statut"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
-msgid "Download"
-msgstr "Télécharger"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
-msgid "Request Date"
-msgstr "Date de la demande"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
-msgid "Complete"
-msgstr "Complet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
-msgid "Processing"
-msgstr "En traitement"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
-msgid "Error"
-msgstr "Erreur"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
-msgid "Unprocessed"
-msgstr "Non traité"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
-msgid "Not Available"
-msgstr "Indisponible"
+msgstr "Nom du projet"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
 msgid "Delete "
-msgstr "Effacer "
+msgstr "Effacer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:71
-msgid "No data available in table"
-msgstr "Aucune donnée disponible dans le tableau"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:72
-msgid "Showing 0 to 0 of 0 entries"
-msgstr "Affiche 0 à 0 de 0 entrées"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "Showing "
-msgstr "Affiche "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "to "
-msgstr "à "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-msgid "of "
-msgstr "de "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:73
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:74
-msgid "entries"
-msgstr "entrées"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:74
-msgid "Show "
-msgstr "Affiche "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:75
-#, fuzzy
-#| msgid "Search "
-msgid "Search"
-msgstr "Chercher "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:77
-msgid "First"
-msgstr "Premier"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:78
-msgid "Previous"
-msgstr "Précédente"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:79
-msgid "Next"
-msgstr "Prochaine"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:80
-msgid "Last"
-msgstr "Dernière"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:103
-msgid "Are you sure?"
-msgstr "Êtes-vous sûr?"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
-msgid "You will not be able to revert this!"
-msgstr "Vous ne pouvez pas reprendre ceci!"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:107
-msgid "Cancel"
-msgstr "Annuler"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:109
-msgid "Yes, delete it!"
-msgstr "Supprime-le!"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:114
-msgid "Deleted!"
-msgstr "Supprimé! "
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:105
 msgid "Your project has been deleted."
-msgstr "Votre projet a été supprimé."
+msgstr "Votre projet a été effacé."
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:133
-msgid "Cancelled!"
-msgstr "Annulé!"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:134
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:124
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
@@ -605,13 +2209,13 @@ msgstr "Projet:"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
-#: olc_webportalv2/vir_typer/forms.py:75
+#: olc_webportalv2/vir_typer/forms.py:76
 msgid "Sample Name"
 msgstr "Échantillon"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:21
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
-#: olc_webportalv2/vir_typer/forms.py:77
+#: olc_webportalv2/vir_typer/forms.py:78
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
@@ -696,10 +2300,6 @@ msgid "Step 2 of 2: Upload Sequence Files and Begin Typing"
 msgstr ""
 "Étape 2 sur 2: Télécharger des fichiers de séquence et commencer Virus Typer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
-msgid "Drop files to upload or click here"
-msgstr "Déposer des fichiers à télécharger ou cliquez ici"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:24
 msgid "Sample"
 msgstr "Échantillon"
@@ -708,86 +2308,91 @@ msgstr "Échantillon"
 msgid "Sequence Files "
 msgstr "Fichiers de séquence "
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
-msgid "Validate Sequence Files"
-msgstr "Valider les fichiers de séquence"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:40
 msgid "Upload Sequence Files"
 msgstr "Télécharger des fichiers de séquence"
 
-#: olc_webportalv2/users/models.py:13
-msgid "Name"
-msgstr "Nom"
+#: olc_webportalv2/users/admin.py:17
+msgid "This username has already been taken."
+msgstr "Ce nom d'utilisateur a déjà été pris"
 
 #: olc_webportalv2/vir_typer/forms.py:17
-msgid "Sample name is required"
+msgid "Sample Name is required"
 msgstr "Le nom de l'échantillon est obligatoire"
 
 #: olc_webportalv2/vir_typer/forms.py:19
-msgid "Reception date is required"
-msgstr "La date de réception est obligatoire"
-
-#: olc_webportalv2/vir_typer/forms.py:21
 msgid "LSTS ID is required"
 msgstr "Identifiant SIESAL est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:23
-msgid "Isolate source is required"
+#: olc_webportalv2/vir_typer/forms.py:21
+msgid "Isolate Source is required"
 msgstr "La source de l'échantillon est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:25
-msgid "Analyst name is required"
+#: olc_webportalv2/vir_typer/forms.py:23
+msgid "Analyst Name is required"
 msgstr "Le nom de l'analyste est obligatoire"
+
+#: olc_webportalv2/vir_typer/forms.py:25
+msgid "Reception Date is required"
+msgstr "La date de réception est obligatoire"
 
 #: olc_webportalv2/vir_typer/forms.py:56
 msgid "Required"
 msgstr "Champs obligatoires"
 
 #: olc_webportalv2/vir_typer/forms.py:63
-msgid "The project name must be unique"
+msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/vir_typer/forms.py:76
+#: olc_webportalv2/vir_typer/forms.py:64
+msgid "Project Name is required"
+msgstr "Le nom du projet est requis"
+
+#: olc_webportalv2/vir_typer/forms.py:77
 msgid "Date received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/vir_typer/forms.py:78
+#: olc_webportalv2/vir_typer/forms.py:79
 msgid "Lab ID"
 msgstr "Identifiant labo"
 
-#: olc_webportalv2/vir_typer/forms.py:79
+#: olc_webportalv2/vir_typer/forms.py:80
 msgid "Subunit"
 msgstr "Sous-unité"
 
-#: olc_webportalv2/vir_typer/forms.py:80
+#: olc_webportalv2/vir_typer/forms.py:81
 msgid "Putative classification"
 msgstr "Classification putative"
 
-#: olc_webportalv2/vir_typer/forms.py:81
+#: olc_webportalv2/vir_typer/forms.py:82
 msgid "Isolate source"
 msgstr "Source de l'échantillon"
 
-#: olc_webportalv2/vir_typer/forms.py:82
+#: olc_webportalv2/vir_typer/forms.py:83
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
 
-#: olc_webportalv2/vir_typer/urls.py:11
+#: olc_webportalv2/vir_typer/urls.py:10
 msgid "^create/"
 msgstr "^créer"
 
-#: olc_webportalv2/vir_typer/urls.py:12
+#: olc_webportalv2/vir_typer/urls.py:11
 msgid "^upload/(?P<vir_typer_pk>\\d+)/$"
 msgstr "^télécharger/(?P<vir_typer_pk>\\d+)/$"
 
-#: olc_webportalv2/vir_typer/urls.py:13
+#: olc_webportalv2/vir_typer/urls.py:12
 msgid "^results/(?P<vir_typer_pk>\\d+)/$"
 msgstr "^résultats/(?P<vir_typer_pk>\\d+)/$"
 
-#: olc_webportalv2/vir_typer/urls.py:14
+#: olc_webportalv2/vir_typer/urls.py:13
 msgid "^edit/(?P<vir_typer_pk>\\d+)/$"
 msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 
-#: olc_webportalv2/vir_typer/views.py:70
+#: olc_webportalv2/vir_typer/views.py:75
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
+
+#: olc_webportalv2/vir_typer/views.py:401
+#, python-format
+msgid "Project %s updated"
+msgstr "Projet %s mis à jour"

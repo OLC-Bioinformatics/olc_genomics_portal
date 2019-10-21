@@ -3,8 +3,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.fields import JSONField
 from olc_webportalv2.users.models import User
 
-
-# Create your models here.
+# GeneSeekr Models ------------------------------------------------------------------------------------------------------------------------------------
 class GeneSeekrRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
@@ -23,13 +22,6 @@ class GeneSeekrRequest(models.Model):
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
    
-
-# This model doesn't actually get used any more - to be deleted.
-class AzureGeneSeekrTask(models.Model):
-    geneseekr_request = models.ForeignKey(GeneSeekrRequest, on_delete=models.CASCADE, related_name='azuretask')
-    exit_code_file = models.CharField(max_length=256)
-
-
 class GeneSeekrDetail(models.Model):
     geneseekr_request = models.ForeignKey(GeneSeekrRequest, on_delete=models.CASCADE, related_name='geneseekrdetail', null=True)
     seqid = models.CharField(max_length=24, default='')
@@ -39,7 +31,6 @@ class GeneSeekrDetail(models.Model):
 
     def __str__(self):
         return self.seqid
-
 
 class TopBlastHit(models.Model):
     geneseekr_request = models.ForeignKey(GeneSeekrRequest, on_delete=models.CASCADE, related_name='topblasthits', null=True)
@@ -60,7 +51,7 @@ class TopBlastHit(models.Model):
     class Meta:
         ordering = ['e_value', '-percent_identity', '-query_coverage']
 
-
+# Parsnp Tree Models ------------------------------------------------------------------------------------------------------------------------------------
 class ParsnpTree(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
@@ -82,6 +73,7 @@ class ParsnpAzureRequest(models.Model):
     exit_code_file = models.CharField(max_length=256)
 
 
+# AMR Models ------------------------------------------------------------------------------------------------------------------------------------
 class AMRSummary(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
@@ -108,6 +100,7 @@ class AMRAzureRequest(models.Model):
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
 
 
+# Prokka Models ------------------------------------------------------------------------------------------------------------------------------------
 class ProkkaRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
@@ -124,7 +117,7 @@ class ProkkaAzureRequest(models.Model):
     prokka_request = models.ForeignKey(ProkkaRequest, on_delete=models.CASCADE, related_name='azuretask')
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
 
-
+# Neighbors Models ------------------------------------------------------------------------------------------------------------------------------------
 class NearestNeighbors(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqid = models.CharField(max_length=24, blank=True, null=True)
@@ -135,6 +128,7 @@ class NearestNeighbors(models.Model):
     status = models.CharField(max_length=64, default='Unprocessed', blank=True, null=True)
     created_at = models.DateField(auto_now_add=True, blank=True, null=True)
 
+    emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
 
 class NearNeighborDetail(models.Model):
     near_neighbor_request = models.ForeignKey(NearestNeighbors, on_delete=models.CASCADE, related_name='neighbor_detail')

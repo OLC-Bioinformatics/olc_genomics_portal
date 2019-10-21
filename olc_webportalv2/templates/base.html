@@ -54,7 +54,7 @@
                     class="fas fa-search"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %}<i
                     class="fas fa-book"></i></a>
-                <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %}<i
+                <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %} <i
                     class="fas fa-file-pdf"></i></a>
               </div>
             </div>
@@ -288,6 +288,12 @@
       document.getElementById("leafy").style.height = "50px";
       document.getElementsByClassName('card-deck')[0].style.display = 'inline';
     }
+    function getLanguage() {
+    var lang = document.documentElement.lang;
+    if (lang=== "fr"){
+      return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+    }
+  }
   </script>
   
   {% endblock javascript %}

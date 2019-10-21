@@ -5,26 +5,26 @@
 {% load i18n widget_tweaks %}
 {% block content %}
   {# Mostly done - need to: Not show the highchart if there's nothing there, and change size of chart based on number of blast hits#}
-  <h2>GeneSeekr Results</h2>
+  <h2>{%trans "GeneSeekr Results"%}</h2>
   <br>
   {% if geneseekr_request.status == 'Complete' %}
     <ul class="nav nav-tabs nav-justified">
-      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% Sequences Query Found</a></li>
-      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">Sequence By Sequence</a></li>
-      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">Top Blast Hits</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% {%trans "Sequences Query Found"%}</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">{%trans "Sequence By Sequence"%}</a></li>
+      <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top BLAST Hits"%}</a></li>
     </ul>
     <div class="tab-content">
         <div id="overall" class="tab-pane fade">
             <br>
-            <p>This graph shows the percentage of sequences in which each query gene was found.</p>
+            <p>{%trans "This graph shows the percentage of sequences in which each query gene was found."%}</p>
             <div id="container" style="height: 500px;"></div>
-            <button type="button" class="btn btn-outline-primary btn-block" data-toggle="collapse" data-target="#geneseekr-results"><strong>View Table</strong></button>
+            <button type="button" class="btn btn-outline-primary btn-block" data-toggle="collapse" data-target="#geneseekr-results"><strong>{%trans "View Table"%}</strong></button>
             <div id="geneseekr-results" class="collapse">
             <table id="datatable" class="table table-hover compact">
               <thead>
                 <tr>
-                  <th>Gene</th>
-                  <th>% sequences where gene was found</th>
+                  <th>{%trans "Gene"%}</th>
+                  <th>% {%trans "sequences where gene was found"%}</th>
                 </tr>
               </thead>
               <tbody>
@@ -40,9 +40,8 @@
         </div>
         <div id="sequence-by-sequence" class="tab-pane fade">
            <br>
-           <p>This table shows the percent identity for each sequence for each query gene.</p>
+           <p>{%trans "This table shows the percent identity for each sequence for each query gene."%}</p>
            <br>
-          <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left" >View LabIDs</button>
           <br>
           <br>
           <br>
@@ -52,7 +51,7 @@
                 <th>SeqID</th>
                 <th>LabID</th>
                 {% for key, value in geneseekr_request.geneseekr_results.items %}
-                  <td>{{ key }}</td>
+                  <th>{{ key }}</th>
                 {% endfor %}
               </tr>
             </thead>
@@ -60,11 +59,11 @@
             {% for geneseekr_detail in geneseekr_details %}
               <tr>
               <td>{{ geneseekr_detail.seqid }}</td>
-                    {% for key, value in labidDict.items %}
-                    {% if key == geneseekr_detail.seqid%}
-                    <td>{{value}}</td>
-                  {% endif %}
-                {% endfor %}
+              {% for key, value in idDict.items %}
+               {% if key == geneseekr_detail.seqid%}
+                   <td>{{value.0}}</td>
+               {% endif %}
+             {% endfor %} 
               {% for gene, percent_id in geneseekr_detail.geneseekr_results.items %}
                 {% if percent_id == 0.0 %}
                   <td style="color: #800f16">{{ percent_id }}</td>
@@ -91,20 +90,20 @@
            {% for gene in geneseekr_request.gene_targets %}
            <div id="{{ gene|slugify }}" class="tab-pane fade gene">
            <br>
-            <button class="btn btn-info btn-lg" id="toggle-vis-table" value='Lab' style="float: left" onclick="myfunc(this)">View LabIDs</button>
+            {% comment %} <button class="btn btn-info btn-lg" id="toggle-vis-table" value='Lab' style="float: left" onclick="myfunc(this)">{%trans "View LabIDs"%}</button> {% endcomment %}
             <br>
             <br><br>
              <div id="{{ gene|slugify }}-chart" style="height: 500px"></div>
              <table id="{{ gene|slugify }}-table" class="table table-hover compact display">
              <thead>
                 <tr>
-                  <th data-toggle="tooltip" title="Name of the contig that the target sequence was found on.">Contig</th>
-                  <th data-toggle="tooltip" title="Percentage of the query sequence that was found.">Query Coverage</th>
-                  <th data-toggle="tooltip" title="How similar the query and target sequence were. 100 means completely identical, 0 means not at all.">Percent Identity</th>
-                  <th data-toggle="tooltip" title="Where on the contig the target gene was found.">Subject Start Position</th>
-                  <th data-toggle="tooltip" title="Where on the contig the target gene was found.">Subject End Position</th>
-                  <th data-toggle="tooltip" title="Measure of significance of the query target match. Lower means more significant.
-For more info, check out https://www.researchgate.net/post/What_does_E_value_in_BLAST_actually_indicates">E Value</th>
+                  <th data-toggle="tooltip" title='{%trans "Name of the contig that the target sequence was found on."%}'>{%trans "Contig"%}</th>
+                  <th data-toggle="tooltip" title='{%trans "Percentage of the query sequence that was found."%}'>{%trans "Query Coverage"%}</th>
+                  <th data-toggle="tooltip" title='{%trans "How similar the query and target sequence were. 100 means completely identical, 0 means not at all."%}'>{%trans "Percent Identity"%}</th>
+                  <th data-toggle="tooltip" title='{%trans "Where on the contig the target gene was found."%}'>{%trans "Subject Start Position"%}</th>
+                  <th data-toggle="tooltip" title='{%trans "Where on the contig the target gene was found."%}'>{%trans "Subject End Position"%}</th>
+                  <th data-toggle="tooltip" title='{%trans "Measure of significance of the query target match. Lower means more significant.
+For more info, check out https://www.researchgate.net/post/What_does_E_value_in_BLAST_actually_indicates"%}'>{%trans "E Value"%}</th>
                 </tr>
              </thead>
              <tbody>
@@ -122,7 +121,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
                            </tr>
                          {% endfor %}
                      {% else %}
-                       <h5>This gene had no BLAST hits.</h5>
+                       <h5>{%trans "This gene had no BLAST hits."%}</h5>
                      {% endif %}
                  {% endif %}
              {% endfor %}
@@ -135,7 +134,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
          </div>
     </div>
   {% else %}
-    <h2>GeneSeekr request not completed.</h2>
+    <h2>{%trans "GeneSeekr request not completed."%}</h2>
   {% endif %}
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <script src="{% static 'js/highcharts.js' %}"></script>
@@ -155,7 +154,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         },
         xAxis: {
             title: {
-                text: 'Gene'
+                text: "{%trans 'Gene'%}"
             },
             marginLeft: 100,
         },
@@ -163,7 +162,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
             min: 0,
             max: 100,
             title: {
-                text: '% sequences where gene was found'
+                text:"%{%trans 'sequences where gene was found' %}"
             },
         },
         colors: ['#191b80'],
@@ -207,7 +206,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
           },
 
           title: {
-            text: 'BLAST Hits for {{ gene }}: Query Length ' + query_sequence_length
+            text: "{%trans 'BLAST Hits for {{ gene }}: Query Length '%}" + query_sequence_length
           },
 
           yAxis: {
@@ -224,7 +223,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
           },
 
           series: [{
-            name: 'Query Coverage',
+            name: "{%trans 'Query Coverage' %}",
             data: query_start_stops
           }]
 
@@ -248,39 +247,7 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
         var seq = table_items[j].innerHTML.split('_');
         table_items[j].classList.add(seq[0],'table');
         }
-    }
-  // Default display for seq-seq table
-  $('td:nth-child(2),th:nth-child(2)').hide();
-  // Toggle for seq-seq table
-  $('#toggle-vis').on( 'click', function () {
-    var $this = $(this);
-       if ($this.val() === 'Lab') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').hide();
-        $this.val('Both');
-        $this.html('View Both');
-        $('#btnLab').show();
-        $('#btnBoth').hide();
-        $('#btnSeq').hide();
-    }else if ($this.val() === 'Both') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $this.val('Seq');
-        $this.html('View SeqIDs');
-        $('#btnBoth').show();
-        $('#btnSeq').hide();
-        $('#btnLab').hide();    
-    }else {
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $('td:nth-child(2),th:nth-child(2)').hide();
-        $this.val('Lab');
-        $this.html('View LabIDs');
-        $('#btnSeq').show();
-        $('#btnLab').hide();
-        $('#btnBoth').hide();
-    }
-    } );
-    
+    }  
     {% for gene, top_blast_hits in gene_top_hits.items %}
       var table = $('#{{ gene|slugify }}-table').DataTable({
         "pageLength": 50
@@ -288,84 +255,5 @@ For more info, check out https://www.researchgate.net/post/What_does_E_value_in_
       table.order([5, 'asc'], [2, 'desc'], [1, 'desc']).draw();
     {% endfor %}
   });
-// Toggle function for Top Blast Hits, changes table and chart 
-// Finds which gene is selected, find that page's text items and change accordingly
-  function myfunc(x) {
-    var btn = x;
-    var selected = $($('div.tab-content').find('div .active.show.gene'));
-    var index = selected.index();
-    var txt_gph_items = selected[0].getElementsByTagName('text');
-    var table_items = selected[0].getElementsByClassName('contig');
-    //First Click
-    if (btn.value === 'Lab') {
-        btn.value ='Both';
-        btn.innerHTML='View Both';
-        for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (text[0] =='{{key}}' ){
-          var replace = obj.innerHTML.replace(text[0], '{{value}}')
-          obj.innerHTML = replace;}
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (txt[0] == '{{key}}'){
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{value}}')
-          table_items[i].innerHTML = replace;
-          }
-          {% endfor %}
-        }
-    //Second Click
-    }else if (btn.value === 'Both') {
-        btn.value ='Seq';
-        btn.innerHTML='View SeqIDs';
-         for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (obj.classList[0]== ("{{key}}") && obj.classList[1]== ("graph") ) {
-          var replace = obj.innerHTML.replace(text[0], '{{key}} {{value}}')
-          obj.innerHTML = replace;
-          }
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          var obj = table_items[i];
-          {% for key,value in labidDict.items%}
-          if (obj.classList[1]== ("{{key}}") && obj.classList[2]== ("table") ) {
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}} {{value}}')
-          table_items[i].innerHTML = replace;
-          }
-
-          {% endfor %}
-        }
-    //Third Click
-    }else {
-        btn.value ='Lab';
-        btn.innerHTML ='View LabIDs';
-         for(var i = 0; i < txt_gph_items.length; i++){
-          var obj = txt_gph_items[i];
-          var text = obj.innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (text[0] =='{{key}} {{value}}' ){
-          var replace = obj.innerHTML.replace(text[0], '{{key}}')
-          obj.innerHTML = replace;}
-          {% endfor %}
-        }
-        for(var i = 0; i < table_items.length; i++){
-          var txt = table_items[i].innerHTML.split('_');
-          {% for key,value in labidDict.items%}
-          if (txt[0] == '{{key}} {{value}}'){
-          var replace = table_items[i].innerHTML.replace(txt[0], '{{key}}')
-          table_items[i].innerHTML = replace;
-          }
-          {% endfor %}
-        }
-    }
-  }
   </script>
 {% endblock %}

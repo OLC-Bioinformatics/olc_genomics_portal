@@ -5,106 +5,102 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-<h2>COWBAT Status for {{ sequencing_run.run_name }}</h2>
+<h2>{%trans "COWBAT Status for"%} {{ sequencing_run.run_name }}</h2>
 <br>
+{% if form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+{{ form.non_field_errors|escape }}
+</div>
+{% endif %}
 
 {% if sequencing_run.status == 'Unprocessed' %}
-    <button class="btn btn-primary btn-block" disabled>{{ sequencing_run.status }}</button>
+    <button class="btn btn-primary btn-block" disabled>{%trans "Unprocessed"%}</button>
+
 {% elif sequencing_run.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{{ sequencing_run.status }}</button>
+    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
     <br>
-    <p>Return to <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
+    <p>{%trans "Return to"%} <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a> </p>
+
 {% elif sequencing_run.status == 'UploadError' %}
-  <button class="btn btn-warning btn-block" disabled>{{ sequencing_run.status }}</button>
+  <button class="btn btn-warning btn-block" disabled>{%trans "Upload Error"%}</button>
   <br>
-  <p>It looks like one or more of your files did not upload successfully. Click the button below to retry upload of
-  your sequence data. You'll only have to upload files that did not successfully upload.</p>
+  <p>{% blocktrans %} It looks like one or more of your files did not upload successfully. Click the button below to retry upload of
+  your sequence data. You'll only have to upload files that did not successfully upload. {%endblocktrans%}</p>
   <br>
+ 
   <div align="center">
   <a href="{% url 'cowbat:retry_sequence_data_upload' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-primary"
-     role="button" >Retry Sequence Upload For {{ sequencing_run.run_name }}</a>
+     role="button" >{%trans "Retry Sequence Upload For "%}{{ sequencing_run.run_name }}</a>
   </div>
+
 {% elif sequencing_run.status == 'Processing' %}
-  <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ sequencing_run.status }}</button>
+  <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
   <br><br>
   <div style="text-align: center">
-      <h4>Run Progress</h4>
+      <h4>{%trans "Run Progress"%}</h4>
       <div class="progress">
           <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="{{ progress }}" aria-valuemin="0"
           aria-valuemax="100" style="width:{{ progress }}%">{{ progress }}%</div>
       </div>
   </div>
   <br>
-   <h5>{{ sequencing_run.progress }}</h5>
-  <p>This page will automatically refresh. An assembly run usually takes at least 4-5 hours.</p>
-  <p>You don't have to remain on this page - this assembly request will be visible on <a href="{% url 'cowbat:assembly_home' %}">Assembly Home</a> </p>
+  
+  <h5>{%trans sequencing_run.progress %}</h5>
+  <p>{%trans "This page will automatically refresh. An assembly run usually takes at least 4-5 hours."%}</p>
+  <p>{%trans "You don't have to remain on this page - this assembly request will be visible on "%} <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a> </p>
   
   <!--Email Block-->
-  {% if messages %}
-  <ul class="messages">
-    {% for message in messages %}
-      <li class="{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
   {% if request.user.email in sequencing_run.emails_array %}
-    <p>Your email is already on the list to be notified. </p>
-    Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
+    <p>{%trans "Your email is already on the list to be notified."%} </p>
+    {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+    {% else %}
+    <p>{%trans "Would you like an email upon completion?"%}</p>
+    {% endif %}
 
-    <form method="Post" id='addEmail'>
+    <form method="post" id='addEmail'>
       {% csrf_token %}
-      {{form}}
-      <button type="submit">Save Email</button>
+      {{form.email.label_tag}}
+      {{form.email}}
+      <button class='btn btn-success' type="submit">{%trans "Save"%}</button>
       <br>
       <br>
     </form>
 
-  <script>
-    var checkbox = document.getElementById('cbx').checked;
-    var form = document.getElementById('addEmail');
-    if (checkbox != true){
-      form.style.visibility ="hidden";}
-    else {
-        form.style.visibility ="visible";}
-    function cbxCheck(){
+    <script>
       var checkbox = document.getElementById('cbx').checked;
       var form = document.getElementById('addEmail');
-      if (checkbox == true){
-        form.style.visibility ="visible";}
-      else{
-        form.style.visibility ="hidden";} 
-        }
-  </script>
-
-  {% else %}
-  <p>Would you like an email upon completion?</p>
-  <form method="Post">
-  {% csrf_token %}
-  {{form}}
-  <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
-  <br>
-  <br>
-  </form>
-  {% endif %}
-
-  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
+      if (checkbox != true){
+        form.style.visibility ="hidden";}
+      else {
+          form.style.visibility ="visible";}
+      function cbxCheck(){
+        var checkbox = document.getElementById('cbx').checked;
+        var form = document.getElementById('addEmail');
+        if (checkbox == true){
+          form.style.visibility ="visible";}
+        else{
+          form.style.visibility ="hidden";} 
+          }
+    </script>
+    
+  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
   <div id="emails-button" class="collapse">
     <br>
-    {% if sequencing_run.emails_array|length == 0 %}
-      <p>No users have signed up to receive an email for this run.</p>
+    {% if geneseekr_request.emails_array|length == 0 %}
+      <p>{%trans "No users have signed up to receive an email for this run."%}</p>
     {% else %}
-        {% for email in sequencing_run.emails_array %}
+        {% for email in geneseekr_request.emails_array %}
           <p>{{ email }}</p>
         {% endfor %}
     {% endif %}
   </div>
-  <!--End Email Block-->
+  <!--End Email Block--> 
 
 {% elif sequencing_run.status == 'Complete' %}
-  <button class="btn btn-success btn-block" disabled>{{ sequencing_run.status }} <i class="fas fa-check-circle"></i></button>
+  <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
   <br>
   <div style="text-align: center">
-    <h4>Run Progress</h4>
+    <h4>{%trans "Run Progress"%}</h4>
     <div class="progress">
       <div class="progress-bar progress-bar-striped bg-success" role="progressbar" aria-valuenow="100" aria-valuemin="0"
            aria-valuemax="100" style="width:100%">100%</div>
@@ -113,11 +109,11 @@
     <br>
   <div align="center">
     <a href="{{ sequencing_run.download_link }}" class="btn btn-outline-dark"
-       role="button" ><i class="fas fa-download"></i> Download Reports and Assemblies for {{ sequencing_run.run_name }} </a>
+       role="button" ><i class="fas fa-download"></i> {%trans "Download Reports and Assemblies for"%} {{ sequencing_run.run_name }} </a>
   </div>
   <br>
      <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ sequencing_run.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{%trans "Shareable link:"%} </b> {{ sequencing_run.download_link }}</p>
     </div>
 {% endif %}
 

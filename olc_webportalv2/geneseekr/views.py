@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import datetime
 # Portal-specific things
@@ -51,7 +52,8 @@ def geneseekr_name(request, geneseekr_request_pk):
     return render(request,
                   'geneseekr/geneseekr_name.html',
                   {
-                      'geneseekr_request': geneseekr_request,  'form': form
+                      'geneseekr_request': geneseekr_request,  
+                      'form': form
                   })
                   
 @login_required
@@ -88,7 +90,8 @@ def geneseekr_query(request):
     return render(request,
                   'geneseekr/geneseekr_query.html',
                   {
-                     'form': form, 'formName':formName,
+                     'form': form, 
+                     'formName':formName,
                   })
 
 @login_required
@@ -96,7 +99,7 @@ def geneseekr_processing(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
 
     form = EmailForm()
-    if request.method == 'POST':
+    if request.method == 'POST':    
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
@@ -104,20 +107,19 @@ def geneseekr_processing(request, geneseekr_request_pk):
                 geneseekr_request.emails_array.append(Email)
                 geneseekr_request.save()
                 form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
+                messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
-                     'geneseekr_request': geneseekr_request, "form": form
+                     'geneseekr_request': geneseekr_request, 
+                     'form': form
                   })
 
 @login_required
 def geneseekr_results(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
-    idDict = id_sync(geneseekr_request)
+    idDict = id_sync(geneseekr_request.seqids)
     # Create dictionary where each gene gets its own top hits
     gene_top_hits = dict()
     for gene_name in geneseekr_request.gene_targets:
@@ -194,24 +196,23 @@ def tree_request(request):
 @login_required
 def tree_result(request, parsnp_request_pk):
     parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
-    idDict = id_sync(parsnp_request)
+    idDict = id_sync(parsnp_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in parsnp_request.emails_array:
-                parsnp_request.emails_array.append(Email)
-                parsnp_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
-            
+                    parsnp_request.emails_array.append(Email)
+                    parsnp_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 'form': form, 'idDict': idDict,
+                      'parsnp_request': parsnp_request, 
+                      'form': form, 
+                      'idDict': idDict,
                   })
 
 @login_required
@@ -228,7 +229,8 @@ def tree_name(request, parsnp_request_pk):
     return render(request,
                   'geneseekr/tree_name.html',
                   {
-                      'parsnp_request': parsnp_request,  'form': form
+                      'parsnp_request': parsnp_request,  
+                      'form': form
                   })
 
 # AMR Summary Views--------------------------------------------------------------------------------------------
@@ -303,13 +305,10 @@ def amr_result(request, amr_request_pk):
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in amr_request.emails_array:
-                amr_request.emails_array.append(Email)
-                amr_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
-
+                    amr_request.emails_array.append(Email)
+                    amr_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/amr_result.html',
                   {
@@ -331,7 +330,8 @@ def amr_name(request, amr_request_pk):
     return render(request,
                   'geneseekr/amr_name.html',
                   {
-                      'amr_request': amr_request,  'form': form
+                      'amr_request': amr_request,  
+                      'form': form
                   })
 
 
@@ -398,17 +398,15 @@ def prokka_result(request, prokka_request_pk):
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in prokka_request.emails_array:
-                prokka_request.emails_array.append(Email)
-                prokka_request.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
-        
+                    prokka_request.emails_array.append(Email)
+                    prokka_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/prokka_result.html',
                   {
-                      'prokka_request': prokka_request, 'form': form,
+                      'prokka_request': prokka_request, 
+                      'form': form,
                   })
 
 @login_required
@@ -425,7 +423,8 @@ def prokka_name(request, prokka_request_pk):
     return render(request,
                   'geneseekr/prokka_name.html',
                   {
-                      'prokka_request': prokka_request,  'form': form
+                      'prokka_request': prokka_request,  
+                      'form': form
                   })
 
 
@@ -478,13 +477,25 @@ def neighbor_result(request, neighbor_request_pk):
         for neighbor_detail in neighbor_details:
             result_dict[neighbor_detail.seqid] = neighbor_detail.distance
 
-    idDict = id_sync(result_dict)
+    idDict = id_sync(result_dict.keys())
+
+    form = EmailForm()
+    if request.method == 'POST':
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in neighbor_request.emails_array:
+                    neighbor_request.emails_array.append(Email)
+                    neighbor_request.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/neighbor_result.html',
                   {
                       'neighbor_request': neighbor_request,
                       'results': result_dict,
-                      'idDict': idDict
+                      'idDict': idDict,
+                      'form' : form
                   })
 
 @csrf_exempt
@@ -518,7 +529,8 @@ def neighbor_name(request, neighbor_request_pk):
     return render(request,
                   'geneseekr/neighbor_name.html',
                   {
-                      'neighbor_request': neighbor_request,  'form': form
+                      'neighbor_request': neighbor_request,  
+                      'form': form
                   })
 
 

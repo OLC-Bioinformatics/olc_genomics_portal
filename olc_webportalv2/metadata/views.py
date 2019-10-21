@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination, views, parsers, response
 from azure.storage.blob import BlockBlobService, BlobPermissions
+from django.utils.translation import ugettext_lazy as _
 
 
 # Not sure where to put this - create pagination.py?
@@ -127,12 +128,17 @@ def metadata_home(request):
             if genus != '':
                 sequence_data_matching_query = sequence_data_matching_query.filter(genus__iexact=genus)
                 criteria_dict['genus'] = genus
+
+            # Unused but are essential for translation on results page since dict is JSON
+            pr = _('Pass + Reference')
+            r = _('Reference')
+            a = _('All')
             
             # Deal with quality.
-            if quality == 'Pass':
+            if quality == _('Pass'):
                 sequence_data_matching_query = sequence_data_matching_query.exclude(quality='Fail')
-                criteria_dict['quality'] = 'Pass + Reference'
-            elif quality == 'Reference':
+                criteria_dict['quality'] = "Pass + Reference"
+            elif quality == _('Reference'):
                 sequence_data_matching_query = sequence_data_matching_query.filter(quality='Reference')
                 criteria_dict['quality'] = 'Reference'
             else:
@@ -155,7 +161,7 @@ def metadata_home(request):
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
-    idDict = id_sync(metadata_result)
+    idDict = id_sync(metadata_result.seqids)
     idList = (str(list(idDict.keys()))).replace("'","").replace("[","").replace("]","").replace(","," ")
     return render(request,
                   'metadata/metadata_results.html',
@@ -172,9 +178,9 @@ def metadata_browse(request):
                       'sequence_data': sequence_data
                   })
 # Uses metadata_result to filter db, and then loop through queryset to compile dictionary
-def id_sync(metadata_result):
+def id_sync(x):
     idDict = dict()
-    data_set = SequenceData.objects.filter(seqid__in=metadata_result.seqids)
+    data_set = SequenceData.objects.filter(seqid__in=x)
     for item in data_set:
         if item.labid is not None:
             labid_result = str(item.labid)

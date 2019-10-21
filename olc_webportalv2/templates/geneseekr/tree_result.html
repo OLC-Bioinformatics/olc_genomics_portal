@@ -7,32 +7,33 @@
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
 
-  <h2>Treesults</h2>
+  <h2>{%trans "Treesults"%}</h2>
   <br>
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+  {{ form.non_field_errors|escape }}
+  </div>
+  {% endif %}
 
   {% if parsnp_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ parsnp_request.status }}</button>
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{% trans "Processing"%}</button>
       <br>
-      <p>This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs).</p>
-      <p>You don't have to remain on this page - this Tree request will be visible on <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
+      <p>{%trans "This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs)."%}</p>
+      <p>{%trans "You don't have to remain on this page - this Tree request will be visible on "%}<a href="{% url 'geneseekr:tree_home' %}">{%trans "Tree Home"%}</a> </p>
 
       <!--Email Block-->
-      {% if messages %}
-        <ul class="messages">
-        {% for message in messages %}
-        <li class="{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-        </ul>
+      {% if request.user.email in parsnp_request.emails_array %}
+      <p>{%trans "Your email is already on the list to be notified."%} </p>
+      {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+      {% else %}
+      <p>{%trans "Would you like an email upon completion?"%}</p>
       {% endif %}
 
-      {% if request.user.email in parsnp_request.emails_array %}
-      <p>Your email is already on the list to be notified. </p>
-      Would you like to add another email? <input type='checkbox' id='cbx' onclick="cbxCheck()">
-
-      <form method="Post" id='addEmail'>
+      <form method="post" id='addEmail'>
         {% csrf_token %}
-        {{form}}
-        <button type="submit">Save Email</button>
+        {{form.email.label_tag}}
+        {{form.email}}
+        <button class='btn btn-success' type="submit">{%trans "Save"%}</button>
         <br>
         <br>
       </form>
@@ -54,22 +55,11 @@
           }
     </script>
 
-      {% else %}
-      <p>Would you like an email upon completion?</p>
-      <form method="Post">
-      {% csrf_token %}
-      {{form}}
-      <button class='btn btn-success' style='padding: .15rem .5rem;' type="submit">Save</button>
-      <br>
-      <br>
-      </form>
-      {% endif %}
-
-      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> Email Recipients</button>
+      <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {%trans " Email Recipients"%}</button>
       <div id="emails-button" class="collapse">
         <br>
         {% if parsnp_request.emails_array|length == 0 %}
-          <p>No users have signed up to receive an email for this run.</p>
+          <p>{%trans "No users have signed up to receive an email for this run."%}</p>
         {% else %}
             {% for email in parsnp_request.emails_array %}
               <p>{{ email }}</p>
@@ -79,18 +69,17 @@
   <!--Email Block-->
 
   {% elif parsnp_request.status == 'Unprocessed' %}
-    <button class="btn btn-info btn-block progress-bar-striped" disabled>{{ parsnp_request.status }}</button>
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{% trans "Unprocessed"%}</button>
     <br>
   {% elif parsnp_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{{ parsnp_request.status }}</button>
+    <button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
     <br>
-    <p>Return to <a href="{% url 'geneseekr:tree_home' %}">Tree Home</a> </p>
+    <p>{%trans 'Return to'%} <a href="{% url 'geneseekr:tree_home' %}">{% trans "Tree Home"%}</a> </p>
   {% elif parsnp_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></button>
+    <button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br>
-    <p>These results will be available for 7 days.</p>
+    <p>{% trans "These results will be available for 7 days."%} </p>
     <br>
-    <button class="btn btn-info btn-lg" id="toggle-vis" value='Lab' style="float: left">View LabIDs</button>
     <br>
     <br>
     <br>
@@ -98,7 +87,7 @@
     <br>
     <br>
     {% if parsnp_request.seqids_diversitree %}
-      <h4>Most Diverse Strains</h4>
+      <h4>{% trans "Most Diverse Strains"%}</h4>
       <table class="table table-compact">
       <thead>
         <tr>
@@ -122,11 +111,11 @@
     {% endif %}
     <br>
     <div style="text-align: center">
-        <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Tree (.nwk format)</a>
+        <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i>{% trans "Download Tree"%} (.nwk format)</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>Shareable link: </b> {{ parsnp_request.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{% trans "Shareable link:"%} </b> {{ parsnp_request.download_link }}</p>
     </div>
     </div>
   {% endif %}
@@ -153,48 +142,4 @@
   </script>
 
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script type="text/javascript">
-  $(document).ready(function () {
-    //hides LabID Column on page load
-    $('td:nth-child(2),th:nth-child(2)').hide();
-    $('#toggle-vis').on('click', function () {
-      var $this = $(this);
-      var items = document.getElementsByClassName('node');
-      if ($this.val() === 'Lab') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').hide();
-        $this.val('Both');
-        $this.html('View Both');
-        {% for key,value in labidDict.items%}
-        for(var i = 0; i < items.length; i++){
-          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}}'){
-          items[i].getElementsByTagName('text')[0].innerHTML = '{{value}}';
-          }}
-        {% endfor%}
-      } else if ($this.val() === 'Both') {
-        $('td:nth-child(2),th:nth-child(2)').show();
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $this.val('Seq');
-        $this.html('View SeqIDs');
-        {% for key,value in labidDict.items%}
-        for(var i = 0; i < items.length; i++){
-          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{value}}'){
-          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}} {{value}}';
-          }}
-        {% endfor%}
-      } else {
-        $('td:nth-child(1),th:nth-child(1)').show();
-        $('td:nth-child(2),th:nth-child(2)').hide();
-        $this.val('Lab');
-        $this.html('View LabIDs');
-        {% for key,value in labidDict.items%}
-        for(var i = 0; i < items.length; i++){
-          if (items[i].getElementsByTagName('text')[0].innerHTML == '{{key}} {{value}}'){
-          items[i].getElementsByTagName('text')[0].innerHTML = '{{key}}';
-          }}
-        {% endfor%}
-      }
-    });
-  });
-  </script>
 {% endblock %}

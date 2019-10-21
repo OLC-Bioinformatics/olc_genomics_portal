@@ -3,32 +3,32 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-    <h2>Step 3 of 3: Upload Sequence Files and Begin Assembly</h2>
+    <h2>{% trans "Step 3 of 3: Upload Sequence Files and Begin Assembly"%}</h2>
     <br>
     <div id="upload-div" class="center" style="width: 600px;"></div>
     <br>
-    <form action={% url 'cowbat:upload_sequence_data'  sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+    <form action={% url 'cowbat:upload_sequence_data' sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
         <div class="dz-message needsclick">
-            Drop files to upload or click here<br>
+            {% trans "Drop files to upload or click here"%}<br>
             <i class="fas fa-cloud-upload-alt fa-4x"></i>
         </div>
     {% csrf_token %}
     </form>
     <br>
-    <button id="validate" class="btn btn-primary">Validate Sequence Files</button>
-    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#files-required-button">Required Files</button>
+    <button id="validate" class="btn btn-primary">{% trans "Validate Sequence Files"%}</button>
+    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#files-required-button">{% trans "Required Files"%}</button>
     <br>
     <br>
-    <button id="submit" class="btn btn-lg btn-success" disabled>Upload Sequence Files and Begin Assembly</button>
+    <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Sequence Files and Begin Assembly"%}</button>
     <div id="files-required-button" class="collapse show">
     <br>
     <div class="container">
         <table id="files-required-table" class="table table-striped small compact">
             <thead>
                 <tr>
-                    <td><strong>File</strong></td>
-                    <td style="text-align:center"> <strong>Forward Reads </strong></td>
-                    <td style="text-align:center"> <strong>Reverse Reads </strong></td>
+                    <td><strong>{% trans "File" %}</strong></td>
+                    <td style="text-align:center"> <strong>{% trans "Forward Reads"%} </strong></td>
+                    <td style="text-align:center"> <strong>{% trans "Reverse Reads"%} </strong></td>
                 </tr>
             </thead>
             <tbody>

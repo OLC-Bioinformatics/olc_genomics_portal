@@ -4,32 +4,32 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Metadata Results</h2>
+  <h2>{% trans 'Metadata Results'%}</h2>
   <br>
-  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">View Search Criteria</button>
+  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">{% trans 'View Search Criteria'%}</button>
   <div id="criteria" class="collapse">
   <br>
   {% for criteria, value in metadata_result.criteria.items %}
-    <p><strong>{{ criteria }}:</strong> {{ value }}</p>
+    <p><strong>{% trans criteria %}:</strong> {% trans value %}</p>
   {% endfor %}
   </div>
   <br>
   <br>
-  <p id="insertbefore">Your search returned <strong>{{ metadata_result.seqids|length }}</strong> results.</p>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ metadata_result.seqids|length }}</strong> {% trans 'results.'%}</p>
   <!--idList passed in from view -->
-  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">Copy SeqIDs</button>
+  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">{% trans 'Copy SeqIDs'%}</button>
   <br>
   <br>
-  <div class="alert alert-success" id="success" style="float:right;display:none">Copied to Clipboard!</div>
+  <div class="alert alert-success" id="success" style="float:right;display:none">{% trans 'Copied to clipboard!'%}</div>
   <br>
   <br>
   <br>
   <table class="table table-hover" id="table_results">
   <thead>
     <tr>
-      <th>SeqID</th>
-      <th>LabID</th>
-      <th>OLNID</th>
+      <th>{% trans 'SeqID'%}</th>
+      <th>{% trans 'LabID'%}</th>
+      <th>{% trans 'OLNID'%}</th>
     </tr>
   </thead>
   <tbody>
@@ -49,6 +49,7 @@
 
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
+
   <!--function for copying SeqIDs to Clipboard -->
   <script type="text/javascript">
   function copySeq(text) {

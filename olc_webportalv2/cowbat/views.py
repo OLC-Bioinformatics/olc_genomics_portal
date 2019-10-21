@@ -3,14 +3,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import messages
+from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import logging
 import fnmatch
 import os
 # Portal-specific things
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm, RealTimeForm
+from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.geneseekr.forms import EmailForm
 # Azure!
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_service_client as batch
@@ -101,17 +103,16 @@ def cowbat_processing(request, sequencing_run_pk):
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in sequencing_run.emails_array:
-                sequencing_run.emails_array.append(Email)
-                sequencing_run.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
+                    sequencing_run.emails_array.append(Email)
+                    sequencing_run.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
             
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {
-                      'sequencing_run': sequencing_run, 'form':form,
+                      'sequencing_run': sequencing_run, 
+                      'form':form,
                       'progress': str(progress)
                   })
 

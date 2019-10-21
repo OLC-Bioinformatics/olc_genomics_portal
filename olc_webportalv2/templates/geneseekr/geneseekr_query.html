@@ -5,7 +5,7 @@
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
-<h2>GeneSeekr Query</h2>
+<h2>{%trans "GeneSeekr Query"%}</h2>
 <form action='' enctype="multipart/form-data" method="post">
   {% if form.errors %}
   <div class="alert alert-danger" role="alert" align="center">
@@ -13,7 +13,7 @@
   </div>
   {% endif %}
   {% csrf_token %}
-  <p>Enter your query sequence, in FASTA format (or upload a file below):</p>
+  <p>{%trans "Enter your query sequence, in FASTA format (or upload a file below):"%}</p>
   {{formName|crispy}}
   {{ form.query_sequence|as_crispy_field }}
   {{ form.query_file}}
@@ -22,25 +22,25 @@
   <div class="accordion" id="accordionExample">
         <button class="btn btn-block btn-outline-dark" type="button" data-toggle="collapse" data-target="#collapseOne" data-tooltip='tooltip' title='hi'
           aria-expanded="true" aria-controls="collapseOne">
-          Choose Genus to Search
+          {%trans "Choose Genus to Search"%}
         </button>
       <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
         <div class="card-body">
-          <p>Enter the genus you want to search. If you want to search all sequences, leave this blank.</p>
-          <p>Enter your genus of interest: {{ form.genus }}</p>
-          <p>Return all sequences <strong>except for</strong> selected genus: {{ form.everything_but }}</p>
+          <p>{%trans "Enter the genus you want to search. If you want to search all sequences, leave this blank."%}</p>
+          <p>{%trans "Enter your genus of interest: "%}{{ form.genus }}</p>
+          <p>{%trans "Return all sequences"%} <strong>{%trans "except for"%}</strong>{%trans "selected genus:"%}  {{ form.everything_but }}</p>
         </div>
       </div>
 
     <br>
         <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='hi'
           data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-          Choose SeqIDs to Search
+          {%trans "Choose SeqIDs to Search"%}
         </button>
 
       <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
         <div class="card-body">
-          <p>Search the following SeqIDs:</p>
+          <p>{%trans "Search the following SeqIDs:"%}</p>
           {{ form.seqids }}
           <br>
         </div>
@@ -48,7 +48,7 @@
 
   </div>
   <br>
-  <button type="submit" class="btn btn-primary btn-lg">Run Query</button>
+  <button type="submit" class="btn btn-primary btn-lg">{%trans "Run Query"%}</button>
 </form>
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
@@ -56,7 +56,7 @@
   // adds tool tips 
   var query_sequence = document.getElementById('div_id_query_sequence');
   $(query_sequence).attr('data-tooltip','tooltip');
-  $(query_sequence).attr('title','Enter one or more query sequences in FASTA format, or upload a file below.');
+  $(query_sequence).attr('title',"{%trans 'Enter one or more query sequences in FASTA format, or upload a file below.' %}");
   });
   </script>
 {% endblock %}
