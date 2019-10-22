@@ -6,127 +6,119 @@
 {% load i18n %}
 {% block content %}
 <br>
-
-  <a href="{% url 'vir_typer:vir_typer_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Virus Typer Query" %}</strong></a>
-  <br>
-  <h2>Virus Typer</h2>
-  <br>
-  <table id="vir_typer-request-table" class="table table-hover">
-    <thead>
-    <tr style="text-align:center">
-       <th>{% trans "Project Name" %}</th>
-       <th>{% trans "Status" %}</th>
-       <th>{% trans "Download" %}</th>
-       <th>{% trans "Request Date" %}</th>
-       <th data-orderable="false">      </th>
-       <th>{% trans "Edit Project" %}</th>
-    </tr>
-  </thead>
-
-  <tbody>
-     {% for vir_typer_project in vir_typer_projects %}
-     <tr id="row{{vir_typer_project.pk}}" style="text-align:center">
-       <td>
-            <p style="text-align:center">{{ vir_typer_project }}</p>
-       </td>
-          {% if vir_typer_project.status == 'Complete' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
-          {% elif vir_typer_project.status == 'Processing' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button"> {% trans "Processing" %} </a></td>
-          {% elif vir_typer_project.status == 'Error' %}
-             <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
-          {% elif vir_typer_project.status == 'Unprocessed' %}
-             <td><button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
-          {% endif %}
-
-          {% if vir_typer_project.status == 'Complete' %}
-            <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
-          {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button></td>
-          {% endif %}
-
-        <td>{{ vir_typer_project.created_at }}</td>
-        {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
-          <form id="form{{vir_typer_project.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
-          </form>
-        {% else %}
-          <td></td>
-        {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'vir_typer:vir_typer_rename' vir_typer_pk=vir_typer_project.pk %}">   <i class="fas fa-pen" aria-hidden="true"></i></a></td>
-     </tr>
-     {% endfor %}
-  </tbody>
-  </table>
-
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/datatables.min.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
-  <script type="text/javascript">
-  $(document).ready(function () {
-    var lang = document.documentElement.lang;
-    var table = $('#vir_typer-request-table').DataTable({
-       language : {
-        url: getLanguage()
-    }
-    });
-        //Default order of table on page load
-        table
-        .order([3,"desc"], [1,"asc"])
-        .draw();
-});
-  setInterval(function () {
-    {% for vir_typer_project in vir_typer_projects %}
-      {% if vir_typer_project.status == 'Processing' %}
-        window.location = window.location.href;
-      {% endif %}
-    {% endfor %}
-    }, 15000) // This should refresh the page every 60 seconds as long as run status is processing
-
-    $(".btn-danger").click(function(e) {
-    //Delete button SweetAlerts
-    e.preventDefault();
-    var btn = this.value;
-    var form = document.getElementById("form" + this.value);
-      Swal.fire({
-      title: '{% trans "Are you sure?" %}',
-      text: '{% trans "You will not be able to revert this!" %}',
-      type: 'warning',
-      showCancelButton: true,
-      cancelButtonText: '{% trans "Cancel" %}',
-      confirmButtonColor: '#d33',
-      confirmButtonText: '{% trans "Yes, delete it!" %}',
-      reverseButtons: true
-     }).then(function(result) {
-      if (result.value == true) {
-       Swal.fire({
-        title: '{% trans "Deleted!" %}',
-        text: '{% trans "Your project has been deleted." %}',
-        type: 'success',
-        showConfirmButton: false
-       }).then(function(cont) {
-        if (cont.value == null) {
-          if (bowser.name =="Internet Explorer") { //allows for page submission IE
-            $.ajax({
-            type:"POST",
-            data: {"delete":btn}}).done(function(data) {
-              location.reload();
+    <a href="{% url 'vir_typer:vir_typer_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Virus Typer Query" %}</strong></a>
+    <br>
+    <h2>Virus Typer</h2>
+    <br>
+    <table id="vir_typer-request-table" class="table table-hover">
+        <thead>
+        <tr style="text-align:center">
+            <th>{% trans "Project Name" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Download" %}</th>
+            <th>{% trans "Request Date" %}</th>
+            <th data-orderable="false"></th>
+            <th>{% trans "Edit Project" %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for vir_typer_project in vir_typer_projects %}
+            <tr id="row{{vir_typer_project.pk}}" style="text-align:center">
+                <td><p style="text-align:center">{{ vir_typer_project }}</p></td>
+                {% if vir_typer_project.status == 'Complete' %}
+                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
+                {% elif vir_typer_project.status == 'Processing' %}
+                    <td><button class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button"> {% trans "Processing" %} </button></td>
+                {% elif vir_typer_project.status == 'Error' %}
+                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
+                {% elif vir_typer_project.status == 'Unprocessed' %}
+                    <td><button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
+                {% endif %}
+                {% if vir_typer_project.status == 'Complete' %}
+                    <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
+                {% else %}
+                    <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button></td>
+                {% endif %}
+                <td>{{ vir_typer_project.created_at }}</td>
+                {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
+                    <form id="form{{vir_typer_project.pk}}" method="post">
+                        <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
+                        <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
+                    </form>
+                {% else %}
+                    <td></td>
+                {% endif %}
+                <td style="text-indent: 5px"><a href="{% url 'vir_typer:vir_typer_rename' vir_typer_pk=vir_typer_project.pk %}">   <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/datatables.min.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            let table = $('#vir_typer-request-table').DataTable({
+                language : {
+                    url: getLanguage()
+                }
             });
-            
-          }else{
-          form.submit();}
-       }
-       })
-      } else {
-       Swal.fire({
-        title: '{% trans "Cancelled!" %}',
-        text: '{% trans "Your project is safe." %}',
-        type: 'error',
-        showConfirmButton: false
-       })
-      }
-     })
-   });
-</script>
+            //Default order of table on page load
+            table
+                .order([3,"desc"], [1,"asc"])
+                .draw();
+        });
+        setInterval(function () {
+            {% for vir_typer_project in vir_typer_projects %}
+                {% if vir_typer_project.status == 'Processing' %}
+                    window.location = window.location.href;
+                    {% endif %}
+            {% endfor %}
+        },
+            15000); // This should refresh the page every 60 seconds as long as run status is processing
+        $(".btn-danger").click(function(e) {
+            // Delete button SweetAlerts
+            e.preventDefault();
+            let btn = this.value;
+            let form = document.getElementById("form" + this.value);
+            Swal.fire({
+                title: '{% trans "Are you sure?" %}',
+                text: '{% trans "You will not be able to revert this!" %}',
+                type: 'warning',
+                showCancelButton: true,
+                cancelButtonText: '{% trans "Cancel" %}',
+                confirmButtonColor: '#d33',
+                confirmButtonText: '{% trans "Yes, delete it!" %}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value === true) {
+                    Swal.fire({
+                        title: '{% trans "Deleted!" %}',
+                        text: '{% trans "Your project has been deleted." %}',
+                        type: 'success',
+                        showConfirmButton: false
+                    }).then(function(cont) {
+                        if (cont.value == null) {
+                            if (bowser.name === "Internet Explorer") { //allows for page submission IE
+                                $.ajax({
+                                    type:"POST",
+                                    data: {"delete":btn}}).done(function(data) {
+                                        location.reload();
+                                    });
+                            }else {
+                                form.submit();
+                            }
+                        }
+                    })
+                } else {
+                    Swal.fire({
+                        title: '{% trans "Cancelled!" %}',
+                        text: '{% trans "Your project is safe." %}',
+                        type: 'error',
+                        showConfirmButton: false
+                    })
+                }
+            })
+        });
+    </script>
 {% endblock %}
