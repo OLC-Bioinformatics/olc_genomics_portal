@@ -13,8 +13,8 @@ urlpatterns = [
     # Tree Stuff
     url(_(r'^tree_home/'), views.tree_home, name='tree_home'),
     url(_(r'^tree_request/'), views.tree_request, name='tree_request'),
-    url(_(r'^tree_result/(?P<parsnp_request_pk>\d+)/$'), views.tree_result, name='tree_result'),    
-    url(_(r'^tree_name/(?P<parsnp_request_pk>\d+)/$'), views.tree_name, name='tree_name'),
+    url(_(r'^tree_result/(?P<tree_request_pk>\d+)/$'), views.tree_result, name='tree_result'),    
+    url(_(r'^tree_name/(?P<tree_request_pk>\d+)/$'), views.tree_name, name='tree_name'),
 
     # AMR Stuff 
     url(_(r'^amr_home/'), views.amr_home, name='amr_home'),

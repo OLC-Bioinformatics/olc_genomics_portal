@@ -15,14 +15,14 @@
   </div>
   {% endif %}
 
-  {% if parsnp_request.status == 'Processing' %}
+  {% if tree_request.status == 'Processing' %}
       <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{% trans "Processing"%}</button>
       <br>
       <p>{%trans "This page will automatically refresh. Your Tree request should be complete in 10 to 15 minutes (more if you requested many SeqIDs)."%}</p>
       <p>{%trans "You don't have to remain on this page - this Tree request will be visible on "%}<a href="{% url 'geneseekr:tree_home' %}">{%trans "Tree Home"%}</a> </p>
 
       <!--Email Block-->
-      {% if request.user.email in parsnp_request.emails_array %}
+      {% if request.user.email in tree_request.emails_array %}
       <p>{%trans "Your email is already on the list to be notified."%} </p>
       {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
       {% else %}
@@ -58,24 +58,24 @@
       <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {%trans " Email Recipients"%}</button>
       <div id="emails-button" class="collapse">
         <br>
-        {% if parsnp_request.emails_array|length == 0 %}
+        {% if tree_request.emails_array|length == 0 %}
           <p>{%trans "No users have signed up to receive an email for this run."%}</p>
         {% else %}
-            {% for email in parsnp_request.emails_array %}
+            {% for email in tree_request.emails_array %}
               <p>{{ email }}</p>
             {% endfor %}
         {% endif %}
       </div>
   <!--Email Block-->
 
-  {% elif parsnp_request.status == 'Unprocessed' %}
+  {% elif tree_request.status == 'Unprocessed' %}
     <button class="btn btn-info btn-block progress-bar-striped" disabled>{% trans "Unprocessed"%}</button>
     <br>
-  {% elif parsnp_request.status == 'Error' %}
+  {% elif tree_request.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
     <br>
     <p>{%trans 'Return to'%} <a href="{% url 'geneseekr:tree_home' %}">{% trans "Tree Home"%}</a> </p>
-  {% elif parsnp_request.status == 'Complete' %}
+  {% elif tree_request.status == 'Complete' %}
     <button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br>
     <p>{% trans "These results will be available for 7 days."%} </p>
@@ -86,7 +86,7 @@
     <svg id="tree_display" />
     <br>
     <br>
-    {% if parsnp_request.seqids_diversitree %}
+    {% if tree_request.seqids_diversitree %}
       <h4>{% trans "Most Diverse Strains"%}</h4>
       <table class="table table-compact">
       <thead>
@@ -96,7 +96,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for seqid in parsnp_request.seqids_diversitree %}
+        {% for seqid in tree_request.seqids_diversitree %}
           <tr>
             <td>{{ seqid }}</td>
             {% for key, value in labidDict.items %}
@@ -111,11 +111,11 @@
     {% endif %}
     <br>
     <div style="text-align: center">
-        <a href="{{ parsnp_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {% trans "Download Tree"%} (.nwk format)</a>
+        <a href="{{ tree_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {% trans "Download Tree"%} (.nwk format)</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{% trans "Shareable link:"%} </b> {{ parsnp_request.download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{% trans "Shareable link:"%} </b> {{ tree_request.download_link }}</p>
     </div>
     </div>
   {% endif %}
@@ -126,14 +126,14 @@
   <script src="{% static 'js/phylotree.js' %} "></script>
   <script type="text/javascript">
     setInterval(function () {
-      {% if parsnp_request.status == 'Processing' %}
+      {% if tree_request.status == 'Processing' %}
         window.location = window.location.href;
       {% endif %}
     }, 45000)  // Refresh every 45 seconds
    </script>
 
    <script type="text/javascript">
-   var tree_string = "{{ parsnp_request.newick_tree }}";
+   var tree_string = "{{ tree_request.newick_tree }}";
    var tree = d3.layout.phylotree().svg(d3.select('#tree_display')).options(
      { 'zoom': true,
        'left-right-spacing': 'fit-to-size',

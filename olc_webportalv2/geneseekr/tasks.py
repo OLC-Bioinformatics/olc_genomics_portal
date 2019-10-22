@@ -213,21 +213,21 @@ def run_amr_summary(amr_summary_pk):
 
 
 @shared_task
-def run_mash(parsnp_request_pk):
-    parsnp_request = Tree.objects.get(pk=parsnp_request_pk)
+def run_mash(tree_request_pk):
+    tree_request = Tree.objects.get(pk=tree_request_pk)
     try:
-        container_name = 'mash-{}'.format(parsnp_request_pk)
+        container_name = 'mash-{}'.format(tree_request_pk)
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         # Set number of cpus to use/VM size based on how many sequences are input.
-        if len(parsnp_request.seqids) < 10:
+        if len(tree_request.seqids) < 10:
             vm_size = 'Standard_D4s_v3'
             cpus = 4
-        elif len(parsnp_request.seqids) < 30:
+        elif len(tree_request.seqids) < 30:
             vm_size = 'Standard_D8s_v3'
             cpus = 8
-        elif len(parsnp_request.seqids) < 150:
+        elif len(tree_request.seqids) < 150:
             vm_size = 'Standard_D16s_v3'
             cpus = 16
         else:
@@ -235,20 +235,20 @@ def run_mash(parsnp_request_pk):
             cpus = 32
         # Create our config file for submission to azure batch service.
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        make_config_file(seqids=parsnp_request.seqids,
+        make_config_file(seqids=tree_request.seqids,
                              job_name=container_name,
                              input_data_folder='sequences',
                              output_data_folder=container_name,
                              command='source $CONDA/activate /envs/mashtree && mkdir {outdir} && mashtree --numcpus '
-                                     '{cpus} sequences/*.fasta > {outdir}/parsnp.tree'.format(outdir=container_name, cpus=cpus),
+                                     '{cpus} sequences/*.fasta > {outdir}/mash.tree'.format(outdir=container_name, cpus=cpus),
                              config_file=batch_config_file,
                              vm_size=vm_size,
-                             other_input_files=parsnp_request.other_input_files)
+                             other_input_files=tree_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        TreeAzureRequest.objects.create(parsnp_request=parsnp_request,
+        TreeAzureRequest.objects.create(tree_request=tree_request,
                                           exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
         # Delete any downloaded fasta files that were used in zip creation if necessary.
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
@@ -257,8 +257,8 @@ def run_mash(parsnp_request_pk):
  
     except Exception as e:
         capture_exception(e)
-        parsnp_request.status = 'Error'
-        parsnp_request.save()
+        tree_request.status = 'Error'
+        tree_request.save()
 
 
 def send_email(subject, body, recipient):

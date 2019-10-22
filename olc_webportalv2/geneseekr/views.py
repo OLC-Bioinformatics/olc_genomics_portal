@@ -138,7 +138,7 @@ def geneseekr_results(request, geneseekr_request_pk):
 @login_required
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    parsnp_requests = Tree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+    tree_requests = Tree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
 
     if request.method == "POST":
         if request.POST.get('delete'): 
@@ -148,7 +148,7 @@ def tree_home(request):
     return render(request,
                   'geneseekr/tree_home.html',
                   {
-                      'parsnp_requests': parsnp_requests
+                      'tree_requests': tree_requests
                   })
 
 
@@ -159,18 +159,18 @@ def tree_request(request):
         form = TreeForm(request.POST, request.FILES)
         if form.is_valid():
             seqids, name, number_diversitree_strains, other_files = form.cleaned_data
-            parsnp_request = Tree.objects.create(user=request.user,
+            tree_request = Tree.objects.create(user=request.user,
                                                        seqids=seqids)
-            parsnp_request.status = 'Processing'
+            tree_request.status = 'Processing'
             if name is None:
-                parsnp_request.name = parsnp_request.pk
+                tree_request.name = tree_request.pk
             else:
-                parsnp_request.name = name
+                tree_request.name = name
             if number_diversitree_strains is None:
-                parsnp_request.number_diversitree_strains = 0
+                tree_request.number_diversitree_strains = 0
             else:
-                parsnp_request.number_diversitree_strains = number_diversitree_strains
-            container_name = 'tree-{}'.format(parsnp_request.pk)
+                tree_request.number_diversitree_strains = number_diversitree_strains
+            container_name = 'tree-{}'.format(tree_request.pk)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
@@ -181,10 +181,10 @@ def tree_request(request):
                 blob_client.create_blob_from_bytes(container_name=container_name,
                                                    blob_name=other_file.name,
                                                    blob=other_file.read())
-            parsnp_request.other_input_files = file_names
-            parsnp_request.save()
-            run_mash.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
-            return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)
+            tree_request.other_input_files = file_names
+            tree_request.save()
+            run_mash.apply_async(queue='cowbat', args=(tree_request.pk, ), countdown=10)
+            return redirect('geneseekr:tree_result', tree_request_pk=tree_request.pk)
     return render(request,
                   'geneseekr/tree_request.html',
                   {
@@ -193,43 +193,43 @@ def tree_request(request):
 
 
 @login_required
-def tree_result(request, parsnp_request_pk):
-    parsnp_request = get_object_or_404(Tree, pk=parsnp_request_pk)
-    id_dict = id_sync(parsnp_request.seqids)
+def tree_result(request, tree_request_pk):
+    tree_request = get_object_or_404(Tree, pk=tree_request_pk)
+    id_dict = id_sync(tree_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
-            if email not in parsnp_request.emails_array:
-                    parsnp_request.emails_array.append(email)
-                    parsnp_request.save()
+            if email not in tree_request.emails_array:
+                    tree_request.emails_array.append(email)
+                    tree_request.save()
                     form = EmailForm()
                     messages.success(request, _('Email saved'))
     return render(request,
                   'geneseekr/tree_result.html',
                   {
-                      'parsnp_request': parsnp_request, 
+                      'tree_request': tree_request, 
                       'form': form, 
                       'idDict': id_dict,
                   })
 
 
 @login_required
-def tree_name(request, parsnp_request_pk):
+def tree_name(request, tree_request_pk):
     form = NameForm()
-    parsnp_request = get_object_or_404(Tree, pk=parsnp_request_pk)
+    tree_request = get_object_or_404(Tree, pk=tree_request_pk)
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():
-            parsnp_request.name = form.cleaned_data['name']
-            parsnp_request.save()
+            tree_request.name = form.cleaned_data['name']
+            tree_request.save()
         return redirect('geneseekr:tree_home')
         
     return render(request,
                   'geneseekr/tree_name.html',
                   {
-                      'parsnp_request': parsnp_request,  
+                      'tree_request': tree_request,  
                       'form': form
                   })
 

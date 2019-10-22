@@ -22,43 +22,43 @@
     </tr>
   </thead>
   <tbody>
-     {% for parsnp_request in parsnp_requests %}
+     {% for tree_request in tree_requests %}
      <tr style="text-align:center">
        <td style="text-indent: 7px">
-          {% for seqid in parsnp_request.seqids|slice:":3" %}
+          {% for seqid in tree_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
-         {% if parsnp_request.seqids|length > 3 %}
-           <p style="font-size:14px">{%trans "...and"%}{{ parsnp_request.seqids|length|add:'-3' }} {%trans "more"%}</p>
+         {% if tree_request.seqids|length > 3 %}
+           <p style="font-size:14px">{%trans "...and"%}{{ tree_request.seqids|length|add:'-3' }} {%trans "more"%}</p>
          {% endif %}
        </td>
-          {% if parsnp_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=parsnp_request.pk %}" class="btn btn-success btn-block" role="button">{% trans "Complete"%} <i class="fas fa-check-circle"></i></a></td>
-          {% elif parsnp_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans "Processing"%} </a></td>
-          {% elif parsnp_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {% trans "Error"%}     </a></td>
-          {% elif parsnp_request.status == 'Unprocessed' %}
+          {% if tree_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:tree_result' tree_request_pk=tree_request.pk %}" class="btn btn-success btn-block" role="button">{% trans "Complete"%} <i class="fas fa-check-circle"></i></a></td>
+          {% elif tree_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:tree_result'  tree_request_pk=tree_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans "Processing"%} </a></td>
+          {% elif tree_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:tree_result'  tree_request_pk=tree_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {% trans "Error"%}     </a></td>
+          {% elif tree_request.status == 'Unprocessed' %}
              <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
           {% endif %}
 
-          {% if parsnp_request.status == 'Complete' %}
-            <td><a href="{{ parsnp_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download"%} <i class="fas fa-download"></i></a></td>
+          {% if tree_request.status == 'Complete' %}
+            <td><a href="{{ tree_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download"%} <i class="fas fa-download"></i></a></td>
           {% else %}
             <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available"%}</button></td>
           {% endif %}
       
-          <td style="text-indent: 5px">{{ parsnp_request.created_at }}</td>
+          <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
-        {% if parsnp_request.status != 'Processing' and 'Unprocessed' %}
-          <form id="form{{parsnp_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}>{% trans "Delete"%}  <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' id="delete{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}>
+        {% if tree_request.status != 'Processing' and 'Unprocessed' %}
+          <form id="form{{tree_request.pk}}" method="post">
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}>{% trans "Delete"%}  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' id="delete{{tree_request.pk}}" name="delete" value={{tree_request.pk}}>
           </form>
         {% else %}
           <td></td>
         {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name' parsnp_request.pk %}">{{parsnp_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name' tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
      </tr>
      {% endfor %}
   </tbody>
@@ -80,8 +80,8 @@
         .draw();
     });
     setInterval(function () {
-      {% for parsnp_request in parsnp_requests %}
-        {% if parsnp_request.status == 'Processing' %}
+      {% for tree_request in tree_requests %}
+        {% if tree_request.status == 'Processing' %}
           window.location = window.location.href;
         {% endif %}
       {% endfor %}

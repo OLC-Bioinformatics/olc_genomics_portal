@@ -264,14 +264,14 @@ def check_cowbat_tasks():
 
 
 def check_tree_tasks():
-    # Also check for Parsnp tree creation tasks
+    # Also check for Mash tree creation tasks
     tree_tasks = TreeAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
-        tree_task = Tree.objects.get(pk=task.parsnp_request.pk)
-        batch_job_name = 'mash-{}'.format(task.parsnp_request.pk)
-        # Check if tasks related with this parsnp job have finished.
+        tree_task = Tree.objects.get(pk=task.tree_request.pk)
+        batch_job_name = 'mash-{}'.format(task.tree_request.pk)
+        # Check if tasks related with this mash job have finished.
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
@@ -279,7 +279,7 @@ def check_tree_tasks():
                     tasks_completed = False
 
         except:  # If something errors first time through job doesn't exist. In that case, give up.
-            Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+            Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             TreeAzureRequest.objects.filter(id=task.id).delete()
             continue
@@ -300,7 +300,7 @@ def check_tree_tasks():
                 download_container(blob_service=blob_client,
                                    container_name=batch_job_name + '-output',
                                    output_dir='olc_webportalv2/media')
-                tree_file = 'olc_webportalv2/media/mash-{}/parsnp.tree'.format(tree_task.pk)
+                tree_file = 'olc_webportalv2/media/mash-{}/mash.tree'.format(tree_task.pk)
                 with open(tree_file) as f:
                     tree_string = f.readline()
                 if tree_task.number_diversitree_strains > 0:
@@ -310,17 +310,17 @@ def check_tree_tasks():
                     tree_task.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
-                # Should now have results from parsnp in olc_webportalv2/media/mash-X, where X is pk of parsnp request
-                parsnp_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
-                os.remove(os.path.join(parsnp_output_folder, 'batch_config.txt'))
+                # Should now have results from mash in olc_webportalv2/media/mash-X, where X is pk of tree request
+                tree_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
+                os.remove(os.path.join(tree_output_folder, 'batch_config.txt'))
                 # Need to zip this folder and then upload the zipped folder to cloud
-                shutil.make_archive(parsnp_output_folder, 'zip', parsnp_output_folder)
+                shutil.make_archive(tree_output_folder, 'zip', tree_output_folder)
                 tree_result_container = 'tree-{}'.format(tree_task.pk)
                 sas_url = generate_download_link(blob_client=blob_client,
                                                  container_name=tree_result_container,
-                                                 output_zipfile=parsnp_output_folder + '.zip',
+                                                 output_zipfile=tree_output_folder + '.zip',
                                                  expiry=8)
-                shutil.rmtree(parsnp_output_folder)
+                shutil.rmtree(tree_output_folder)
                 zip_folder = 'olc_webportalv2/media/{}.zip'.format(batch_job_name)
                 if os.path.isfile(zip_folder):
                     os.remove(zip_folder)
@@ -335,7 +335,7 @@ def check_tree_tasks():
                 #     recipient=email)
 
             else:
-                Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+                Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             TreeAzureRequest.objects.filter(id=task.id).delete()
 
@@ -558,7 +558,7 @@ def monitor_tasks():
     except Exception as e:
         capture_exception(e)
 
-    # Also check for Parsnp tree creation tasks
+    # Also check for Mash tree creation tasks
     try:
         check_tree_tasks()
     except Exception as e:

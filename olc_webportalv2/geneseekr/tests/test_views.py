@@ -75,12 +75,12 @@ class SampleTestCase(TestCase):
             self.assertNotIn(request.name, resp.content.decode('utf-8'))
 
     def test_tree_result_login_required(self):
-        resp = self.client.get(reverse('geneseekr:tree_result', kwargs={'parsnp_request_pk': 1}))
+        resp = self.client.get(reverse('geneseekr:tree_result', kwargs={'tree_request_pk': 1}))
         self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.
 
     def test_tree_result_404_no_run(self):
         self.client.login(username='TestUser', password='password')
-        resp = self.client.get(reverse('geneseekr:tree_result', kwargs={'parsnp_request_pk': 123}))
+        resp = self.client.get(reverse('geneseekr:tree_result', kwargs={'tree_request_pk': 123}))
         self.assertEqual(resp.status_code, 404)
 
 # AMR View Tests ----------------------------------------------------------------------------------------------------------------->

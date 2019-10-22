@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 18:04+0000\n"
+"POT-Creation-Date: 2019-10-22 19:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -64,10 +64,10 @@ msgid "^retry_sequence_data_upload/(?P<sequencing_run_pk>\\d+)/$"
 msgstr "^réessayer/(?P<sequencing_run_pk>\\d+)/$"
 
 #: olc_webportalv2/cowbat/views.py:109 olc_webportalv2/geneseekr/views.py:108
-#: olc_webportalv2/geneseekr/views.py:209
-#: olc_webportalv2/geneseekr/views.py:317
-#: olc_webportalv2/geneseekr/views.py:411
-#: olc_webportalv2/geneseekr/views.py:497
+#: olc_webportalv2/geneseekr/views.py:208
+#: olc_webportalv2/geneseekr/views.py:316
+#: olc_webportalv2/geneseekr/views.py:410
+#: olc_webportalv2/geneseekr/views.py:496
 msgid "Email saved"
 msgstr "Email enregistré"
 
@@ -330,12 +330,12 @@ msgid "^tree_request/"
 msgstr "^arbre_requête/"
 
 #: olc_webportalv2/geneseekr/urls.py:16
-msgid "^tree_result/(?P<parsnp_request_pk>\\d+)/$"
-msgstr "^arbre_résultats/(?P<parsnp_request_pk>\\d+)/$"
+msgid "^tree_result/(?P<tree_request_pk>\\d+)/$"
+msgstr "^arbre_résultats/(?P<tree_request_pk>\\d+)/$"
 
 #: olc_webportalv2/geneseekr/urls.py:17
-msgid "^tree_name/(?P<parsnp_request_pk>\\d+)/$"
-msgstr "^arbre_nom/(?P<parsnp_request_pk>\\d+)/$"
+msgid "^tree_name/(?P<tree_request_pk>\\d+)/$"
+msgstr "^arbre_nom/(?P<tree_request_pk>\\d+)/$"
 
 #: olc_webportalv2/geneseekr/urls.py:20
 msgid "^amr_home/"
