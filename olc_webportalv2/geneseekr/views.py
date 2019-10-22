@@ -8,11 +8,11 @@ from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import datetime
 # Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, NameForm, EmailForm, \
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, TreeForm, AMRForm, ProkkaForm, NameForm, EmailForm, \
     NearNeighborForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, AMRSummary, \
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
-from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, \
+from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_mash, run_amr_summary, run_prokka, \
     run_nearest_neighbors
 from olc_webportalv2.metadata.views import id_sync
 from azure.storage.blob import BlockBlobService
@@ -154,11 +154,11 @@ def tree_home(request):
 
 @login_required
 def tree_request(request):
-    form = ParsnpForm()
+    form = TreeForm()
     if request.method == 'POST':
-        form = ParsnpForm(request.POST, request.FILES)
+        form = TreeForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains, other_files = form.cleaned_data
+            seqids, name, number_diversitree_strains, other_files = form.cleaned_data
             parsnp_request = Tree.objects.create(user=request.user,
                                                        seqids=seqids)
             parsnp_request.status = 'Processing'
@@ -170,8 +170,7 @@ def tree_request(request):
                 parsnp_request.number_diversitree_strains = 0
             else:
                 parsnp_request.number_diversitree_strains = number_diversitree_strains
-            parsnp_request.tree_program = tree_program
-            container_name = 'parsnp-{}'.format(parsnp_request.pk)
+            container_name = 'tree-{}'.format(parsnp_request.pk)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
@@ -184,7 +183,7 @@ def tree_request(request):
                                                    blob=other_file.read())
             parsnp_request.other_input_files = file_names
             parsnp_request.save()
-            run_parsnp.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
+            run_mash.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)
     return render(request,
                   'geneseekr/tree_request.html',
@@ -268,7 +267,7 @@ def amr_request(request):
                 amr_request.name = amr_request.pk
             else:
                 amr_request.name = name
-            container_name = 'parsnp-{}'.format(amr_request.pk)
+            container_name = 'mash-{}'.format(amr_request.pk)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)

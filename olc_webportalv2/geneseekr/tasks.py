@@ -213,10 +213,10 @@ def run_amr_summary(amr_summary_pk):
 
 
 @shared_task
-def run_parsnp(parsnp_request_pk):
+def run_mash(parsnp_request_pk):
     parsnp_request = Tree.objects.get(pk=parsnp_request_pk)
     try:
-        container_name = 'parsnp-{}'.format(parsnp_request_pk)
+        container_name = 'mash-{}'.format(parsnp_request_pk)
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)

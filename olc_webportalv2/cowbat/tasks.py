@@ -270,7 +270,7 @@ def check_tree_tasks():
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
         tree_task = Tree.objects.get(pk=task.parsnp_request.pk)
-        batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
+        batch_job_name = 'mash-{}'.format(task.parsnp_request.pk)
         # Check if tasks related with this parsnp job have finished.
         tasks_completed = True
         try:
@@ -300,7 +300,7 @@ def check_tree_tasks():
                 download_container(blob_service=blob_client,
                                    container_name=batch_job_name + '-output',
                                    output_dir='olc_webportalv2/media')
-                tree_file = 'olc_webportalv2/media/parsnp-{}/parsnp.tree'.format(tree_task.pk)
+                tree_file = 'olc_webportalv2/media/mash-{}/parsnp.tree'.format(tree_task.pk)
                 with open(tree_file) as f:
                     tree_string = f.readline()
                 if tree_task.number_diversitree_strains > 0:
@@ -310,7 +310,7 @@ def check_tree_tasks():
                     tree_task.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
-                # Should now have results from parsnp in olc_webportalv2/media/parsnp-X, where X is pk of parsnp request
+                # Should now have results from parsnp in olc_webportalv2/media/mash-X, where X is pk of parsnp request
                 parsnp_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
                 os.remove(os.path.join(parsnp_output_folder, 'batch_config.txt'))
                 # Need to zip this folder and then upload the zipped folder to cloud
@@ -631,8 +631,8 @@ def clean_old_containers():
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$', 'amrsummary-\d+$',
-                          '^amrsummary-\d+-output$', '^prokka-\d+$', '^parsnp-\d+$',
-                          '^prokka-\d+-output$', '^parsnp-\d+-output$', '^prokka-result-\d+$',
+                          '^amrsummary-\d+-output$', '^prokka-\d+$', '^mash-\d+$',
+                          '^prokka-\d+-output$', '^mash-\d+-output$', '^prokka-result-\d+$',
                           '^tree-\d+$']
     generator = blob_client.list_containers(include_metadata=True)
     for container in generator:

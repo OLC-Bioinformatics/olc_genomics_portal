@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.http import QueryDict
-from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm, ProkkaForm, NearNeighborForm
+from olc_webportalv2.geneseekr.forms import TreeForm, GeneSeekrForm, AMRForm, ProkkaForm, NearNeighborForm
 from olc_webportalv2.metadata.models import SequenceData
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -97,7 +97,7 @@ class GeneSeekrFormTest(TestCase):
         self.assertFalse(form.is_valid())
 
 
-class ParsnpFormTest(TestCase):
+class TreeFormTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
@@ -110,7 +110,7 @@ class ParsnpFormTest(TestCase):
         sequence_data.save()
 
     def test_valid_form(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712'
         }, QueryDict())
         self.assertTrue(form.is_valid())
@@ -118,31 +118,31 @@ class ParsnpFormTest(TestCase):
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712',
         }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712'
         }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_negative_number_diversitree_strains(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712', 'number_diversitree_strains':'-2'
         }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_large_number_diversitree_strains(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712', 'number_diversitree_strains':'5'
         }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
-        form = ParsnpForm({
+        form = TreeForm({
             'seqids': ''
         }, QueryDict())
         self.assertFalse(form.is_valid())

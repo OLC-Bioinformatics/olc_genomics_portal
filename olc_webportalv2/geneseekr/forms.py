@@ -149,7 +149,7 @@ class GeneSeekrForm(forms.Form):
         return seqid_list, query_sequence
 
 
-class ParsnpForm(forms.Form):
+class TreeForm(forms.Form):
     name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
 
