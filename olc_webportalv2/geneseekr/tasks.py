@@ -8,7 +8,7 @@ import multiprocessing
 from io import StringIO
 from django.conf import settings
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
-    ParsnpAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
+    TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
 from sentry_sdk import capture_exception
@@ -248,7 +248,7 @@ def run_parsnp(parsnp_request_pk):
         # Use Popen to run in background so that task is considered complete.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        ParsnpAzureRequest.objects.create(parsnp_request=parsnp_request,
+        TreeAzureRequest.objects.create(parsnp_request=parsnp_request,
                                           exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
         # Delete any downloaded fasta files that were used in zip creation if necessary.
         fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))

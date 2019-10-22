@@ -1,6 +1,6 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
+from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
     AMRDetail, ProkkaRequest, ProkkaAzureRequest
 from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
@@ -265,7 +265,7 @@ def check_cowbat_tasks():
 
 def check_tree_tasks():
     # Also check for Parsnp tree creation tasks
-    tree_tasks = ParsnpAzureRequest.objects.filter()
+    tree_tasks = TreeAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
@@ -281,7 +281,7 @@ def check_tree_tasks():
         except:  # If something errors first time through job doesn't exist. In that case, give up.
             Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            ParsnpAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=task.id).delete()
             continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
@@ -337,7 +337,7 @@ def check_tree_tasks():
             else:
                 Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            ParsnpAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=task.id).delete()
 
 
 def check_amr_summary_tasks():
