@@ -154,7 +154,6 @@ class ParsnpForm(forms.Form):
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
 
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
-    tree_program = forms.ChoiceField(label=_('Which tree program? '), initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
     number_diversitree_strains = forms.IntegerField(label= _('Number of diversitree strains'), min_value=0,required=False)
 
     def clean(self):
@@ -168,10 +167,6 @@ class ParsnpForm(forms.Form):
             name = self.cleaned_data['name']
         except KeyError:
             name = None
-        try:
-            tree_program = self.cleaned_data['tree_program']
-        except KeyError:
-            tree_program = 'parsnp'
         try:
             number_diversitree_strains = self.cleaned_data['number_diversitree_strains']
         except KeyError:
@@ -210,7 +205,7 @@ class ParsnpForm(forms.Form):
                 raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
         if len(seqid_list) + len(other_files) < 2:
             raise forms.ValidationError(_('At least two input sequences must be given.'))
-        return seqid_list, name, tree_program, number_diversitree_strains, other_files
+        return seqid_list, name, number_diversitree_strains, other_files
 
 
 class AMRForm(forms.Form):

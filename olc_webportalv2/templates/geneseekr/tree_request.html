@@ -19,7 +19,6 @@
       <p>{%trans "Enter SeqIDs to use to build your tree:"%}</p>
       {{ form.seqids|as_crispy_field }}
       {{ form.other_files|as_crispy_field }}
-      {{form.tree_program|as_crispy_field }}
 
       <div class="col-3" style="padding-left:0;">
       {{form.number_diversitree_strains|as_crispy_field }}
@@ -32,16 +31,6 @@
   <script type="text/javascript">
   $(document).ready(function () {
   // adds tool tips 
-  var tree_options = document.getElementsByClassName('form-check');
-  $(tree_options[0]).attr('data-tooltip','tooltip');
-  $(tree_options[0]).attr('title',"{%trans 'Mashtree makes trees very quickly, but will not provide very good resolution on closely related strains.'%}");
-  $(tree_options[1]).attr('data-tooltip','tooltip');
-  $(tree_options[1]).attr('title',"{%trans 'Parsnp is slower than mashtree but more capable of discriminating between closely related strains. It does not work if your strains are not closely related (keep it to the same species!)'%}");
-
-  var diversitree = document.getElementById('div_id_number_diversitree_strains');
-  $(diversitree).attr('data-tooltip','tooltip');
-  $(diversitree).attr('title', "{%trans 'If you want to choose a subset of strains that contain the most phylogenetic diversity possible, enter the number of strains you want chosen here.'%}");
-
   var seqids = document.getElementById('div_id_seqids');
   $(seqids).attr('data-tooltip','tooltip');
   $(seqids).attr('title', "{%trans 'Enter SeqIDs you want to build a tree from here, one per line.'%}");

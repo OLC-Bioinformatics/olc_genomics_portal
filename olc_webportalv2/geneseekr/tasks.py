@@ -235,17 +235,7 @@ def run_parsnp(parsnp_request_pk):
             cpus = 32
         # Create our config file for submission to azure batch service.
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        if parsnp_request.tree_program == 'parsnp':
-            make_config_file(seqids=parsnp_request.seqids,
-                             job_name=container_name,
-                             input_data_folder='sequences',
-                             output_data_folder=container_name,
-                             command='source $CONDA/activate /envs/parsnp && parsnp -d sequences -r! -o {} -p {}'.format(container_name, cpus),
-                             config_file=batch_config_file,
-                             vm_size=vm_size,
-                             other_input_files=parsnp_request.other_input_files)
-        elif parsnp_request.tree_program == 'mashtree':
-            make_config_file(seqids=parsnp_request.seqids,
+        make_config_file(seqids=parsnp_request.seqids,
                              job_name=container_name,
                              input_data_folder='sequences',
                              output_data_folder=container_name,

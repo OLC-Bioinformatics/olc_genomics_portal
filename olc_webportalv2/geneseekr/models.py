@@ -60,7 +60,6 @@ class ParsnpTree(models.Model):
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=64, default='Unprocessed')
-    tree_program = models.CharField(max_length=10000,null=False, default="parsnp")
     number_diversitree_strains = models.IntegerField(blank=True, null=True)
     seqids_diversitree = ArrayField(models.CharField(max_length=24), blank=True, default=list)
 

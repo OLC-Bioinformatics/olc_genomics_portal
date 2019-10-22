@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-18 19:02+0000\n"
+"POT-Creation-Date: 2019-10-22 17:12+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -63,22 +63,22 @@ msgstr "^données_séquentielles/(?P<sequencing_run_pk>\\d+)/$"
 msgid "^retry_sequence_data_upload/(?P<sequencing_run_pk>\\d+)/$"
 msgstr "^réessayer/(?P<sequencing_run_pk>\\d+)/$"
 
-#: olc_webportalv2/cowbat/views.py:109 olc_webportalv2/geneseekr/views.py:110
+#: olc_webportalv2/cowbat/views.py:109 olc_webportalv2/geneseekr/views.py:108
 #: olc_webportalv2/geneseekr/views.py:209
-#: olc_webportalv2/geneseekr/views.py:311
-#: olc_webportalv2/geneseekr/views.py:404
-#: olc_webportalv2/geneseekr/views.py:491
+#: olc_webportalv2/geneseekr/views.py:317
+#: olc_webportalv2/geneseekr/views.py:411
+#: olc_webportalv2/geneseekr/views.py:497
 msgid "Email saved"
 msgstr "Email enregistré"
 
 #: olc_webportalv2/data/forms.py:8 olc_webportalv2/geneseekr/forms.py:47
 #: olc_webportalv2/geneseekr/forms.py:154
-#: olc_webportalv2/geneseekr/forms.py:218
-#: olc_webportalv2/geneseekr/forms.py:269
+#: olc_webportalv2/geneseekr/forms.py:213
+#: olc_webportalv2/geneseekr/forms.py:264
 msgid "YYYY-LAB-####"
 msgstr "AAAA-LAB-####"
 
-#: olc_webportalv2/data/forms.py:13 olc_webportalv2/geneseekr/forms.py:329
+#: olc_webportalv2/data/forms.py:13 olc_webportalv2/geneseekr/forms.py:324
 msgid "Cannot be blank"
 msgstr "Ne peut pas être vide!"
 
@@ -95,8 +95,8 @@ msgstr ""
 "d'avoir saisi une SEQID par ligne. SEQIDS invalide: %s"
 
 #: olc_webportalv2/data/forms.py:34 olc_webportalv2/geneseekr/forms.py:82
-#: olc_webportalv2/geneseekr/forms.py:255
-#: olc_webportalv2/geneseekr/forms.py:307
+#: olc_webportalv2/geneseekr/forms.py:250
+#: olc_webportalv2/geneseekr/forms.py:302
 #, python-format
 msgid ""
 "One or more of the SEQIDs you entered was not found in our database. SEQIDs "
@@ -122,8 +122,8 @@ msgid "^data_download/(?P<data_request_pk>\\d+)/$"
 msgstr "^télécharger/(?P<data_request_pk>\\d+)/$"
 
 #: olc_webportalv2/geneseekr/forms.py:14 olc_webportalv2/geneseekr/forms.py:153
-#: olc_webportalv2/geneseekr/forms.py:217
-#: olc_webportalv2/geneseekr/forms.py:268
+#: olc_webportalv2/geneseekr/forms.py:212
+#: olc_webportalv2/geneseekr/forms.py:263
 msgid "Name: "
 msgstr "Nom: "
 
@@ -169,9 +169,9 @@ msgstr ""
 ">Gène \n"
 " ACGTACGT"
 
-#: olc_webportalv2/geneseekr/forms.py:68 olc_webportalv2/geneseekr/forms.py:188
-#: olc_webportalv2/geneseekr/forms.py:241
-#: olc_webportalv2/geneseekr/forms.py:293
+#: olc_webportalv2/geneseekr/forms.py:68 olc_webportalv2/geneseekr/forms.py:183
+#: olc_webportalv2/geneseekr/forms.py:236
+#: olc_webportalv2/geneseekr/forms.py:288
 #, python-format
 msgid ""
 "One or more of the SEQIDs you entered was not formatted correctly. Correct "
@@ -244,53 +244,49 @@ msgstr ""
 "d'entrée avait des %s bases"
 
 #: olc_webportalv2/geneseekr/forms.py:153
-#: olc_webportalv2/geneseekr/forms.py:217
-#: olc_webportalv2/geneseekr/forms.py:268
-#: olc_webportalv2/geneseekr/forms.py:319
+#: olc_webportalv2/geneseekr/forms.py:212
+#: olc_webportalv2/geneseekr/forms.py:263
+#: olc_webportalv2/geneseekr/forms.py:314
 msgid "Optional"
 msgstr "Facultatif"
 
 #: olc_webportalv2/geneseekr/forms.py:157
-msgid "Which tree program? "
-msgstr "Quel programme d'arborescence ?"
-
-#: olc_webportalv2/geneseekr/forms.py:158
 msgid "Number of diversitree strains"
 msgstr "Nombre de souches de diversitree"
 
-#: olc_webportalv2/geneseekr/forms.py:166
-#: olc_webportalv2/geneseekr/forms.py:227
-#: olc_webportalv2/geneseekr/forms.py:278
+#: olc_webportalv2/geneseekr/forms.py:165
+#: olc_webportalv2/geneseekr/forms.py:222
+#: olc_webportalv2/geneseekr/forms.py:273
 msgid "Input cannot be only whitespace"
 msgstr "L'entrée ne peut pas être seulement vide."
 
-#: olc_webportalv2/geneseekr/forms.py:207
+#: olc_webportalv2/geneseekr/forms.py:202
 #, python-format
 msgid "Too many Diversitree strains selected, must be %s or less"
 msgstr "Trop de souches Diversitree sélectionnées, doivent être en %s ou moins"
 
-#: olc_webportalv2/geneseekr/forms.py:210
-#: olc_webportalv2/geneseekr/forms.py:260
-#: olc_webportalv2/geneseekr/forms.py:313
+#: olc_webportalv2/geneseekr/forms.py:205
+#: olc_webportalv2/geneseekr/forms.py:255
+#: olc_webportalv2/geneseekr/forms.py:308
 msgid "All files uploaded must be in FASTA format with the extension .fasta"
 msgstr ""
 "Tous les fichiers téléchargés doivent être au format FASTA avec l'extension ."
 "fasta"
 
-#: olc_webportalv2/geneseekr/forms.py:212
+#: olc_webportalv2/geneseekr/forms.py:207
 msgid "At least two input sequences must be given."
 msgstr "Au moins deux séquences d'entrée doivent être données."
 
-#: olc_webportalv2/geneseekr/forms.py:263
+#: olc_webportalv2/geneseekr/forms.py:258
 msgid "At least one input sequence must be given."
 msgstr "Au moins une séquence d'entrée doit être donnée."
 
-#: olc_webportalv2/geneseekr/forms.py:310
+#: olc_webportalv2/geneseekr/forms.py:305
 msgid "Must enter at least one SeqID or upload at least one file."
 msgstr ""
 "Vous devez saisir au moins un SeqID ou télécharger au moins un fichier."
 
-#: olc_webportalv2/geneseekr/forms.py:319
+#: olc_webportalv2/geneseekr/forms.py:314
 #: olc_webportalv2/templates/geneseekr/amr_home.html:20
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:20
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:20
@@ -301,7 +297,7 @@ msgstr ""
 msgid "Name"
 msgstr "Nom"
 
-#: olc_webportalv2/geneseekr/forms.py:331
+#: olc_webportalv2/geneseekr/forms.py:326
 msgid "Must be in proper email format"
 msgstr "Doit être dans le bon format de courriel"
 
@@ -507,7 +503,7 @@ msgid "Re-send Verification"
 msgstr "Renvoyer la Vérification"
 
 #: olc_webportalv2/templates/account/email.html:43
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:67
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:65
 msgid "Remove"
 msgstr "Retirer"
 
@@ -777,7 +773,7 @@ msgstr "Trouver des gènes "
 
 #: olc_webportalv2/templates/base.html:78
 #: olc_webportalv2/templates/base.html:220
-#: olc_webportalv2/templates/geneseekr/tree_request.html:28
+#: olc_webportalv2/templates/geneseekr/tree_request.html:27
 msgid "Create Tree "
 msgstr "Créer un arbre phylogénétique "
 
@@ -921,7 +917,7 @@ msgstr "Téléchargement du rapport"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:73
 #: olc_webportalv2/templates/geneseekr/tree_home.html:42
 #: olc_webportalv2/templates/geneseekr/tree_result.html:72
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:39
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
 msgid "Unprocessed"
 msgstr "Non traité"
 
@@ -938,8 +934,8 @@ msgstr "Non traité"
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:46
 #: olc_webportalv2/templates/geneseekr/tree_home.html:17
 #: olc_webportalv2/templates/geneseekr/tree_home.html:46
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:43
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:38
 msgid "Download"
 msgstr "Télécharger"
 
@@ -950,7 +946,7 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:45
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:48
 #: olc_webportalv2/templates/geneseekr/tree_home.html:48
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:40
 msgid "Not Available"
 msgstr "Indisponible"
 
@@ -971,7 +967,7 @@ msgstr "Statut COWBAT pour"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:77
 #: olc_webportalv2/templates/geneseekr/tree_home.html:40
 #: olc_webportalv2/templates/geneseekr/tree_result.html:75
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:37
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
 msgid "Error"
 msgstr "Erreur"
 
@@ -1016,7 +1012,7 @@ msgstr "Réessayer le téléchargement de séquence pour"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:20
 #: olc_webportalv2/templates/geneseekr/tree_home.html:38
 #: olc_webportalv2/templates/geneseekr/tree_result.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:31
 msgid "Processing"
 msgstr "En traitement"
 
@@ -1109,7 +1105,7 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:82
 #: olc_webportalv2/templates/geneseekr/tree_home.html:36
 #: olc_webportalv2/templates/geneseekr/tree_result.html:79
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:29
 msgid "Complete"
 msgstr "Complet"
 
@@ -1154,7 +1150,7 @@ msgstr "Fichier"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:16
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:16
 #: olc_webportalv2/templates/geneseekr/tree_home.html:16
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
 msgid "Status"
 msgstr "Statut"
 
@@ -1206,6 +1202,7 @@ msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:256
 #: olc_webportalv2/templates/data/assembled_data.html:29
 #: olc_webportalv2/templates/data/raw_data.html:29
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
 msgid "Why here"
 msgstr ""
 
@@ -1215,7 +1212,7 @@ msgstr ""
 "Étape 3 de 3 : Charger les fichiers de séquence et commencer l'assemblage"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:18
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:39
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:40
 msgid "Validate Sequence Files"
 msgstr "Valider les fichiers de séquence"
 
@@ -1357,7 +1354,7 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:18
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:18
 #: olc_webportalv2/templates/geneseekr/tree_home.html:18
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:20
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 msgid "Request Date"
 msgstr "Date de la demande"
 
@@ -1408,7 +1405,7 @@ msgstr "Sélectionnez Séquence pour voir les résultats"
 
 #: olc_webportalv2/templates/geneseekr/amr_detail.html:27
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:26
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:158
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:153
 msgid "Gene"
 msgstr "Gène"
 
@@ -1448,7 +1445,7 @@ msgstr "Effacer"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:90
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:96
 #: olc_webportalv2/templates/geneseekr/tree_home.html:96
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:93
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:85
 msgid "Are you sure?"
 msgstr "Êtes-vous sûr?"
 
@@ -1457,7 +1454,7 @@ msgstr "Êtes-vous sûr?"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:91
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:97
 #: olc_webportalv2/templates/geneseekr/tree_home.html:97
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:94
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:86
 msgid "You will not be able to revert this!"
 msgstr "Vous ne pouvez pas reprendre ceci!"
 
@@ -1466,7 +1463,7 @@ msgstr "Vous ne pouvez pas reprendre ceci!"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:95
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:101
 #: olc_webportalv2/templates/geneseekr/tree_home.html:101
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:99
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:91
 msgid "Yes, delete it!"
 msgstr "Oui, effacez-le !"
 
@@ -1475,7 +1472,7 @@ msgstr "Oui, effacez-le !"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:96
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:102
 #: olc_webportalv2/templates/geneseekr/tree_home.html:102
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:89
 msgid "Cancel"
 msgstr "Annuler"
 
@@ -1484,7 +1481,7 @@ msgstr "Annuler"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:101
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:107
 #: olc_webportalv2/templates/geneseekr/tree_home.html:107
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:104
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:96
 msgid "Deleted!"
 msgstr "Effacé"
 
@@ -1501,7 +1498,7 @@ msgstr "Votre fichier a été effacé."
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:120
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:126
 #: olc_webportalv2/templates/geneseekr/tree_home.html:126
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:123
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
 msgid "Cancelled!"
 msgstr "Annulé!"
 
@@ -1634,6 +1631,7 @@ msgstr ""
 "Saisissez votre séquence de recherche, au format FASTA (ou téléchargez un "
 "fichier ci-dessous) :"
 
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:23
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:25
 msgid "Choose Genus to Search"
 msgstr "Choisir le genre à rechercher"
@@ -1655,26 +1653,29 @@ msgid "Return all sequences"
 msgstr "Retourne toutes les séquences"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
-msgid "except for"
+#, fuzzy
+#| msgid "except for"
+msgid "except for "
 msgstr "à l'exception de"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
 msgid "selected genus:"
 msgstr "le genre sélectionné:"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:38
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:35
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:37
 msgid "Choose SeqIDs to Search"
 msgstr "Choisissez SeqIDs à rechercher"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:43
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:41
 msgid "Search the following SeqIDs:"
 msgstr "Recherchez les SeqID suivantes:"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:51
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:48
 msgid "Run Query"
 msgstr "Exécuter une requête"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:59
+#: olc_webportalv2/templates/geneseekr/geneseekr_query.html:56
 msgid ""
 "Enter one or more query sequences in FASTA format, or upload a file below."
 msgstr ""
@@ -1706,7 +1707,7 @@ msgid "View Table"
 msgstr "Afficher le tableau"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:27
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:166
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:161
 msgid "sequences where gene was found"
 msgstr "les séquences où le gène a été trouvé"
 
@@ -1717,24 +1718,24 @@ msgstr ""
 "Ce tableau montre le pourcentage d'identité de chaque séquence pour chaque "
 "gène d'interrogation."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:99
 msgid "Name of the contig that the target sequence was found on."
 msgstr "Nom du contig sur lequel la séquence cible a été trouvée."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:99
 msgid "Contig"
 msgstr "Contig"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:100
 msgid "Percentage of the query sequence that was found."
 msgstr "Pourcentage de la séquence de requêtes trouvée."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:227
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:100
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:217
 msgid "Query Coverage"
 msgstr "Protection des requêtes"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
 msgid ""
 "How similar the query and target sequence were. 100 means completely "
 "identical, 0 means not at all."
@@ -1742,38 +1743,51 @@ msgstr ""
 "À quel point la requête et la séquence cible étaient similaires. 100 "
 "signifie complètement identique, 0 signifie pas du tout."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
 msgid "Percent Identity"
 msgstr "Pourcentage Identité"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
 msgid "Where on the contig the target gene was found."
 msgstr "Où sur le contig le gène cible a été trouvé."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
 msgid "Subject Start Position"
 msgstr "Position de départ du sujet"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:105
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
 msgid "Subject End Position"
 msgstr "Position finale du sujet"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:107
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
+msgid ""
+"Measure of significance of the query target match. Lower means more "
+"significant. For more info, check out https://www.researchgate.net/post/"
+"What_does_E_value_in_BLAST_actually_indicates"
+msgstr ""
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
 msgid "E Value"
 msgstr "E Valeur"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:125
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:122
 msgid "This gene had no BLAST hits."
 msgstr "Ce gène n'a pas été touché par BLAST."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:138
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:134
 msgid "GeneSeekr request not completed."
 msgstr "Demande de GeneSeekr non complétée."
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:210
-msgid "BLAST Hits for {{ gene }}: Query Length "
-msgstr "BLAST Hits pour {{ gene }} : Longueur de la requête "
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:204
+#, fuzzy
+#| msgid "Top BLAST Hits"
+msgid "BLAST Hits for: "
+msgstr "Meilleurs résultats BLAST"
+
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:204
+msgid ". Query length: "
+msgstr ""
 
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:8
 msgid "Create A Neighbor Query"
@@ -1909,34 +1923,7 @@ msgstr "Requête sur les arbres"
 msgid "Enter SeqIDs to use to build your tree:"
 msgstr "Saisissez les SeqIDs à utiliser pour construire votre arbre :"
 
-#: olc_webportalv2/templates/geneseekr/tree_request.html:37
-msgid ""
-"Mashtree makes trees very quickly, but will not provide very good resolution "
-"on closely related strains."
-msgstr ""
-"Mashtree produit des arbres très rapidement, mais n'offre pas une très bonne "
-"résolution sur les souches étroitement apparentées."
-
-#: olc_webportalv2/templates/geneseekr/tree_request.html:39
-msgid ""
-"Parsnp is slower than mashtree but more capable of discriminating between "
-"closely related strains. It does not work if your strains are not closely "
-"related (keep it to the same species!)"
-msgstr ""
-"Parsnp est plus lent que le mashtree mais plus capable de distinguer les "
-"souches étroitement apparentées. Il ne fonctionne pas si vos souches ne sont "
-"pas étroitement apparentées (gardez-les dans la même espèce !)"
-
-#: olc_webportalv2/templates/geneseekr/tree_request.html:43
-msgid ""
-"If you want to choose a subset of strains that contain the most phylogenetic "
-"diversity possible, enter the number of strains you want chosen here."
-msgstr ""
-"Si vous voulez choisir un sous-ensemble de souches qui contiennent le plus "
-"de diversité phylogénétique possible, saisissez ici le nombre de souches que "
-"vous voulez choisir."
-
-#: olc_webportalv2/templates/geneseekr/tree_request.html:47
+#: olc_webportalv2/templates/geneseekr/tree_request.html:36
 msgid "Enter SeqIDs you want to build a tree from here, one per line."
 msgstr ""
 "Saisissez les SeqIDs que vous voulez construire un arbre à partir d'ici, un "
@@ -2132,166 +2119,166 @@ msgstr "Création des échantillons"
 msgid "Select a unique name for this project"
 msgstr "Sélectionnez un nom unique pour ce projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:23
 msgid "Sample name e.g. VI0639"
 msgstr "Nom de l'échantillon p.ex. VI0639"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:27
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:26
 msgid "LSTS ID e.g. 2019FPP00000475214"
 msgstr "LSTS ID p. ex. 2019FPP0000000475214"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:30
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:29
 msgid "Laboratory name (select from list)"
 msgstr "Nom du laboratoire (choisir dans la liste)"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:33
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:32
 msgid "Sampling number (can be blank) e.g. 15"
 msgstr "Numéro d'échantillon (peut être blanc) p. ex. 15"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:36
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:35
 msgid "Initial classification (select from list)"
 msgstr "Classification initiale (choisir dans la liste)"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:41
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:40
 msgid "Source of sample e.g. oyster"
 msgstr "Source de l'échantillon, p. ex. huître"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:44
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:43
 msgid "Analyst name e.g. Jane Doe"
 msgstr "Nom de l'analyste, p. ex. Jane Doe"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:47
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:46
 msgid "Date sample was received (select from calendar)"
 msgstr "Date de réception de l'échantillon (choisir dans le calendrier)"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:55
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:54
 msgid "Create samples"
 msgstr "Créer les échantillons"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:66
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:64
 msgid "Add New Sample"
 msgstr "Ajouter un échantillon"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:8
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:22
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:21
 msgid "Edit Project"
 msgstr "Modifier le projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:20
+#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:19
 msgid "Update Project"
 msgstr "Réviser"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:10
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:9
 msgid "Create A Virus Typer Query"
 msgstr "Créer une requête de Virus Typer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:16
 #: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
 msgstr "Nom du projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:51
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Delete "
 msgstr "Effacer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:105
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
 msgid "Your project has been deleted."
 msgstr "Votre projet a été effacé."
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:124
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:116
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:11
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:10
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:40
 msgid "Project:"
 msgstr "Projet:"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:19
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:78
 #: olc_webportalv2/vir_typer/forms.py:76
 msgid "Sample Name"
 msgstr "Échantillon"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:21
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
 #: olc_webportalv2/vir_typer/forms.py:78
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:22
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:81
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:21
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
 msgid "Date Received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:23
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:82
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:22
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:81
 msgid "Source"
 msgstr "Source"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:83
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:23
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:82
 msgid "Organism"
 msgstr "Organisme"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:84
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:83
 msgid "Identifier"
 msgstr "Identifiant"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:85
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:84
 msgid "Trimmed Sequence"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:86
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:85
 msgid "Allele"
 msgstr "Allèle"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:87
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:86
 msgid "Length"
 msgstr "Longueur"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:29
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:88
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:87
 msgid "Mismatches"
 msgstr "Discordances"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:37
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:36
 msgid "Create PDF Report"
 msgstr "Créer un rapport PDF"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:44
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:43
 msgid "Report Issuance Date:"
 msgstr "Date d'émission du rapport:"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:53
 msgid "Laboratory"
 msgstr "Laboratoire"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
 msgid "Address"
 msgstr "Adresse"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:56
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
 msgid "Tel #"
 msgstr "Numéro de téléphone"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:60
 msgid "CFIA Burnaby"
 msgstr "ACIA Burnaby"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:66
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:65
 msgid "CFIA St. Hyacinthe"
 msgstr "ACIA St.Hyacinthe"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:89
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:88
 msgid "Quality Mean"
 msgstr "Qualité moyenne"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:90
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:89
 msgid "Quality Stdev"
 msgstr "Qualité écart-type"
 
@@ -2300,15 +2287,15 @@ msgid "Step 2 of 2: Upload Sequence Files and Begin Typing"
 msgstr ""
 "Étape 2 sur 2: Télécharger des fichiers de séquence et commencer Virus Typer"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:24
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:25
 msgid "Sample"
 msgstr "Échantillon"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:25
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:26
 msgid "Sequence Files "
 msgstr "Fichiers de séquence "
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:40
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:41
 msgid "Upload Sequence Files"
 msgstr "Télécharger des fichiers de séquence"
 
