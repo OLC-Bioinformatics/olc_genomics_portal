@@ -7,7 +7,7 @@ from Bio import SeqIO
 import multiprocessing
 from io import StringIO
 from django.conf import settings
-# from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, \
+# from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
 #     ParsnpAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link

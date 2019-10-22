@@ -51,8 +51,8 @@ class TopBlastHit(models.Model):
     class Meta:
         ordering = ['e_value', '-percent_identity', '-query_coverage']
 
-# Parsnp Tree Models ------------------------------------------------------------------------------------------------------------------------------------
-class ParsnpTree(models.Model):
+# Tree Models ------------------------------------------------------------------------------------------------------------------------------------
+class Tree(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
     other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
@@ -68,7 +68,7 @@ class ParsnpTree(models.Model):
 
 
 class ParsnpAzureRequest(models.Model):
-    parsnp_request = models.ForeignKey(ParsnpTree, on_delete=models.CASCADE, related_name='azuretask')
+    parsnp_request = models.ForeignKey(Tree, on_delete=models.CASCADE, related_name='azuretask')
     exit_code_file = models.CharField(max_length=256)
 
 

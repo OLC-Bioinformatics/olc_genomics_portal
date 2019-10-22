@@ -1,6 +1,6 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, \
+from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
     AMRDetail, ProkkaRequest, ProkkaAzureRequest
 from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
@@ -269,7 +269,7 @@ def check_tree_tasks():
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
-        tree_task = ParsnpTree.objects.get(pk=task.parsnp_request.pk)
+        tree_task = Tree.objects.get(pk=task.parsnp_request.pk)
         batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
         # Check if tasks related with this parsnp job have finished.
         tasks_completed = True
@@ -279,7 +279,7 @@ def check_tree_tasks():
                     tasks_completed = False
 
         except:  # If something errors first time through job doesn't exist. In that case, give up.
-            ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+            Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
             continue
@@ -335,7 +335,7 @@ def check_tree_tasks():
                 #     recipient=email)
 
             else:
-                ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+                Tree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
             ParsnpAzureRequest.objects.filter(id=task.id).delete()
 

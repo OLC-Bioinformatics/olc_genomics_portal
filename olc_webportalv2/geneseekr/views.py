@@ -10,7 +10,7 @@ import datetime
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, ParsnpForm, AMRForm, ProkkaForm, NameForm, EmailForm, \
     NearNeighborForm
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, AMRSummary, \
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, AMRSummary, \
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, \
     run_nearest_neighbors
@@ -138,11 +138,11 @@ def geneseekr_results(request, geneseekr_request_pk):
 @login_required
 def tree_home(request):
     one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    parsnp_requests = ParsnpTree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
+    parsnp_requests = Tree.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
 
     if request.method == "POST":
         if request.POST.get('delete'): 
-            query = ParsnpTree.objects.filter(pk=request.POST.get('delete'))
+            query = Tree.objects.filter(pk=request.POST.get('delete'))
             query.delete()
         
     return render(request,
@@ -159,7 +159,7 @@ def tree_request(request):
         form = ParsnpForm(request.POST, request.FILES)
         if form.is_valid():
             seqids, name, tree_program, number_diversitree_strains, other_files = form.cleaned_data
-            parsnp_request = ParsnpTree.objects.create(user=request.user,
+            parsnp_request = Tree.objects.create(user=request.user,
                                                        seqids=seqids)
             parsnp_request.status = 'Processing'
             if name is None:
@@ -195,7 +195,7 @@ def tree_request(request):
 
 @login_required
 def tree_result(request, parsnp_request_pk):
-    parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    parsnp_request = get_object_or_404(Tree, pk=parsnp_request_pk)
     id_dict = id_sync(parsnp_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
@@ -219,7 +219,7 @@ def tree_result(request, parsnp_request_pk):
 @login_required
 def tree_name(request, parsnp_request_pk):
     form = NameForm()
-    parsnp_request = get_object_or_404(ParsnpTree, pk=parsnp_request_pk)
+    parsnp_request = get_object_or_404(Tree, pk=parsnp_request_pk)
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():

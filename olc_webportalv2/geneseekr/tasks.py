@@ -7,7 +7,7 @@ from Bio import SeqIO
 import multiprocessing
 from io import StringIO
 from django.conf import settings
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, ParsnpTree, \
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
     ParsnpAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
@@ -214,7 +214,7 @@ def run_amr_summary(amr_summary_pk):
 
 @shared_task
 def run_parsnp(parsnp_request_pk):
-    parsnp_request = ParsnpTree.objects.get(pk=parsnp_request_pk)
+    parsnp_request = Tree.objects.get(pk=parsnp_request_pk)
     try:
         container_name = 'parsnp-{}'.format(parsnp_request_pk)
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))

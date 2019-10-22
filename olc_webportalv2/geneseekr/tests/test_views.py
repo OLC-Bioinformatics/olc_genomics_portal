@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from olc_webportalv2.users.models import User
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, ParsnpTree, AMRSummary, ProkkaRequest
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, Tree, AMRSummary, ProkkaRequest
 
 class SampleTestCase(TestCase):
     @classmethod
@@ -14,8 +14,8 @@ class SampleTestCase(TestCase):
         user1.save()
         request_one = GeneSeekrRequest.objects.create(name='123',query_sequence='>seqAAAAAAAA', user=user)
         request_two = GeneSeekrRequest.objects.create(name='456',query_sequence='>seqAAATTTTA', user=user)
-        tree_one = ParsnpTree.objects.create(name='123',user=user)
-        tree_two = ParsnpTree.objects.create(name='456',user=user)
+        tree_one = Tree.objects.create(name='123',user=user)
+        tree_two = Tree.objects.create(name='456',user=user)
         amr_one = AMRSummary.objects.create(name='123',user=user)
         amr_two = AMRSummary.objects.create(name='456',user=user)
         prokka_one = ProkkaRequest.objects.create(name='123',user=user)
@@ -62,7 +62,7 @@ class SampleTestCase(TestCase):
         self.client.login(username='TestUser', password='password')
         resp = self.client.get(reverse('geneseekr:tree_home'))
         self.assertEqual(resp.status_code, 200)
-        tree_requests = ParsnpTree.objects.filter()
+        tree_requests = Tree.objects.filter()
         for request in tree_requests:
             self.assertIn(request.name, resp.content.decode('utf-8'))
     
@@ -70,7 +70,7 @@ class SampleTestCase(TestCase):
         self.client.login(username='Test', password='password')
         resp = self.client.get(reverse('geneseekr:tree_home'))
         self.assertEqual(resp.status_code, 200)
-        tree_requests = ParsnpTree.objects.filter()
+        tree_requests = Tree.objects.filter()
         for request in tree_requests:
             self.assertNotIn(request.name, resp.content.decode('utf-8'))
 
