@@ -108,3 +108,4 @@ env
 .idea
 celerybeat-schedule.db
 *.fasta
+olc_webportalv2/media/
