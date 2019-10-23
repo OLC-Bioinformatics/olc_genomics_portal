@@ -5,15 +5,15 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-  <h2>Annotation Rename</h2>
+  <h2>{%trans "Annotation Rename" %}</h2>
   <br>
   <h4>{{prokka_request.pk}} - {{prokka_request.created_at}}</h4>
 
   <form method='post'>
   {% csrf_token %}
-  Previous Name: {{prokka_request.name}} </br></br>
+  {%trans "Previous Name:" %} {{prokka_request.name}} </br></br>
   {{form}} </br></br>
- <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:prokka_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
+ <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:prokka_home' %}">{%trans "Back" %}</a></button>  <button type='submit' class='btn btn-success'>{%trans "Save Changes" %}</button>
   </form>
 
 {% endblock %}

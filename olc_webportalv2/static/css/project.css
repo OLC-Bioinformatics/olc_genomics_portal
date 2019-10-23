@@ -55,7 +55,6 @@ label.col-sm-2.control-label {
 }
 .navbar .navbar-nav .nav-link:hover {
   background-color:white !important;
-  font-weight: 500 !important;
   color: black !important;
 }
 
@@ -69,17 +68,10 @@ label.col-sm-2.control-label {
 .card-deck { 
   display: flex;
   }
-.card-deck > article {
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 20px;
-  margin: 15px;
-  width: 320px;
-  height: 315px;
-}
-.card-deck > article:hover {
-  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-}
+ 
+.card:hover{ 
+    box-shadow: 1px 8px 20px grey;
+ }
 
 /* Styling on Profile */
 .list-group{
@@ -101,6 +93,37 @@ margin-left: -5%;
 .form-control > .option{
   color:black;
 }
+
+/* Settings Bar styling */
+.settings {
+  padding-top: 1em;
+
+}
+
+/* Language select styling */
+.sel-lang {
+  color: white !important;
+  border:none;
+  background-color: transparent;
+  padding:8px;
+  width:100px;  
+}
+.sel-lang:hover{
+  background-color: white;
+  color: black!important;
+  border-radius: 0.25rem;
+}
+
+.sel-lang:focus {
+  background: white;
+  color: black!important;
+  border: none;
+  box-shadow: none;
+}
+.sel-lang option {
+    background:white;
+    color: black;
+  }
 
 .navbar {
   background-color: #0e4164; }
@@ -141,6 +164,8 @@ margin-left: -5%;
   .navbar-expend-sm .navbar-nav .show .dropdown-menu .dropdown-item.active {
     color: #ffffff;
     background-color: #193451; } 
+  .sel-lang {
+    padding-left: 0px;}
   }
 
 @media (max-width: 767px) {
@@ -156,6 +181,10 @@ margin-left: -5%;
       margin-left: 4px;
       padding-right:100%
     }
+    .sel-lang {
+    padding-left: 0px;
+  }
+    
   }
 @media (max-width: 991px) {
   .navbar-expend-lg .navbar-nav .show .dropdown-menu .dropdown-item {
@@ -198,3 +227,7 @@ margin-left: -5%;
   display: block !important; }
 
 /*# sourceMappingURL=project.css.map */
+
+.asteriskField {
+  display: none;
+}

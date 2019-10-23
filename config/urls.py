@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.views.generic import TemplateView
 from django.views import defaults as default_views
+from django.conf.urls.i18n import i18n_patterns
 
 urlpatterns = [
     url(r'^$', TemplateView.as_view(template_name='pages/home.html'), name='home'),
@@ -13,19 +14,23 @@ urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
     url(settings.ADMIN_URL, admin.site.urls),
 
+    # Your stuff: custom urls includes go here
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('api-auth/', include('rest_framework.urls'))
+]
+# Allows for url translation
+urlpatterns += i18n_patterns(
     # User management
     url(r'^users/', include(('olc_webportalv2.users.urls', 'users'), namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
-
-    # Your stuff: custom urls includes go here
+    
     url(r'^cowbat/', include(('olc_webportalv2.cowbat.urls', 'cowbat'), namespace='cowbat')),
     url(r'^data/', include(('olc_webportalv2.data.urls', 'data'), namespace='data')),
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
+    url(r'^vir_typer/', include(('olc_webportalv2.vir_typer.urls', 'vir_typer'), namespace='vir_typer')),
     url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
-    path('api-auth/', include('rest_framework.urls'))
-
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
     # This allows the error pages to be debugged during development, just visit

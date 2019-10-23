@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load static %}
+{% load i18n %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load widget_tweaks %}
+{% block content %}
+  <h2>{% trans 'Metadata Forms'%}</h2>
+  <br>
+  <div>
+  <a href="/static/MetadataEnglish.PDF" class="btn btn-primary" style="padding-left:6px;" role="button"> {% trans "English" %} <i class="fas fa-download"></i></a>  
+  <div style="width:5px; height:auto;display:inline-block;"></div>
+  <a href="/static/MetadataFrench.PDF" class="btn btn-primary" style="padding-left:5px;" role="button"> {% trans "French" %} <i class="fas fa-download"></i></a>
+  </div> 
+{% endblock %}

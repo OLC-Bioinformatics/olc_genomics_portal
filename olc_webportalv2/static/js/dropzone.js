@@ -468,7 +468,7 @@ var Dropzone = function (_Emitter) {
         /**
          * If `addRemoveLinks` is true, the text to be used to remove a file.
          */
-        dictRemoveFile: '<i class="fas fa-minus-circle"></i>  Remove',
+        dictRemoveFile: '<i class="fas fa-minus-circle"></i>',
 
         /**
          * If this is not null, then the user will be prompted before removing a file.
@@ -777,8 +777,14 @@ var Dropzone = function (_Emitter) {
             }
 
             if (this.options.addRemoveLinks) {
-              file._removeLink = Dropzone.createElement("<a class=\"dz-remove\" href=\"javascript:undefined;\" data-dz-remove>" + this.options.dictRemoveFile + "</a>");
-              file.previewElement.appendChild(file._removeLink);
+              if (document.documentElement.lang == "fr"){
+                file._removeLink = Dropzone.createElement("<a class=\"dz-remove\" href=\"javascript:undefined;\" data-dz-remove>" + this.options.dictRemoveFile + " Retirer" + "</a>");
+                file.previewElement.appendChild(file._removeLink);
+              }else{
+
+                file._removeLink = Dropzone.createElement("<a class=\"dz-remove\" href=\"javascript:undefined;\" data-dz-remove>" + this.options.dictRemoveFile + " Remove"+"</a>");
+                file.previewElement.appendChild(file._removeLink);
+              }
             }
 
             var removeFileEvent = function removeFileEvent(e) {

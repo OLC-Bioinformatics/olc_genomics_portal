@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+    <h2>{% trans "Sample Creation" %}</h2>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% if tombstone_form.errors %}
+            <div class="alert alert-danger" role="alert" align="center" style="display:none;">
+                {{ tombstone_form.non_field_errors|escape }}
+            </div>
+        {% endif %}
+        {% csrf_token %}
+        <div class="col-3" style="padding-left:0;" data-tooltip='tooltip' title={% trans "Select a unique name for this project" %}>
+            {{ tombstone_form.project_name|as_crispy_field }}
+        </div>
+        {{ sample_formset.management_form }}
+        {% for sample_form in sample_formset %}
+            <div class="sample_formset">
+                <div class="form-row">
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                        {{ sample_form.sample_name|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                        {{ sample_form.LSTS_ID|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Laboratory name (select from list)" %}>
+                        {{ sample_form.lab_ID|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-1 mb-0" data-tooltip='tooltip' title={% trans "Sampling number (can be blank) e.g. 15" %}>
+                        {{ sample_form.subunit|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "Initial classification (select from list)" %}>
+                        {{ sample_form.putative_classification|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "Source of sample e.g. oyster" %}>
+                        {{ sample_form.isolate_source|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "Analyst name e.g. Jane Doe" %}>
+                        {{ sample_form.analyst_name|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Date sample was received (select from calendar)" %}>
+                        {{ sample_form.date_received|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        <br>
+        <br>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create samples" %}</button>
+    </form>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+    <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> // Allows adding and removal of formsets
+        $('.sample_formset').formset({
+            addText: '<i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
+            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %} <br></br><br>'
+        });
+        $('.datepicker').datepicker({
+            format: "yyyy-mm-dd",
+            language: "{{LANGUAGE_CODE}}",
+            orientation: "bottom auto"
+        });
+        </script>
+    <script type="text/javascript">
+        $('.add-row').click(function(){
+            $('.datepicker').datepicker({
+                format: "yyyy-mm-dd",
+                language: "{{LANGUAGE_CODE}}",
+                orientation: "bottom auto"
+            });
+        })
+        </script>
+{% endblock %}

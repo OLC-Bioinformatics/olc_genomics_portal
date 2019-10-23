@@ -68,6 +68,8 @@ LOCAL_APPS = [
     'olc_webportalv2.geneseekr.apps.GeneseekrConfig',
     'olc_webportalv2.metadata.apps.MetadataConfig',
     'olc_webportalv2.api.apps.ApiConfig',
+    'olc_webportalv2.vir_typer.apps.VirTyperConfig',
+
 
     # Need this to get django-multiselectfield to work
     'multiselectfield',
@@ -340,7 +342,7 @@ ADMIN_URL = r'^admin/'
 
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
-ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20']
+ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20', '192.168.1.12']
 MAX_ATTEMPTS = 1
 
 LOGGING = {

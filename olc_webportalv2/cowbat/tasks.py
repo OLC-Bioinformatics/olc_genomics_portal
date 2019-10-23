@@ -1,7 +1,8 @@
 # Django-related imports
 from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import ParsnpAzureRequest, ParsnpTree, AMRSummary, AMRAzureRequest, \
+from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
     AMRDetail, ProkkaRequest, ProkkaAzureRequest
+from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 from django.core.mail import send_mail  # To be used eventually, only works in cloud
@@ -26,6 +27,7 @@ import azure.batch.models as batchmodels
 from strainchoosr import strainchoosr
 import re
 import ete3
+import json
 # Celery Task Management
 from celery import shared_task, task
 # Sentry
@@ -48,7 +50,7 @@ def run_cowbat_batch(sequencing_run_pk):
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
-        for seqid in sequencing_run.seqids:
+        for seqid in sequencing_run.seqids_to_upload:
             forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
             reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
             if len(forward_reads) != 1 or len(reverse_reads) != 1:
@@ -81,7 +83,7 @@ def run_cowbat_batch(sequencing_run_pk):
             # The CLARK part of the pipeline needs absolute path specified, so the $AZ_BATCH_TASK_WORKING_DIR has to
             # be specified as part of the command in order to have the absolute path of our sequences propagate to it.
             f.write('COMMAND:=source $CONDA/activate /envs/cowbat && assembly_pipeline.py '
-                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.3.4\n'.format(run_name=str(sequencing_run)))
+                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.8\n'.format(run_name=str(sequencing_run)))
 
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
@@ -191,6 +193,40 @@ def cowbat_cleanup(sequencing_run_pk):
     #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(sequencing_run),sas_url),
     #                recipient=email)
 
+import re
+def escape_ansi(line):
+    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    return ansi_escape.sub('', line)
+
+
+def check_cowbat_progress(batch_client, job_id, sequencing_run):
+    """
+
+    :return:
+    """
+    node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
+    contents = dict()
+    for node_file in node_files:
+        # Stderr.txt file
+        if 'stderr' in node_file.name:
+            try:
+                contents[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                           file_path=node_file.name)
+            except:
+                pass
+    for file_name, content_object in contents.items():
+        for content_chunk in content_object:
+
+            # print(str(content_chunk.decode()))
+            try:
+                clean_line = escape_ansi(line=content_chunk.decode())
+                final_line = clean_line.split('\n')[-2]
+                status = ' '.join(final_line.split(' ')[2:])
+                sequencing_run.progress = status
+                sequencing_run.save()
+            except:
+                pass
+
 
 def check_cowbat_tasks():
     # Check for completed cowbat runs
@@ -207,7 +243,6 @@ def check_cowbat_tasks():
         for cloudtask in batch_client.task.list(batch_job_name):
             if cloudtask.state != batchmodels.TaskState.completed:
                 tasks_completed = False
-
         # Assuming that things have completed, check exit codes. Set status to error if any are non-zero.
         if tasks_completed:
             exit_codes_good = True
@@ -224,17 +259,19 @@ def check_cowbat_tasks():
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
             # Delete task so we don't have to keep checking up on it.
             AzureTask.objects.filter(id=task.id).delete()
+        else:
+            check_cowbat_progress(batch_client, batch_job_name, sequencing_run)
 
 
 def check_tree_tasks():
-    # Also check for Parsnp tree creation tasks
-    tree_tasks = ParsnpAzureRequest.objects.filter()
+    # Also check for Mash tree creation tasks
+    tree_tasks = TreeAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
     for task in tree_tasks:
-        tree_task = ParsnpTree.objects.get(pk=task.parsnp_request.pk)
-        batch_job_name = 'parsnp-{}'.format(task.parsnp_request.pk)
-        # Check if tasks related with this parsnp job have finished.
+        tree_task = Tree.objects.get(pk=task.tree_request.pk)
+        batch_job_name = 'mash-{}'.format(task.tree_request.pk)
+        # Check if tasks related with this mash job have finished.
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
@@ -242,9 +279,9 @@ def check_tree_tasks():
                     tasks_completed = False
 
         except:  # If something errors first time through job doesn't exist. In that case, give up.
-            ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+            Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            ParsnpAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=task.id).delete()
             continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
@@ -263,7 +300,7 @@ def check_tree_tasks():
                 download_container(blob_service=blob_client,
                                    container_name=batch_job_name + '-output',
                                    output_dir='olc_webportalv2/media')
-                tree_file = 'olc_webportalv2/media/parsnp-{}/parsnp.tree'.format(tree_task.pk)
+                tree_file = 'olc_webportalv2/media/mash-{}/mash.tree'.format(tree_task.pk)
                 with open(tree_file) as f:
                     tree_string = f.readline()
                 if tree_task.number_diversitree_strains > 0:
@@ -273,17 +310,17 @@ def check_tree_tasks():
                     tree_task.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
                 tree_task.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
-                # Should now have results from parsnp in olc_webportalv2/media/parsnp-X, where X is pk of parsnp request
-                parsnp_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
-                os.remove(os.path.join(parsnp_output_folder, 'batch_config.txt'))
+                # Should now have results from mash in olc_webportalv2/media/mash-X, where X is pk of tree request
+                tree_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
+                os.remove(os.path.join(tree_output_folder, 'batch_config.txt'))
                 # Need to zip this folder and then upload the zipped folder to cloud
-                shutil.make_archive(parsnp_output_folder, 'zip', parsnp_output_folder)
+                shutil.make_archive(tree_output_folder, 'zip', tree_output_folder)
                 tree_result_container = 'tree-{}'.format(tree_task.pk)
                 sas_url = generate_download_link(blob_client=blob_client,
                                                  container_name=tree_result_container,
-                                                 output_zipfile=parsnp_output_folder + '.zip',
+                                                 output_zipfile=tree_output_folder + '.zip',
                                                  expiry=8)
-                shutil.rmtree(parsnp_output_folder)
+                shutil.rmtree(tree_output_folder)
                 zip_folder = 'olc_webportalv2/media/{}.zip'.format(batch_job_name)
                 if os.path.isfile(zip_folder):
                     os.remove(zip_folder)
@@ -298,9 +335,9 @@ def check_tree_tasks():
                 #     recipient=email)
 
             else:
-                ParsnpTree.objects.filter(pk=task.parsnp_request.pk).update(status='Error')
+                Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            ParsnpAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=task.id).delete()
 
 
 def check_amr_summary_tasks():
@@ -382,6 +419,73 @@ def check_amr_summary_tasks():
             AMRAzureRequest.objects.filter(id=task.id).delete()
 
 
+def check_vir_typer_tasks():
+    """
+    VirusTyper!
+    """
+
+    vir_typer_tasks = VirTyperAzureRequest.objects.filter()
+    credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
+    batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
+    for sub_task in vir_typer_tasks:
+        vir_typer_task = VirTyperProject.objects.get(pk=sub_task.project_name.pk)
+        batch_job_name = VirTyperProject.objects.get(pk=vir_typer_task.pk).container_namer()
+        # Check if tasks related with this VirusTyper project have finished.
+        tasks_completed = True
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
+        except:  # If something errors first time through job can't get deleted. In that case, give up.
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(status='Error')
+            # Delete Azure task so we don't keep iterating over it.
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+            continue
+        # If tasks have completed, check if they were successful.
+        if tasks_completed:
+            exit_codes_good = True
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.execution_info.exit_code != 0:
+                    exit_codes_good = False
+            # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
+            if exit_codes_good:
+                # Now need to generate an SAS URL and give access to it/update the download link.
+                blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
+                                               account_name=settings.AZURE_ACCOUNT_NAME)
+                vir_typer_result_container = batch_job_name + '-output'
+                #
+
+                # Download the output container so we can zip it.
+                download_container(blob_service=blob_client,
+                                   container_name=vir_typer_result_container,
+                                   output_dir='olc_webportalv2/media')
+                output_dir = 'olc_webportalv2/media/{}'.format(batch_job_name)
+                if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
+                    os.remove(os.path.join(output_dir, 'batch_config.txt'))
+                shutil.make_archive(output_dir, 'zip', output_dir)
+                # Read in the json output
+                json_output = os.path.join(output_dir, 'virus_typer_outputs.json')
+                with open(json_output, 'r') as json_report:
+
+                    vir_typer_task.report = json.load(json_report)
+                # vir_typer_result_container = 'vir-typer-result-{}'.format(vir_typer_task.pk)
+                sas_url = generate_download_link(blob_client=blob_client,
+                                                 container_name=vir_typer_result_container,
+                                                 output_zipfile=output_dir + '.zip',
+                                                 expiry=8)
+                vir_typer_task.download_link = sas_url
+                vir_typer_task.status = 'Complete'
+                vir_typer_task.save()
+                shutil.rmtree(output_dir)
+                os.remove(output_dir + '.zip')
+            else:
+                vir_typer_task.status = 'Error'
+                vir_typer_task.save()
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+
+
 def check_prokka_tasks():
     # Prokka!
     prokka_tasks = ProkkaAzureRequest.objects.filter()
@@ -454,7 +558,7 @@ def monitor_tasks():
     except Exception as e:
         capture_exception(e)
 
-    # Also check for Parsnp tree creation tasks
+    # Also check for Mash tree creation tasks
     try:
         check_tree_tasks()
     except Exception as e:
@@ -465,7 +569,11 @@ def monitor_tasks():
         check_amr_summary_tasks()
     except Exception as e:
         capture_exception(e)
-
+    # VirusTyper!
+    try:
+        check_vir_typer_tasks()
+    except Exception as e:
+        capture_exception(e)
     # Prokka!
     try:
         check_prokka_tasks()
@@ -489,7 +597,8 @@ def generate_download_link(blob_client, container_name, output_zipfile, expiry=8
                                       file_path=output_zipfile)
     sas_token = blob_client.generate_container_shared_access_signature(container_name=container_name,
                                                                        permission=BlobPermissions.READ,
-                                                                       expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry))
+                                                                       expiry=datetime.datetime.utcnow() + datetime
+                                                                       .timedelta(days=expiry))
     sas_url = blob_client.make_blob_url(container_name=container_name,
                                         blob_name=blob_name,
                                         sas_token=sas_token)
@@ -515,7 +624,6 @@ def download_container(blob_service, container_name, output_dir):
             blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, blob.name))
 
 
-
 @shared_task
 def clean_old_containers():
     blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
@@ -523,8 +631,8 @@ def clean_old_containers():
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = ['^data-request-\d+$', '^geneseekr-\d+$', 'amrsummary-\d+$',
-                          '^amrsummary-\d+-output$', '^prokka-\d+$', '^parsnp-\d+$',
-                          '^prokka-\d+-output$', '^parsnp-\d+-output$', '^prokka-result-\d+$',
+                          '^amrsummary-\d+-output$', '^prokka-\d+$', '^mash-\d+$',
+                          '^prokka-\d+-output$', '^mash-\d+-output$', '^prokka-result-\d+$',
                           '^tree-\d+$']
     generator = blob_client.list_containers(include_metadata=True)
     for container in generator:

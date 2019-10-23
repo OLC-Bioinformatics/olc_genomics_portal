@@ -1,0 +1,22 @@
+[Header]
+IEMFileVersion,4
+Investigator Name,DhillonP
+Experiment Name,CAL-MicroSE-3
+Date,8/22/2018
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,Nextera XT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+151
+151
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+2018-CAL-0033,2018-CAL-0033,DAR-FD-2015-MI-01783,,N705,GGACTCCT,S505,GTAAGGAG,MicroNano,

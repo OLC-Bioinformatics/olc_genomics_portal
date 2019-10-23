@@ -1,9 +1,10 @@
 from olc_webportalv2.data import views
 from django.conf.urls import url, include
+from django.utils.translation import gettext_lazy as _
 
 urlpatterns = [
-    url(r'^data_home/', views.data_home, name='data_home'),
-    url(r'^raw_data/', views.raw_data, name='raw_data'),
-    url(r'^assembled_data/', views.assembled_data, name='assembled_data'),
-    url(r'^data_download/(?P<data_request_pk>\d+)/$', views.data_download, name='data_download'),
+    url(_(r'^data_home/'), views.data_home, name='data_home'),
+    url(_(r'^raw_data/'), views.raw_data, name='raw_data'),
+    url(_(r'^assembled_data/'), views.assembled_data, name='assembled_data'),
+    url(_(r'^data_download/(?P<data_request_pk>\d+)/$'), views.data_download, name='data_download'),
 ]

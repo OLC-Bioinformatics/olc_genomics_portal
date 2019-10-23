@@ -5,60 +5,60 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>Create A New Tree</strong></a>
+  <a href="{% url 'geneseekr:tree_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i> <strong>{%trans "Create A New Tree"%}</strong></a>
 <br>
-<h2>Tree Home</h2>
+<h2>{%trans "Tree Home"%}</h2>
  <br>
   <table id="tree-request-table" class="table table-hover">
   <thead>
     <tr style="text-align:center">
        <th>SEQIDs</th>
-       <th>Status</th>
-       <th>Download</th>
-       <th>Request Date</th>
+       <th>{%trans "Status"%}</th>
+       <th>{%trans "Download"%}</th>
+       <th>{%trans "Request Date"%}</th>
        <th data-orderable="false">       </th>
-       <th>Name</th>
+       <th>{%trans "Name"%}</th>
 {#       <th>Type</th>#}
     </tr>
   </thead>
   <tbody>
-     {% for parsnp_request in parsnp_requests %}
+     {% for tree_request in tree_requests %}
      <tr style="text-align:center">
        <td style="text-indent: 7px">
-          {% for seqid in parsnp_request.seqids|slice:":3" %}
+          {% for seqid in tree_request.seqids|slice:":3" %}
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
-         {% if parsnp_request.seqids|length > 3 %}
-           <p style="font-size:14px">...and {{ parsnp_request.seqids|length|add:'-3' }} more</p>
+         {% if tree_request.seqids|length > 3 %}
+           <p style="font-size:14px">{%trans "...and"%}{{ tree_request.seqids|length|add:'-3' }} {%trans "more"%}</p>
          {% endif %}
        </td>
-          {% if parsnp_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:tree_result' parsnp_request_pk=parsnp_request.pk %}" class="btn btn-success btn-block" role="button">{{ parsnp_request.status }} <i class="fas fa-check-circle"></i></a></td>
-          {% elif parsnp_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ parsnp_request.status }}</a></td>
-          {% elif parsnp_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:tree_result'  parsnp_request_pk=parsnp_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {{ parsnp_request.status }}     </a></td>
-          {% elif parsnp_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ parsnp_request.status }}</button></td>
+          {% if tree_request.status == 'Complete' %}
+             <td><a href="{% url 'geneseekr:tree_result' tree_request_pk=tree_request.pk %}" class="btn btn-success btn-block" role="button">{% trans "Complete"%} <i class="fas fa-check-circle"></i></a></td>
+          {% elif tree_request.status == 'Processing' %}
+             <td><a href="{% url 'geneseekr:tree_result'  tree_request_pk=tree_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans "Processing"%} </a></td>
+          {% elif tree_request.status == 'Error' %}
+             <td><a href="{% url 'geneseekr:tree_result'  tree_request_pk=tree_request.pk %}" class="btn btn-outline-danger btn-block" role="button">   {% trans "Error"%}     </a></td>
+          {% elif tree_request.status == 'Unprocessed' %}
+             <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
           {% endif %}
 
-          {% if parsnp_request.status == 'Complete' %}
-            <td><a href="{{ parsnp_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+          {% if tree_request.status == 'Complete' %}
+            <td><a href="{{ tree_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download"%} <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available"%}</button></td>
           {% endif %}
       
-          <td style="text-indent: 5px">{{ parsnp_request.created_at }}</td>
+          <td style="text-indent: 5px">{{ tree_request.created_at }}</td>
 
-        {% if parsnp_request.status != 'Processing' and 'Unprocessed' %}
-          <form id="form{{parsnp_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
-          <input type='hidden' id="delete{{parsnp_request.pk}}" name="delete" value={{parsnp_request.pk}}>
+        {% if tree_request.status != 'Processing' and 'Unprocessed' %}
+          <form id="form{{tree_request.pk}}" method="post">
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{tree_request.pk}}" name="delete" value={{tree_request.pk}}>{% trans "Delete"%}  <i class="fas fa-trash-alt"></i></button></td>
+          <input type='hidden' id="delete{{tree_request.pk}}" name="delete" value={{tree_request.pk}}>
           </form>
         {% else %}
           <td></td>
         {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name' parsnp_request.pk %}">{{parsnp_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:tree_name' tree_request.pk %}">{{tree_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
      </tr>
      {% endfor %}
   </tbody>
@@ -70,14 +70,18 @@
   <script type="text/javascript">
     $(document).ready(function () {
       //Default order of table on page load
-       var table =  $('#tree-request-table').DataTable();
+       var table =  $('#tree-request-table').DataTable({
+        language : {
+        url: getLanguage()
+    }
+       });
           table
         .order([3,"desc"], [1,"asc"])
         .draw();
     });
     setInterval(function () {
-      {% for parsnp_request in parsnp_requests %}
-        {% if parsnp_request.status == 'Processing' %}
+      {% for tree_request in tree_requests %}
+        {% if tree_request.status == 'Processing' %}
           window.location = window.location.href;
         {% endif %}
       {% endfor %}
@@ -89,18 +93,19 @@
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
       Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
+      title: '{% trans "Are you sure?" %}',
+      text: '{% trans "You will not be able to revert this!" %}',
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: '{% trans "Yes, delete it!"%}',
+      cancelButtonText:'{% trans "Cancel"%}',
       reverseButtons: true
      }).then(function(result) {
       if (result.value == true) {
        Swal.fire({
-        title: 'Deleted!',
-        text: 'Your file has been deleted.',
+        title: '{% trans "Deleted!" %}',
+        text: '{% trans "Your file has been deleted."%}',
         type: 'success',
         showConfirmButton: false
        }).then(function(cont) {
@@ -118,8 +123,8 @@
        })
       } else {
        Swal.fire({
-        title: 'Cancelled!',
-        text: 'Your file is safe.',
+        title: '{% trans "Cancelled!" %}',
+        text: '{% trans "Your file is safe."%}',
         type: 'error',
         showConfirmButton: false
        })

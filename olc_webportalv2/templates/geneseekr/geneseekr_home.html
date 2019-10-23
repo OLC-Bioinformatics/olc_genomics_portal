@@ -2,22 +2,22 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
-{% load widget_tweaks %}
+{% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> Create A GeneSeekr Query</strong></a>
+  <a href="{% url 'geneseekr:geneseekr_query' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A GeneSeekr Query" %}</strong></a>
   <br>
-  <h2>GeneSeekr Home</h2>
+  <h2>{% trans "GeneSeekr Home" %}</h2>
   <br>
   <table id="geneseekr-request-table" class="table table-hover">
     <thead>
     <tr style="text-align:center">
-       <th >SEQIDs</th>
-       <th>Status</th>
-       <th>Download</th>
-       <th>Request Date</th>
+       <th>SEQIDs</th>
+       <th>{% trans "Status" %}</th>
+       <th>{% trans "Download" %}</th>
+       <th>{% trans "Request Date" %}</th>
        <th data-orderable="false">       </th>
-       <th>Name</th>
+       <th>{% trans "Name" %}</th>
        {#       <th>Type</th>#}
     </tr>
   </thead>
@@ -30,23 +30,23 @@
             <p style="font-size:14px">{{ seqid }}</p>
           {% endfor %}
          {% if geneseekr_request.seqids|length > 3 %}
-           <p style="font-size:14px">...and {{ geneseekr_request.seqids|length|add:'-3' }} more</p>
+           <p style="font-size:14px">{% trans "...and"%} {{ geneseekr_request.seqids|length|add:'-3' }} {% trans "more"%}</p>
          {% endif %}
        </td>
           {% if geneseekr_request.status == 'Complete' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success btn-block" role="button">{{ geneseekr_request.status }} <i class="fas fa-check-circle"></i></a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing' geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-success btn-block" role="button">{% trans "Complete"%} <i class="fas fa-check-circle"></i></a></td>
           {% elif geneseekr_request.status == 'Processing' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{% trans "Processing"%}</a></td>
           {% elif geneseekr_request.status == 'Error' %}
-             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{{ geneseekr_request.status }}</a></td>
+             <td><a href="{% url 'geneseekr:geneseekr_processing'  geneseekr_request_pk=geneseekr_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{% trans "Error"%}</a></td>
           {% elif geneseekr_request.status == 'Unprocessed' %}
-             <td><button class="btn-secondary btn-block" disabled>{{ geneseekr_request.status }}</button></td>
+             <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
           {% endif %}
 
           {% if geneseekr_request.status == 'Complete' %}
-            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-dark btn-block"  role="button">Download <i class="fas fa-download"></i></a></td>
+            <td><a href="{{ geneseekr_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download"%} <i class="fas fa-download"></i></a></td>
           {% else %}
-            <td><button class="btn btn-dark btn-block" disabled>Not Available</button></td>
+            <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available"%}</button></td>
           {% endif %}
 
         <td>{{ geneseekr_request.created_at }}</td>
@@ -58,7 +58,7 @@
 {#        {% endif %}#}
         {% if geneseekr_request.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{geneseekr_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> Delete  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{geneseekr_request.pk}}" name="delBtn" value={{geneseekr_request.pk}}> {% trans "Delete"%}  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{geneseekr_request.pk}}" name="delete" value={{geneseekr_request.pk}}>
           </form>
         {% else %}
@@ -76,7 +76,11 @@
   <script type="text/javascript">
   $(document).ready(function () {
     //Default order of table on page load
-    var table = $('#geneseekr-request-table').DataTable(); 
+    var table = $('#geneseekr-request-table').DataTable({
+      language : {
+        url: getLanguage()
+    }
+    }); 
         table
         .order([3,"desc"], [1,"asc"])
         .draw();
@@ -95,18 +99,19 @@
     var btn = this.value;
     var form = document.getElementById("form" + this.value);
       Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
+      title: '{% trans "Are you sure?" %}',
+      text: '{% trans "You will not be able to revert this!" %}',
       type: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: '{% trans "Yes, delete it!"%}',
+      cancelButtonText:'{% trans "Cancel"%}',
       reverseButtons: true
      }).then(function(result) {
       if (result.value == true) {
        Swal.fire({
-        title: 'Deleted!',
-        text: 'Your file has been deleted.',
+        title: '{% trans "Deleted!" %}',
+        text: '{% trans "Your file has been deleted."%}',
         type: 'success',
         showConfirmButton: false
        }).then(function(cont) {
@@ -124,8 +129,8 @@
        })
       } else {
        Swal.fire({
-        title: 'Cancelled!',
-        text: 'Your file is safe.',
+        title: '{% trans "Cancelled!" %}',
+        text: '{% trans "Your file is safe."%}',
         type: 'error',
         showConfirmButton: false
        })

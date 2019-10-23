@@ -2,9 +2,9 @@ from django.urls import reverse
 from django.views.generic import DetailView, ListView, RedirectView, UpdateView
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils import translation
 
 from .models import User
-
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
@@ -17,21 +17,27 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
     permanent = False
 
     def get_redirect_url(self):
+        lang = self.request.user.language
+        translation.activate(lang)
+        self.request.session[translation.LANGUAGE_SESSION_KEY] = lang
         return reverse('users:detail',
                        kwargs={'username': self.request.user.username})
-
 
 class UserUpdateView(LoginRequiredMixin, UpdateView):
 
     fields = ['name',
+              'language',
               'lab',
               'rank']
 
     # we already imported User in the view code above, remember?
     model = User
-
+    
     # send the user back to their own page after a successful update
     def get_success_url(self):
+        lang =self.request.POST.get('language')
+        translation.activate(lang)
+        self.request.session[translation.LANGUAGE_SESSION_KEY] = lang
         return reverse('users:detail',
                        kwargs={'username': self.request.user.username})
 

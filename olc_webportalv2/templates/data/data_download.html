@@ -4,46 +4,46 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Download Data</h2>
+  <h2>{% trans "Download Data"%}</h2>
   <br>
   {% if data_request.missing_seqids|length > 0 %}
     <div class="alert alert-danger" role="alert" align="center">
-        <p>The following SEQIDs were not found: {{ data_request.missing_seqids }}</p>
+        <p>{% trans "The following SEQIDs were not found:"%} {{ data_request.missing_seqids }}</p>
     </div>
   {% endif %}
   {% if data_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{{ data_request.status }}</button>
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{% trans "Processing"%}</button>
       <br>
-      <p>This page will automatically refresh.</p>
-      <p>You don't have to remain on this page - this request will be visible on <a href="{% url 'data:data_home' %}">Data Home</a> </p>
+      <p>{% trans "This page will automatically refresh."%}</p>
+      <p>{% trans "You don't have to remain on this page - this request will be visible on"%} <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
   {% elif data_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{{ data_request.status }} <i class="fas fa-check-circle"></i></button>
+    <button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br>
-    <p>These files will be available for 7 days.</p>
+    <p>{% trans "These files will be available for 7 days."%}</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> Download Assemblies</a>
+        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {% trans "Download Assemblies"%}</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> Shareable link:</b> {{ data_request.download_link }} </p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {% trans "Shareable link:"%}</b> {{ data_request.download_link }} </p>
     </div>
   {% elif data_request.status == 'Warning' %}
-    <button class="btn btn-warning btn-block" disabled>{{ data_request.status }}</button>
+    <button class="btn btn-warning btn-block" disabled>{% trans "Warning"%}</button>
     <br>
-    <p>These files will be available for 7 days.</p>
+    <p>{% trans "These files will be available for 7 days."%}</p>
     <br>
     <div style="text-align: center">
-    <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button">Download Assemblies</a>
+    <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button">{% trans "Download Assemblies"%}</a>
     <br>
     <br>
     <div class="alert alert-primary" role="alert" align="center">
-      <p style="word-wrap:break-word;"><b>Shareable link:</b> {{ data_request.download_link }}</p>
+      <p style="word-wrap:break-word;"><b>{% trans "Shareable link:"%}</b> {{ data_request.download_link }}</p>
     </div>
   {% elif data_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{{ data_request.status }}</button>
+    <button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
     <br>
-    <p>Return to <a href="{% url 'data:data_home' %}">Data Home</a> </p>
+    <p>{% trans "Return to "%} <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
     <br>
     {% endif %}
     <script type="text/javascript">

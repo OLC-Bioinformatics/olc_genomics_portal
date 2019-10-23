@@ -1,0 +1,9 @@
+
+
+vir-typer-94-2019-vir-0004
+
+olc_webportalv2/media/vir-typer-94-2019-vir-0004source $CONDA/activate /envs/vir_typer && mkdir vir-typer-94-2019-vir-0004 && vir_typer.py -r vir-typer-94-2019-vir-0004 -s sequences/
+P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.seq,P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.seq
+vir-typer-94-2019-vir-0004
+olc_webportalv2/media/vir-typer-94-2019-vir-0004/batch_config.txt
+olc_webportalv2/media/vir-typer-94-2019-vir-0004

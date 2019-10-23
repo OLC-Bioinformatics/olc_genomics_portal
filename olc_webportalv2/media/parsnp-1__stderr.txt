@@ -1,0 +1,120 @@
+mashtree: main: Temporary directory will be /tmp/MASHTREE.tLZoGg
+mashtree: main: mashtree on 34 files
+mashtree: mashSketch(TID1): This thread will work on 3 sketches
+mashtree: mashSketch(TID1): Working on file 1 out of 3
+mashtree: mashSketch(TID2): This thread will work on 3 sketches
+mashtree: mashSketch(TID2): Working on file 1 out of 3
+mashtree: mashSketch(TID3): This thread will work on 2 sketches
+mashtree: mashSketch(TID3): Working on file 1 out of 2
+mashtree: mashSketch(TID4): This thread will work on 2 sketches
+mashtree: mashSketch(TID4): Working on file 1 out of 2
+mashtree: mashSketch(TID5): This thread will work on 2 sketches
+mashtree: mashSketch(TID5): Working on file 1 out of 2
+mashtree: mashSketch(TID6): This thread will work on 2 sketches
+mashtree: mashSketch(TID6): Working on file 1 out of 2
+mashtree: mashSketch(TID7): This thread will work on 2 sketches
+mashtree: mashSketch(TID7): Working on file 1 out of 2
+mashtree: mashSketch(TID8): This thread will work on 2 sketches
+mashtree: mashSketch(TID8): Working on file 1 out of 2
+mashtree: mashSketch(TID9): This thread will work on 2 sketches
+mashtree: mashSketch(TID9): Working on file 1 out of 2
+mashtree: mashSketch(TID10): This thread will work on 2 sketches
+mashtree: mashSketch(TID10): Working on file 1 out of 2
+mashtree: mashSketch(TID1): Working on file 2 out of 3
+mashtree: mashSketch(TID11): This thread will work on 2 sketches
+mashtree: mashSketch(TID11): Working on file 1 out of 2
+mashtree: mashSketch(TID12): This thread will work on 2 sketches
+mashtree: mashSketch(TID12): Working on file 1 out of 2
+mashtree: mashSketch(TID13): This thread will work on 2 sketches
+mashtree: mashSketch(TID13): Working on file 1 out of 2
+mashtree: mashSketch(TID14): This thread will work on 2 sketches
+mashtree: mashSketch(TID14): Working on file 1 out of 2
+mashtree: mashSketch(TID15): This thread will work on 2 sketches
+mashtree: mashSketch(TID15): Working on file 1 out of 2
+mashtree: mashSketch(TID16): This thread will work on 2 sketches
+mashtree: mashSketch(TID16): Working on file 1 out of 2
+mashtree: mashSketch(TID3): Working on file 2 out of 2
+mashtree: mashSketch(TID4): Working on file 2 out of 2
+mashtree: mashSketch(TID2): Working on file 2 out of 3
+mashtree: mashSketch(TID7): Working on file 2 out of 2
+mashtree: mashSketch(TID5): Working on file 2 out of 2
+mashtree: mashSketch(TID6): Working on file 2 out of 2
+mashtree: mashSketch(TID8): Working on file 2 out of 2
+mashtree: mashSketch(TID9): Working on file 2 out of 2
+mashtree: mashSketch(TID10): Working on file 2 out of 2
+mashtree: mashSketch(TID1): Working on file 3 out of 3
+mashtree: mashSketch(TID13): Working on file 2 out of 2
+mashtree: mashSketch(TID14): Working on file 2 out of 2
+mashtree: mashSketch(TID11): Working on file 2 out of 2
+mashtree: mashSketch(TID12): Working on file 2 out of 2
+mashtree: mashSketch(TID16): Working on file 2 out of 2
+mashtree: mashSketch(TID15): Working on file 2 out of 2
+mashtree: mashSketch(TID2): Working on file 3 out of 3
+mashtree: mashDist(TID17): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0712.fasta.msh
+mashtree: mashDist(TID18): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0709.fasta.msh
+mashtree: mashDist(TID17): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0719.fasta.msh
+mashtree: mashDist(TID18): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0707.fasta.msh
+mashtree: mashDist(TID17): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0720.fasta.msh
+mashtree: mashDist(TID19): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0696.fasta.msh
+mashtree: mashDist(TID18): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0703.fasta.msh
+mashtree: mashDist(TID19): Distances for /tmp/MASHTREE.tLZoGg/2014-SEQ-0134.fasta.msh
+mashtree: mashDist(TID20): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0695.fasta.msh
+mashtree: mashDist(TID20): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0700.fasta.msh
+mashtree: mashDist(TID21): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0710.fasta.msh
+mashtree: mashDist(TID22): Distances for /tmp/MASHTREE.tLZoGg/2014-SEQ-0276.fasta.msh
+mashtree: mashDist(TID21): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0718.fasta.msh
+mashtree: mashDist(TID22): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0706.fasta.msh
+mashtree: mashDist(TID23): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0715.fasta.msh
+mashtree: mashDist(TID23): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0711.fasta.msh
+mashtree: mashDist(TID24): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0690.fasta.msh
+mashtree: mashDist(TID24): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0708.fasta.msh
+mashtree: mashDist(TID25): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0716.fasta.msh
+mashtree: mashDist(TID25): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0694.fasta.msh
+mashtree: mashDist(TID26): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0701.fasta.msh
+mashtree: mashDist(TID27): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0713.fasta.msh
+mashtree: mashDist(TID26): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0693.fasta.msh
+mashtree: mashDist(TID27): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0689.fasta.msh
+mashtree: mashDist(TID28): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0702.fasta.msh
+mashtree: mashDist(TID28): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0697.fasta.msh
+mashtree: mashDist(TID29): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0717.fasta.msh
+mashtree: mashDist(TID30): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0699.fasta.msh
+mashtree: mashDist(TID29): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0704.fasta.msh
+mashtree: mashDist(TID30): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0705.fasta.msh
+mashtree: mashDist(TID31): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0714.fasta.msh
+mashtree: mashDistance: Waiting to join thread TID17
+mashtree: mashDist(TID32): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0692.fasta.msh
+mashtree: mashDist(TID31): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0698.fasta.msh
+mashtree: mashDist(TID32): Distances for /tmp/MASHTREE.tLZoGg/2018-SEQ-0691.fasta.msh
+mashtree: mashDistance: Joined TID17
+mashtree: mashDistance: Waiting to join thread TID18
+mashtree: mashDistance: Joined TID18
+mashtree: mashDistance: Waiting to join thread TID19
+mashtree: mashDistance: Joined TID19
+mashtree: mashDistance: Waiting to join thread TID20
+mashtree: mashDistance: Joined TID20
+mashtree: mashDistance: Waiting to join thread TID21
+mashtree: mashDistance: Joined TID21
+mashtree: mashDistance: Waiting to join thread TID22
+mashtree: mashDistance: Joined TID22
+mashtree: mashDistance: Waiting to join thread TID23
+mashtree: mashDistance: Joined TID23
+mashtree: mashDistance: Waiting to join thread TID24
+mashtree: mashDistance: Joined TID24
+mashtree: mashDistance: Waiting to join thread TID25
+mashtree: mashDistance: Joined TID25
+mashtree: mashDistance: Waiting to join thread TID26
+mashtree: mashDistance: Joined TID26
+mashtree: mashDistance: Waiting to join thread TID27
+mashtree: mashDistance: Joined TID27
+mashtree: mashDistance: Waiting to join thread TID28
+mashtree: mashDistance: Joined TID28
+mashtree: mashDistance: Waiting to join thread TID29
+mashtree: mashDistance: Joined TID29
+mashtree: mashDistance: Waiting to join thread TID30
+mashtree: mashDistance: Joined TID30
+mashtree: mashDistance: Waiting to join thread TID31
+mashtree: mashDistance: Joined TID31
+mashtree: mashDistance: Waiting to join thread TID32
+mashtree: mashDistance: Joined TID32
+mashtree: mashDistance: Converting to phylip format into /tmp/MASHTREE.tLZoGg/distances.phylip
+mashtree: Mashtree::createTreeFromPhylip: Creating tree with QuickTree

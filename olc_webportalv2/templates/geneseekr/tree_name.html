@@ -5,15 +5,15 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-  <h2>Tree Rename</h2>
+  <h2>{%trans "Tree Rename"%}</h2>
   <br>
-  <h4>{{parsnp_request.pk}} - {{parsnp_request.created_at}}</h4>
+  <h4>{{tree_request.pk}} - {{tree_request.created_at}}</h4>
 
   <form method='post'>
   {% csrf_token %}
-  Previous Name: {{parsnp_request.name}} </br></br>
+  {%trans "Previous Name:"%} {{tree_request.name}} </br></br>
   {{form}} </br></br>
- <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:tree_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
+ <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:tree_home' %}">{%trans "Back"%} </a></button>  <button type='submit' class='btn btn-success'>{%trans "Save Changes"%} </button>
   </form>
 
 {% endblock %}

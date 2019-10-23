@@ -6,13 +6,15 @@ from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
+from django.core.exceptions import ValidationError
+from django.utils.translation import ugettext_lazy as _
 
 
 class NearNeighborForm(forms.Form):
-    name = forms.CharField(max_length=56, label='Name: ', required=False)
+    name = forms.CharField(max_length=56, label=_('Name: '), required=False)
     seqid = forms.CharField(max_length=24, label='SeqID: ', required=False)
     uploaded_file = forms.FileField(label='', required=False)
-    number_neighbors = forms.IntegerField(label='Number neighbors: ', initial=2, required=True)
+    number_neighbors = forms.IntegerField(label=_('Number neighbors: '), initial=2, required=True)
 
     def clean(self):
         MIN_NUM_NEIGHBORS = 1
@@ -27,23 +29,23 @@ class NearNeighborForm(forms.Form):
         for sequence_data in sequence_data_objects:
             seqids_in_database.append(sequence_data.seqid)
         if uploaded_file is None and seqid == '':
-            raise forms.ValidationError('Must enter at least one of SeqID or uploaded file.')
+            raise forms.ValidationError(_('Must enter at least one of SeqID or uploaded file.'))
         elif seqid != '' and uploaded_file is not None:
-            raise forms.ValidationError('Only enter one of SeqID and uploaded file.')
+            raise forms.ValidationError(_('Only enter one of SeqID and uploaded file.'))
         elif uploaded_file is not None:
             if not uploaded_file.name.endswith('.fasta'):
-                raise forms.ValidationError('Uploaded file must be in FASTA format and filename must end with .fasta')
+                raise forms.ValidationError(_('Uploaded file must be in FASTA format and filename must end with .fasta'))
         elif seqid not in seqids_in_database:
-            raise forms.ValidationError('Requested SEQID is not in the database. Correct format for SeqID is '
-                                        'YYYY-LAB-####. Please check your SEQID and try again.')
+            raise forms.ValidationError(_('Requested SEQID is not in the database. Correct format for SeqID is '
+                                        'YYYY-LAB-####. Please check your SEQID and try again.'))
         if not MIN_NUM_NEIGHBORS <= number_neighbors <= MAX_NUM_NEIGHBORS:
-            raise forms.ValidationError('Invalid number of nearest neighbors requested. Valid values are from 1 to 250.')
+            raise forms.ValidationError(_('Invalid number of nearest neighbors requested. Valid values are from 1 to 250.'))
         return seqid, name, number_neighbors, uploaded_file
 
 
 class GeneSeekrForm(forms.Form):
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
-    query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea(attrs={'placeholder': '>Gene\nACGTACGT'}), label='', required=False)
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
+    query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea(attrs={'placeholder': _('>Gene \n ACGTACGT')}), label='', required=False)
     query_file = forms.FileField(label='', required=False)
     genus = forms.CharField(max_length=48, label='', required=False)  # TODO: Genus should be an autocomplete field
     everything_but = forms.BooleanField(required=False)
@@ -63,10 +65,10 @@ class GeneSeekrForm(forms.Form):
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not formatted correctly. '
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
                                         'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line.\n'
-                                        'Invalid SEQIDs: {}'.format(bad_seqids))
+                                        'SEQID per line. '
+                                        'Invalid SEQIDs: %s') % bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()
         seqids_in_database = list()
@@ -77,8 +79,8 @@ class GeneSeekrForm(forms.Form):
             if seqid not in seqids_in_database:
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
-                                        'SEQIDs not found: {}'.format(bad_seqids))
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database. '
+                                        'SEQIDs not found: %s') % bad_seqids)
 
         # If user didn't input SeqIDs into the SeqID text box, do filtering based on Genus.
         if len(seqid_list) == 0:
@@ -94,20 +96,20 @@ class GeneSeekrForm(forms.Form):
         # Now check that we actually have some SeqIDs, or things will break.
         if len(seqid_list) == 0:
             if exclude is False:
-                raise forms.ValidationError('Your query did not correspond to any sequences in our database: query was for '
-                                            'sequences from genus {}'.format(genus))
+                raise forms.ValidationError(_('Your query did not correspond to any sequences in our database: query was for '
+                                            'sequences from genus %s')% genus)
             else:
-                raise forms.ValidationError('Your query did not correspond to any sequences in our database: query was for '
-                                            'sequences NOT from genus {}'.format(genus))
+                raise forms.ValidationError(_('Your query did not correspond to any sequences in our database: query was for '
+                                            'sequences NOT from genus %s') % genus)
 
 
         # Ensure that query sequence or query file was submitted
         if query_sequence == '' and query_file is None:
-            raise forms.ValidationError('No input found! You must submit a FASTA sequence by pasting it into the text '
-                                        'box or uploading a FASTA file.')
+            raise forms.ValidationError(_('No input found! You must submit a FASTA sequence by pasting it into the text '
+                                        'box or uploading a FASTA file.'))
         elif query_sequence != '' and query_file is not None:
-            raise forms.ValidationError('Multiple inputs found! You must submit a FASTA sequence by pasting it into '
-                                        'the text box or uploading a FASTA file, but not both.')
+            raise forms.ValidationError(_('Multiple inputs found! You must submit a FASTA sequence by pasting it into '
+                                        'the text box or uploading a FASTA file, but not both.'))
 
         # Check proper FASTA format. Must have at least one sequence, and that must have only A,C,T,G or N
         # Check query sequence, if specified.
@@ -118,11 +120,11 @@ class GeneSeekrForm(forms.Form):
             for sequence in sequences:
                 num_sequences += 1
                 if not set(str(sequence.seq).upper()).issubset(valid_bases):
-                    raise forms.ValidationError('Your FASTA sequence contains invalid characters. Sequence should '
-                                                'only contain valid nucleotides (A, C, T, G, N).')
+                    raise forms.ValidationError(_('Your FASTA sequence contains invalid characters. Sequence should '
+                                                'only contain valid nucleotides (A, C, T, G, N).'))
 
             if num_sequences == 0:
-                raise forms.ValidationError('Invalid FASTA sequence entered. Correct format is:\n>sequencename\nACTGATCGA')
+                raise forms.ValidationError(_('Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA'))
 
         # Check query file, if that's what was specified.
         if query_file is not None:
@@ -135,40 +137,36 @@ class GeneSeekrForm(forms.Form):
                 num_sequences += 1
                 num_nucleotides += len(sequence.seq)
                 if not set(str(sequence.seq).upper()).issubset(valid_bases):
-                    raise forms.ValidationError('Your FASTA sequence contains invalid characters. Sequence should '
-                                                'only contain valid nucleotides (A, C, T, G, N).')
+                    raise forms.ValidationError(_('Your FASTA sequence contains invalid characters. Sequence should '
+                                                'only contain valid nucleotides (A, C, T, G, N).'))
 
             if num_sequences == 0:
-                raise forms.ValidationError('Invalid FASTA sequence entered. Correct format is:\n>sequencename\nACTGATCGA')
+                raise forms.ValidationError(_('Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA'))
 
             if num_nucleotides > 10000:
-                raise forms.ValidationError('FASTA sequence length maximum is 10000 bases. Your input sequence '
-                                            'had {} bases.'.format(num_nucleotides))
+                raise forms.ValidationError(_('FASTA sequence length maximum is 10000 bases. Your input sequence '
+                                            'had %s bases.') % num_nucleotides)
         return seqid_list, query_sequence
 
 
-class ParsnpForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+class TreeForm(forms.Form):
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
 
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
-    tree_program = forms.ChoiceField(label='Which tree program? ', initial='mashtree',choices=[('mashtree', 'mashtree'),('parsnp', 'parsnp')], widget=forms.RadioSelect())
-    number_diversitree_strains = forms.IntegerField(min_value=0,required=False)
+    number_diversitree_strains = forms.IntegerField(label= _('Number of diversitree strains'), min_value=0,required=False)
+
     def clean(self):
         super().clean()
         #KeyError raises when only whitespace is submitted
         try:
             seqid_input = self.cleaned_data['seqids']
         except KeyError:
-            raise forms.ValidationError('Input cannot be only whitespace')
+            raise forms.ValidationError(_('Input cannot be only whitespace'))
         try:
             name = self.cleaned_data['name']
         except KeyError:
             name = None
-        try:
-            tree_program = self.cleaned_data['tree_program']
-        except KeyError:
-            tree_program = 'parsnp'
         try:
             number_diversitree_strains = self.cleaned_data['number_diversitree_strains']
         except KeyError:
@@ -182,10 +180,10 @@ class ParsnpForm(forms.Form):
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not formatted correctly. '
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
                                         'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line.\n'
-                                        'Invalid SEQIDs: {}'.format(bad_seqids))
+                                        'SEQID per line. '
+                                        'Invalid SEQIDs: %s') % bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()    
         seqids_in_database = list()
@@ -196,23 +194,23 @@ class ParsnpForm(forms.Form):
             if seqid not in seqids_in_database:
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
+            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database. '
                                         'SEQIDs not found: {}'.format(bad_seqids))
         # Diversitree strains can't be greater than total strains
         if number_diversitree_strains is not None:
             if len(seqid_list) + len(other_files) < number_diversitree_strains:
-                raise forms.ValidationError('Too many Diversitree strains selected, must be {} or less'.format(len(seqid_list)))
+                raise forms.ValidationError(_('Too many Diversitree strains selected, must be %s or less') % len(seqid_list))
         for other_file in other_files:
             if not other_file.name.endswith('.fasta'):
-                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
+                raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
         if len(seqid_list) + len(other_files) < 2:
-            raise forms.ValidationError('At least 2 input sequences must be given.')
-        return seqid_list, name, tree_program, number_diversitree_strains, other_files
+            raise forms.ValidationError(_('At least two input sequences must be given.'))
+        return seqid_list, name, number_diversitree_strains, other_files
 
 
 class AMRForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
     def clean(self):
@@ -221,7 +219,7 @@ class AMRForm(forms.Form):
         try:
             seqid_input = self.cleaned_data['seqids']
         except KeyError:
-            raise forms.ValidationError('Input cannot be only whitespace')
+            raise forms.ValidationError(_('Input cannot be only whitespace'))
         try:
             name = self.cleaned_data['name']
         except KeyError:
@@ -235,10 +233,10 @@ class AMRForm(forms.Form):
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not formatted correctly. '
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
                                         'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line.\n'
-                                        'Invalid SEQIDs: {}'.format(bad_seqids))
+                                        'SEQID per line. '
+                                        'Invalid SEQIDs: %s') % bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()    
         seqids_in_database = list()
@@ -249,21 +247,21 @@ class AMRForm(forms.Form):
             if seqid not in seqids_in_database:
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
-                                        'SEQIDs not found: {}'.format(bad_seqids))
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database. '
+                                        'SEQIDs not found: %s') % bad_seqids)
 
         for other_file in other_files:
             if not other_file.name.endswith('.fasta'):
-                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
+                raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
 
         if len(seqid_list) + len(other_files) == 0:
-            raise forms.ValidationError('At least 1 input sequence must be given.')
+            raise forms.ValidationError(_('At least one input sequence must be given.'))
         return seqid_list, name, other_files
 
 
 class ProkkaForm(forms.Form):
-    name = forms.CharField(label='Name: ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': 'YYYY-LAB-####'}), label='', required=False)
+    name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
     other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
 
     def clean(self):
@@ -272,7 +270,7 @@ class ProkkaForm(forms.Form):
         try:
             seqid_input = self.cleaned_data['seqids']
         except KeyError:
-            raise forms.ValidationError('Input cannot be only whitespace')
+            raise forms.ValidationError(_('Input cannot be only whitespace'))
         try:
             name = self.cleaned_data['name']
         except KeyError:
@@ -287,10 +285,10 @@ class ProkkaForm(forms.Form):
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not formatted correctly. '
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
                                         'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line.\n'
-                                        'Invalid SEQIDs: {}'.format(bad_seqids))
+                                        'SEQID per line. '
+                                        'Invalid SEQIDs: %s') % bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()    
         seqids_in_database = list()
@@ -301,20 +299,28 @@ class ProkkaForm(forms.Form):
             if seqid not in seqids_in_database:
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database.\n'
-                                        'SEQIDs not found: {}'.format(bad_seqids))
+            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database. '
+                                        'SEQIDs not found: %s') % bad_seqids)
         if len(seqid_list) == 0 and len(other_files) == 0:
-            raise forms.ValidationError('Must enter at least one SeqID or upload at least one file.')
+            raise forms.ValidationError(_('Must enter at least one SeqID or upload at least one file.'))
         for other_file in other_files:
             if not other_file.name.endswith('.fasta'):
-                raise forms.ValidationError('All files uploaded must be in FASTA format with the extension .fasta')
+                raise forms.ValidationError(_('All files uploaded must be in FASTA format with the extension .fasta'))
 
         return seqid_list, name, other_files
 
 
 class NameForm(forms.Form):
-    name = forms.CharField(label='Name ', required=False ,widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-
+    name = forms.CharField(label=_('Name'), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
 
 class EmailForm(forms.Form):
-    email = forms.EmailField(max_length=50,label= "Email ")
+    email = forms.CharField(max_length=50,label= "Email ", required=False)
+
+    def clean(self):
+        super().clean()
+        email = self.cleaned_data.get('email')
+        EMAIL_REGEX = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+        if len(email) <1:
+            raise forms.ValidationError(_('Cannot be blank'))
+        if email and not re.match(EMAIL_REGEX, email):
+            raise forms.ValidationError(_('Must be in proper email format'))

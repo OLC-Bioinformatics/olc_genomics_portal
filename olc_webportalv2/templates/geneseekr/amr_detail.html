@@ -3,15 +3,15 @@
 {% load staticfiles %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
 {% block content %}
-<h2>AMR Summary Results for {{ amr_detail.seqid }}</h2>
-<p>These results will be available for 7 days.</p>
+
+<h2>{%trans "AMR Summary Results for "%}{{ amr_detail.seqid }}</h2>
+<p>{%trans "These results will be available for 7 days."%}</p>
 <br>
+
   <div class="dropdown">
      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">
-       Select Sequence to View Results
+       {%trans "Select Sequence to View Results"%}
      </button>
      <div class="dropdown-menu">
        {% for amr_detail in amr_request.amrdetail.all %}
@@ -20,42 +20,42 @@
      </div>
   </div>
   <br>
-    <table class="table">
-    <thead>
-      <tr>
-        <th>Gene</th>
-        <th>Location</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for gene, location in amr_detail.amr_results.items %}
-      <tr>
-         <td>{{ gene }}</td>
-         {% if location == 'chromosome' %}
-           <td class="table-secondary">{{ location }}</td>
-         {% else %}
-           <td class="table-info">Plasmid {{ location }}</td>
-         {% endif %}
-      </tr>
-    {% endfor %}
-    </tbody>
-    </table>
+
+  <table class="table">
+  <thead>
+    <tr>
+      <th>{%trans "Gene"%}</th>
+      <th>{%trans "Location"%}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for gene, location in amr_detail.amr_results.items %}
+    <tr>
+        <td>{{ gene }}</td>
+        {% if location == 'chromosome' %}
+          <td class="table-secondary">{{ location }}</td>
+        {% else %}
+          <td class="table-info">{%trans "Plasmid"%}{{ location }}</td>
+        {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+  </table>
 <br>
-<br>
-<br>
+
 <div style="text-align: center">
   <a href="{{ amr_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i>
-    Download Summary</a>
+    {%trans "Download Summary"%}</a>
   <br>
   <br>
+
   <div class="alert alert-primary" role="alert" align="center">
-    <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> Shareable link:</b> {{ amr_request.download_link }}</p>
+    <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "Shareable link:"%} </b> {{ amr_request.download_link }}</p>
   </div>
 </div>
 
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
 <script type="text/javascript">
-
   setInterval(function () {
     {% if amr_request.status == 'Processing' %}
     window.location = window.location.href; 

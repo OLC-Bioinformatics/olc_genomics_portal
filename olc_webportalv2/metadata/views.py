@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.conf import settings
-
+from django.db.models import Q
 from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
     make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
 from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID, OLNID
@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination, views, parsers, response
 from azure.storage.blob import BlockBlobService, BlobPermissions
+from django.utils.translation import ugettext_lazy as _
 
 
 # Not sure where to put this - create pagination.py?
@@ -19,12 +20,10 @@ class LargeResultsPagination(pagination.PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 20000
 
-
 class OLNList(generics.ListCreateAPIView):
     queryset = OLNID.objects.all()
     serializer_class = OLNSerializer
     pagination_class = LargeResultsPagination
-
 
 class OLNDetail(generics.RetrieveAPIView):
     serializer_class = OLNSerializer
@@ -46,13 +45,11 @@ class OLNDetail(generics.RetrieveAPIView):
     def handle_exception(self, exc):
         return JsonResponse({'ERROR': str(exc)})
 
-
 class SequenceDataList(generics.ListCreateAPIView):
     queryset = SequenceData.objects.all()
     serializer_class = SequenceDataSerializer
     permission_classes = (permissions.IsAdminUser,)
     pagination_class = LargeResultsPagination
-
 
 class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = SequenceData.objects.all()
@@ -74,7 +71,6 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
         return JsonResponse({'id': primary_key,
                              'seqid': seqid,
                              'download_link': sas_url})
-
 
 class GenusAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
@@ -99,7 +95,6 @@ class MLSTAutoCompleter(autocomplete.Select2ListView):
 class RMLSTAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
         return make_rmlst_choice_list()
-
 
 # Create your views here.
 @login_required
@@ -133,12 +128,17 @@ def metadata_home(request):
             if genus != '':
                 sequence_data_matching_query = sequence_data_matching_query.filter(genus__iexact=genus)
                 criteria_dict['genus'] = genus
+
+            # Unused but are essential for translation on results page since dict is JSON
+            pr = _('Pass + Reference')
+            r = _('Reference')
+            a = _('All')
             
             # Deal with quality.
-            if quality == 'Pass':
+            if quality == _('Pass'):
                 sequence_data_matching_query = sequence_data_matching_query.exclude(quality='Fail')
-                criteria_dict['quality'] = 'Pass + Reference'
-            elif quality == 'Reference':
+                criteria_dict['quality'] = "Pass + Reference"
+            elif quality == _('Reference'):
                 sequence_data_matching_query = sequence_data_matching_query.filter(quality='Reference')
                 criteria_dict['quality'] = 'Reference'
             else:
@@ -158,17 +158,16 @@ def metadata_home(request):
                      'form': form
                   })
 
-
 @login_required
 def metadata_results(request, metadata_request_pk):
     metadata_result = get_object_or_404(MetaDataRequest, pk=metadata_request_pk)
-    labidDict = LabID_sync_SeqID(metadata_result.seqids)
+    idDict = id_sync(metadata_result.seqids)
+    idList = (str(list(idDict.keys()))).replace("'","").replace("[","").replace("]","").replace(","," ")
     return render(request,
                   'metadata/metadata_results.html',
                   {
-                      'metadata_result': metadata_result, 'labidDict': labidDict
+                      'metadata_result': metadata_result, 'idDict': idDict, 'idList':idList
                   })
-
 
 @login_required
 def metadata_browse(request):
@@ -178,16 +177,25 @@ def metadata_browse(request):
                   {
                       'sequence_data': sequence_data
                   })
-
-
-# TODO: The optimization on this is horrendous. We're hitting the DB potentially thousands of times.
-def LabID_sync_SeqID(seqid_list):
-    labidDict = dict()
-    for item in seqid_list:
-        sequence_result = SequenceData.objects.get(seqid=item)
-        if sequence_result.labid is not None:
-            labid_result = LabID.objects.get(pk=sequence_result.labid.pk)
+# Uses metadata_result to filter db, and then loop through queryset to compile dictionary
+def id_sync(x):
+    idDict = dict()
+    data_set = SequenceData.objects.filter(seqid__in=x)
+    for item in data_set:
+        if item.labid is not None:
+            labid_result = str(item.labid)
         else:
             labid_result = 'N/A'
-        labidDict.update({sequence_result.seqid: str(labid_result)})
-    return labidDict
+
+        if item.olnid is not None:
+            olnid_result = str(item.olnid)
+        else:
+            olnid_result = 'N/A'  
+
+        idDict.update({item.seqid:(labid_result,olnid_result)})
+    return idDict
+
+@login_required
+def metadata_submit(request):
+    return render(request,
+        'metadata/metadata_submit.html',)

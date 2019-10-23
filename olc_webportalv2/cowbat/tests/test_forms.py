@@ -1,7 +1,8 @@
 from django.test import TestCase, Client
 from django import forms
 
-from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm
+from olc_webportalv2.cowbat.forms import RunNameForm
+from olc_webportalv2.geneseekr.forms import EmailForm
 
 
 class FormTest(TestCase):

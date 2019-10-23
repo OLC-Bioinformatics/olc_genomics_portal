@@ -1,221 +1,302 @@
-{% load static i18n %}<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
-    <title> {% block title %}CFIA FoodPort {% endblock title %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
+{% load static i18n %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+{%if request.user.is_authenticated%}
+{% get_language_info for request.user.language as lang %}
+{%endif%}
+<html lang="{{LANGUAGE_CODE}}">
 
-    {% block css %}
-    <!-- Compiled and minified Bootstrap 4 CSS -->
-    <link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}" />
+  <title> {% block title %}{% trans "CFIA FoodPort" %} {% endblock title %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
 
-    <!-- Project-specific CSS -->
-    <link rel="stylesheet" href="{% static '/css/project.css' %}">
+  {% block css %}
+  <!-- Compiled and minified Bootstrap 4 CSS -->
+  <link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static '/css/bootstrap-datepicker.min.css' %}">
 
-    <!-- Third-party CSS libraries go here -->
-    <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
-    {% endblock %}
+  <!-- Project-specific CSS -->
+  <link rel="stylesheet" href="{% static '/css/project.css' %}">
 
-  </head>
-  <body>
-    <div class="m-b-1" id="main-navbar">
-      <nav class="navbar navbar-expand-md">
-        <button class="navbar-toggler navbar-toggler-right tog" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+  <!-- Third-party CSS libraries go here -->
+  <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
+  {% endblock %}
+
+</head>
+
+<body>
+  <div class="m-b-1" id="main-navbar">
+    <nav class="navbar navbar-expand-md">
+      <button class="navbar-toggler navbar-toggler-right tog" type="button" data-toggle="collapse"
+        data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+        aria-label="Toggle navigation">
         <i class="fas fa-bars" style="color:white"></i>
-        </button>
-        <a class="navbar-brand" href="{% url 'home' %}">
-                    <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>  CFIA FoodPort</strong>
-        </a>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-              <a class="nav-link" href="{% url 'home' %}">Home <i class="fas fa-home"></i></a>
-            </li>
-            <li class="nav-item active">
-              <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton" data-toggle="dropdown">Explore</button>
-                <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
-                  <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">Search <i class="fas fa-search"></i></a>
-                  <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">Browse <i class="fas fa-book"></i></a>
-                </div>
+      </button>
+      <a class="navbar-brand" href="{% url 'home' %}">
+        <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>
+          {% trans "  CFIA FoodPort" %}</strong>
+      </a>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="{% url 'home' %}">{% trans "Home " %}<i class="fas fa-home"></i></a>
+          </li>
+          <li class="nav-item active">
+            <div class="dropdown">
+              <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton"
+                data-toggle="dropdown">{% trans "Explore" %}</button>
+              <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
+                <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">{% trans "Search " %}<i
+                    class="fas fa-search"></i></a>
+                <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %}<i
+                    class="fas fa-book"></i></a>
+                <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %} <i
+                    class="fas fa-file-pdf"></i></a>
               </div>
-            </li>
-
-            <li class="nav-item active">
-              <a class="nav-link" href="{% url 'data:data_home' %}">Retrieve <i class="far fa-file-alt"></i></a>
-             </li>
-
-            <li class="nav-item active">
-              <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">Assembly <i class="fas fa-cogs"></i></a>
-            </li>
-              <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">Analyze</button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                  <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes <i class="fas fa-microscope"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">Create Tree <i class="fas fa-seedling"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">Investigate AMR <i class="fas fa-vial"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">Annotate <i class="fas fa-highlighter"></i></a>
-                  <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">Find Near Neighbors <i class="fas fa-code-branch"></i></a>
-                </div>
             </div>
-            </ul>
+          </li>
 
-            <ul class="navbar-nav ml-auto">
-            {% if request.user.is_authenticated %}
-              <li class="nav-item active">
-                {# URL provided by django-allauth/account/urls.py #}
-                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "Profile" %} <i class="fas fa-user-circle"></i></a>
-              </li>
+          <li class="nav-item active">
+            <a class="nav-link" href="{% url 'data:data_home' %}">{% trans "Retrieve " %}<i
+                class="far fa-file-alt"></i></a>
+          </li>
 
-              <li class="nav-item active">
-                {# URL provided by django-allauth/account/urls.py #}
-                <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %} <i class="fas fa-sign-out-alt"></i></a>
-              </li>
+          <li class="nav-item active">
+            <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly " %}<i
+                class="fas fa-cogs"></i></a>
+          </li>
+          <div class="dropdown">
+            <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton"
+              data-toggle="dropdown">{% trans "Analyze" %}</button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+              <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes " %}<i
+                  class="fas fa-microscope"></i></a>
+              <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}<i
+                  class="fas fa-seedling"></i></a>
+              <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR " %}<i
+                  class="fas fa-vial"></i></a>
+              <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate " %}<i
+                  class="fas fa-highlighter"></i></a>
+              <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">{% trans "Find Near Neighbors " %}<i
+                  class="fas fa-code-branch"></i></a>
+              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer <i
+                  class="fas fa-pastafarianism"></i></a>
+            </div>
+          </div>
 
-            {% else %}
-              <li class="nav-item">
-                {# URL provided by django-allauth/account/urls.py #}
-                <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Login" %} <i class="fas fa-sign-in-alt"></i> </a>
-              </li>
+        </ul>
 
-              <li class="nav-item">
-                {# URL provided by django-allauth/account/urls.py #}
-                <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %} <i class="fas fa-user-plus"></i></a>
-              </li>
+        <ul class="navbar-nav settings">
+          {# Language selection #}
+          <li class="nav-item active">
+            <form action="{% url "set_language" %}" method="post" class="dropdown">
+              {% csrf_token %}
+              {% get_current_language as LANGUAGE_CODE %}
+              {% get_available_languages as LANGUAGES %}
+              <div class="form-group">
+                <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
+                  {% for language in LANGUAGES %}
+                  <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected" {% endif %}>
+                    {{ language.1 }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </form>
+          </li>
+          {% if request.user.is_authenticated %}
+          <li class="nav-item active">
+            {# URL provided by django-allauth/account/urls.py #}
+            <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "Profile" %} <i
+                class="fas fa-user-circle"></i></a>
+          </li>
 
-            {% endif %}
-          </ul>
-        </div>
-      </nav>
+          <li class="nav-item active">
+            {# URL provided by django-allauth/account/urls.py #}
+            <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %} <i
+                class="fas fa-sign-out-alt"></i></a>
+          </li>
 
-    </div>
+          {% else %}
+          <li class="nav-item">
+            {# URL provided by django-allauth/account/urls.py #}
+            <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Login" %} <i
+                class="fas fa-sign-in-alt"></i> </a>
+          </li>
 
-    <div class="container">
+          <li class="nav-item">
+            {# URL provided by django-allauth/account/urls.py #}
+            <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %} <i
+                class="fas fa-user-plus"></i></a>
+          </li>
+
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+
+  </div>
+
+  <div class="container">
     {#This is where alert messages will appear (i.e. successful signin)#}
-      <br>
-      {% if messages %}
-          {% for message in messages %}
-              <div class="container">
-              <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
-              </div>
-          {% endfor %}
-      {% endif %}
+    <br>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="container">
+      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
-      {% block content %}
-        <br>
-        <p class="lead h6" style="text-align:center">
-            <span class="h1" ><b>Welcome to the CFIA FoodPort</b> <i class="fas fa-dna"></i></span><br>
-        </p>
-        <br>
-        <div class="card-deck d-flex h-100 justify-content-center align-self-center">
-          
-          <article>
-            <div class="text">
-              <h3>Explore Data</h3>
-              <p id="article1">Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs.</p>
-              <br>
-              <br>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'metadata:metadata_home' %}">Explore Data</a>
-              </div>
-          </article>
-          
-          <article >
-            <div class="text">
-              <h3>Get Data</h3>
-              <p id="article2">Retrieve copies of files stored at OLC to analyze locally. Enter desired SeqIDs for either assemblies (FASTA), and a link to those files will be created as well as a shareable distribution link. Files created are available for seven (7) days.</p>
-              <a class="btn btn-primary btn-lg" href="{% url 'data:data_home' %}">Get Data</a>
-            </div>
-          </article>
-          <article>
-            <div class="text">
-              <h3>Assembly</h3>
-              <p id="article3" >For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs.</p>
-              <br>
-              <br>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'cowbat:assembly_home' %}">Assembly</a>
-            </div>
-          </article>
-          <article>
-            <div class="text">
-              <h3>Find Genes</h3>
-              <p id="article4" >Implements OLC's GeneSeekr tool to search for any gene of interest in our collection. Specify which sequences you want to search using SeqIDs, and also provide a gene (or genes) you want to search for in FASTA format.</p>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:geneseekr_home' %}">Find Genes</a>
-            </div>
-          </article>
-          <article>
-            <div class="text">
-              <h3>Create a Tree</h3>
-              <p id="article5">Create phylogenetic trees based on whole genome sequences to investigate relatedness
-              of isolates.</p>
-              <br>
-              <br>
-              <br>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:tree_home' %}">Create Tree </a>
-            </div>
-          </article>
-          <article>
-            <div class="text">
-              <h3>Investigate AMR</h3>
-              <p id="article5">Look for AMR genes in sequence data, and find out if they're present on mobile
-                elements or the chromosome.</p>
-              <br>
-              <br>
-              <br>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:amr_home' %}">Investigate AMR</a>
-            </div>
-          </article>
-          <article>
-            <div class="text">
-              <h3>Annotate Genomes</h3>
-              <p id="article5">Annotate genomes of interest using Prokka to find out what genes are present.</p>
-              <br>
-              <br>
-              <br>
-              <br>
-              <a class="btn btn-primary btn-lg" href="{% url 'geneseekr:prokka_home' %}">Annotate Genomes</a>
-            </div>
-          </article>
-        </div>
+    {% block content %}
       
 
-      {% endblock content %}
+<br>
+	<p class="lead h6" style="text-align:center">
+		<span class="h1">
+			<b>{% trans "Welcome to the CFIA FoodPort" %}</b>
+			<i class="fas fa-dna"></i>
+		</span>
+		<br>
+		</p>
+		<br>
+			<div class="h-100 justify-content-center">
+				<div class="container">
+					<div class="card-deck mb-3 text-center">
 
-    </div>
+						<div class="row">
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Explore Data" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article1">{% trans "Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'metadata:metadata_home' %}">{% trans "Explore Data" %}</a>
+								</div>
+							</div>
 
-    {% block modal %}{% endblock modal %}
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Get Data" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article2">{% trans "Retrieve copies of files stored at OLC to analyze locally." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'data:data_home' %}">{% trans "Get Data" %}</a>
+								</div>
+							</div>
 
-    <!-- JavaScript
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Assembly" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article3">{% trans "For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly" %}</a>
+								</div>
+							</div>
+            </div>
+
+						<div class="row">
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Find Genes" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article4">{% trans "Use GeneSeekr to search for any gene of interest in our assembly database." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes" %}</a>
+								</div>
+							</div>
+
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Create a Tree" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article5">{% trans "Create phylogenetic trees of assemblies." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}</a>
+								</div>
+							</div>
+
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Investigate AMR" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article5">{% trans "Look for AMR genes in assemblies, and find out if they're present on mobile elements or the chromosome." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR" %}</a>
+								</div>
+							</div>
+						</div>
+
+						<div class="row mx-auto">
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>{% trans "Annotate Genomes" %}</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article5">{% trans "Annotate assemblies with Prokka." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate Genomes" %}</a>
+								</div>
+							</div>
+              
+							<div class="card mb-4 box-shadow">
+								<div class="card-header">
+									<h3>Virus Typer</h3>
+								</div>
+								<div class="card-body d-flex flex-column">
+									<p id="article5">{% trans "Perform typing on viral sequences." %}</p>
+									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer</a>
+								</div>
+							</div>
+            </div>
+            
+					</div>
+				</div>
+      </div>
+      </div>
+
+    {% endblock content %}
+
+  </div>
+
+  {% block modal %}{% endblock modal %}
+
+  <!-- JavaScript
     ================================================== -->
-    {% block javascript %}
-      <!-- Required by Bootstrap 4 -->
-      <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-      <script src="{% static 'js/popper.min.js' %}"></script>
-      <script src="{% static 'js/bootstrap.min.js' %}"></script>
-      <!-- Third-party javascript libraries go here -->
-      <script src="{% static 'js/sweetalerts.js'%}"></script>
-      <script src="{% static 'js/core.js' %}"></script>
-      <script src="{% static 'js/cookie.min.js' %}"></script>      
-      <script src="{% static 'js/bowser.min.js'%}"></script>
-      <script src="{% static 'js/js/all.js' %}"></script>
+  {% block javascript %}
+  <!-- Required by Bootstrap 4 -->
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/popper.min.js' %}"></script>
+  <script src="{% static 'js/bootstrap.min.js' %}"></script>
+  <!-- Third-party javascript libraries go here -->
+  <script src="{% static 'js/sweetalerts.js'%}"></script>
+  <script src="{% static 'js/core.js' %}"></script>
+  <script src="{% static 'js/cookie.min.js' %}"></script>
+  <script src="{% static 'js/bowser.min.js'%}"></script>
+  <script src="{% static 'js/js/all.js' %}"></script>
 
-      <!-- Project specific Javascript goes in this file -->
-      <script src="{% static 'js/project.js' %}"></script>
-      <script type="text/javascript">
-      if (bowser.name =="Internet Explorer") { 
+  <!-- Project specific Javascript goes in this file -->
+  <script src="{% static 'js/project.js' %}"></script>
+  <script type="text/javascript">
+    if (bowser.name == "Internet Explorer") {
       //IE doesn't like nice things - this adjusts the image so it is not distorted
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
-}
-     </script>
-    {% endblock javascript %}
-  </body>
-</html>
+      document.getElementsByClassName('card-deck')[0].style.display = 'inline';
+    }
+    function getLanguage() {
+    var lang = document.documentElement.lang;
+    if (lang=== "fr"){
+      return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+    }
+  }
+  </script>
+  
+  {% endblock javascript %}
+</body>
 
+</html>

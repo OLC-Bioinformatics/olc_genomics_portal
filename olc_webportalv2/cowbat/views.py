@@ -3,14 +3,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import messages
+from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import logging
 import fnmatch
 import os
 # Portal-specific things
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, EmailForm, RealTimeForm
+from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.geneseekr.forms import EmailForm
 # Azure!
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_service_client as batch
@@ -51,15 +53,33 @@ def check_uploaded_seqids(sequencing_run):
     blobs = blob_client.list_blobs(container_name=container_name)
     for blob in blobs:
         blob_filenames.append(blob.name)
-    seqids_to_remove = list()
+    # uploaded_seqids = list()
     for seqid in sequencing_run.seqids:
         forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
         reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
-        if len(forward_reads) == 1 and len(reverse_reads) == 1:
-            seqids_to_remove.append(seqid)
-    for seqid in seqids_to_remove:
-        sequencing_run.seqids.remove(seqid)
-    sequencing_run.save()
+        if len(forward_reads) == 1:
+            if seqid not in sequencing_run.uploaded_forward_reads:
+                sequencing_run.uploaded_forward_reads.append(seqid)
+        else:
+            if seqid not in sequencing_run.forward_reads_to_upload:
+                sequencing_run.forward_reads_to_upload.append(seqid)
+        if len(reverse_reads) == 1:
+            if seqid not in sequencing_run.uploaded_reverse_reads:
+                sequencing_run.uploaded_reverse_reads.append(seqid)
+        else:
+            if seqid not in sequencing_run.reverse_reads_to_upload:
+                sequencing_run.reverse_reads_to_upload.append(seqid)
+        # if len(forward_reads) == 1 and len(reverse_reads) == 1:
+        #     sequencing_run.uploaded_seqids.append(seqid)
+        # else:
+        #     seqids_to_upload.append(seqid)
+    # for seqid in seqids_to_upload:
+    #     if seqid not in sequencing_run.seqids_to_upload:
+    #         sequencing_run.seqids_to_upload.append(seqid)
+    # for seqid in uploaded_seqids:
+    #     if seqid not in sequencing_run.uploaded_seqids:
+    #         sequencing_run.uploaded_seqids.append(seqid)
+        sequencing_run.save()
 
 
 # Create your views here.
@@ -83,17 +103,16 @@ def cowbat_processing(request, sequencing_run_pk):
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in sequencing_run.emails_array:
-                sequencing_run.emails_array.append(Email)
-                sequencing_run.save()
-                form = EmailForm()
-                messages.success(request, 'Email saved')
-            else:
-                messages.error(request, 'Email has already been saved')
+                    sequencing_run.emails_array.append(Email)
+                    sequencing_run.save()
+                    form = EmailForm()
+                    messages.success(request, _('Email saved'))
             
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {
-                      'sequencing_run': sequencing_run, 'form':form,
+                      'sequencing_run': sequencing_run, 
+                      'form':form,
                       'progress': str(progress)
                   })
 
@@ -115,8 +134,9 @@ def upload_metadata(request):
         form = RunNameForm(request.POST)
         if form.is_valid():
             if not SequencingRun.objects.filter(run_name=form.cleaned_data.get('run_name')).exists():
-                sequencing_run, created = SequencingRun.objects.update_or_create(run_name=form.cleaned_data.get('run_name'),
-                                                                                 seqids=list())
+                sequencing_run, created = SequencingRun.objects\
+                    .update_or_create(run_name=form.cleaned_data.get('run_name'),
+                                      seqids=list())
             else:
                 sequencing_run = SequencingRun.objects.get(run_name=form.cleaned_data.get('run_name'))
             files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
@@ -132,7 +152,8 @@ def upload_metadata(request):
                     instance = DataFile(sequencing_run=sequencing_run,
                                         data_file=item)
                     instance.save()
-                    with open('olc_webportalv2/media/{run_name}/SampleSheet.csv'.format(run_name=str(sequencing_run))) as f:
+                    with open('olc_webportalv2/media/{run_name}/SampleSheet.csv'
+                                      .format(run_name=str(sequencing_run))) as f:
                         lines = f.readlines()
                     seqid_start = False
                     seqid_list = list()
@@ -149,6 +170,7 @@ def upload_metadata(request):
                                 realtime = lines[i].rstrip().split(',')[9]
                             except IndexError:
                                 realtime = ''
+
                             seqid_list.append(seqid)
                             if realtime == 'TRUE' or realtime == 'VRAI':
                                 realtime_dict[seqid] = 'True'  # Not sure JSONField this gets stored in can handle bool
@@ -250,7 +272,9 @@ def upload_interop(request, sequencing_run_pk):
 def upload_sequence_data(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     check_uploaded_seqids(sequencing_run=sequencing_run)
+    seqid_list = list()
     if request.method == 'POST':
+        check_uploaded_seqids(sequencing_run=sequencing_run)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)

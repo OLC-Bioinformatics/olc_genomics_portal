@@ -4,18 +4,18 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-  <h2>Metadata Browse</h2>
+  <h2>{% trans 'Metadata Browse'%}</h2>
   <table id="metadata-browse-table" class="table table-hover">
     <thead>
       <tr>
-        <th>SeqID</th>
-        <th>LabID</th>
-        <th>Genus</th>
-        <th>Species</th>
-        <th>Serotype</th>
-        <th>MLST</th>
-        <th>rMLST</th>
-        <th>Assembly Quality</th>
+        <th>{% trans 'SeqID'%}</th>
+        <th>{% trans 'LabID'%}</th>
+        <th>{% trans 'Genus'%}</th>
+        <th>{% trans 'Species'%}</th>
+        <th>{% trans 'Serotype'%}</th>
+        <th>{% trans 'MLST'%}</th>
+        <th>{% trans 'rMLST'%}</th>
+        <th>{% trans 'Assembly Quality'%}</th>
       </tr>
     </thead>
     <tbody>
@@ -28,7 +28,7 @@
           <td>{{ sequence.serotype }}</td>
           <td>{{ sequence.mlst }}</td>
           <td>{{ sequence.rmlst }}</td>
-          <td>{{ sequence.quality }}</td>
+          <td>{% trans sequence.quality %}</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -39,7 +39,16 @@
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">
   $(document).ready(function () {
-    $('#metadata-browse-table').DataTable({ "lengthMenu": [[100, -1], ['100', 'All']]});
+    var lang = document.documentElement.lang;
+    var i = 'All';
+    if (lang == "fr"){
+      var i = 'Tout';
+    }
+    $('#metadata-browse-table').DataTable(
+      {language : {
+        url: getLanguage()
+    }, "lengthMenu": [[100, -1], ['100', i]],
+    });
   });
   </script>
 {% endblock %}

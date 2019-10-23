@@ -28,16 +28,16 @@ class TestAPI(APITestCase):
         user.save()
 
     def test_upload_get_requires_auth(self):
-        response = self.client.get('/api/upload/fake_run/fake_file')
+        response = self.client.get('/en-ca/api/upload/fake_run/fake_file')
         self.assertEqual(response.status_code, 403)  # Should be forbidden if not logged in
 
     def test_upload_put_requires_auth(self):
-        response = self.client.put('/api/upload/fake_run/fake_file')
+        response = self.client.put('/en-ca/api/upload/fake_run/fake_file')
         self.assertEqual(response.status_code, 403)  # Should be forbidden if not logged in
 
     def test_file_does_not_exist(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/fake_run/fake_file', format='json')
+        response = self.client.get('/en-ca/api/upload/fake_run/fake_file', format='json')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
@@ -45,7 +45,7 @@ class TestAPI(APITestCase):
     def test_file_upload_samplesheet(self):
         self.client.login(username='TestUser', password='password')
         with open('olc_webportalv2/test_files/SampleSheet.csv', 'rb') as infile:
-            response = self.client.put('/api/upload/111111_FAKE/SampleSheet.csv', infile.read(), content_type='text/csv')
+            response = self.client.put('/en-ca/api/upload/111111_FAKE/SampleSheet.csv', infile.read(), content_type='text/csv')
         sequencing_run = SequencingRun.objects.get(run_name='111111_FAKE')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)
@@ -59,7 +59,7 @@ class TestAPI(APITestCase):
     def test_file_upload_fastq(self):
         self.client.login(username='TestUser', password='password')
         with open('olc_webportalv2/test_files/2018-SEQ-1471_S1_L001_R1_001.fastq.gz', 'rb') as infile:
-            response = self.client.put('/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz',
+            response = self.client.put('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz',
                                        infile.read(), content_type='application/gzip')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                        account_key=settings.AZURE_ACCOUNT_KEY)
@@ -71,7 +71,7 @@ class TestAPI(APITestCase):
     def test_file_upload_interop(self):
         self.client.login(username='TestUser', password='password')
         with open('olc_webportalv2/test_files/InterOp/QMetricsOut.bin', 'rb') as infile:
-            response = self.client.put('/api/upload/111111_FAKE/QMetricsOut.bin',
+            response = self.client.put('/en-ca/api/upload/111111_FAKE/QMetricsOut.bin',
                                        infile.read(),
                                        content_type='application/octet-stream')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
@@ -84,7 +84,7 @@ class TestAPI(APITestCase):
     def test_file_upload_metadata_file(self):
         self.client.login(username='TestUser', password='password')
         with open('olc_webportalv2/test_files/RunInfo.xml', 'rb') as infile:
-            response = self.client.put('/api/upload/111111_FAKE/RunInfo.xml',
+            response = self.client.put('/en-ca/api/upload/111111_FAKE/RunInfo.xml',
                                        infile.read(),
                                        content_type='text/xml')
         blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
@@ -96,48 +96,48 @@ class TestAPI(APITestCase):
 
     def test_get_interop_file_exists(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/QMetricsOut.bin')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/QMetricsOut.bin')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertTrue(response_dict['exists'])
         self.assertGreater(response_dict['size'], 0)
 
     def test_get_interop_file_does_not_exist(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/ControlMetricsOut.bin')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/ControlMetricsOut.bin')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
 
     def test_get_metadata_file_exists(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/RunInfo.xml')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/RunInfo.xml')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertTrue(response_dict['exists'])
         self.assertGreater(response_dict['size'], 0)
 
     def test_get_metadata_file_does_not_exist(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/runParameters.xml')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/runParameters.xml')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
 
     def test_get_fastq_file_exists(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertTrue(response_dict['exists'])
         self.assertGreater(response_dict['size'], 0)
 
     def test_get_fastq_file_does_not_exist(self):
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/upload/111111_FAKE/2018-SEQ-1471_not_real_L001_R1_001.fastq.gz')
+        response = self.client.get('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_not_real_L001_R1_001.fastq.gz')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
 
     def test_start_cowbat_login_required(self):
-        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        response = self.client.get('/en-ca/api/run_cowbat/111111_FAKE')
         self.assertEqual(response.status_code, 403)
 
     def test_start_cowbat_files_not_present(self):
@@ -145,7 +145,7 @@ class TestAPI(APITestCase):
                                                       seqids=['2018-SEQ-1471', '2018-SEQ-1472'])
         sequencing_run.save()
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        response = self.client.get('/en-ca/api/run_cowbat/111111_FAKE')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertEqual(response_dict['status'], 'Some files were missing. Could not start assembly.')
 
@@ -154,6 +154,6 @@ class TestAPI(APITestCase):
                                                       status='Complete')
         sequencing_run.save()
         self.client.login(username='TestUser', password='password')
-        response = self.client.get('/api/run_cowbat/111111_FAKE')
+        response = self.client.get('/en-ca/api/run_cowbat/111111_FAKE')
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertIn('Did not start', response_dict['status'])
