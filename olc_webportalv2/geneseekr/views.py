@@ -13,6 +13,8 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_parsnp, run_amr_summary, run_prokka, run_nearest_neighbors
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.metadata.views import LabID_sync_SeqID
+from azure.storage.blob import BlockBlobService
+import os
 # Task Management
 from kombu import Queue
 
@@ -153,9 +155,9 @@ def tree_home(request):
 def tree_request(request):
     form = ParsnpForm()
     if request.method == 'POST':
-        form = ParsnpForm(request.POST)
+        form = ParsnpForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name, tree_program, number_diversitree_strains = form.cleaned_data
+            seqids, name, tree_program, number_diversitree_strains, other_files = form.cleaned_data
             parsnp_request = ParsnpTree.objects.create(user=request.user,
                                                        seqids=seqids)
             parsnp_request.status = 'Processing'
@@ -168,6 +170,18 @@ def tree_request(request):
             else:
                 parsnp_request.number_diversitree_strains = number_diversitree_strains
             parsnp_request.tree_program = tree_program
+            container_name = 'parsnp-{}'.format(parsnp_request.pk)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            parsnp_request.other_input_files = file_names
             parsnp_request.save()
             run_parsnp.apply_async(queue='cowbat', args=(parsnp_request.pk, ), countdown=10)
             return redirect('geneseekr:tree_result', parsnp_request_pk=parsnp_request.pk)
@@ -239,9 +253,9 @@ def amr_home(request):
 def amr_request(request):
     form = AMRForm()
     if request.method == 'POST':
-        form = AMRForm(request.POST)
+        form = AMRForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name = form.cleaned_data
+            seqids, name, other_files = form.cleaned_data
             amr_request = AMRSummary.objects.create(user=request.user,
                                                     seqids=seqids)
             amr_request.status = 'Processing'
@@ -249,6 +263,18 @@ def amr_request(request):
                 amr_request.name = amr_request.pk
             else:
                 amr_request.name = name
+            container_name = 'parsnp-{}'.format(amr_request.pk)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            amr_request.other_input_files = file_names
             amr_request.save()
             run_amr_summary.apply_async(queue='cowbat', args=(amr_request.pk, ), countdown=10)
             return redirect('geneseekr:amr_result', amr_request_pk=amr_request.pk)
@@ -257,36 +283,38 @@ def amr_request(request):
                   {
                       'form': form
                   })
+@login_required
+def amr_detail(request, amr_detail_pk):
+    amr_detail = get_object_or_404(AMRDetail, pk=amr_detail_pk)
+    amr_request = AMRSummary.objects.get(amrdetail=amr_detail)
+    return render(request,
+                  'geneseekr/amr_detail.html',
+                  {
+                      'amr_request': amr_request,
+                      'amr_detail': amr_detail,
+                  })
 
 @login_required
 def amr_result(request, amr_request_pk):
     amr_request = get_object_or_404(AMRSummary, pk=amr_request_pk)
-    amr_details = AMRDetail.objects.filter(amr_request=amr_request)
     form = EmailForm()
-    selectedSeq = None
-    selectedTog = None
-    labidDict = LabID_sync_SeqID(amr_request.seqids)
     if request.method == 'POST':
-        if 'selectedSeq' in request.POST:
-            selectedSeq = request.POST.get('selectedSeq')
-        if 'selectedTog' in request.POST:
-            selectedTog = request.POST.get('selectedTog')
-        else:    
-            form = EmailForm(request.POST)
-            if form.is_valid():
-                Email = form.cleaned_data.get('email')
-                if Email not in amr_request.emails_array:
-                    amr_request.emails_array.append(Email)
-                    amr_request.save()
-                    form = EmailForm()
-                    messages.success(request, 'Email saved')
-                else:
-                    messages.error(request, 'Email has already been saved')
-            
+        form = EmailForm(request.POST)
+        if form.is_valid():
+            Email = form.cleaned_data.get('email')
+            if Email not in amr_request.emails_array:
+                amr_request.emails_array.append(Email)
+                amr_request.save()
+                form = EmailForm()
+                messages.success(request, 'Email saved')
+            else:
+                messages.error(request, 'Email has already been saved')
+
     return render(request,
                   'geneseekr/amr_result.html',
                   {
-                      'amr_request': amr_request,'amr_details': amr_details, 'form': form, 'selectedSeq':selectedSeq, 'selectedTog':selectedTog ,'labidDict':labidDict,
+                      'amr_request': amr_request,
+                      'form': form,
                   })
 
 @login_required
@@ -329,16 +357,29 @@ def prokka_home(request):
 def prokka_request(request):
     form = ProkkaForm()
     if request.method == 'POST':
-        form = ProkkaForm(request.POST)
+        form = ProkkaForm(request.POST, request.FILES)
         if form.is_valid():
-            seqids, name = form.cleaned_data
+            seqids, name, other_files = form.cleaned_data
             prokka_request = ProkkaRequest.objects.create(user=request.user,
-                                                    seqids=seqids)
-            prokka_request.status = 'Processing'
+                                                          seqids=seqids,
+                                                          status='Processing')
             if name == None:
                 prokka_request.name = prokka_request.pk
             else:
                 prokka_request.name = name
+            prokka_request.save()
+            container_name = 'prokka-{}'.format(prokka_request.pk)
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            blob_client.create_container(container_name)
+            file_names = list()
+            for other_file in request.FILES.getlist('other_files'):
+                file_name = os.path.join(container_name, other_file.name)
+                file_names.append(file_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=other_file.name,
+                                                   blob=other_file.read())
+            prokka_request.other_input_files = file_names
             prokka_request.save()
             run_prokka.apply_async(queue='cowbat', args=(prokka_request.pk, ), countdown=10)
             return redirect('geneseekr:prokka_result', prokka_request_pk=prokka_request.pk)
@@ -393,17 +434,32 @@ def prokka_name(request, prokka_request_pk):
 def neighbor_request(request):
     form = NearNeighborForm()
     if request.method == 'POST':
-        form = NearNeighborForm(request.POST)
+        form = NearNeighborForm(request.POST, request.FILES)
         if form.is_valid():
-            seqid, name, number_neighbors = form.cleaned_data
+            seqid, name, number_neighbors, uploaded_file = form.cleaned_data
             if name is None:
                 name = ''
+            if seqid is None:
+                seqid = ''
+            if uploaded_file is None:
+                uploaded_file_name = ''
+            else:
+                uploaded_file_name = uploaded_file.name
             nearest_neighbor_task = NearestNeighbors.objects.create(seqid=seqid,
                                                                     number_neighbors=number_neighbors,
                                                                     name=name,
                                                                     user=request.user,
+                                                                    uploaded_file_name=uploaded_file_name,
                                                                     status='Processing')
             nearest_neighbor_task.save()
+            if uploaded_file_name != '':
+                container_name = 'neighbor-{}'.format(nearest_neighbor_task.pk)
+                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                               account_key=settings.AZURE_ACCOUNT_KEY)
+                blob_client.create_container(container_name)
+                blob_client.create_blob_from_bytes(container_name=container_name,
+                                                   blob_name=uploaded_file_name,
+                                                   blob=uploaded_file.read())
             run_nearest_neighbors.apply_async(queue='geneseekr', args=(nearest_neighbor_task.pk, ), countdown=10)
             return redirect('geneseekr:neighbor_result', neighbor_request_pk=nearest_neighbor_task.pk)
     return render(request,

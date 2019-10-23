@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.http import QueryDict
 from olc_webportalv2.geneseekr.forms import ParsnpForm, GeneSeekrForm, AMRForm, ProkkaForm, NearNeighborForm
 from olc_webportalv2.metadata.models import SequenceData
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -111,39 +112,39 @@ class ParsnpFormTest(TestCase):
     def test_valid_form(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertTrue(form.is_valid())
-        seqids, name,tree_program, number_diversitree_strains = form.cleaned_data
+        seqids, name,tree_program, number_diversitree_strains, other_files = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
         form = ParsnpForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
         form = ParsnpForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_negative_number_diversitree_strains(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp', 'number_diversitree_strains':'-2'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_large_number_diversitree_strains(self):
         form = ParsnpForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712','tree_program' : 'parsnp', 'number_diversitree_strains':'5'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
         form = ParsnpForm({
             'seqids': ''
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
 class AMRFormTest(TestCase):
@@ -161,28 +162,29 @@ class AMRFormTest(TestCase):
     def test_valid_form(self):
         form = AMRForm({
             'seqids': '2015-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertTrue(form.is_valid())
-        seqids, name = form.cleaned_data
+        seqids, name, other_files = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
-        form =  AMRForm({
+        form = AMRForm({
             'seqids': ''
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
+
 
 class ProkkaFormTest(TestCase):
     @classmethod
@@ -197,29 +199,27 @@ class ProkkaFormTest(TestCase):
         sequence_data.save()
 
     def test_valid_form(self):
-        form = ProkkaForm({
-            'seqids': '2015-SEQ-0711 2015-SEQ-0712'
-        })
+        form = ProkkaForm(QueryDict('seqids=2015-SEQ-0711 2015-SEQ-0712'), QueryDict())
         self.assertTrue(form.is_valid())
-        seqids, name = form.cleaned_data
+        seqids, name, other_files = form.cleaned_data
         self.assertEqual(seqids, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_wrong_seqid_regex(self):
-        form =  ProkkaForm({
+        form = ProkkaForm({
             'seqids': '22015-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_wrong_seqid_does_not_exist(self):
-        form =  ProkkaForm({
+        form = ProkkaForm({
             'seqids': '2222-SEQ-0711 2015-SEQ-0712'
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_blank(self):
-        form =  ProkkaForm({
+        form = ProkkaForm({
             'seqids': ''
-        })
+        }, QueryDict())
         self.assertFalse(form.is_valid())
 
 
@@ -238,7 +238,7 @@ class NearNeighborsFormTest(TestCase):
     def test_valid_form(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 10})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 10)
 
@@ -253,14 +253,14 @@ class NearNeighborsFormTest(TestCase):
     def test_neighbor_boundary_low_valid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 1})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 1)
 
     def test_neighbor_boundary_high_valid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 250})
         self.assertTrue(form.is_valid())
-        seqid, name, number_neighbors = form.cleaned_data
+        seqid, name, number_neighbors, uploaded_file = form.cleaned_data
         self.assertEqual(seqid, '2015-SEQ-0711')
         self.assertEqual(number_neighbors, 250)
 
@@ -271,3 +271,22 @@ class NearNeighborsFormTest(TestCase):
     def test_neighbor_boundary_low_invalid(self):
         form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 0})
         self.assertFalse(form.is_valid())
+
+    def test_neighbor_uploaded_file_no_seqid(self):
+        with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
+            file_data = {'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read())}
+            form = NearNeighborForm({'seqid': '', 'number_neighbors': 4}, file_data)
+            self.assertTrue(form.is_valid())
+
+    def test_neighbor_uploaded_file_bad_extension(self):
+        with open('olc_webportalv2/test_files/config.xml', 'rb') as upload_file:
+            form = NearNeighborForm({'seqid': '',
+                                     'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read()),
+                                     'number_neighbors': 4})
+            self.assertFalse(form.is_valid())
+
+    def test_form_invalid_seqid_and_file(self):
+        with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
+            file_data = {'uploaded_file': SimpleUploadedFile(upload_file.name, upload_file.read())}
+            form = NearNeighborForm({'seqid': '2015-SEQ-0711', 'number_neighbors': 4}, file_data)
+            self.assertFalse(form.is_valid())
