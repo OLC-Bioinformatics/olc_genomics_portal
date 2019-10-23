@@ -5,7 +5,7 @@ services:
     restart: always
     build: 
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.dev
     expose:
       - "8000"
     links:
