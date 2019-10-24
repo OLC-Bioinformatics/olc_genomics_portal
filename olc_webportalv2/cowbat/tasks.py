@@ -32,6 +32,8 @@ import json
 from celery import shared_task, task
 # Sentry
 from sentry_sdk import capture_exception
+from azure.batch.models import BatchErrorException
+
 
 @shared_task
 def run_cowbat_batch(sequencing_run_pk):
@@ -50,7 +52,7 @@ def run_cowbat_batch(sequencing_run_pk):
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
-        for seqid in sequencing_run.seqids_to_upload:
+        for seqid in sequencing_run.seqids:
             forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
             reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
             if len(forward_reads) != 1 or len(reverse_reads) != 1:
@@ -60,7 +62,6 @@ def run_cowbat_batch(sequencing_run_pk):
             sequencing_run.status = 'UploadError'
             sequencing_run.save()
             return
-
 
         # Create a configuration file to be used by my Azure batch script.
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
@@ -177,11 +178,11 @@ def cowbat_cleanup(sequencing_run_pk):
     for seqid in sequencing_run.realtime_strains:
         if sequencing_run.realtime_strains[seqid] == 'True':
             realtime_strains.append(seqid)
-    recipient_list = ['ray.allain@canada.ca', 'andrew.low@canada.ca', 'adam.koziol@canada.ca']
+    recipient_list = ['ray.allain@canada.ca', 'adam.koziol@canada.ca', 'julie.shay@canada.ca']
     """
     for recipient in recipient_list:
         send_email(subject='Run {} has finished assembly.'.format(str(sequencing_run)),
-                   body='If you are Andrew or Adam, please download the blob container to local OLC storage. '
+                   body='If you are Adam or Julie, please download the blob container to local OLC storage. '
                         'If you\'re Ray, please add this data to the OLC database.\n Reports and assemblies '
                         'are available at the following link: {}\nIn this run, the following strains '
                         'will need ROGAs created: {}'.format(sas_url, realtime_strains),
@@ -240,15 +241,21 @@ def check_cowbat_tasks():
         # Check if all tasks (within batch, this terminology gets confusing) associated
         # with this job have completed.
         tasks_completed = True
-        for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != batchmodels.TaskState.completed:
-                tasks_completed = False
+        try:
+            for cloudtask in batch_client.task.list(batch_job_name):
+                if cloudtask.state != batchmodels.TaskState.completed:
+                    tasks_completed = False
+        except BatchErrorException:
+            pass
         # Assuming that things have completed, check exit codes. Set status to error if any are non-zero.
         if tasks_completed:
             exit_codes_good = True
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.execution_info.exit_code != 0:
-                    exit_codes_good = False
+            try:
+                for cloudtask in batch_client.task.list(batch_job_name):
+                    if cloudtask.execution_info.exit_code != 0:
+                        exit_codes_good = False
+            except BatchErrorException:
+                pass
             batch_client.job.delete(job_id=batch_job_name)
             batch_client.pool.delete(pool_id=batch_job_name)  # Set up in tasks.py so that pool and job have same ID
             if exit_codes_good:

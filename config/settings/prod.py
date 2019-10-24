@@ -148,7 +148,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 # ------------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#/As
 ADMINS = [
-     ("""Andrew Low""", 'andrew.low@canada.ca'),
+     ("""Adam Koziol""", 'adam.koziol@canada.ca'),
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
