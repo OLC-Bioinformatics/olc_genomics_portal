@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 19:02+0000\n"
+"POT-Creation-Date: 2019-10-25 14:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -768,8 +768,8 @@ msgid "Analyze"
 msgstr "Analyser"
 
 #: olc_webportalv2/templates/base.html:76
-msgid "Find Genes "
-msgstr "Trouver des gènes "
+msgid "Find Genes"
+msgstr "Trouver des gènes"
 
 #: olc_webportalv2/templates/base.html:78
 #: olc_webportalv2/templates/base.html:220
@@ -1193,18 +1193,16 @@ msgstr "Invalide"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:72
 msgid "Run name cannot be blank!"
-msgstr "Le nom de l'exécution ne peut pas être vide !"
+msgstr "Le nom de l'exécution ne peut pas être vide!"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:83
 msgid "Run name must be in YYMMDD_LAB format!"
-msgstr "Le nom de l'exécution doit être au format AAMMJJJ_LAB!"
+msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:256
-#: olc_webportalv2/templates/data/assembled_data.html:29
-#: olc_webportalv2/templates/data/raw_data.html:29
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
-msgid "Why here"
-msgstr ""
+msgid "Drop or click to add files"
+msgstr "Déposer ou cliquer pour ajouter des fichiers"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:6
 msgid "Step 3 of 3: Upload Sequence Files and Begin Assembly"
@@ -1262,7 +1260,7 @@ msgstr "Aucune souche sélectionnée"
 
 #: olc_webportalv2/templates/cowbat/verify_realtime.html:52
 msgid "Are you sure no strains need ROGAs?"
-msgstr "Vous êtes sûr qu'aucune souche n'a besoin de ROGA ?"
+msgstr "Vous êtes sûr qu'aucune souche n'a besoin de ROGA?"
 
 #: olc_webportalv2/templates/cowbat/verify_realtime.html:57
 msgid "Yes, I am sure!"
@@ -1288,13 +1286,18 @@ msgstr ""
 msgid "Get Files"
 msgstr "Obtenir des fichiers"
 
+#: olc_webportalv2/templates/data/assembled_data.html:29
+#: olc_webportalv2/templates/data/raw_data.html:29
+msgid "Enter SEQIDs here"
+msgstr "Saisissez SEQIDs ici"
+
 #: olc_webportalv2/templates/data/data_download.html:7
 msgid "Download Data"
 msgstr "Télécharger les données"
 
 #: olc_webportalv2/templates/data/data_download.html:11
 msgid "The following SEQIDs were not found:"
-msgstr "Les SEQID suivantes n'ont pas été trouvées :"
+msgstr "Les SEQID suivantes n'ont pas été trouvées:"
 
 #: olc_webportalv2/templates/data/data_download.html:17
 msgid "This page will automatically refresh."
@@ -1653,8 +1656,6 @@ msgid "Return all sequences"
 msgstr "Retourne toutes les séquences"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:31
-#, fuzzy
-#| msgid "except for"
 msgid "except for "
 msgstr "à l'exception de"
 
@@ -1719,16 +1720,16 @@ msgstr ""
 "gène d'interrogation."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:99
-msgid "Name of the contig that the target sequence was found on."
-msgstr "Nom du contig sur lequel la séquence cible a été trouvée."
+msgid "Contig name"
+msgstr "Nom de Contig"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:99
 msgid "Contig"
 msgstr "Contig"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:100
-msgid "Percentage of the query sequence that was found."
-msgstr "Pourcentage de la séquence de requêtes trouvée."
+msgid "Percentage of the query sequence that was found"
+msgstr "Pourcentage de la séquence de requêtes trouvée"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:100
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:217
@@ -1736,36 +1737,24 @@ msgid "Query Coverage"
 msgstr "Protection des requêtes"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
-msgid ""
-"How similar the query and target sequence were. 100 means completely "
-"identical, 0 means not at all."
-msgstr ""
-"À quel point la requête et la séquence cible étaient similaires. 100 "
-"signifie complètement identique, 0 signifie pas du tout."
-
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:101
 msgid "Percent Identity"
 msgstr "Pourcentage Identité"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
-msgid "Where on the contig the target gene was found."
-msgstr "Où sur le contig le gène cible a été trouvé."
+msgid "Subject start position"
+msgstr "Position de départ du sujet"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:102
 msgid "Subject Start Position"
 msgstr "Position de départ du sujet"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
-msgid "Subject End Position"
+msgid "Subject end position"
 msgstr "Position finale du sujet"
 
-#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
-msgid ""
-"Measure of significance of the query target match. Lower means more "
-"significant. For more info, check out https://www.researchgate.net/post/"
-"What_does_E_value_in_BLAST_actually_indicates"
-msgstr ""
+#: olc_webportalv2/templates/geneseekr/geneseekr_results.html:103
+msgid "Subject End Position"
+msgstr "Position finale du sujet"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:104
 msgid "E Value"
@@ -1780,14 +1769,12 @@ msgid "GeneSeekr request not completed."
 msgstr "Demande de GeneSeekr non complétée."
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:204
-#, fuzzy
-#| msgid "Top BLAST Hits"
 msgid "BLAST Hits for: "
-msgstr "Meilleurs résultats BLAST"
+msgstr "Résultats BLAST pour"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:204
 msgid ". Query length: "
-msgstr ""
+msgstr ". Longueur de la requête:"
 
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:8
 msgid "Create A Neighbor Query"
@@ -1997,45 +1984,61 @@ msgstr "rMLST"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:18
 msgid "Assembly Quality"
-msgstr "Qualité de l'assemblage "
+msgstr "Qualité de l'assemblage"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:10
 msgid "Metadata Search"
 msgstr "Recherche de métadonnées"
 
+#: olc_webportalv2/templates/metadata/metadata_home.html:18
+msgid "Genus of interest"
+msgstr "Genre intéressant"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:18
+msgid "Enter your genus of interest"
+msgstr "Saisissez votre genre intéressant"
+
 #: olc_webportalv2/templates/metadata/metadata_home.html:19
-msgid "Enter your genus of interest:"
-msgstr "Saisissez votre genre d'intérêt:"
+msgid "Species of interest"
+msgstr "Espèces intéressant"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:19
+msgid "Enter your species of interest"
+msgstr "Saisissez votre espèce intéressant"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:20
+msgid "Serotype of interest"
+msgstr "Sérotype intéressant"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:20
+msgid "Enter your serotype of interest"
+msgstr "Saisissez le sérotype qui vous intéresse"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:21
-#: olc_webportalv2/templates/metadata/metadata_home.html:22
-#: olc_webportalv2/templates/metadata/metadata_home.html:23
-#: olc_webportalv2/templates/metadata/metadata_home.html:24
-#: olc_webportalv2/templates/metadata/metadata_home.html:25
-msgid "hi"
-msgstr ""
+msgid "MLST of interest"
+msgstr "MLST intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:21
-msgid "Enter your species of interest:"
-msgstr "Saisissez votre espèce d'intérêt:"
+msgid "Enter your MLST of interest"
+msgstr "Saisissez votre MLST intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:22
-msgid "Enter your serotype of interest:"
-msgstr "Saisissez le sérotype qui vous intéresse :"
+msgid "rMLST of interest"
+msgstr "rMLST intéressant"
+
+#: olc_webportalv2/templates/metadata/metadata_home.html:22
+msgid "Enter your rMLST of interest"
+msgstr "Saisissez votre rMLST intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:23
-msgid "Enter your MLST of interest:"
-msgstr "Saisissez votre MLST d'intérêt:"
+msgid "Desired assembly quality"
+msgstr "Qualité souhaitée"
 
-#: olc_webportalv2/templates/metadata/metadata_home.html:24
-msgid "Enter your rMLST of interest:"
-msgstr "Saisissez votre rMLSTR d'intérêt:"
+#: olc_webportalv2/templates/metadata/metadata_home.html:23
+msgid "Choose your desired assembly quality"
+msgstr "Choisissez la qualité de montage souhaitée"
 
-#: olc_webportalv2/templates/metadata/metadata_home.html:25
-msgid "Choose your desired assembly quality:"
-msgstr "Choisissez la qualité de montage souhaitée:"
-
-#: olc_webportalv2/templates/metadata/metadata_home.html:28
+#: olc_webportalv2/templates/metadata/metadata_home.html:26
 msgid "Get SeqIDs"
 msgstr "Obtenir les SeqIDs"
 
