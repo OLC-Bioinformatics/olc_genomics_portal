@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-25 14:27+0000\n"
+"POT-Creation-Date: 2019-10-28 19:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -292,6 +292,7 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:20
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:20
 #: olc_webportalv2/templates/geneseekr/tree_home.html:20
+#: olc_webportalv2/templates/primer/primer_val_home.html:16
 #: olc_webportalv2/templates/users/user_detail.html:18
 #: olc_webportalv2/users/models.py:13
 msgid "Name"
@@ -768,7 +769,7 @@ msgid "Analyze"
 msgstr "Analyser"
 
 #: olc_webportalv2/templates/base.html:76
-msgid "Find Genes"
+msgid "Find Genes "
 msgstr "Trouver des gènes"
 
 #: olc_webportalv2/templates/base.html:78
@@ -904,6 +905,68 @@ msgstr "Statut d'exécution"
 msgid "Report Download"
 msgstr "Téléchargement du rapport"
 
+#: olc_webportalv2/templates/cowbat/assembly_home.html:26
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:100
+#: olc_webportalv2/templates/data/data_download.html:20
+#: olc_webportalv2/templates/data/data_home.html:37
+#: olc_webportalv2/templates/geneseekr/amr_home.html:36
+#: olc_webportalv2/templates/geneseekr/amr_result.html:83
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:78
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:33
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:86
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:36
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:82
+#: olc_webportalv2/templates/geneseekr/tree_home.html:36
+#: olc_webportalv2/templates/geneseekr/tree_result.html:79
+#: olc_webportalv2/templates/primer/primer_val_home.html:29
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:29
+msgid "Complete"
+msgstr "Complet"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:28
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:37
+#: olc_webportalv2/templates/data/data_download.html:15
+#: olc_webportalv2/templates/data/data_home.html:41
+#: olc_webportalv2/templates/geneseekr/amr_home.html:38
+#: olc_webportalv2/templates/geneseekr/amr_result.html:18
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:17
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:35
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:24
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:38
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:20
+#: olc_webportalv2/templates/geneseekr/tree_home.html:38
+#: olc_webportalv2/templates/geneseekr/tree_result.html:19
+#: olc_webportalv2/templates/primer/primer_val_home.html:31
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:31
+msgid "Processing"
+msgstr "En traitement"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:30
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:20
+#: olc_webportalv2/templates/data/data_download.html:44
+#: olc_webportalv2/templates/data/data_home.html:43
+#: olc_webportalv2/templates/geneseekr/amr_home.html:40
+#: olc_webportalv2/templates/geneseekr/amr_result.html:77
+#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
+#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:73
+#: olc_webportalv2/templates/geneseekr/neighbor_home.html:37
+#: olc_webportalv2/templates/geneseekr/neighbor_result.html:81
+#: olc_webportalv2/templates/geneseekr/prokka_home.html:40
+#: olc_webportalv2/templates/geneseekr/prokka_result.html:77
+#: olc_webportalv2/templates/geneseekr/tree_home.html:40
+#: olc_webportalv2/templates/geneseekr/tree_result.html:75
+#: olc_webportalv2/templates/primer/primer_val_home.html:33
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
+msgid "Error"
+msgstr "Erreur"
+
+#: olc_webportalv2/templates/cowbat/assembly_home.html:32
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:25
+msgid "Upload Error"
+msgstr "Erreur de téléchargement"
+
 #: olc_webportalv2/templates/cowbat/assembly_home.html:34
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:17
 #: olc_webportalv2/templates/data/data_home.html:45
@@ -917,6 +980,7 @@ msgstr "Téléchargement du rapport"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:73
 #: olc_webportalv2/templates/geneseekr/tree_home.html:42
 #: olc_webportalv2/templates/geneseekr/tree_result.html:72
+#: olc_webportalv2/templates/primer/primer_val_home.html:35
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
 msgid "Unprocessed"
 msgstr "Non traité"
@@ -934,6 +998,8 @@ msgstr "Non traité"
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:46
 #: olc_webportalv2/templates/geneseekr/tree_home.html:17
 #: olc_webportalv2/templates/geneseekr/tree_home.html:46
+#: olc_webportalv2/templates/primer/primer_val_home.html:18
+#: olc_webportalv2/templates/primer/primer_val_home.html:38
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:38
 msgid "Download"
@@ -946,6 +1012,7 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:45
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:48
 #: olc_webportalv2/templates/geneseekr/tree_home.html:48
+#: olc_webportalv2/templates/primer/primer_val_home.html:40
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:40
 msgid "Not Available"
 msgstr "Indisponible"
@@ -954,23 +1021,6 @@ msgstr "Indisponible"
 msgid "COWBAT Status for"
 msgstr "Statut COWBAT pour"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:20
-#: olc_webportalv2/templates/data/data_download.html:44
-#: olc_webportalv2/templates/data/data_home.html:43
-#: olc_webportalv2/templates/geneseekr/amr_home.html:40
-#: olc_webportalv2/templates/geneseekr/amr_result.html:77
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:41
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:73
-#: olc_webportalv2/templates/geneseekr/neighbor_home.html:37
-#: olc_webportalv2/templates/geneseekr/neighbor_result.html:81
-#: olc_webportalv2/templates/geneseekr/prokka_home.html:40
-#: olc_webportalv2/templates/geneseekr/prokka_result.html:77
-#: olc_webportalv2/templates/geneseekr/tree_home.html:40
-#: olc_webportalv2/templates/geneseekr/tree_result.html:75
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
-msgid "Error"
-msgstr "Erreur"
-
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
 #: olc_webportalv2/templates/geneseekr/amr_result.html:79
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:83
@@ -978,10 +1028,6 @@ msgstr "Erreur"
 #: olc_webportalv2/templates/geneseekr/tree_result.html:77
 msgid "Return to"
 msgstr "Retourner à"
-
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:25
-msgid "Upload Error"
-msgstr "Erreur de téléchargement"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:27
 msgid ""
@@ -998,23 +1044,6 @@ msgstr ""
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:33
 msgid "Retry Sequence Upload For "
 msgstr "Réessayer le téléchargement de séquence pour"
-
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:37
-#: olc_webportalv2/templates/data/data_download.html:15
-#: olc_webportalv2/templates/data/data_home.html:41
-#: olc_webportalv2/templates/geneseekr/amr_home.html:38
-#: olc_webportalv2/templates/geneseekr/amr_result.html:18
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:39
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:17
-#: olc_webportalv2/templates/geneseekr/neighbor_home.html:35
-#: olc_webportalv2/templates/geneseekr/neighbor_result.html:24
-#: olc_webportalv2/templates/geneseekr/prokka_home.html:38
-#: olc_webportalv2/templates/geneseekr/prokka_result.html:20
-#: olc_webportalv2/templates/geneseekr/tree_home.html:38
-#: olc_webportalv2/templates/geneseekr/tree_result.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:31
-msgid "Processing"
-msgstr "En traitement"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:40
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:103
@@ -1092,23 +1121,6 @@ msgstr ""
 "Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
 "exécution."
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:100
-#: olc_webportalv2/templates/data/data_download.html:20
-#: olc_webportalv2/templates/data/data_home.html:37
-#: olc_webportalv2/templates/geneseekr/amr_home.html:36
-#: olc_webportalv2/templates/geneseekr/amr_result.html:83
-#: olc_webportalv2/templates/geneseekr/geneseekr_home.html:37
-#: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:78
-#: olc_webportalv2/templates/geneseekr/neighbor_home.html:33
-#: olc_webportalv2/templates/geneseekr/neighbor_result.html:86
-#: olc_webportalv2/templates/geneseekr/prokka_home.html:36
-#: olc_webportalv2/templates/geneseekr/prokka_result.html:82
-#: olc_webportalv2/templates/geneseekr/tree_home.html:36
-#: olc_webportalv2/templates/geneseekr/tree_result.html:79
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:29
-msgid "Complete"
-msgstr "Complet"
-
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:112
 msgid "Download Reports and Assemblies for"
 msgstr "Télécharger les rapports et assemblages pour"
@@ -1150,6 +1162,7 @@ msgstr "Fichier"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:16
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:16
 #: olc_webportalv2/templates/geneseekr/tree_home.html:16
+#: olc_webportalv2/templates/primer/primer_val_home.html:17
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
 msgid "Status"
 msgstr "Statut"
@@ -1357,6 +1370,7 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:18
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:18
 #: olc_webportalv2/templates/geneseekr/tree_home.html:18
+#: olc_webportalv2/templates/primer/primer_val_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 msgid "Request Date"
 msgstr "Date de la demande"
@@ -1448,6 +1462,7 @@ msgstr "Effacer"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:90
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:96
 #: olc_webportalv2/templates/geneseekr/tree_home.html:96
+#: olc_webportalv2/templates/primer/primer_val_home.html:85
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:85
 msgid "Are you sure?"
 msgstr "Êtes-vous sûr?"
@@ -1457,6 +1472,7 @@ msgstr "Êtes-vous sûr?"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:91
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:97
 #: olc_webportalv2/templates/geneseekr/tree_home.html:97
+#: olc_webportalv2/templates/primer/primer_val_home.html:86
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:86
 msgid "You will not be able to revert this!"
 msgstr "Vous ne pouvez pas reprendre ceci!"
@@ -1466,6 +1482,7 @@ msgstr "Vous ne pouvez pas reprendre ceci!"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:95
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:101
 #: olc_webportalv2/templates/geneseekr/tree_home.html:101
+#: olc_webportalv2/templates/primer/primer_val_home.html:91
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:91
 msgid "Yes, delete it!"
 msgstr "Oui, effacez-le !"
@@ -1475,6 +1492,7 @@ msgstr "Oui, effacez-le !"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:96
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:102
 #: olc_webportalv2/templates/geneseekr/tree_home.html:102
+#: olc_webportalv2/templates/primer/primer_val_home.html:89
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:89
 msgid "Cancel"
 msgstr "Annuler"
@@ -1484,6 +1502,7 @@ msgstr "Annuler"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:101
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:107
 #: olc_webportalv2/templates/geneseekr/tree_home.html:107
+#: olc_webportalv2/templates/primer/primer_val_home.html:96
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:96
 msgid "Deleted!"
 msgstr "Effacé"
@@ -1501,6 +1520,7 @@ msgstr "Votre fichier a été effacé."
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:120
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:126
 #: olc_webportalv2/templates/geneseekr/tree_home.html:126
+#: olc_webportalv2/templates/primer/primer_val_home.html:115
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
 msgid "Cancelled!"
 msgstr "Annulé!"
@@ -2082,6 +2102,32 @@ msgstr "Anglais"
 msgid "French"
 msgstr "Français"
 
+#: olc_webportalv2/templates/primer/primer_val_home.html:9
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:9
+msgid "Create A Virus Typer Query"
+msgstr "Créer une requête de Virus Typer"
+
+#: olc_webportalv2/templates/primer/primer_val_home.html:21
+#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:8
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:21
+msgid "Edit Project"
+msgstr "Modifier le projet"
+
+#: olc_webportalv2/templates/primer/primer_val_home.html:45
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
+msgid "Delete "
+msgstr "Effacer"
+
+#: olc_webportalv2/templates/primer/primer_val_home.html:97
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
+msgid "Your project has been deleted."
+msgstr "Votre projet a été effacé."
+
+#: olc_webportalv2/templates/primer/primer_val_home.html:116
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:116
+msgid "Your project is safe."
+msgstr "Votre projet est sûr."
+
 #: olc_webportalv2/templates/users/user_detail.html:11
 msgid "Personal Info"
 msgstr "Informations Personnelles"
@@ -2162,35 +2208,14 @@ msgstr "Créer les échantillons"
 msgid "Add New Sample"
 msgstr "Ajouter un échantillon"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:8
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:21
-msgid "Edit Project"
-msgstr "Modifier le projet"
-
 #: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:19
 msgid "Update Project"
 msgstr "Réviser"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:9
-msgid "Create A Virus Typer Query"
-msgstr "Créer une requête de Virus Typer"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:16
 #: olc_webportalv2/vir_typer/forms.py:59
 msgid "Project Name"
 msgstr "Nom du projet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
-msgid "Delete "
-msgstr "Effacer"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
-msgid "Your project has been deleted."
-msgstr "Votre projet a été effacé."
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:116
-msgid "Your project is safe."
-msgstr "Votre projet est sûr."
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:10
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:40
