@@ -136,7 +136,8 @@
                           cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
                         } 
                         else {
-                          if (requiredFiles[i] == 'runParameters.xml'){}
+                          if (requiredFiles[i] == 'runParameters.xml' && (filesAcceptedNames.indexOf('RunParameters.xml') !== -1)){}
+                          else if (requiredFiles[i] == 'RunParameters.xml' && (filesAcceptedNames.indexOf('runParameters.xml') !== -1)){}
                           else if (requiredFiles[i] == 'RunParameters.xml'){}
                           else{
                           var row = filesTable.insertRow();
