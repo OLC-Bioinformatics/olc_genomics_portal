@@ -124,7 +124,7 @@
                           filesTable.deleteRow(i);
                       }
                       var validationSuccess = true;
-                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml', 'runParameters.xml', 'RunParameters.xml', 'SampleSheet.csv'];
+                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml','runParameters.xml', 'RunParameters.xml', 'SampleSheet.csv'];
                       for(var i=0; i<requiredFiles.length; i++ ) {
                         if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
                           var row = filesTable.insertRow();
@@ -134,10 +134,11 @@
                           cell2.classList.add('table-success');
                           cell2.align = 'center';
                           cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                        }
-                        else if (filesAcceptedNames.indexOf(requiredFiles[i] == (4||5))) {
-                        }
+                        } 
                         else {
+                          if (requiredFiles[i] == 'runParameters.xml' || 'RunParameters.xml'){
+                          }
+                          else{
                           var row = filesTable.insertRow();
                           var cell1 = row.insertCell();
                           var cell2 = row.insertCell();
@@ -146,6 +147,7 @@
                           cell2.align = 'center';
                           cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
                           validationSuccess = false;
+                        }
                         }
                         
                       }
