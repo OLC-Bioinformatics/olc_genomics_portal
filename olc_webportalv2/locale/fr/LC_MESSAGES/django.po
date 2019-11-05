@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-28 19:07+0000\n"
+"POT-Creation-Date: 2019-11-05 21:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -461,6 +461,22 @@ msgstr "Passe + Référence"
 #: olc_webportalv2/metadata/views.py:135
 msgid "All"
 msgstr "Tous"
+
+#: olc_webportalv2/primer/urls.py:10 olc_webportalv2/vir_typer/urls.py:10
+msgid "^create/"
+msgstr "^créer"
+
+#: olc_webportalv2/primer/urls.py:11 olc_webportalv2/vir_typer/urls.py:11
+msgid "^upload/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^télécharger/(?P<vir_typer_pk>\\d+)/$"
+
+#: olc_webportalv2/primer/urls.py:12 olc_webportalv2/vir_typer/urls.py:12
+msgid "^results/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^résultats/(?P<vir_typer_pk>\\d+)/$"
+
+#: olc_webportalv2/primer/urls.py:13 olc_webportalv2/vir_typer/urls.py:13
+msgid "^edit/(?P<vir_typer_pk>\\d+)/$"
+msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
@@ -1212,7 +1228,20 @@ msgstr "Le nom de l'exécution ne peut pas être vide!"
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:256
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:154
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:171
+msgid "Following files are not needed: "
+msgstr "Les fichiers suivants ne sont pas nécessaires: "
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:161
+msgid " and have been deleted "
+msgstr " et ont été supprimés "
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:165
+msgid "Unnecessary Files"
+msgstr "Fichiers inutiles"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:281
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
 msgid "Drop or click to add files"
 msgstr "Déposer ou cliquer pour ajouter des fichiers"
@@ -2386,22 +2415,6 @@ msgstr "Source de l'échantillon"
 #: olc_webportalv2/vir_typer/forms.py:83
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
-
-#: olc_webportalv2/vir_typer/urls.py:10
-msgid "^create/"
-msgstr "^créer"
-
-#: olc_webportalv2/vir_typer/urls.py:11
-msgid "^upload/(?P<vir_typer_pk>\\d+)/$"
-msgstr "^télécharger/(?P<vir_typer_pk>\\d+)/$"
-
-#: olc_webportalv2/vir_typer/urls.py:12
-msgid "^results/(?P<vir_typer_pk>\\d+)/$"
-msgstr "^résultats/(?P<vir_typer_pk>\\d+)/$"
-
-#: olc_webportalv2/vir_typer/urls.py:13
-msgid "^edit/(?P<vir_typer_pk>\\d+)/$"
-msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 
 #: olc_webportalv2/vir_typer/views.py:75
 msgid "You have created project "
