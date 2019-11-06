@@ -9,8 +9,10 @@
 <h2>{% trans "Step 1 of 3: Upload Metadata Files and Name Run"%}</h2>
   <p>{% blocktrans %} Enter a run name and drag and drop the files found in the following table to upload. Once all files have been uploaded,
   you can proceed to the next page. {% endblocktrans %}</p>
- <form enctype="multipart/form-data" method='post' name="file-form"><strong>{{form|crispy}}</strong></form>
- <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" >
+  <br><br>
+  <br>
+ <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+       <div style="position:absolute; top:-85px;left:-3px;"> <strong>{{form|crispy}}</strong> </div>
         <div class="dz-message needsclick">
         {% trans "Drop files to upload or click here" %}<br>
         <i class="fas fa-cloud-upload-alt fa-4x"></i>
@@ -110,6 +112,7 @@
                 });
 
                 validateButton.addEventListener("click", function(e) {
+                      validateForm();
                       var filesAccepted = myDropzone.getAcceptedFiles();
                       var filesTable = document.getElementById('files-required-table');
                       // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
