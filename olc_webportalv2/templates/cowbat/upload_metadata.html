@@ -124,7 +124,7 @@
                           filesTable.deleteRow(i);
                       }
                       var validationSuccess = true;
-                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml', 'runParameters.xml', 'SampleSheet.csv'];
+                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml','runParameters.xml', 'RunParameters.xml', 'SampleSheet.csv'];
                       for(var i=0; i<requiredFiles.length; i++ ) {
                         if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
                           var row = filesTable.insertRow();
@@ -134,19 +134,44 @@
                           cell2.classList.add('table-success');
                           cell2.align = 'center';
                           cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                        }
+                        } 
                         else {
-                          var row = filesTable.insertRow();
-                          var cell1 = row.insertCell();
-                          var cell2 = row.insertCell();
-                          cell1.innerHTML=requiredFiles[i];
-                          cell2.classList.add('table-danger');
-                          cell2.align = 'center';
-                          cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
-                          validationSuccess = false;
-                        }
-                        
+                          // table formatting to allow only one of run/Run Parameters
+                          if (requiredFiles[i] == 'runParameters.xml' && (filesAcceptedNames.indexOf('RunParameters.xml') !== -1)){}
+                          else if (requiredFiles[i] == 'RunParameters.xml' && (filesAcceptedNames.indexOf('runParameters.xml') !== -1)){}
+                          else if (requiredFiles[i] == 'RunParameters.xml') {}
+                          else {
+                            var row = filesTable.insertRow();
+                            var cell1 = row.insertCell();
+                            var cell2 = row.insertCell();
+                            cell1.innerHTML=requiredFiles[i];
+                            cell2.classList.add('table-danger');
+                            cell2.align = 'center';
+                            cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                            validationSuccess = false;}}
                       }
+                      // Message and removal of extra files
+                      var del_text = "{% trans 'Following files are not needed: ' %}";
+                      for(var i=0; i<filesAcceptedNames.length; i++ ) {
+                        if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
+                        del_text += filesAcceptedNames[i] + ', ';
+                        myDropzone.removeFile(filesAccepted[i]);        
+                        }
+                      }
+                      del_text += "{% trans ' and have been deleted ' %}";
+                      console.log(del_text.length);
+                      if (del_text.length > 69) {
+                      Swal.fire({
+                      title: "{% trans 'Unnecessary Files' %}",
+                      text: del_text,
+                      type: 'warning',
+                      showConfirmButton: false
+                      })
+                      validationSuccess = false;
+                      del_text = "{% trans 'Following files are not needed: ' %}";
+                      return false
+                    }
+                      
                       // Also check that all SEQIDs submitted are valid.
                       // in this list.
                       var seqid_validated = true;
