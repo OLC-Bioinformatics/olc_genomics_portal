@@ -128,6 +128,29 @@
                           }
                         }
                       }
+                      // Message and removal of extra files
+                      var del_text = "{% trans 'Following files are not needed: ' %}";
+                      for(var i=0; i<filesAcceptedNames.length; i++ ) {
+                        if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
+                        del_text += filesAcceptedNames[i] + ', ';
+                        myDropzone.removeFile(filesAccepted[i]);        
+                        }
+                      }
+                      // Alert text populated with names of non-required files
+                      del_text += "{% trans ' and have been deleted ' %}";
+                      // if there are files names added to text, then alert
+                      if (del_text.length > 55) {
+                      Swal.fire({
+                      title: "{% trans 'Unnecessary Files' %}",
+                      text: del_text,
+                      type: 'warning',
+                      showConfirmButton: false
+                      })
+                      validationSuccess = false;
+                      del_text = "{% trans 'Following files are not needed: ' %}";
+                      return false
+                    }
+
                       if (validationSuccess === true) {
                         $('#submit').prop('disabled', false);
                       }

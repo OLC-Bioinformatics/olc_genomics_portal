@@ -12,7 +12,7 @@
   <br><br>
   <br>
  <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
-       <div style="position:absolute; top:-85px;left:-3px;"> <strong>{{form|crispy}}</strong> </div>
+       <div style="position:absolute; top:-85px;left:-2px;"> <strong>{{form|crispy}}</strong> </div>
         <div class="dz-message needsclick">
         {% trans "Drop files to upload or click here" %}<br>
         <i class="fas fa-cloud-upload-alt fa-4x"></i>
@@ -153,7 +153,7 @@
                             cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
                             validationSuccess = false;}}
                       }
-                      // Message and removal of extra files
+                      // Removal of extra files and alert
                       var del_text = "{% trans 'Following files are not needed: ' %}";
                       for(var i=0; i<filesAcceptedNames.length; i++ ) {
                         if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
@@ -161,7 +161,9 @@
                         myDropzone.removeFile(filesAccepted[i]);        
                         }
                       }
+                      // Alert text populated with names of non-required files
                       del_text += "{% trans ' and have been deleted ' %}";
+                      // if there are files names added to text, then alert
                       if (del_text.length > 69) {
                       Swal.fire({
                       title: "{% trans 'Unnecessary Files' %}",
@@ -240,7 +242,6 @@
                                 xmlDoc.loadXML(txt);
                               }
                               x = xmlDoc.getElementsByTagName('SampleName');
-                              console.log(bad_seqids_in_run_stats);
                               for (i = 0; i < x.length; i++) {
                                 // Check element is in our list of good SeqIDs.
                                 var seqid_in_run_stats = x[i].childNodes[0].nodeValue.toString();

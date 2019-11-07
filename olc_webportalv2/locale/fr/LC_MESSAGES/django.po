@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-05 21:05+0000\n"
+"POT-Creation-Date: 2019-11-06 20:41+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -908,8 +908,8 @@ msgid "Upload a New Run"
 msgstr "Télécharger une nouvelle exécution"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:10
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:50
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:23
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:51
 msgid "Assembly Home"
 msgstr "Accueil de l'Assemblée"
 
@@ -922,7 +922,7 @@ msgid "Report Download"
 msgstr "Téléchargement du rapport"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:26
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:100
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:101
 #: olc_webportalv2/templates/data/data_download.html:20
 #: olc_webportalv2/templates/data/data_home.html:37
 #: olc_webportalv2/templates/geneseekr/amr_home.html:36
@@ -941,7 +941,7 @@ msgid "Complete"
 msgstr "Complet"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:28
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:37
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:38
 #: olc_webportalv2/templates/data/data_download.html:15
 #: olc_webportalv2/templates/data/data_home.html:41
 #: olc_webportalv2/templates/geneseekr/amr_home.html:38
@@ -979,7 +979,7 @@ msgid "Error"
 msgstr "Erreur"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:32
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:25
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:26
 msgid "Upload Error"
 msgstr "Erreur de téléchargement"
 
@@ -1038,6 +1038,10 @@ msgid "COWBAT Status for"
 msgstr "Statut COWBAT pour"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
+msgid "Last processed step: "
+msgstr "Dernière étape traitée: "
+
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:23
 #: olc_webportalv2/templates/geneseekr/amr_result.html:79
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:83
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:79
@@ -1045,7 +1049,7 @@ msgstr "Statut COWBAT pour"
 msgid "Return to"
 msgstr "Retourner à"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:27
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:28
 msgid ""
 " It looks like one or more of your files did not upload successfully. Click "
 "the button below to retry upload of\n"
@@ -1057,16 +1061,16 @@ msgstr ""
 "vos données de séquence. Vous n'aurez qu'à télécharger les fichiers qui "
 "n'ont pas réussi à le faire."
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:33
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:34
 msgid "Retry Sequence Upload For "
 msgstr "Réessayer le téléchargement de séquence pour"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:40
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:103
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:41
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:104
 msgid "Run Progress"
 msgstr "Progression de l'exécution"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:49
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:50
 msgid ""
 "This page will automatically refresh. An assembly run usually takes at least "
 "4-5 hours."
@@ -1074,7 +1078,7 @@ msgstr ""
 "Cette page se rafraîchit automatiquement. Un cycle de montage prend "
 "généralement au moins 4 à 5 heures."
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:50
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:51
 msgid ""
 "You don't have to remain on this page - this assembly request will be "
 "visible on "
@@ -1082,7 +1086,7 @@ msgstr ""
 "Vous n'avez pas besoin de rester sur cette page - cette demande d'assemblage "
 "sera visible sur"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:54
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:55
 #: olc_webportalv2/templates/geneseekr/amr_result.html:25
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:24
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:31
@@ -1091,7 +1095,7 @@ msgstr ""
 msgid "Your email is already on the list to be notified."
 msgstr "Votre email est déjà sur la liste pour être notifié."
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:55
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:56
 #: olc_webportalv2/templates/geneseekr/amr_result.html:26
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:25
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:32
@@ -1100,7 +1104,7 @@ msgstr "Votre email est déjà sur la liste pour être notifié."
 msgid "Would you like to add another email?"
 msgstr "Souhaitez-vous ajouter un autre courriel ?"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:57
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:58
 #: olc_webportalv2/templates/geneseekr/amr_result.html:28
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:27
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:34
@@ -1109,7 +1113,7 @@ msgstr "Souhaitez-vous ajouter un autre courriel ?"
 msgid "Would you like an email upon completion?"
 msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:64
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:65
 #: olc_webportalv2/templates/geneseekr/amr_result.html:35
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:34
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:41
@@ -1118,7 +1122,7 @@ msgstr "Souhaitez-vous recevoir un courriel une fois terminé ?"
 msgid "Save"
 msgstr "Enregistrer"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:86
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:87
 #: olc_webportalv2/templates/geneseekr/amr_result.html:60
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:56
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:63
@@ -1126,7 +1130,7 @@ msgstr "Enregistrer"
 msgid "Email Recipients"
 msgstr "Destinataires des courriels"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:90
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:91
 #: olc_webportalv2/templates/geneseekr/amr_result.html:64
 #: olc_webportalv2/templates/geneseekr/geneseekr_processing.html:60
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:67
@@ -1137,11 +1141,11 @@ msgstr ""
 "Aucun utilisateur ne s'est inscrit pour recevoir un courriel pour cette "
 "exécution."
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:112
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:113
 msgid "Download Reports and Assemblies for"
 msgstr "Télécharger les rapports et assemblages pour"
 
-#: olc_webportalv2/templates/cowbat/cowbat_processing.html:116
+#: olc_webportalv2/templates/cowbat/cowbat_processing.html:117
 #: olc_webportalv2/templates/data/data_download.html:29
 #: olc_webportalv2/templates/data/data_download.html:41
 #: olc_webportalv2/templates/geneseekr/amr_detail.html:53
@@ -1158,20 +1162,20 @@ msgid "Step 2 of 3: Upload InterOp Files for Run"
 msgstr "Étape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:11
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:15
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:17
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:12
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
 msgid "Drop files to upload or click here"
 msgstr "Déposer des fichiers à télécharger ou cliquez ici"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:19
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:23
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:25
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:29
 msgid "File"
 msgstr "Fichier"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:20
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:24
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:26
 #: olc_webportalv2/templates/data/data_home.html:18
 #: olc_webportalv2/templates/geneseekr/amr_home.html:16
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:16
@@ -1191,13 +1195,34 @@ msgstr "Valider les fichiers InterOp"
 msgid "Upload InterOp Files"
 msgstr "Télécharger des fichiers InterOp"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:8
+#: olc_webportalv2/templates/cowbat/upload_interop.html:132
+#: olc_webportalv2/templates/cowbat/upload_interop.html:149
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:173
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:266
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:308
+msgid "Following files are not needed: "
+msgstr "Les fichiers suivants ne sont pas nécessaires: "
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:139
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:164
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:299
+msgid " and have been deleted "
+msgstr " et ont été supprimés "
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:143
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:167
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:302
+msgid "Unnecessary Files"
+msgstr "Fichiers inutiles"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:9
 msgid "Step 1 of 3: Upload Metadata Files and Name Run"
 msgstr ""
 "Étape 1 de 3 : Télécharger les fichiers de métadonnées et le nom de "
 "l'exécution"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:9
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:10
 msgid ""
 " Enter a run name and drag and drop the files found in the following table "
 "to upload. Once all files have been uploaded,\n"
@@ -1207,41 +1232,28 @@ msgstr ""
 "le tableau suivant pour les télécharger. Une fois que tous les fichiers ont "
 "été téléchargés, vous pouvez passer à la page suivante. "
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:55
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:57
 msgid "Validate Metadata Files"
 msgstr "Valider les fichiers de métadonnées"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:57
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:59
 msgid "Upload Metadata Files"
 msgstr "Télécharger des fichiers de métadonnées"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:71
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:82
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:73
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:84
 msgid "Invalid"
 msgstr "Invalide"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:72
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:74
 msgid "Run name cannot be blank!"
 msgstr "Le nom de l'exécution ne peut pas être vide!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:83
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:85
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:154
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:171
-msgid "Following files are not needed: "
-msgstr "Les fichiers suivants ne sont pas nécessaires: "
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:161
-msgid " and have been deleted "
-msgstr " et ont été supprimés "
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:165
-msgid "Unnecessary Files"
-msgstr "Fichiers inutiles"
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:281
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:283
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
 msgid "Drop or click to add files"
 msgstr "Déposer ou cliquer pour ajouter des fichiers"
