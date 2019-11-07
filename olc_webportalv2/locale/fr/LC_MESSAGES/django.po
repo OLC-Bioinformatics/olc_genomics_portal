@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-06 20:41+0000\n"
+"POT-Creation-Date: 2019-11-07 21:13+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1038,7 +1038,7 @@ msgid "COWBAT Status for"
 msgstr "Statut COWBAT pour"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:22
-msgid "Last processed step: "
+msgid "Last processed step:"
 msgstr "Dernière étape traitée: "
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:23
@@ -1196,23 +1196,20 @@ msgid "Upload InterOp Files"
 msgstr "Télécharger des fichiers InterOp"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:132
-#: olc_webportalv2/templates/cowbat/upload_interop.html:149
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:173
+#: olc_webportalv2/templates/cowbat/upload_interop.html:150
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:266
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:308
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:310
 msgid "Following files are not needed: "
 msgstr "Les fichiers suivants ne sont pas nécessaires: "
 
-#: olc_webportalv2/templates/cowbat/upload_interop.html:139
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:164
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:299
+#: olc_webportalv2/templates/cowbat/upload_interop.html:140
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:300
 msgid " and have been deleted "
 msgstr " et ont été supprimés "
 
-#: olc_webportalv2/templates/cowbat/upload_interop.html:143
+#: olc_webportalv2/templates/cowbat/upload_interop.html:144
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:167
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:302
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:304
 msgid "Unnecessary Files"
 msgstr "Fichiers inutiles"
 
@@ -1253,7 +1250,19 @@ msgstr "Le nom de l'exécution ne peut pas être vide!"
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:283
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
+msgid "Following files are unnecessary and have been removed: "
+msgstr "Les fichiers suivants sont inutiles et ont été supprimés: "
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:176
+msgid "Following files are duplicates and have been removed: "
+msgstr "Les fichiers suivants sont des doublons et ont été supprimés: "
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:185
+msgid "Duplicate Files"
+msgstr "Fichiers en double"
+
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:299
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
 msgid "Drop or click to add files"
 msgstr "Déposer ou cliquer pour ajouter des fichiers"
@@ -2254,7 +2263,7 @@ msgid "Update Project"
 msgstr "Réviser"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:16
-#: olc_webportalv2/vir_typer/forms.py:59
+#: olc_webportalv2/vir_typer/forms.py:60
 msgid "Project Name"
 msgstr "Nom du projet"
 
@@ -2265,13 +2274,13 @@ msgstr "Projet:"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:78
-#: olc_webportalv2/vir_typer/forms.py:76
+#: olc_webportalv2/vir_typer/forms.py:77
 msgid "Sample Name"
 msgstr "Échantillon"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
-#: olc_webportalv2/vir_typer/forms.py:78
+#: olc_webportalv2/vir_typer/forms.py:79
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
@@ -2392,47 +2401,47 @@ msgstr "Le nom de l'analyste est obligatoire"
 msgid "Reception Date is required"
 msgstr "La date de réception est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:56
+#: olc_webportalv2/vir_typer/forms.py:57
 msgid "Required"
 msgstr "Champs obligatoires"
 
-#: olc_webportalv2/vir_typer/forms.py:63
+#: olc_webportalv2/vir_typer/forms.py:64
 msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/vir_typer/forms.py:64
+#: olc_webportalv2/vir_typer/forms.py:65
 msgid "Project Name is required"
 msgstr "Le nom du projet est requis"
 
-#: olc_webportalv2/vir_typer/forms.py:77
+#: olc_webportalv2/vir_typer/forms.py:78
 msgid "Date received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/vir_typer/forms.py:79
+#: olc_webportalv2/vir_typer/forms.py:80
 msgid "Lab ID"
 msgstr "Identifiant labo"
 
-#: olc_webportalv2/vir_typer/forms.py:80
+#: olc_webportalv2/vir_typer/forms.py:81
 msgid "Subunit"
 msgstr "Sous-unité"
 
-#: olc_webportalv2/vir_typer/forms.py:81
+#: olc_webportalv2/vir_typer/forms.py:82
 msgid "Putative classification"
 msgstr "Classification putative"
 
-#: olc_webportalv2/vir_typer/forms.py:82
+#: olc_webportalv2/vir_typer/forms.py:83
 msgid "Isolate source"
 msgstr "Source de l'échantillon"
 
-#: olc_webportalv2/vir_typer/forms.py:83
+#: olc_webportalv2/vir_typer/forms.py:84
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
 
-#: olc_webportalv2/vir_typer/views.py:75
+#: olc_webportalv2/vir_typer/views.py:80
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
 
-#: olc_webportalv2/vir_typer/views.py:401
+#: olc_webportalv2/vir_typer/views.py:406
 #, python-format
 msgid "Project %s updated"
 msgstr "Projet %s mis à jour"
