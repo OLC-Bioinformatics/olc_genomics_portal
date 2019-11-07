@@ -56,9 +56,14 @@ def vir_typer_request(request):
                 isolate_source = form.cleaned_data.get('isolate_source')
                 putative_classification = form.cleaned_data.get('putative_classification')
                 analyst_name = form.cleaned_data.get('analyst_name')
-                subunit = form.cleaned_data.get('subunit')
+                # if subunit is blank
+                if (form.cleaned_data['subunit'] == None):
+                    subunit = 0
+                else:
+                    subunit = form.cleaned_data.get('subunit')    
+                # subunit not included as it can be 0/false
                 if sample_name and date_received and lab_id and lsts_id and isolate_source and putative_classification\
-                        and analyst_name and subunit:
+                        and analyst_name:
                     sample_data.append(VirTyperRequest(sample_name=sample_name,
                                                        project_name_id=vir_typer_project.pk,
                                                        date_received=date_received,
