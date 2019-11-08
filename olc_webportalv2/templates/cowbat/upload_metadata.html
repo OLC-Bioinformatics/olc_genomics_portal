@@ -19,12 +19,12 @@
         </div>
   {% csrf_token %}
   </form>
-  <table id="files-required-table" class="table table-striped compact small">
+  <table id="files-required-table" class="table table-hover compact small">
     <thead>
-        <tr style="font-size: 1.25rem">
-          <td><strong>{% trans "File"%}</strong></td>
-          <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
-          </tr>
+        <tr style="font-size: 1.25rem;">
+          <td style="border:none;"><strong>{% trans "File"%}</strong></td>
+          <td style="text-align:center; border:none;"><strong>{% trans 'Status'%}<strong></td>
+        </tr>
     </thead>
     <tbody>
         <tr>
@@ -59,8 +59,8 @@
   <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Metadata Files"%}</button>
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
-  <script src={% static 'js/dropzone.js' %}></script>
-  <script src={% static 'js/papaparse.min.js' %}></script>
+  <script src="{% static 'js/dropzone.js' %}"></script>
+  <script src="{% static 'js/papaparse.min.js' %}"></script>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   function validateForm() {

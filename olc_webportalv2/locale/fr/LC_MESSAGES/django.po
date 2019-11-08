@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-07 21:13+0000\n"
+"POT-Creation-Date: 2019-11-08 14:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1196,22 +1196,25 @@ msgid "Upload InterOp Files"
 msgstr "Télécharger des fichiers InterOp"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:132
-#: olc_webportalv2/templates/cowbat/upload_interop.html:150
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:266
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:310
-msgid "Following files are not needed: "
-msgstr "Les fichiers suivants ne sont pas nécessaires: "
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
+msgid "Following files are unnecessary and have been removed: "
+msgstr "Les fichiers suivants sont inutiles et ont été supprimés: "
 
-#: olc_webportalv2/templates/cowbat/upload_interop.html:140
-#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:300
-msgid " and have been deleted "
-msgstr " et ont été supprimés "
-
-#: olc_webportalv2/templates/cowbat/upload_interop.html:144
+#: olc_webportalv2/templates/cowbat/upload_interop.html:143
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:167
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:304
 msgid "Unnecessary Files"
 msgstr "Fichiers inutiles"
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:152
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:176
+msgid "Following files are duplicates and have been removed: "
+msgstr "Les fichiers suivants sont des doublons et ont été supprimés: "
+
+#: olc_webportalv2/templates/cowbat/upload_interop.html:161
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:185
+msgid "Duplicate Files"
+msgstr "Fichiers en double"
 
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:9
 msgid "Step 1 of 3: Upload Metadata Files and Name Run"
@@ -1250,18 +1253,6 @@ msgstr "Le nom de l'exécution ne peut pas être vide!"
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
-msgid "Following files are unnecessary and have been removed: "
-msgstr "Les fichiers suivants sont inutiles et ont été supprimés: "
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:176
-msgid "Following files are duplicates and have been removed: "
-msgstr "Les fichiers suivants sont des doublons et ont été supprimés: "
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:185
-msgid "Duplicate Files"
-msgstr "Fichiers en double"
-
 #: olc_webportalv2/templates/cowbat/upload_metadata.html:299
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
 msgid "Drop or click to add files"
@@ -1292,6 +1283,15 @@ msgstr "Brins en avant"
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:31
 msgid "Reverse Reads"
 msgstr "Brins inverses"
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:266
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:310
+msgid "Following files are not needed: "
+msgstr "Les fichiers suivants ne sont pas nécessaires: "
+
+#: olc_webportalv2/templates/cowbat/upload_sequence_data.html:300
+msgid " and have been deleted "
+msgstr " et ont été supprimés "
 
 #: olc_webportalv2/templates/cowbat/verify_realtime.html:9
 msgid "Select ROGA Strains for and verify Strain Names for"

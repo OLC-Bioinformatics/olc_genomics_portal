@@ -22,13 +22,13 @@
     <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Sequence Files and Begin Assembly"%}</button>
     <div id="files-required-button" class="collapse show">
     <br>
-    <div class="container">
-        <table id="files-required-table" class="table table-striped small compact">
+    <div class="container" style="padding-left: 0px;">
+        <table id="files-required-table" class="table table-hover small compact">
             <thead>
-                <tr>
-                    <td><strong>{% trans "File" %}</strong></td>
-                    <td style="text-align:center"> <strong>{% trans "Forward Reads"%} </strong></td>
-                    <td style="text-align:center"> <strong>{% trans "Reverse Reads"%} </strong></td>
+                <tr style="font-size: 1.25rem;">
+                    <td style="border:none;"><strong>{% trans "File" %}</strong></td>
+                    <td style="text-align:center; border:none;"> <strong>{% trans "Forward Reads"%} </strong></td>
+                    <td style="text-align:center; border:none;"> <strong>{% trans "Reverse Reads"%} </strong></td>
                 </tr>
             </thead>
             <tbody>
@@ -79,7 +79,7 @@
     </style>
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
-    <script src={% static 'js/dropzone.js' %}></script>
+    <script src="{% static 'js/dropzone.js' %}"></script>
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript">
     function progressSpinner() {
