@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from django.forms.formsets import BaseFormSet
 from django.forms import ModelForm
@@ -9,12 +10,37 @@ from .models import VirTyperProject, VirTyperRequest
 class BaseVirTyperSampleFormSet(BaseFormSet):
 
     def clean(self):
+
         super().clean()
+        sample_names = list()
+        lsts_ids = list()
         for form in self.forms:
             error_list = list()
             key_names = [key for key in form.cleaned_data]
+            try:
+                sample_name = form.cleaned_data['sample_name']
+                if sample_name not in sample_names:
+                    sample_names.append(sample_name)
+                else:
+                    error_list.append(_('Sample Names must be unique. The following sample names are repeated: '
+                                        '{sn}'.format(sn=', '.join(sample_names))))
+            except KeyError:
+                pass
+            try:
+                lsts_id = form.cleaned_data['LSTS_ID']
+                if lsts_id not in lsts_ids:
+                    lsts_ids.append(lsts_id)
+                else:
+                    error_list.append(_('LSTS IDs must be unique. The following LSTS IDs are repeated: '
+                                        '{sn}'.format(sn=', '.join(lsts_ids))))
+
+            except KeyError:
+                pass
             if 'sample_name' not in key_names:
-                error_list.append(_('Sample Name is required'))
+                if form._errors['sample_name'][0] != 'This field is required.':
+                    error_list.append(form._errors['sample_name'])
+                else:
+                    error_list.append(_('Sample Name is required'))
             if 'LSTS_ID' not in key_names:
                 error_list.append(_('LSTS ID is required'))
             if 'isolate_source' not in key_names:
@@ -28,6 +54,7 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
 
 
 class BaseModelForm(ModelForm):
+
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('auto_id', '%s')
         kwargs.setdefault('label_suffix', '')

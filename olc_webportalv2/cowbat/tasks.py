@@ -79,12 +79,14 @@ def run_cowbat_batch(sequencing_run_pk):
             f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, '*.fastq.gz'), str(sequencing_run)))
             f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, '*.xml'), str(sequencing_run)))
             f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, '*.csv'), str(sequencing_run)))
-            f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, 'InterOp', '*.bin'), os.path.join(str(sequencing_run), 'InterOp')))
+            f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, 'InterOp', '*.bin'),
+                                              os.path.join(str(sequencing_run), 'InterOp')))
             f.write('OUTPUT:={}\n'.format(str(sequencing_run) + '/'))
             # The CLARK part of the pipeline needs absolute path specified, so the $AZ_BATCH_TASK_WORKING_DIR has to
             # be specified as part of the command in order to have the absolute path of our sequences propagate to it.
             f.write('COMMAND:=source $CONDA/activate /envs/cowbat && assembly_pipeline.py '
-                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.8\n'.format(run_name=str(sequencing_run)))
+                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.12.0\n'
+                    .format(run_name=str(sequencing_run)))
 
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
@@ -120,15 +122,18 @@ def cowbat_cleanup(sequencing_run_pk):
     # With the sequencing run done, need to put create a zipfile with assemblies and reports for user to download.
     # First create a folder.
     run_folder = 'olc_webportalv2/media/{run_name}'.format(run_name=str(sequencing_run))
-    reports_and_assemblies_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies'.format(run_name=str(sequencing_run))
+    reports_and_assemblies_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies'\
+        .format(run_name=str(sequencing_run))
     if not os.path.isdir(reports_and_assemblies_folder):
         os.makedirs(reports_and_assemblies_folder)
     container_name = sequencing_run.run_name.lower().replace('_', '-') + '-output'
     blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
                                    account_key=settings.AZURE_ACCOUNT_KEY)
     # Download all reports and assemblies to reports and assemblies folder.
-    assemblies_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies/BestAssemblies'.format(run_name=str(sequencing_run))
-    reports_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies/reports'.format(run_name=str(sequencing_run))
+    assemblies_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies/BestAssemblies'\
+        .format(run_name=str(sequencing_run))
+    reports_folder = 'olc_webportalv2/media/{run_name}/reports_and_assemblies/reports'\
+        .format(run_name=str(sequencing_run))
     if not os.path.isdir(assemblies_folder):
         os.makedirs(assemblies_folder)
     if not os.path.isdir(reports_folder):
@@ -158,10 +163,10 @@ def cowbat_cleanup(sequencing_run_pk):
                                          blob_name=blob.name,
                                          file_path=os.path.join(reports_folder, os.path.split(blob.name)[1]))
 
-
     # With that done, create a zipfile.
     blob_name = sequencing_run.run_name.lower().replace('_', '-') + '.zip'
-    shutil.make_archive(os.path.join(run_folder, sequencing_run.run_name.lower().replace('_', '-')), 'zip', reports_and_assemblies_folder)
+    shutil.make_archive(os.path.join(run_folder, sequencing_run.run_name.lower().replace('_', '-')), 'zip',
+                        reports_and_assemblies_folder)
     report_assembly_container = 'reports-and-assemblies'
     sas_url = generate_download_link(blob_client=blob_client,
                                      container_name=report_assembly_container,
@@ -188,13 +193,8 @@ def cowbat_cleanup(sequencing_run_pk):
                         'will need ROGAs created: {}'.format(sas_url, realtime_strains),
                    recipient=recipient)
     """
-    # email_list = sequencing_run.emails_array
-    # for email in email_list:
-    #     send_email(subject='Run {} has finished assembly.'.format(str(sequencing_run)),
-    #                body='This email is to inform you that the run {} has completed and is available at the following link {}'.format(str(sequencing_run),sas_url),
-    #                recipient=email)
 
-import re
+
 def escape_ansi(line):
     ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
     return ansi_escape.sub('', line)
@@ -203,18 +203,24 @@ def escape_ansi(line):
 def check_cowbat_progress(batch_client, job_id, sequencing_run):
     """
 
+    :param batch_client:
+    :param job_id:
+    :param sequencing_run:
     :return:
     """
     node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
     contents = dict()
     for node_file in node_files:
-        # Stderr.txt file
-        if 'stderr' in node_file.name:
-            try:
-                contents[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
-                                                                           file_path=node_file.name)
-            except:
-                pass
+        try:
+            # Stderr.txt file
+            if 'stderr' in node_file.name:
+                try:
+                    contents[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                               file_path=node_file.name)
+                except:
+                    pass
+        except BatchErrorException:
+            pass
     for file_name, content_object in contents.items():
         for content_chunk in content_object:
 
@@ -260,7 +266,8 @@ def check_cowbat_tasks():
             batch_client.pool.delete(pool_id=batch_job_name)  # Set up in tasks.py so that pool and job have same ID
             if exit_codes_good:
                 # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
-                cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))  # This also sets task to complete
+                # This also sets task to complete
+                cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
             else:
                 # Something went wrong - update status to error so user knows.
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
@@ -334,12 +341,6 @@ def check_tree_tasks():
                 tree_task.download_link = sas_url
                 tree_task.status = 'Complete'
                 tree_task.save()
-
-                # email_list = tree_task.emails_array
-                # for email in email_list:
-                #     send_email(subject='Tree {} has finished.'.format(tree_task.name),
-                #     body='This email is to inform you that the tree query {} has completed and is available at the following link {}'.format(str(tree_task),sas_url),
-                #     recipient=email)
 
             else:
                 Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
@@ -415,11 +416,6 @@ def check_amr_summary_tasks():
                 amr_task.status = 'Complete'
                 amr_task.save()
 
-                # email_list = amr_task.emails_array
-                # for email in email_list:
-                #     send_email(subject='AMR Summary {} has finished.'.format(amr_task.name),
-                #     body='This email is to inform you that the AMR Summary request {} has completed and is available at the following link {}'.format(str(amr_task),sas_url),
-                #     recipient=email)
             else:
                 amr_task.status = 'Error'
                 amr_task.save()
@@ -543,11 +539,6 @@ def check_prokka_tasks():
                 prokka_task.save()
                 shutil.rmtree(output_dir)
                 os.remove(output_dir + '.zip')
-                # email_list = prokka_task.emails_array
-                # for email in email_list:
-                #     send_email(subject='Annotation Task {} has finished.'.format(prokka_task.name),
-                #     body='This email is to inform you that the annotation request {} has completed and is available at the following link {}'.format(str(prokka_task),sas_url),
-                #     recipient=email)
             else:
                 prokka_task.status = 'Error'
                 prokka_task.save()
@@ -613,7 +604,8 @@ def generate_download_link(blob_client, container_name, output_zipfile, expiry=8
 
 
 def download_container(blob_service, container_name, output_dir):
-    # Modified from https://blogs.msdn.microsoft.com/brijrajsingh/2017/05/27/downloading-a-azure-blob-storage-container-python/
+    # Modified from:
+    # https://blogs.msdn.microsoft.com/brijrajsingh/2017/05/27/downloading-a-azure-blob-storage-container-python/
     generator = blob_service.list_blobs(container_name)
     for blob in generator:
         # check if the path contains a folder structure, create the folder structure

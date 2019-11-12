@@ -4,6 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.formsets import formset_factory
 from azure.storage.blob import BlockBlobService
+from django.db import IntegrityError
 from django.contrib import messages
 from weasyprint import HTML, CSS
 from django.conf import settings
@@ -56,9 +57,10 @@ def vir_typer_request(request):
                 isolate_source = form.cleaned_data.get('isolate_source')
                 putative_classification = form.cleaned_data.get('putative_classification')
                 analyst_name = form.cleaned_data.get('analyst_name')
-                subunit = form.cleaned_data.get('subunit')
+                subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
+                # Only add the data if all the fields (except subunit, which is optional) have been supplied
                 if sample_name and date_received and lab_id and lsts_id and isolate_source and putative_classification\
-                        and analyst_name and subunit:
+                        and analyst_name:
                     sample_data.append(VirTyperRequest(sample_name=sample_name,
                                                        project_name_id=vir_typer_project.pk,
                                                        date_received=date_received,
@@ -71,14 +73,20 @@ def vir_typer_request(request):
 
             if sample_data:
                 vir_typer_project.save()
-                VirTyperRequest.objects.bulk_create(sample_data)
-                message_str = _('You have created project ')
-                messages.success(request, message_str + '{project}'
-                                 .format(project=vir_typer_project.project_name))
+                try:
+                    VirTyperRequest.objects.bulk_create(sample_data)
+                    message_str = _('You have created project ')
+                    messages.success(request, message_str + '{project}'
+                                     .format(project=vir_typer_project.project_name))
 
-                return redirect('vir_typer:vir_typer_upload',
-                                vir_typer_pk=vir_typer_project.pk)
-# If forms aren't valid, error messages
+                    return redirect('vir_typer:vir_typer_upload',
+                                    vir_typer_pk=vir_typer_project.pk)
+                # If the data violates the unique_together restrictions (all sample names and LSTS IDs must be
+                # unique within a project), add the errors from the offending fields
+                except IntegrityError:
+                    out_str = sample_form_set.non_form_errors()
+                    messages.error(request, out_str)
+        # If forms aren't valid, error messages
         else:
             out_str = str()
             if tombstone_form.cleaned_data.get('project_name') is None:
@@ -101,7 +109,7 @@ def vir_typer_upload(request, vir_typer_pk):
     vir_typer_samples = list(VirTyperRequest.objects.filter(project_name__pk=vir_typer_pk))
     sample_names = list()
     for sample in vir_typer_samples:
-        sample_names.append(str(sample.sample_name))
+        sample_names.append(str(sample.LSTS_ID))
     if request.method == 'POST':
         seq_files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
         if seq_files:
@@ -114,9 +122,10 @@ def vir_typer_upload(request, vir_typer_pk):
                                                    blob_name=item.name,
                                                    blob=item.read())
             for sample in vir_typer_samples:
-                sample_name = str(sample.sample_name)
+                # sample_name = '{lsts}_{sn}'.format(lsts=str(sample.LSTS_ID),
+                #                                    sn=str(sample.sample_name))
                 for seq_file in seq_files:
-                    if sample_name in str(seq_file):
+                    if str(sample.LSTS_ID) in str(seq_file):
 
                         vir_files = VirTyperFiles(sample_name_id=sample.pk,
                                                   sequence_file=seq_file)
@@ -343,6 +352,7 @@ def vir_typer_results(request, vir_typer_pk):
     json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
     data_tables_path = '../../../../static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
     os.makedirs('olc_webportalv2/static/ajax/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
+    os.makedirs('olc_webportalv2/media/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
     # Create the JSON-formatted output file
     with open(json_path, 'w') as json_out:
         json.dump(full_results, json_out)

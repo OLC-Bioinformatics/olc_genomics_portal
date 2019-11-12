@@ -17,16 +17,16 @@ if __name__ == '__main__':
     # Assume if user entered this wrong some sort of error pops up at this point.
     blob_client = BlockBlobService(account_name=storage_account,
                                    account_key=storage_account_key)
-    # done_count = 0
-    # for fasta in local_fastas:
-    #     sequences = list()
-    #     for contig in SeqIO.parse(fasta, 'fasta'):
-    #         contig.id = os.path.split(fasta)[1].replace('.fasta', '') + '_' + contig.id
-    #         sequences.append(contig)
-    #     with open('mega_fasta.fasta', 'a+') as f:
-    #         SeqIO.write(sequences, f, 'fasta')
-    #     done_count += 1
-    #     print('Done {}/{}'.format(done_count, len(local_fastas)), end='\r')
+    done_count = 0
+    for fasta in local_fastas:
+        sequences = list()
+        for contig in SeqIO.parse(fasta, 'fasta'):
+            contig.id = os.path.split(fasta)[1].replace('.fasta', '') + '_' + contig.id
+            sequences.append(contig)
+        with open('mega_fasta.fasta', 'a+') as f:
+            SeqIO.write(sequences, f, 'fasta')
+        done_count += 1
+        print('Done {}/{}'.format(done_count, len(local_fastas)), end='\r')
 
     cmd = 'makeblastdb -dbtype nucl -in mega_fasta.fasta'
     os.system(cmd)

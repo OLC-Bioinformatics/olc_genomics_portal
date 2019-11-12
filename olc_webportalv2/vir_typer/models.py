@@ -39,10 +39,12 @@ class VirTyperRequest(models.Model):
     NORI = 'NOVI'
     NORII = 'NOVII'
     HAV = 'HAV'
+    MNV = 'MNV'
     VIRUSES = [
         (NORI, 'Norovirus genogroup 1'),
         (NORII, 'Norovirus genogroup 2'),
-        (HAV, 'Hepatitus A')
+        (HAV, 'Hepatitus A'),
+        (MNV, 'Murine norovirus')
     ]
 
     project_name = models.ForeignKey(VirTyperProject, on_delete=models.CASCADE, related_name='project_request')
@@ -55,8 +57,14 @@ class VirTyperRequest(models.Model):
     date_received = models.DateField(blank=False)
     analyst_name = models.CharField(max_length=50, blank=False)
 
+    class Meta:
+        unique_together = (('sample_name', 'project_name'), ('LSTS_ID', 'project_name'))
+        # constraints = [
+        #     models.UniqueConstraint(fields=['sample_name', 'project_name_pk'], name='project_sample_names_unique'),
+        # ]
+
     def __str__(self):
-        return self.sample_name
+        return str(self.pk)
 
 
 class VirTyperFiles(models.Model):

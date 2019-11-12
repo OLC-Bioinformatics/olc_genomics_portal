@@ -29,7 +29,7 @@
                 <tbody>
                 {% for sample in vir_typer_samples %}
                     <tr>
-                        <td>{{ sample.sample_name }}</td>
+                        <td>{{ sample.LSTS_ID }}</td>
                         <td class="table-danger" align="center"><i class="fa fa-ban fa-1x"></i></td>
                     </tr>
                 {% endfor %}
@@ -104,7 +104,7 @@
                         sample_validation[sample_name] = false;
                         // Iterate through all the names of the files in Dropzone
                         for (let j = 0; j < filesAcceptedNames.length; j++) {
-                            // If the sample name is a substring of the file name, then the file is associated with the sample
+                            // If the LSTS ID is a substring of the file name, then the file is associated with the sample
                             if (filesAcceptedNames[j].indexOf(sample_name) !== -1) {
                             // Set the file_present Boolean to true, and add it to the array of all sample file presence
                             // Booleans
