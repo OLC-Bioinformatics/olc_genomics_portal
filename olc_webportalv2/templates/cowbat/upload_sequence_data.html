@@ -22,13 +22,13 @@
     <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Sequence Files and Begin Assembly"%}</button>
     <div id="files-required-button" class="collapse show">
     <br>
-    <div class="container">
-        <table id="files-required-table" class="table table-striped small compact">
+    <div class="container" style="padding-left: 0px;">
+        <table id="files-required-table" class="table table-hover small compact">
             <thead>
-                <tr>
-                    <td><strong>{% trans "File" %}</strong></td>
-                    <td style="text-align:center"> <strong>{% trans "Forward Reads"%} </strong></td>
-                    <td style="text-align:center"> <strong>{% trans "Reverse Reads"%} </strong></td>
+                <tr style="font-size: 1.25rem;">
+                    <td style="border:none;"><strong>{% trans "File" %}</strong></td>
+                    <td style="text-align:center; border:none;"> <strong>{% trans "Forward Reads"%} </strong></td>
+                    <td style="text-align:center; border:none;"> <strong>{% trans "Reverse Reads"%} </strong></td>
                 </tr>
             </thead>
             <tbody>
@@ -79,7 +79,7 @@
     </style>
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
-    <script src={% static 'js/dropzone.js' %}></script>
+    <script src="{% static 'js/dropzone.js' %}"></script>
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript">
     function progressSpinner() {
@@ -263,6 +263,8 @@
                         validated = false;
                     }
                 }
+                var del_text = "{% trans 'Following files are not needed: ' %}";
+
                 // Remove unwanted files, and remove the ability to delete wanted files
                 for (let n = 0; n < filesAccepted.length; n++ ) {
                     let keep_file = false;
@@ -280,6 +282,7 @@
                     }
                     // Remove the file from dropzone (will be re-added below, if necessary)
                     myDropzone.removeFile(filesAccepted[n]);
+
                     // If we actually want to keep the file, disable the ability to delete it
                     if (keep_file === true) {
                         myDropzone.options.addRemoveLinks = false;
@@ -288,7 +291,26 @@
                         // Re-enable the ability to delete freshly dropped files
                         myDropzone.options.addRemoveLinks = true;
                     }
+                    // Alert text populated with names of non-required files
+                    else {
+                        del_text += filesAccepted[n].name + ', ';
+                    }
                 }
+                    // Message and removal of extra files
+                    del_text += "{% trans ' and have been deleted ' %}";
+                    // if there are files names added to text, then alert
+                    if (del_text.length > 55) {
+                    Swal.fire({
+                    title: "{% trans 'Unnecessary Files' %}",
+                    text: del_text,
+                    type: 'warning',
+                    showConfirmButton: false
+                    })
+                    validationSuccess = false;
+                    del_text = "{% trans 'Following files are not needed: ' %}";
+                    return false
+                    }
+
                 // If the requirements for validation are met, disable the ability to add more files, and enable the
                 // submit button
                 if (validated === true) {

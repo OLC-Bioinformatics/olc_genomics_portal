@@ -13,12 +13,12 @@
         </div>
   {% csrf_token %}
   </form>
-  <table id="files-required-table" class="table table-striped compact small">
+  <table id="files-required-table" class="table table-hover compact small">
     <thead>
-        <tr style="font-size: 1.25rem">
-        <td><strong>{% trans "File"%}</strong></td>
-          <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
-          </tr>
+        <tr style="font-size: 1.25rem;">
+          <td style="border:none;"><strong>{% trans "File"%}</strong></td>
+          <td style="text-align:center; border:none;"><strong>{% trans 'Status'%}<strong></td>
+        </tr>
     </thead>
     <tbody>
         <tr>
@@ -58,7 +58,7 @@
 
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
-  <script src={% static 'js/dropzone.js' %}></script>
+  <script src="{% static 'js/dropzone.js' %}"></script>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   Dropzone.options.myDropzone = {
@@ -128,6 +128,45 @@
                           }
                         }
                       }
+                      // Removal of unnecessary files and alert populated with names of files
+                      let del_text = "{% trans 'Following files are unnecessary and have been removed: ' %}";
+                      for(var i=0; i<filesAcceptedNames.length; i++ ) {
+                        if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
+                        del_text += filesAcceptedNames[i] + ', ';
+                        myDropzone.removeFile(filesAccepted[i]);        
+                        }
+                      }
+                      // if there are files names added to text, then alert
+                      console.log(del_text.length);
+                      if (del_text.length > 58) {
+                      Swal.fire({
+                      title: "{% trans 'Unnecessary Files' %}",
+                      text: del_text,
+                      type: 'warning',
+                      showConfirmButton: false
+                      })
+                      validationSuccess = false;
+                      return false
+                      }
+                      // Removal of duplicate files and alert populated with names of files
+                      let dup_text = "{% trans 'Following files are duplicates and have been removed: ' %}";
+                      let findDuplicates = arr => arr.filter((item, index) => arr.indexOf(item) != index);
+                      let duplicates = findDuplicates(filesAcceptedNames);
+                      if (duplicates.length > 0) {
+                        for(var i=0; i<duplicates.length; i++ ) {
+                          dup_text += duplicates[i] + ', ';
+                          myDropzone.removeFile(filesAccepted[(filesAcceptedNames.indexOf(duplicates[i]))]);
+                        }
+                        Swal.fire({
+                        title: "{% trans 'Duplicate Files' %}",
+                        text: dup_text,
+                        type: 'warning',
+                        showConfirmButton: false
+                        })
+                        validationSuccess = false;
+                        return false
+                      }
+
                       if (validationSuccess === true) {
                         $('#submit').prop('disabled', false);
                       }
