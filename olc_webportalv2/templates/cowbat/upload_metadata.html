@@ -4,25 +4,27 @@
 {% load bootstrap %}
 {% load widget_tweaks %}
 {% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
 {% block content %}
 <h2>{% trans "Step 1 of 3: Upload Metadata Files and Name Run"%}</h2>
   <p>{% blocktrans %} Enter a run name and drag and drop the files found in the following table to upload. Once all files have been uploaded,
   you can proceed to the next page. {% endblocktrans %}</p>
-
+  <br><br>
+  <br>
  <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
-    <strong>{{form}}</strong>
+       <div style="position:absolute; top:-85px;left:-2px;"> <strong>{{form|crispy}}</strong> </div>
         <div class="dz-message needsclick">
         {% trans "Drop files to upload or click here" %}<br>
         <i class="fas fa-cloud-upload-alt fa-4x"></i>
         </div>
   {% csrf_token %}
   </form>
-  <table id="files-required-table" class="table table-striped compact small">
+  <table id="files-required-table" class="table table-hover compact small">
     <thead>
-        <tr style="font-size: 1.25rem">
-          <td><strong>{% trans "File"%}</strong></td>
-          <td style="text-align:center"><strong>{% trans 'Status'%}<strong></td>
-          </tr>
+        <tr style="font-size: 1.25rem;">
+          <td style="border:none;"><strong>{% trans "File"%}</strong></td>
+          <td style="text-align:center; border:none;"><strong>{% trans 'Status'%}<strong></td>
+        </tr>
     </thead>
     <tbody>
         <tr>
@@ -57,16 +59,16 @@
   <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Metadata Files"%}</button>
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
-  <script src={% static 'js/dropzone.js' %}></script>
-  <script src={% static 'js/papaparse.min.js' %}></script>
+  <script src="{% static 'js/dropzone.js' %}"></script>
+  <script src="{% static 'js/papaparse.min.js' %}"></script>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script type="text/javascript">
   function validateForm() {
       var lang = document.documentElement.lang;
-      var x = document.forms["file-form"]["run_name"].value;
+      var name = document.forms["file-form"]["run_name"].value;
       var external_regex = /\d{6}_[A-Z]+$/;
       var olc_regex = /\d{6}_M\d+$/;
-      if (x === "") {
+      if (name === "") {
         Swal.fire({
         title: "{% trans 'Invalid' %}",
         text: "{% trans 'Run name cannot be blank!' %}",
@@ -75,8 +77,8 @@
         })
         return false
       }
-      var found_external = x.match(external_regex);
-      var found_olc = x.match(olc_regex);
+      var found_external = name.match(external_regex);
+      var found_olc = name.match(olc_regex);
       if (found_external === null && found_olc === null) {
         Swal.fire({
         title: "{% trans 'Invalid' %}",
@@ -110,6 +112,7 @@
                 });
 
                 validateButton.addEventListener("click", function(e) {
+                      validateForm();
                       var filesAccepted = myDropzone.getAcceptedFiles();
                       var filesTable = document.getElementById('files-required-table');
                       // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
@@ -150,27 +153,43 @@
                             cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
                             validationSuccess = false;}}
                       }
-                      // Message and removal of extra files
-                      var del_text = "{% trans 'Following files are not needed: ' %}";
+                      // Removal of unnecessary files and alert populated with names of files
+                      let del_text = "{% trans 'Following files are unnecessary and have been removed: ' %}";
                       for(var i=0; i<filesAcceptedNames.length; i++ ) {
                         if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
                         del_text += filesAcceptedNames[i] + ', ';
                         myDropzone.removeFile(filesAccepted[i]);        
                         }
                       }
-                      del_text += "{% trans ' and have been deleted ' %}";
-                      console.log(del_text.length);
+                      // if there are files names added to del_text, then alert
                       if (del_text.length > 69) {
-                      Swal.fire({
-                      title: "{% trans 'Unnecessary Files' %}",
-                      text: del_text,
-                      type: 'warning',
-                      showConfirmButton: false
-                      })
-                      validationSuccess = false;
-                      del_text = "{% trans 'Following files are not needed: ' %}";
-                      return false
-                    }
+                        Swal.fire({
+                        title: "{% trans 'Unnecessary Files' %}",
+                        text: del_text,
+                        type: 'warning',
+                        showConfirmButton: false
+                        })
+                        validationSuccess = false;
+                        return false
+                      }
+                      // Removal of duplicate files and alert populated with names of files
+                      let dup_text = "{% trans 'Following files are duplicates and have been removed: ' %}";
+                      let findDuplicates = arr => arr.filter((item, index) => arr.indexOf(item) != index);
+                      let duplicates = findDuplicates(filesAcceptedNames);
+                      if (duplicates.length > 0) {
+                        for(var i=0; i<duplicates.length; i++ ) {
+                          dup_text += duplicates[i] + ', ';
+                          myDropzone.removeFile(filesAccepted[(filesAcceptedNames.indexOf(duplicates[i]))]);
+                        }
+                        Swal.fire({
+                        title: "{% trans 'Duplicate Files' %}",
+                        text: dup_text,
+                        type: 'warning',
+                        showConfirmButton: false
+                        })
+                        validationSuccess = false;
+                        return false
+                      }
                       
                       // Also check that all SEQIDs submitted are valid.
                       // in this list.
@@ -238,7 +257,6 @@
                                 xmlDoc.loadXML(txt);
                               }
                               x = xmlDoc.getElementsByTagName('SampleName');
-                              console.log(bad_seqids_in_run_stats);
                               for (i = 0; i < x.length; i++) {
                                 // Check element is in our list of good SeqIDs.
                                 var seqid_in_run_stats = x[i].childNodes[0].nodeValue.toString();

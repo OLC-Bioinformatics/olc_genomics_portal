@@ -70,6 +70,7 @@ class BaseModelForm(ModelForm):
                     field.widget = forms.TextInput(
                         attrs={
                             'class': 'datepicker',
+                            'autocomplete' : 'off',
                         }
                     )
 
@@ -119,11 +120,6 @@ class VirTyperFileForm(forms.Form):
         super().clean()
         query_file_list = self.files.getlist('query_files')
         return query_file_list
-
-
-class NameForm(forms.Form):
-    name = forms.CharField(label='Name ', required=False, widget=forms.TextInput(attrs={'placeholder': 'Optional'}))
-
 
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50, label="Email ")

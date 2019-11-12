@@ -19,6 +19,7 @@
 {% elif sequencing_run.status == 'Error' %}
     <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
     <br>
+    <h5>{%trans "Last processed step:"%} {{sequencing_run.progress}}</h5>
     <p>{%trans "Return to"%} <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a> </p>
 
 {% elif sequencing_run.status == 'UploadError' %}

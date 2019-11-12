@@ -57,6 +57,7 @@ def vir_typer_request(request):
                 isolate_source = form.cleaned_data.get('isolate_source')
                 putative_classification = form.cleaned_data.get('putative_classification')
                 analyst_name = form.cleaned_data.get('analyst_name')
+                # Set the subunit to 0 is it not provided (None), otherwise use the cleaned value
                 subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
                 # Only add the data if all the fields (except subunit, which is optional) have been supplied
                 if sample_name and date_received and lab_id and lsts_id and isolate_source and putative_classification\
