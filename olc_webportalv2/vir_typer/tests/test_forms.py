@@ -171,13 +171,16 @@ class VirusTyperFiles(TestCase):
                                                  )
         request.save()
         files = VirTyperFiles.objects.create(sample_name=request,
-                                             sequence_file='P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.ab1')
+                                             sequence_file=
+                                             'P19954_2019FPP00000475214_VI482_11_GI_B05_M13-R17_G10_068.ab1')
         files.save()
         files = VirTyperFiles.objects.create(sample_name=request,
-                                             sequence_file='P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.ab1')
+                                             sequence_file=
+                                             'P19954_2019FPP00000475214_VI482_11_GI_B04_M13-R17_F10_070.ab1')
         files.save()
         files = VirTyperFiles.objects.create(sample_name=request,
-                                             sequence_file='P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.ab1')
+                                             sequence_file=
+                                             'P19954_2019FPP00000475214_VI482_11_GI_B03_M13-R17_E10_072.ab1')
         files.save()
         request = VirTyperRequest.objects.create(project_name=project,
                                                  lab_ID='Burnaby',
@@ -191,17 +194,19 @@ class VirusTyperFiles(TestCase):
         request.save()
         # Sample 2
         files = VirTyperFiles.objects.create(sample_name=request,
-                                             sequence_file='P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.ab1')
+                                             sequence_file=
+                                             'P19954_2019FPP00000475215_VI483_11_GI_B05_M13-R17_G10_074.ab1')
         files.save()
 
     def test_files_names(self):
         seq_files = VirTyperFiles.objects.all()
-        self.assertEquals([str(sample.sample_name) for sample in seq_files], ['VI482', 'VI482', 'VI482', 'VI483'])
+        self.assertEquals([str(sample.LSTS_ID) for sample in seq_files],
+                          ['2019FPP00000475214', '2019FPP00000475214', '2019FPP00000475214', '2019FPP00000475215'])
         self.assertEquals([sample.sequence_file for sample in seq_files],
-                          ['P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.ab1',
-                           'P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.ab1',
-                           'P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.ab1',
-                           'P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.ab1'])
+                          ['P19954_2019_2019FPP00000475214_11_GI_B05_M13-R17_G10_068.ab1',
+                           'P19954_2019_2019FPP00000475214_11_GI_B04_M13-R17_F10_070.ab1',
+                           'P19954_2019_2019FPP00000475214_11_GI_B03_M13-R17_E10_072.ab1',
+                           'P19954_2019FPP00000475215_VI483_11_GI_B05_M13-R17_G10_074.ab1'])
 
 
 class VirusTyperResults(TestCase):
