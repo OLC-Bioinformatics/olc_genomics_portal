@@ -22,8 +22,8 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
                 if sample_name not in sample_names:
                     sample_names.append(sample_name)
                 else:
-                    error_list.append(_('Sample Names must be unique. The following sample names are repeated: '
-                                        '{sn}'.format(sn=', '.join(sample_names))))
+                    error_message = _('Sample Names must be unique. The following sample names are repeated: ')
+                    error_list.append(error_message + ', '.join(sample_names))
             except KeyError:
                 pass
             try:
@@ -31,8 +31,8 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
                 if lsts_id not in lsts_ids:
                     lsts_ids.append(lsts_id)
                 else:
-                    error_list.append(_('LSTS IDs must be unique. The following LSTS IDs are repeated: '
-                                        '{sn}'.format(sn=', '.join(lsts_ids))))
+                    error_message = _('LSTS IDs must be unique. The following LSTS IDs are repeated: ')
+                    error_list.append(error_message + ', '.join(lsts_ids))
 
             except KeyError:
                 pass
