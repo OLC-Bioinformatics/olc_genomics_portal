@@ -200,13 +200,13 @@ class VirusTyperFiles(TestCase):
 
     def test_files_names(self):
         seq_files = VirTyperFiles.objects.all()
-        self.assertEquals([str(sample.LSTS_ID) for sample in seq_files],
-                          ['2019FPP00000475214', '2019FPP00000475214', '2019FPP00000475214', '2019FPP00000475215'])
+        self.assertEquals([str(sample.sample_name) for sample in seq_files],
+                          ['1', '2', '3', '4'])
         self.assertEquals([sample.sequence_file for sample in seq_files],
-                          ['P19954_2019_2019FPP00000475214_11_GI_B05_M13-R17_G10_068.ab1',
-                           'P19954_2019_2019FPP00000475214_11_GI_B04_M13-R17_F10_070.ab1',
-                           'P19954_2019_2019FPP00000475214_11_GI_B03_M13-R17_E10_072.ab1',
-                           'P19954_2019FPP00000475215_VI483_11_GI_B05_M13-R17_G10_074.ab1'])
+                          ['P19954_2019_VI482_11_GI_B05_M13-R17_G10_068.ab1',
+                           'P19954_2019_VI482_11_GI_B04_M13-R17_F10_070.ab1',
+                           'P19954_2019_VI482_11_GI_B03_M13-R17_E10_072.ab1',
+                           'P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.ab1'])
 
 
 class VirusTyperResults(TestCase):
