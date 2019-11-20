@@ -4,71 +4,71 @@
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
-    <table id="tombstone" style="font-size:120%;" class="display" width="100%">
-        <thead>
-        <tr>
-            <th colspan="2">{% trans "Project:" %} {{ vir_typer_project }}</th>
-        </tr>
+
+<table id="tombstone" style="font-size:120%;" class="display" width="100%">
+    <thead>
+    <tr>
+        <th colspan="2">{% trans "Project:" %} {{ vir_typer_project }}</th>
+    </tr>
+    </thead>
+</table>
+<br>
+<table id="results" style="font-size:90%;" class="display compact nowrap" width="100%">
+    <thead>
+            <tr>
+                <th>{% trans "Sample Name" %}</th>
+                <th>{% trans "LSTS ID" %}</th>
+                <th>{% trans "Date Received" %}</th>
+                <th>{% trans "Source" %}</th>
+                <th>{% trans "Organism" %}</th>
+                <th>{% trans "Trimmed Sequence" %}</th>
+                <th>{% trans "Allele" %}</th>
+                <th>{% trans "Length" %}</th>
+                <th>{% trans "Mismatches" %}</th>
+            </tr>
         </thead>
-    </table>
-    <br>
+</table>
+<br>
 
-    <table id="results" style="font-size:90%;" class="display compact nowrap" width="100%">
-        <thead>
-                <tr>
-                    <th>{% trans "Sample Name" %}</th>
-                    <th>{% trans "LSTS ID" %}</th>
-                    <th>{% trans "Date Received" %}</th>
-                    <th>{% trans "Source" %}</th>
-                    <th>{% trans "Organism" %}</th>
-                    <th>{% trans "Trimmed Sequence" %}</th>
-                    <th>{% trans "Allele" %}</th>
-                    <th>{% trans "Length" %}</th>
-                    <th>{% trans "Mismatches" %}</th>
-                </tr>
-            </thead>
-    </table>
-    <br>
+<div>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create PDF Report" %}</button>
+    </form>
+</div>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css">
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/rowgroup/1.1.0/js/dataTables.rowGroup.min.js"></script>
+<script type="text/javascript">
+    $(document).ready( function () {
+    $('#results').DataTable({
+        "bInfo" : false,
+        "paging": false,
+        "searching": false,
+        rowGroup: {
+            dataSrc: { "data": "sample_name" },
+        },
+        "ajax": "{{ json_results }}",
+        columnDefs : [
+    {
+        targets: [-1, -2],
+        className: 'dt-body-center'
+    }
+    ],
+        "columns": [
+            { "data": "sample_name"},
+            { "data": "lsts"},
+            { "data": "date_received"},
+            { "data": "isolate_source"},
+            { "data": "organism"},
+            { "data": 'sequence', render: "[\<br>\]"},
+            { "data": "allele", render: "[\<br>\]"},
+            { "data": "sequence_length", render: "[\<br>\]"},
+            { "data": "variable_locations", render: "[\<br>\]"},
+        ]
+    });
 
-    <div>
-        <form action='' enctype="multipart/form-data" method="post" novalidate>
-            <button type="submit" class="btn btn-primary btn-lg">{% trans "Create PDF Report" %}</button>
-        </form>
-    </div>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.6/css/buttons.dataTables.min.css">
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/rowgroup/1.1.0/js/dataTables.rowGroup.min.js"></script>
-    <script type="text/javascript">
-        $(document).ready( function () {
-        $('#results').DataTable({
-            "bInfo" : false,
-            "paging": false,
-            "searching": false,
-            rowGroup: {
-                dataSrc: { "data": "sample_name" },
-            },
-            "ajax": "{{ json_results }}",
-            columnDefs : [
-        {
-            targets: [-1, -2],
-            className: 'dt-body-center'
-        }
-        ],
-            "columns": [
-                { "data": "sample_name"},
-                { "data": "lsts"},
-                { "data": "date_received"},
-                { "data": "isolate_source"},
-                { "data": "organism"},
-                { "data": 'sequence', render: "[\<br>\]"},
-                { "data": "allele", render: "[\<br>\]"},
-                { "data": "sequence_length", render: "[\<br>\]"},
-                { "data": "variable_locations", render: "[\<br>\]"},
-            ]
-        });
-
-        } );
-    </script>
+    } );
+</script>
 {% endblock %}

@@ -121,5 +121,6 @@ class VirTyperFileForm(forms.Form):
         query_file_list = self.files.getlist('query_files')
         return query_file_list
 
+
 class EmailForm(forms.Form):
     email = forms.EmailField(max_length=50, label="Email ")

@@ -1,36 +1,13 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
-{% load static i18n widget_tweaks %}
+{% load i18n widget_tweaks %}
 {% block content %}
+{% load static %}
 
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}"/>
-    <title> {% block title %}CFIA FoodPort {% endblock title %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-
-    {% block css %}
-    <!-- Compiled and minified Bootstrap 4 CSS -->
-    <link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
-
-    <!-- Project-specific CSS -->
-    <link rel="stylesheet" href="{% static '/css/project.css' %}">
-
-    <!-- Third-party CSS libraries go here -->
-    <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
-        <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
-    {% endblock %}
-
-</head>
-<br>
 <body>
-    <div>
-        <img src="{% static '/images/CFIA_logo.png' %}" alt="CFIA Logo" style="width:30%;" >
+    <div class="col-md-2">
+        <img src="{% static 'images/CFIA_logo.png' %}" alt="CFIA Logo" style="width: 15%;" >
     </div>
     <hr>
     <div class="col-md-6">

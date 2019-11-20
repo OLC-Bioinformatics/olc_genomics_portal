@@ -1,24 +1,19 @@
-from django.contrib.postgres.fields import ArrayField
-from django.utils.translation import ugettext_lazy as _
 from olc_webportalv2.users.models import User
 from django.db import models
 
 
 class VirTyperProject(models.Model):
-    # request = models.ForeignKey(VirTyperRequest, on_delete=models.CASCADE, related_name='vir_typer_request')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project_name = models.CharField(max_length=256, unique=True)
+    project_name = models.CharField(max_length=256)
     status = models.CharField(max_length=64, default='Unprocessed')
-    # emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=[])
     download_link = models.CharField(max_length=256, blank=True)
     created_at = models.DateField(auto_now_add=True)
     report = models.CharField(max_length=100000, blank=True)
-    # The cleaned consensus sequence
-    # processed_sequence = models.CharField(max_length=256, blank=True)
-    #
-    # fasta_header = models.CharField(max_length=64, blank=False)
-    # predicted_organism = ''
-    # comments = ''
+
+    class Meta:
+        unique_together = (
+            ('user', 'project_name')
+        )
 
     def __str__(self):
         return self.project_name
@@ -48,20 +43,17 @@ class VirTyperRequest(models.Model):
     ]
 
     project_name = models.ForeignKey(VirTyperProject, on_delete=models.CASCADE, related_name='project_request')
-    lab_ID = models.CharField(max_length=20, choices=LABS, default=STHY, blank=False)
-    isolate_source = models.CharField(max_length=50, blank=False)
-    LSTS_ID = models.CharField(max_length=50, blank=False)
+    lab_ID = models.CharField(max_length=64, choices=LABS, default=STHY, blank=False)
+    isolate_source = models.CharField(max_length=64, blank=False)
+    LSTS_ID = models.CharField(max_length=64, blank=False)
     putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
-    sample_name = models.CharField(max_length=50, blank=False)
+    sample_name = models.CharField(max_length=64, blank=False)
     subunit = models.PositiveIntegerField(null=True, blank=True)
     date_received = models.DateField(blank=False)
-    analyst_name = models.CharField(max_length=50, blank=False)
+    analyst_name = models.CharField(max_length=64, blank=False)
 
     class Meta:
         unique_together = (('sample_name', 'project_name'), ('LSTS_ID', 'project_name'))
-        # constraints = [
-        #     models.UniqueConstraint(fields=['sample_name', 'project_name_pk'], name='project_sample_names_unique'),
-        # ]
 
     def __str__(self):
         return str(self.pk)

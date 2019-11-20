@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-12 16:29+0000\n"
+"POT-Creation-Date: 2019-11-20 15:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2251,96 +2251,91 @@ msgstr "Réviser"
 msgid "Project Name"
 msgstr "Nom du projet"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:10
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:40
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:11
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:17
 msgid "Project:"
 msgstr "Projet:"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:19
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:78
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
 #: olc_webportalv2/vir_typer/forms.py:104
 msgid "Sample Name"
 msgstr "Échantillon"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:20
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:79
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:56
 #: olc_webportalv2/vir_typer/forms.py:106
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:21
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:80
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:57
 msgid "Date Received"
 msgstr "Date de réception"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:22
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:81
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:58
 msgid "Source"
 msgstr "Source"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:23
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:82
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:59
 msgid "Organism"
 msgstr "Organisme"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:83
-msgid "Identifier"
-msgstr "Identifiant"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:84
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:60
 msgid "Trimmed Sequence"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:85
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
 msgid "Allele"
 msgstr "Allèle"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:86
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:62
 msgid "Length"
 msgstr "Longueur"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:87
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:63
 msgid "Mismatches"
 msgstr "Discordances"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:36
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:35
 msgid "Create PDF Report"
 msgstr "Créer un rapport PDF"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:43
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:20
 msgid "Report Issuance Date:"
 msgstr "Date d'émission du rapport:"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:53
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:30
 msgid "Laboratory"
 msgstr "Laboratoire"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:54
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:31
 msgid "Address"
 msgstr "Adresse"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:55
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:32
 msgid "Tel #"
 msgstr "Numéro de téléphone"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:60
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:37
 msgid "CFIA Burnaby"
 msgstr "ACIA Burnaby"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:65
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:42
 msgid "CFIA St. Hyacinthe"
 msgstr "ACIA St.Hyacinthe"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:88
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:64
 msgid "Quality Mean"
 msgstr "Qualité moyenne"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:89
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:65
 msgid "Quality Stdev"
 msgstr "Qualité écart-type"
 
@@ -2367,11 +2362,15 @@ msgstr "Ce nom d'utilisateur a déjà été pris"
 
 #: olc_webportalv2/vir_typer/forms.py:25
 msgid "Sample Names must be unique. The following sample names are repeated: "
-msgstr "Les noms d'échantillons doivent être uniques. Les noms suivants sont répétés: "
+msgstr ""
+"Les noms d'échantillons doivent être uniques. Les noms suivants sont "
+"répétés: "
 
 #: olc_webportalv2/vir_typer/forms.py:34
 msgid "LSTS IDs must be unique. The following LSTS IDs are repeated: "
-msgstr "Les identifiants SIESAL doivent être uniques. Les identifiants suivants sont répétés: "
+msgstr ""
+"Les identifiants SIESAL doivent être uniques. Les identifiants suivants sont "
+"répétés: "
 
 #: olc_webportalv2/vir_typer/forms.py:43
 msgid "Sample Name is required"
@@ -2397,7 +2396,7 @@ msgstr "La date de réception est obligatoire"
 msgid "Required"
 msgstr "Champs obligatoires"
 
-#: olc_webportalv2/vir_typer/forms.py:91
+#: olc_webportalv2/vir_typer/forms.py:91 olc_webportalv2/vir_typer/views.py:95
 msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
@@ -2445,11 +2444,14 @@ msgstr "^résultats/(?P<vir_typer_pk>\\d+)/$"
 msgid "^edit/(?P<vir_typer_pk>\\d+)/$"
 msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 
-#: olc_webportalv2/vir_typer/views.py:79
+#: olc_webportalv2/vir_typer/views.py:81
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
 
 #: olc_webportalv2/vir_typer/views.py:412
-#, python-format
-msgid "Project %s updated"
-msgstr "Projet %s mis à jour"
+msgid "Project"
+msgstr "Projet"
+
+#: olc_webportalv2/vir_typer/views.py:412
+msgid "updated"
+msgstr "mis à jour"

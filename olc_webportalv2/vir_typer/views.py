@@ -41,52 +41,59 @@ def vir_typer_request(request):
     # Create a sample form set using the sample form and formset_factory
     sample_form_set_factory = formset_factory(VirTyperSampleForm, formset=BaseVirTyperSampleFormSet, max_num=10)
     if request.method == 'POST':
+
         tombstone_form = VirTyperProjectForm(request.POST)
         sample_form_set = sample_form_set_factory(request.POST)
         if tombstone_form.is_valid() and sample_form_set.is_valid():
             project_name = tombstone_form.cleaned_data.get('project_name')
-            vir_typer_project = VirTyperProject.objects.create(project_name=project_name,
-                                                               user=request.user,)
+            try:
+                vir_typer_project = VirTyperProject.objects.create(project_name=project_name,
+                                                                   user=request.user)
 
-            sample_data = list()
-            for form in sample_form_set:
-                sample_name = form.cleaned_data.get('sample_name')
-                date_received = form.cleaned_data.get('date_received')
-                lab_id = form.cleaned_data.get('lab_ID')
-                lsts_id = form.cleaned_data.get('LSTS_ID')
-                isolate_source = form.cleaned_data.get('isolate_source')
-                putative_classification = form.cleaned_data.get('putative_classification')
-                analyst_name = form.cleaned_data.get('analyst_name')
-                # Set the subunit to 0 is it not provided (None), otherwise use the cleaned value
-                subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
-                # Only add the data if all the fields (except subunit, which is optional) have been supplied
-                if sample_name and date_received and lab_id and lsts_id and isolate_source and putative_classification\
-                        and analyst_name:
-                    sample_data.append(VirTyperRequest(sample_name=sample_name,
-                                                       project_name_id=vir_typer_project.pk,
-                                                       date_received=date_received,
-                                                       lab_ID=lab_id,
-                                                       LSTS_ID=lsts_id,
-                                                       isolate_source=isolate_source,
-                                                       putative_classification=putative_classification,
-                                                       analyst_name=analyst_name,
-                                                       subunit=subunit))
+                sample_data = list()
+                for form in sample_form_set:
+                    sample_name = form.cleaned_data.get('sample_name')
+                    date_received = form.cleaned_data.get('date_received')
+                    lab_id = form.cleaned_data.get('lab_ID')
+                    lsts_id = form.cleaned_data.get('LSTS_ID')
+                    isolate_source = form.cleaned_data.get('isolate_source')
+                    putative_classification = form.cleaned_data.get('putative_classification')
+                    analyst_name = form.cleaned_data.get('analyst_name')
+                    # Set the subunit to 0 is it not provided (None), otherwise use the cleaned value
+                    subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
+                    # Only add the data if all the fields (except subunit, which is optional) have been supplied
+                    if sample_name and date_received and lab_id and lsts_id and isolate_source and \
+                            putative_classification and analyst_name:
+                        sample_data.append(VirTyperRequest(sample_name=sample_name,
+                                                           project_name_id=vir_typer_project.pk,
+                                                           date_received=date_received,
+                                                           lab_ID=lab_id,
+                                                           LSTS_ID=lsts_id,
+                                                           isolate_source=isolate_source,
+                                                           putative_classification=putative_classification,
+                                                           analyst_name=analyst_name,
+                                                           subunit=subunit))
 
-            if sample_data:
-                vir_typer_project.save()
-                try:
-                    VirTyperRequest.objects.bulk_create(sample_data)
-                    message_str = _('You have created project ')
-                    messages.success(request, message_str + '{project}'
-                                     .format(project=vir_typer_project.project_name))
+                if sample_data:
+                    vir_typer_project.save()
+                    try:
+                        VirTyperRequest.objects.bulk_create(sample_data)
+                        message_str = _('You have created project ')
+                        messages.success(request, message_str + '{project}'
+                                         .format(project=vir_typer_project.project_name))
 
-                    return redirect('vir_typer:vir_typer_upload',
-                                    vir_typer_pk=vir_typer_project.pk)
-                # If the data violates the unique_together restrictions (all sample names and LSTS IDs must be
-                # unique within a project), add the errors from the offending fields
-                except IntegrityError:
-                    out_str = sample_form_set.non_form_errors()
-                    messages.error(request, out_str)
+                        return redirect('vir_typer:vir_typer_upload',
+                                        vir_typer_pk=vir_typer_project.pk)
+                    # If the data violates the unique_together restrictions (all sample names and LSTS IDs must be
+                    # unique within a project), add the errors from the offending fields
+                    except IntegrityError:
+                        out_str = sample_form_set.non_form_errors()
+                        messages.error(request, out_str)
+            # If the data violates the unique_together restrictions (project name must be unique at the user level),
+            # add the errors from the offending fields
+            except IntegrityError:
+                messages.error(request, _('Project Name must be unique'))
+
         # If forms aren't valid, error messages
         else:
             out_str = str()
@@ -339,9 +346,7 @@ def vir_typer_results(request, vir_typer_pk):
                         html_string, variable_locations = sequence_html_string(vir_typer_result.trimmed_sequence,
                                                                                consensus_sequence)
                         sample_dict['variable_locations'].append(variable_locations)
-                        # print(sample.sample_name, vir_file, variable_locations)
                         sample_dict['sequence'].append(html_string + '\n')
-                        # print(html_string)
                 full_results['data'].append(sample_dict)
                 outputs.append(sample_dict)
     json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
@@ -370,13 +375,17 @@ def vir_typer_results(request, vir_typer_pk):
         # Create a custom CSS string to make the page letter sized, with landscape orientation
         page_css = CSS(string='@page { size: Letter landscape; margin: 1cm }')
         #
-        html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport.pdf'.format(pk=vir_typer_pk),
-                       stylesheets=[bootstrap_css, project_css, all_css, page_css])
+        html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport_{pn}.pdf'
+                       .format(pk=vir_typer_pk,
+                               pn=vir_typer_project.project_name),
+                       stylesheets=[bootstrap_css, project_css, all_css, page_css],
+                       presentational_hints=True)
         # Download
         fs = FileSystemStorage('olc_webportalv2/media/vir_typer/{pk}/'.format(pk=vir_typer_pk))
-        with fs.open("VirusTyperReport.pdf") as pdf:
+        with fs.open("VirusTyperReport_{pn}.pdf".format(pn=vir_typer_project.project_name)) as pdf:
             response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="VirusTyperReport.pdf"'
+            response['Content-Disposition'] = 'attachment; filename="VirusTyperReport_{pn}.pdf"'\
+                .format(pn=vir_typer_project.project_name)
             return response
     return render(request,
                   'vir_typer/vir_typer_results.html',
@@ -395,16 +404,18 @@ def vir_typer_results(request, vir_typer_pk):
 def vir_typer_rename(request, vir_typer_pk):
     vir_typer_project = get_object_or_404(VirTyperProject, pk=vir_typer_pk)
     tombstone_form = VirTyperProjectForm(instance=vir_typer_project)
-    # vir_typer_project = get_object_or_404(VirTyperProject, pk=vir_typer_pk)
     if request.method == "POST":
         tombstone_form = VirTyperProjectForm(request.POST, instance=vir_typer_project)
         if tombstone_form.is_valid():
-            # vir_typer_project.project_name = form.cleaned_data['project_name']
-            # vir_typer_project.save()
-            tombstone_form.save()
-            messages.success(request,
-                             _('Project %s updated')% vir_typer_project.project_name)
-            return redirect('vir_typer:vir_typer_home')
+            try:
+                tombstone_form.save()
+                message = '{} {} {}'.format(str(_('Project')), str(vir_typer_project.project_name), str(_('updated')))
+                messages.success(request, message)
+                return redirect('vir_typer:vir_typer_home')
+            # If the data violates the unique_together restrictions (project name must be unique at the user level),
+            # add the errors from the offending fields
+            except IntegrityError:
+                messages.error(request, _('Project Name must be unique'))
         else:
             messages.error(request, tombstone_form.errors.as_json())
 
