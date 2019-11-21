@@ -210,8 +210,8 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
     """
     node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
     contents = dict()
-    for node_file in node_files:
-        try:
+    try:
+        for node_file in node_files:
             # Stderr.txt file
             if 'stderr' in node_file.name:
                 try:
@@ -219,8 +219,8 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
                                                                                file_path=node_file.name)
                 except:
                     pass
-        except BatchErrorException:
-            pass
+    except BatchErrorException:
+        pass
     for file_name, content_object in contents.items():
         for content_chunk in content_object:
 
