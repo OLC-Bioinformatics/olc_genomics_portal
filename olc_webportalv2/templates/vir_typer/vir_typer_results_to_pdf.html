@@ -57,6 +57,7 @@
                         <th>{% trans "Date Received" %}</th>
                         <th>{% trans "Source" %}</th>
                         <th>{% trans "Organism" %}</th>
+                        <th>{% trans "Identifier" %}</th>
                         <th>{% trans "Trimmed Sequence" %}</th>
                         <th>{% trans "Allele" %}</th>
                         <th>{% trans "Length" %}</th>
@@ -74,6 +75,11 @@
                     <td> {{ sample_dict.date_received }} </td>
                     <td> {{ sample_dict.isolate_source }} </td>
                     <td> {{ sample_dict.organism }} </td>
+                    <td>
+                        {% for identifier in sample_dict.identifier %}
+                            {{ identifier }}<br>
+                        {% endfor %}
+                    </td>
                     <td>
                         {% for sequence in sample_dict.sequence %}
                             {{ sequence }} <br>
