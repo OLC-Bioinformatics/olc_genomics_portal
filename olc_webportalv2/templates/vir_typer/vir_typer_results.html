@@ -21,6 +21,7 @@
                 <th>{% trans "Date Received" %}</th>
                 <th>{% trans "Source" %}</th>
                 <th>{% trans "Organism" %}</th>
+                <th>{% trans "Identifier" %}</th>
                 <th>{% trans "Trimmed Sequence" %}</th>
                 <th>{% trans "Allele" %}</th>
                 <th>{% trans "Length" %}</th>
@@ -62,6 +63,7 @@
             { "data": "date_received"},
             { "data": "isolate_source"},
             { "data": "organism"},
+            { "data": "identifier", render: "[\<br>\]"},
             { "data": 'sequence', render: "[\<br>\]"},
             { "data": "allele", render: "[\<br>\]"},
             { "data": "sequence_length", render: "[\<br>\]"},

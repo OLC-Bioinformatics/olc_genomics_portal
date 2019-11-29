@@ -321,6 +321,7 @@ def vir_typer_results(request, vir_typer_pk):
                                manager_codes[sample.putative_classification]['comments_fr']))
                 except KeyError:
                     pass
+                sample_dict['identifier'] = list()
                 sample_dict['allele'] = list()
                 sample_dict['sequence'] = list()
                 sample_dict['sequence_length'] = list()
@@ -330,11 +331,16 @@ def vir_typer_results(request, vir_typer_pk):
                 alleles[sample.sample_name] = set()
                 for vir_file in VirTyperFiles.objects.filter(sample_name__pk=sample.pk):
                     vir_files.append(vir_file)
+                    seq_identifier_well = str(os.path.splitext(vir_file.sequence_file)[0].split('_')[-2])
+                    seq_identifier_num = os.path.splitext(vir_file.sequence_file)[0].split('_')[-1]
+                    seq_identifier_code = '_'.join((seq_identifier_well, seq_identifier_num))
+                    sample_dict['identifier'].append(seq_identifier_code + '\n')
                     result = VirTyperResults.objects.filter(sequence_file__pk=vir_file.pk)
                     for vir_typer_result in result:
                         sample_dict['allele'].append(vir_typer_result.allele + '\n')
                         alleles[sample.sample_name].add(vir_typer_result.allele)
-                        sequences.append({sample.sample_name: vir_typer_result.trimmed_sequence})
+                        sequences.append({sample.sample_name + '_' + seq_identifier_code: vir_typer_result
+                                         .trimmed_sequence})
                         sample_dict['sequence_length'].append(vir_typer_result.trimmed_sequence_len + '\n')
                         sample_dict['mean_quality'].append(vir_typer_result.trimmed_quality_mean)
                         sample_dict['stdev_quality'].append(vir_typer_result.trimmed_quality_stdev)
