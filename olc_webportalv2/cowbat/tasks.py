@@ -266,11 +266,20 @@ def check_cowbat_tasks():
                 batch_client.job.delete(job_id=batch_job_name)
                 batch_client.pool.delete(pool_id=batch_job_name)  # Set up in tasks.py so that pool and job have same ID
             except BatchErrorException:
-                # Delete task so we don't have to keep checking up on it.
-                AzureTask.objects.filter(id=task.id).delete()
-                cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
-                # Something went wrong - update status to error so user knows.
-                SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
+                try:
+                    # Delete task so we don't have to keep checking up on it.
+                    AzureTask.objects.filter(id=task.id).delete()
+                except:
+                    pass
+                try:
+                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
+                except:
+                    pass
+                try:
+                    # Something went wrong - update status to error so user knows.
+                    SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
+                except:
+                    pass
             if exit_codes_good:
                 # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
                 # This also sets task to complete
