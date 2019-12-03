@@ -101,7 +101,7 @@
                 <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
                   {% for language in LANGUAGES %}
                   <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected" {% endif %}>
-                    {{ language.1 }}
+                    {{ language.1 }} 
                   </option>
                   {% endfor %}
                 </select>
@@ -288,6 +288,9 @@
       document.getElementById("leafy").style.height = "50px";
       document.getElementsByClassName('card-deck')[0].style.display = 'inline';
     }
+    if (bowser.name == "Firefox") {      
+    document.getElementsByTagName("select")[0].className = "fox";
+    }
     function getLanguage() {
     var lang = document.documentElement.lang;
     if (lang=== "fr"){
@@ -298,5 +301,4 @@
   
   {% endblock javascript %}
 </body>
-
 </html>
