@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 """
 from django.utils.translation import ugettext_lazy as language
 from sentry_sdk.integrations.django import DjangoIntegration
+from django.core.exceptions import ImproperlyConfigured
 from celery.schedules import crontab
 from kombu import Queue
 import sentry_sdk
@@ -28,8 +29,9 @@ SECRET_KEY = env('SECRET_KEY')
 
 try:
     ENVIRONMENT = env('ENVIRONMENT')
-except ModuleNotFoundError:
-    ENVIRONMENT = 'ERROR'
+except (KeyError, ImproperlyConfigured):
+    os.environ['ENVIRONMENT'] = 'ERROR'
+    ENVIRONMENT = env('ENVIRONMENT')
 
 if READ_DOT_ENV_FILE:
     # Operating System Environment variables have precedence over variables defined in the .env file,
@@ -135,6 +137,8 @@ if ENVIRONMENT == 'DEV':
 else:
     DEBUG = env.bool('DJANGO_DEBUG', False)
 
+
+print(DEBUG, '235426523746357853487')
 # FIXTURE CONFIGURATION
 # ------------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-FIXTURE_DIRS
