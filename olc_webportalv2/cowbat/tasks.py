@@ -85,7 +85,7 @@ def run_cowbat_batch(sequencing_run_pk):
             # The CLARK part of the pipeline needs absolute path specified, so the $AZ_BATCH_TASK_WORKING_DIR has to
             # be specified as part of the command in order to have the absolute path of our sequences propagate to it.
             f.write('COMMAND:=source $CONDA/activate /envs/cowbat && assembly_pipeline.py '
-                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.12.0\n'
+                    '-s $AZ_BATCH_TASK_WORKING_DIR/{run_name} -r /databases/0.5.0.12\n'
                     .format(run_name=str(sequencing_run)))
 
         # With that done, we can submit the file to batch with our package.
@@ -283,7 +283,10 @@ def check_cowbat_tasks():
             if exit_codes_good:
                 # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
                 # This also sets task to complete
-                cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
+                try:
+                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
+                except:
+                    pass
             else:
                 # Something went wrong - update status to error so user knows.
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')

@@ -7,12 +7,14 @@ https://docs.djangoproject.com/en/dev/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/dev/ref/settings/
 """
+from django.utils.translation import ugettext_lazy as language
+from sentry_sdk.integrations.django import DjangoIntegration
+from celery.schedules import crontab
+from kombu import Queue
+import sentry_sdk
 import environ
 import os
-from kombu import Queue
-from celery.schedules import crontab
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
+
 
 ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
@@ -24,14 +26,19 @@ env = environ.Env()
 READ_DOT_ENV_FILE = env.bool('DJANGO_READ_DOT_ENV_FILE', default=True)
 SECRET_KEY = env('SECRET_KEY')
 
+try:
+    ENVIRONMENT = env('ENVIRONMENT')
+except ModuleNotFoundError:
+    ENVIRONMENT = 'ERROR'
+
 if READ_DOT_ENV_FILE:
     # Operating System Environment variables have precedence over variables defined in the .env file,
     # that is to say variables from the .env files will only be used if not defined
     # as environment variables.
     env_file = str(ROOT_DIR.path('env'))
-    print('Loading : {}'.format(env_file))
+    print('Loading : {} from prod.py'.format(env_file))
     env.read_env(env_file)
-    print('The .env file has been loaded. See base.py for more information')
+    print('The .env file has been loaded. See prod.py for more information')
 
 print('Loaded prod settings')
 # APP CONFIGURATION
@@ -81,9 +88,6 @@ LOCAL_APPS = [
     # Sortable HTML tables
     'django_tables2',
 
-    # Highcharts
-    #'highcharts',
-
     # django-widget-tweaks
     'widget_tweaks',
 
@@ -126,7 +130,10 @@ MIGRATION_MODULES = {
 # DEBUG
 # ------------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = env.bool('DJANGO_DEBUG', True)
+if ENVIRONMENT == 'DEV':
+    DEBUG = env.bool('DJANGO_DEBUG', True)
+else:
+    DEBUG = env.bool('DJANGO_DEBUG', False)
 
 # FIXTURE CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -141,8 +148,11 @@ EMAIL_BACKEND = env('DJANGO_EMAIL_BACKEND', default='django.core.mail.backends.s
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+if ENVIRONMENT == 'DEV':
+    pass
+else:
+    EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 # MANAGER CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -180,7 +190,7 @@ TIME_ZONE = 'Canada/Eastern'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # LANGUAGE_CODE = 'en-ca'
-from django.utils.translation import ugettext_lazy as language
+
 LANGUAGES = (
     ('en-ca', language('English')),
     ('fr', language('French')),
@@ -318,8 +328,11 @@ AUTHENTICATION_BACKENDS = [
 # Some really nice defaults
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # Options are 'optional', 'mandatory' and 'none'
-ACCOUNT_EMAIL_SUBJECT_PREFIX = 'OLC Web Portal'
+if ENVIRONMENT == 'DEV':
+    ACCOUNT_EMAIL_VERIFICATION = 'none'  # Options are 'optional', 'mandatory' and 'none'
+    ACCOUNT_EMAIL_SUBJECT_PREFIX = 'OLC Web Portal'
+else:
+    ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Options are 'optional', 'mandatory' and 'none'
 
 ACCOUNT_ALLOW_REGISTRATION = env.bool('DJANGO_ACCOUNT_ALLOW_REGISTRATION', True)
 ACCOUNT_ADAPTER = 'olc_webportalv2.users.adapters.AccountAdapter'
@@ -335,7 +348,7 @@ LOGIN_URL = 'account_login'
 # SLUGLIFIER
 AUTOSLUG_SLUGIFY_FUNCTION = 'slugify.slugify'
 
-########## CELERY
+# CELERY
 INSTALLED_APPS += ['olc_webportalv2.taskapp.celery.CeleryConfig']
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379')
 CELERY_RESULT_BACKEND = 'redis://redis:6379'
@@ -343,36 +356,38 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
-#Main Queues
+# Main Queues
 CELERY_QUEUES = (
    Queue('default', Exchange='default', routing_key='default'),
    Queue('geneseekr', Exchange='geneseekr', routing_key='geneseekr'),
    Queue('cowbat', Exchange='cowbat', routing_key='cowbat'),
 )
 
-#Periodic Tasks
+# Periodic Tasks
 CELERYBEAT_SCHEDULE = {
-    'monitor_tasks' : {
-        'task' : 'olc_webportalv2.cowbat.tasks.monitor_tasks',
+    'monitor_tasks': {
+        'task': 'olc_webportalv2.cowbat.tasks.monitor_tasks',
         'schedule': 30.0,
-        'options': {'queue':'default'},
+        'options': {'queue': 'default'},
         },
 
-    'clean_old_containers' : {
-        'task':'olc_webportalv2.cowbat.tasks.clean_old_containers',
+    'clean_old_containers': {
+        'task': 'olc_webportalv2.cowbat.tasks.clean_old_containers',
         'schedule': crontab(hour=2),
-        'options': {'queue':'default'},
+        'options': {'queue': 'default'},
         },
 }
-########## END CELERY
-
+# END CELERY
 
 # Location of root django.contrib.admin URL, use {% url 'admin:index' %}
 ADMIN_URL = r'^admin/'
 
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
-ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20', "192.168.1.8", '192.168.1.12']
+if ENVIRONMENT == 'DEV':
+    ALLOWED_HOSTS = ['0.0.0.0', '192.168.1.22', '192.168.1.20', "192.168.1.8", '192.168.1.12']
+else:
+    ALLOWED_HOSTS = ['0.0.0.0', 'olc.lnpr.info', '40.85.255.27', 'olc.cloud.inspection.gc.ca']
 MAX_ATTEMPTS = 1
 
 LOGGING = {

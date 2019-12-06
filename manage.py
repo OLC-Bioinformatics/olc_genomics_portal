@@ -3,8 +3,7 @@ import os
 import sys
 
 if __name__ == '__main__':
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.local')
-
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.prod'
     try:
         from django.core.management import execute_from_command_line
     except ImportError:
@@ -20,6 +19,7 @@ if __name__ == '__main__':
                 "forget to activate a virtual environment?"
             )
         raise
+    import environ
 
     # This allows easy placement of apps within the interior
     # olc_webportalv2 directory.

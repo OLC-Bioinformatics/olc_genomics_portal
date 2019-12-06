@@ -274,7 +274,12 @@ def vir_typer_results(request, vir_typer_pk):
             'code': 'HAV-SEQ',
             'comments_en': 'Hepatitis A was confirmed by gene sequencing of the amplicon.',
             'comments_fr': 'Le séquençage de l\'amplicon confirme la présence du Hepatitis A.'
-        }
+        },
+        'MNV': {
+            'code': 'MNV-SEQ',
+            'comments_en': 'Murine norovirus was confirmed by gene sequencing of the amplicon.',
+            'comments_fr': 'Le séquençage de l\'amplicon confirme la présence du Murine norovirus.'
+        },
     }
     vir_typer_project = get_object_or_404(VirTyperProject, pk=vir_typer_pk)
 
