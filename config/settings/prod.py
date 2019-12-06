@@ -17,7 +17,7 @@ import environ
 import os
 
 
-ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
+ROOT_DIR = environ.Path(__file__) - 3  # (olc_webportalv2/config/settings/prod.py - 3 = olc_webportalv2/)
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
 
 # Load operating system environment variables and then prepare to use them
@@ -138,7 +138,6 @@ else:
     DEBUG = env.bool('DJANGO_DEBUG', False)
 
 
-print(DEBUG, '235426523746357853487')
 # FIXTURE CONFIGURATION
 # ------------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-FIXTURE_DIRS
