@@ -3,6 +3,7 @@ from django.test import LiveServerTestCase
 from django.urls import reverse_lazy
 from olc_webportalv2.users.models import User
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
+from selenium.webdriver.firefox.options import Options
 
 # TODO: This has made me realize that sometimes I have buttons as links that look like buttons, and
  # sometimes I have them as actual buttons. Should standardize to one or the other.
@@ -10,16 +11,18 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 class GeneSeekrIntegrationTest(LiveServerTestCase):
     def setUp(self):
-        self.driver = webdriver.Firefox(executable_path='/data/web/geckodriver')
+        options = Options()
+        options.headless = True
+        self.driver = webdriver.Firefox(options=options,executable_path='/data/web/geckodriver')
         user = User.objects.create(username='testuser', password='password', email='test@test.com')
         user.set_password('password')
-        user.save()
+        user.save()        
 
     def login(self):
         self.driver.get('%s%s' % (self.live_server_url, reverse_lazy('geneseekr:geneseekr_home')))
         self.driver.find_element_by_id('id_login').send_keys('test@test.com')
         self.driver.find_element_by_id('id_password').send_keys('password')
-        self.driver.find_element_by_xpath('//button[text()="Sign In"]').click()
+        self.driver.find_element_by_xpath('//button[text()="Sign In"]').click() 
 
     def test_create_query(self):
         # Login.
@@ -31,7 +34,7 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_link_text('Find Genes').click()
         # Now move to create query button.
         self.driver.find_element_by_link_text('Create A GeneSeekr Query').click()
-        # Now actually submit a query.
+        # # Now actually submit a query.
         self.driver.find_element_by_id('id_name').send_keys('NewQuery')
         self.driver.find_element_by_id('id_query_sequence').send_keys(query_sequence)
         self.driver.find_element_by_xpath('//button[text()="Run Query"]').click()
