@@ -5,12 +5,15 @@ RUN mkdir -p /data/web
 WORKDIR /data/web
 
 # Setup
-RUN apt-get update
-RUN apt-get install -y python3 python3-dev postgresql-client postgresql-server-dev-all gettext ncbi-blast+
-RUN apt-get install -y python3-pip
+RUN apt-get update && apt-get install -y python3 python3-dev postgresql-client postgresql-server-dev-all gettext ncbi-blast+ xvfb
+RUN apt-get install -y python3-pip python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
 RUN pip3 install --upgrade pip
 COPY requirements/base.txt /data/web/
-RUN pip3 install -r base.txt
+RUN pip3 install -r base.txt --ignore-installed
+# Get weasyprint to work
+RUN pip3 install weasyprint
+RUN pip3 install --no-cache-dir --force-reinstall cffi
+RUN pip3 install --no-cache-dir cairocffi
 
 # Prepare
 COPY . /data/web/
