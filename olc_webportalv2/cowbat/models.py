@@ -21,6 +21,8 @@ class SequencingRun(models.Model):
     run_name = models.CharField(max_length=64, unique=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     progress = models.CharField(max_length=64, default='Unprocessed')
+    errors = ArrayField(models.CharField(max_length=24), blank=True, default=list)
+    exit_code = models.PositiveIntegerField(null=True, blank=True)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     forward_reads_to_upload = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     reverse_reads_to_upload = ArrayField(models.CharField(max_length=24), blank=True, default=list)

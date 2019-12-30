@@ -209,6 +209,9 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
     """
     node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
     contents = dict()
+    text_files = dict()
+    out_dir = 'olc_webportalv2/media/cowbat/{pk}'.format(pk=job_id)
+    os.makedirs(out_dir, exist_ok=True)
     try:
         for node_file in node_files:
             # Stderr.txt file
@@ -216,10 +219,28 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
                 try:
                     contents[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
                                                                                file_path=node_file.name)
-                except:
-                    pass
-    except BatchErrorException:
-        pass
+                    text_files[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                                 file_path=node_file.name)
+                except Exception as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
+            elif 'log' in node_file.name or 'err' in node_file.name:
+                try:
+                    text_files[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                                 file_path=node_file.name)
+                except Exception as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
+            elif fnmatch.fnmatch(node_file.name, 'reports/*.csv'):
+                try:
+                    text_files[node_file.name] = batch_client.file.get_from_task(job_id=job_id, task_id=job_id,
+                                                                                 file_path=node_file.name)
+                except Exception as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
+    except BatchErrorException as e:
+        sequencing_run.errors.append(e)
+        sequencing_run.save()
     for file_name, content_object in contents.items():
         for content_chunk in content_object:
 
@@ -230,8 +251,20 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
                 status = ' '.join(final_line.split(' ')[2:])
                 sequencing_run.progress = status
                 sequencing_run.save()
-            except:
-                pass
+            except Exception as e:
+                sequencing_run.errors.append(e)
+                sequencing_run.save()
+    try:
+        for file_name, content_object in text_files.items():
+            # The get_blob_to_path method gets angry if the containing folder doesn't already exist
+            parent_dir = os.path.split(file_name)[-2]
+            os.makedirs(os.path.join(out_dir, parent_dir), exist_ok=True)
+            with open(os.path.join(out_dir, parent_dir, os.path.basename(file_name)), 'w') as text_output:
+                for content_chunk in content_object:
+                    text_output.write(content_chunk.decode())
+    except Exception as e:
+        sequencing_run.errors.append(e)
+        sequencing_run.save()
 
 
 def check_cowbat_tasks():
@@ -250,47 +283,77 @@ def check_cowbat_tasks():
             for cloudtask in batch_client.task.list(batch_job_name):
                 if cloudtask.state != batchmodels.TaskState.completed:
                     tasks_completed = False
-        except BatchErrorException:
-            pass
+        except BatchErrorException as e:
+            sequencing_run.errors.append(e)
+            sequencing_run.save()
         # Assuming that things have completed, check exit codes. Set status to error if any are non-zero.
         if tasks_completed:
             exit_codes_good = True
+            exit_code = 0
             try:
                 for cloudtask in batch_client.task.list(batch_job_name):
                     if cloudtask.execution_info.exit_code != 0:
+                        exit_code = cloudtask.execution_info.exit_code
+                        sequencing_run.exit_code = exit_code
+                        sequencing_run.save()
                         exit_codes_good = False
-            except BatchErrorException:
-                pass
-            try:
-                batch_client.job.delete(job_id=batch_job_name)
-                batch_client.pool.delete(pool_id=batch_job_name)  # Set up in tasks.py so that pool and job have same ID
-            except BatchErrorException:
+            except BatchErrorException as e:
+                sequencing_run.errors.append(e)
+                sequencing_run.save()
                 try:
-                    # Delete task so we don't have to keep checking up on it.
-                    AzureTask.objects.filter(id=task.id).delete()
-                except:
-                    pass
-                try:
-                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
-                except:
-                    pass
-                try:
-                    # Something went wrong - update status to error so user knows.
-                    SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
-                except:
-                    pass
+                    # Set up in tasks.py so that pool and job have same ID
+                    batch_client.job.delete(job_id=batch_job_name)
+                    batch_client.pool.delete(pool_id=batch_job_name)
+                except BatchErrorException as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
+                    try:
+                        # Delete task so we don't have to keep checking up on it.
+                        AzureTask.objects.filter(id=task.id).delete()
+                    except Exception as e:
+                        sequencing_run.errors.append(e)
+                        sequencing_run.save()
+                    try:
+                        cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
+                    except Exception as e:
+                        sequencing_run.errors.append(e)
+                        sequencing_run.save()
+                    try:
+                        # Something went wrong - update status to error so user knows.
+                        SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
+                    except Exception as e:
+                        sequencing_run.errors.append(e)
+                        sequencing_run.save()
             if exit_codes_good:
+                sequencing_run.exit_code = exit_code
+                sequencing_run.save()
                 # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
                 # This also sets task to complete
                 try:
                     cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
-                except:
-                    pass
+                except Exception as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
             else:
+                sequencing_run.exit_code = exit_code
+                sequencing_run.save()
                 # Something went wrong - update status to error so user knows.
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
-            # Delete task so we don't have to keep checking up on it.
-            AzureTask.objects.filter(id=task.id).delete()
+                sequencing_run.errors.append('Exit code bad')
+                sequencing_run.save()
+                try:
+                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
+                except Exception as e:
+                    sequencing_run.errors.append(e)
+                    sequencing_run.save()
+            try:
+                # Delete task so we don't have to keep checking up on it.
+                AzureTask.objects.filter(id=task.id).delete()
+                sequencing_run.errors.append('Exit code normal')
+                sequencing_run.save()
+            except Exception as e:
+                sequencing_run.errors.append(e)
+                sequencing_run.save()
         else:
             check_cowbat_progress(batch_client, batch_job_name, sequencing_run)
 
