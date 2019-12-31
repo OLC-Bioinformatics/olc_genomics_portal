@@ -36,7 +36,7 @@ from azure.batch.models import BatchErrorException
 
 
 @shared_task
-def run_cowbat_batch(sequencing_run_pk):
+def run_cowbat_batch(sequencing_run_pk, vm_size='Standard_D32s_v3'):
     try:
         blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
                                        account_name=settings.AZURE_ACCOUNT_NAME)
@@ -75,6 +75,7 @@ def run_cowbat_batch(sequencing_run_pk):
             f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
             f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
             f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
+            f.write('VM_SIZE:={}\n'.format(vm_size))
             f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
             f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, '*.fastq.gz'), str(sequencing_run)))
             f.write('CLOUDIN:={} {}\n'.format(os.path.join(container_name, '*.xml'), str(sequencing_run)))
