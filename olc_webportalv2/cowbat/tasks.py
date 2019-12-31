@@ -251,31 +251,6 @@ def check_cowbat_progress(batch_client, batch_job_name, sequencing_run, azure_ta
                     sequencing_run.save()
     except BatchErrorException:
         pass
-        # Clean-up!
-        # try:
-        #     # Set up in tasks.py so that pool and job have same ID
-        #     batch_client.job.delete(job_id=batch_job_name)
-        #     batch_client.pool.delete(pool_id=batch_job_name)
-        # except BatchErrorException as e:
-        #     sequencing_run.errors.append(e)
-        #     sequencing_run.save()
-        #     try:
-        #         # Delete task so we don't have to keep checking up on it.
-        #         AzureTask.objects.filter(id=azure_task.id).delete()
-        #     except Exception as e:
-        #         sequencing_run.errors.append(e)
-        #         sequencing_run.save()
-        #     try:
-        #         cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
-        #     except Exception as e:
-        #         sequencing_run.errors.append(e)
-        #         sequencing_run.save()
-        #     try:
-        #         # Something went wrong - update status to error so user knows.
-        #         SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
-        #     except Exception as e:
-        #         sequencing_run.errors.append(e)
-        #         sequencing_run.save()
     # Otherwise update the model
     for file_name, content_object in contents.items():
         for content_chunk in content_object:
@@ -343,23 +318,6 @@ def check_cowbat_tasks():
                 except BatchErrorException as e:
                     sequencing_run.errors.append(e)
                     sequencing_run.save()
-                    try:
-                        # Delete task so we don't have to keep checking up on it.
-                        AzureTask.objects.filter(id=azure_task.id).delete()
-                    except Exception as e:
-                        sequencing_run.errors.append(e)
-                        sequencing_run.save()
-                    try:
-                        cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk,))
-                    except Exception as e:
-                        sequencing_run.errors.append(e)
-                        sequencing_run.save()
-                    try:
-                        # Something went wrong - update status to error so user knows.
-                        SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
-                    except Exception as e:
-                        sequencing_run.errors.append(e)
-                        sequencing_run.save()
             if exit_codes_good:
                 sequencing_run.exit_code = exit_code
                 sequencing_run.save()
@@ -377,11 +335,6 @@ def check_cowbat_tasks():
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
                 sequencing_run.errors.append('Exit code bad')
                 sequencing_run.save()
-                try:
-                    cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
-                except Exception as e:
-                    sequencing_run.errors.append(e)
-                    sequencing_run.save()
             try:
                 # Delete task so we don't have to keep checking up on it.
                 AzureTask.objects.filter(id=task.id).delete()
