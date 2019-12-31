@@ -241,6 +241,7 @@ def check_cowbat_progress(batch_client, job_id, sequencing_run):
     except BatchErrorException as e:
         sequencing_run.errors.append(e)
         sequencing_run.save()
+        raise BatchErrorException
     for file_name, content_object in contents.items():
         for content_chunk in content_object:
 

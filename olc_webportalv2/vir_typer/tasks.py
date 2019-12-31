@@ -1,46 +1,28 @@
-import os
-import glob
-import shutil
-import datetime
-import subprocess
-from Bio import SeqIO
-import multiprocessing
-from io import StringIO
-from django.conf import settings
-# from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
-#     TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
-from olc_webportalv2.metadata.models import SequenceData
-from olc_webportalv2.cowbat.tasks import generate_download_link
 from sentry_sdk import capture_exception
-
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-
-import csv
-from django.shortcuts import get_object_or_404
-
+from django.conf import settings
 from celery import shared_task
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import smtplib
+import subprocess
+import os
 
 from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest
 
 
-def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file, vm_size='Standard_D8s_v3'):
+def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file,
+                     vm_size='Standard_D8s_v3'):
     """
     Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
-    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names and keys
-    :param seqids: List of SeqIDs that are going to be analyzed.
+    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names
+    and keys
+    :param sequences: List of sequences that are going to be analyzed.
     :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
-    it will be put in olc_webportalv2/media/job_name - this will get cleaned up if it exists by our monitor_tasks function
+    it will be put in olc_webportalv2/media/job_name - this will get cleaned up if it exists by our monitor_tasks
+    function
     :param input_data_folder: Name of folder on VM that FASTA sequences will be put into.
     :param output_data_folder: Name of folder on VM that output files will be written to.
     :param command: Command that's going to be run on the SeqIDs
     :param config_file: Where you want to save the config file to.
-    :param vm_size: Size of VM you want to spin up. See https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general
-    for a list of options.
+    :param vm_size: Size of VM you want to spin up. See
+    https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general for a list of options.
     :return:
     """
     with open(config_file, 'w') as f:
@@ -86,8 +68,6 @@ def run_vir_typer(vir_typer_request_pk):
         command = 'source $CONDA/activate /envs/virustyper && mkdir {cn}'.format(cn=container_name)
         #
         command += ' && virustyper -r {container_name} -s sequences/'.format(container_name=container_name)
-        # command = 'mkdir {container_name} && ls sequences/* > {container_name}/sequences.txt'.format(container_name=container_name)
-
         make_config_file(job_name=container_name,
                          sequences=sequences,
                          input_data_folder='sequences',
