@@ -241,7 +241,7 @@ def check_cowbat_progress(batch_client, batch_job_name, sequencing_run, azure_ta
                 except Exception as e:
                     sequencing_run.errors.append(e)
                     sequencing_run.save()
-            elif fnmatch.fnmatch(node_file.name, 'reports/*.csv'):
+            elif 'reports' in node_file.name:
                 try:
                     text_files[node_file.name] = batch_client.file.get_from_task(job_id=batch_job_name,
                                                                                  task_id=batch_job_name,
