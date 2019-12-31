@@ -175,8 +175,13 @@ def cowbat_cleanup(sequencing_run_pk):
     SequencingRun.objects.filter(pk=sequencing_run_pk).update(download_link=sas_url)
     shutil.rmtree(os.path.join('olc_webportalv2/media/{run_name}'.format(run_name=str(sequencing_run))))
     # Run is now considered complete! Update to let user know and send email to people that need to know.
-    SequencingRun.objects.filter(pk=sequencing_run_pk).update(status='Complete')
-    print('Complete!')
+    try:
+        seq_run = SequencingRun.objects.get(pk=sequencing_run_pk)
+        if seq_run.status != 'Error':
+            SequencingRun.objects.filter(pk=sequencing_run_pk).update(status='Complete')
+        print('Complete!')
+    except:
+        pass
     # Finally (but actually this time) send an email to relevant people to let them know that things have worked.
     # Uncomment this on the cloud where email sending actually works
     realtime_strains = list()
