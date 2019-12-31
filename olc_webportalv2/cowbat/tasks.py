@@ -340,6 +340,9 @@ def check_cowbat_tasks():
                 AzureTask.objects.filter(id=task.id).delete()
                 sequencing_run.errors.append('Exit code normal')
                 sequencing_run.save()
+                # Set up in tasks.py so that pool and job have same ID
+                batch_client.job.delete(job_id=batch_job_name)
+                batch_client.pool.delete(pool_id=batch_job_name)
             except Exception as e:
                 sequencing_run.errors.append(e)
                 sequencing_run.save()
