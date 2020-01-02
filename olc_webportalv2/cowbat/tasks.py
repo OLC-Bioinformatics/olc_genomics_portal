@@ -301,36 +301,38 @@ def check_cowbat_tasks():
         if tasks_completed:
             exit_codes_good = True
             exit_code = 0
+            # Determine the exit code
             try:
                 for cloudtask in batch_client.task.list(batch_job_name):
                     if cloudtask.execution_info.exit_code != 0:
                         exit_code = cloudtask.execution_info.exit_code
-                        sequencing_run.exit_code = exit_code
-                        sequencing_run.save()
                         exit_codes_good = False
             except BatchErrorException as e:
                 sequencing_run.errors.append(e)
                 sequencing_run.save()
-                try:
-                    # Set up in tasks.py so that pool and job have same ID
-                    batch_client.job.delete(job_id=batch_job_name)
-                    batch_client.pool.delete(pool_id=batch_job_name)
-                except BatchErrorException as e:
-                    sequencing_run.errors.append(e)
-                    sequencing_run.save()
-            if exit_codes_good:
-                sequencing_run.exit_code = exit_code
+            # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
+            try:
+
+                batch_client.job.delete(job_id=batch_job_name)
+            except BatchErrorException as e:
+                sequencing_run.errors.append(e)
                 sequencing_run.save()
-                # Get rid of job and pool so we don't waste big $$$ and do cleanup/get files downloaded in tasks.
-                # This also sets task to complete
+            try:
+                batch_client.pool.delete(pool_id=batch_job_name)
+            except BatchErrorException as e:
+                sequencing_run.errors.append(e)
+                sequencing_run.save()
+            # Add the exit code to the sequencing run
+            sequencing_run.exit_code = exit_code
+            sequencing_run.save()
+            if exit_codes_good:
+                # Clean up the sequencing run
                 try:
                     cowbat_cleanup.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
                 except Exception as e:
                     sequencing_run.errors.append(e)
                     sequencing_run.save()
             else:
-                sequencing_run.exit_code = exit_code
-                sequencing_run.save()
                 # Something went wrong - update status to error so user knows.
                 SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Error')
                 sequencing_run.errors.append('Exit code bad')
@@ -338,11 +340,6 @@ def check_cowbat_tasks():
             try:
                 # Delete task so we don't have to keep checking up on it.
                 AzureTask.objects.filter(id=task.id).delete()
-                sequencing_run.errors.append('Exit code normal')
-                sequencing_run.save()
-                # Set up in tasks.py so that pool and job have same ID
-                batch_client.job.delete(job_id=batch_job_name)
-                batch_client.pool.delete(pool_id=batch_job_name)
             except Exception as e:
                 sequencing_run.errors.append(e)
                 sequencing_run.save()
