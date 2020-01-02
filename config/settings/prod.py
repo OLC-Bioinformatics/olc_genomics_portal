@@ -312,12 +312,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'OPTIONS': {
+            'min_length': 6,
+        }
     },
 ]
 
@@ -335,7 +332,7 @@ if ENVIRONMENT == 'DEV':
     ACCOUNT_EMAIL_VERIFICATION = 'none'  # Options are 'optional', 'mandatory' and 'none'
     ACCOUNT_EMAIL_SUBJECT_PREFIX = 'OLC Web Portal'
 else:
-    ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Options are 'optional', 'mandatory' and 'none'
+    ACCOUNT_EMAIL_VERIFICATION = 'none'  # Options are 'optional', 'mandatory' and 'none'
 
 ACCOUNT_ALLOW_REGISTRATION = env.bool('DJANGO_ACCOUNT_ALLOW_REGISTRATION', True)
 ACCOUNT_ADAPTER = 'olc_webportalv2.users.adapters.AccountAdapter'
