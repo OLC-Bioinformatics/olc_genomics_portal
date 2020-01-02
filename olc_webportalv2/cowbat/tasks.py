@@ -5,7 +5,6 @@ from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary,
 from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
-from django.core.mail import send_mail  # To be used eventually, only works in cloud
 # Standard python stuff
 import subprocess
 import datetime
@@ -339,7 +338,7 @@ def check_cowbat_tasks():
                 sequencing_run.save()
             try:
                 # Delete task so we don't have to keep checking up on it.
-                AzureTask.objects.filter(id=task.id).delete()
+                AzureTask.objects.filter(id=azure_task.id).delete()
             except Exception as e:
                 sequencing_run.errors.append(e)
                 sequencing_run.save()
@@ -352,9 +351,9 @@ def check_tree_tasks():
     tree_tasks = TreeAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
-    for task in tree_tasks:
-        tree_task = Tree.objects.get(pk=task.tree_request.pk)
-        batch_job_name = 'mash-{}'.format(task.tree_request.pk)
+    for tree_task in tree_tasks:
+        tree_object = Tree.objects.get(pk=tree_task.tree_request.pk)
+        batch_job_name = 'mash-{}'.format(tree_task.tree_request.pk)
         # Check if tasks related with this mash job have finished.
         tasks_completed = True
         try:
@@ -363,9 +362,9 @@ def check_tree_tasks():
                     tasks_completed = False
 
         except:  # If something errors first time through job doesn't exist. In that case, give up.
-            Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
+            Tree.objects.filter(pk=tree_task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            TreeAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
             continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
@@ -384,22 +383,22 @@ def check_tree_tasks():
                 download_container(blob_service=blob_client,
                                    container_name=batch_job_name + '-output',
                                    output_dir='olc_webportalv2/media')
-                tree_file = 'olc_webportalv2/media/mash-{}/mash.tree'.format(tree_task.pk)
+                tree_file = 'olc_webportalv2/media/mash-{}/mash.tree'.format(tree_object.pk)
                 with open(tree_file) as f:
                     tree_string = f.readline()
-                if tree_task.number_diversitree_strains > 0:
+                if tree_object.number_diversitree_strains > 0:
                     diverse_strains = strainchoosr.pd_greedy(tree=ete3.Tree(tree_file),
-                                                             number_tips=tree_task.number_diversitree_strains,
+                                                             number_tips=tree_object.number_diversitree_strains,
                                                              starting_strains=[])
-                    tree_task.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
-                tree_task.newick_tree = tree_string.rstrip().replace("'", "")
+                    tree_object.seqids_diversitree = strainchoosr.get_leaf_names_from_nodes(diverse_strains)
+                tree_object.newick_tree = tree_string.rstrip().replace("'", "")
                 blob_client.delete_container(container_name=batch_job_name)
                 # Should now have results from mash in olc_webportalv2/media/mash-X, where X is pk of tree request
                 tree_output_folder = os.path.join('olc_webportalv2/media', batch_job_name)
                 os.remove(os.path.join(tree_output_folder, 'batch_config.txt'))
                 # Need to zip this folder and then upload the zipped folder to cloud
                 shutil.make_archive(tree_output_folder, 'zip', tree_output_folder)
-                tree_result_container = 'tree-{}'.format(tree_task.pk)
+                tree_result_container = 'tree-{}'.format(tree_object.pk)
                 sas_url = generate_download_link(blob_client=blob_client,
                                                  container_name=tree_result_container,
                                                  output_zipfile=tree_output_folder + '.zip',
@@ -408,9 +407,9 @@ def check_tree_tasks():
                 zip_folder = 'olc_webportalv2/media/{}.zip'.format(batch_job_name)
                 if os.path.isfile(zip_folder):
                     os.remove(zip_folder)
-                tree_task.download_link = sas_url
-                tree_task.status = 'Complete'
-                tree_task.save()
+                tree_object.download_link = sas_url
+                tree_object.status = 'Complete'
+                tree_object.save()
 
             else:
                 Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
@@ -422,9 +421,9 @@ def check_amr_summary_tasks():
     amr_summary_tasks = AMRAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
-    for task in amr_summary_tasks:
-        amr_task = AMRSummary.objects.get(pk=task.amr_request.pk)
-        batch_job_name = 'amrsummary-{}'.format(task.amr_request.pk)
+    for amr_task in amr_summary_tasks:
+        amr_object = AMRSummary.objects.get(pk=amr_task.amr_request.pk)
+        batch_job_name = 'amrsummary-{}'.format(amr_task.amr_request.pk)
         # Check if tasks related with this amrsummary job have finished.
         tasks_completed = True
         try:
@@ -432,9 +431,9 @@ def check_amr_summary_tasks():
                 if cloudtask.state != batchmodels.TaskState.completed:
                     tasks_completed = False
         except:  # If something errors first time through job can't get deleted. In that case, give up.
-            AMRSummary.objects.filter(pk=task.amr_request.pk).update(status='Error')
+            AMRSummary.objects.filter(pk=amr_task.amr_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            AMRAzureRequest.objects.filter(id=task.id).delete()
+            AMRAzureRequest.objects.filter(id=amr_task.id).delete()
             continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
@@ -457,14 +456,14 @@ def check_amr_summary_tasks():
                 if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
                     os.remove(os.path.join(output_dir, 'batch_config.txt'))
                 shutil.make_archive(output_dir, 'zip', output_dir)
-                amr_result_container = 'amrsummary-{}'.format(amr_task.pk)
+                amr_result_container = 'amrsummary-{}'.format(amr_object.pk)
                 sas_url = generate_download_link(blob_client=blob_client,
                                                  container_name=amr_result_container,
                                                  output_zipfile=output_dir + '.zip',
                                                  expiry=8)
                 # Also need to populate our AMRDetail model with results.
                 seq_amr_dict = dict()
-                for seqid in amr_task.seqids:
+                for seqid in amr_object.seqids:
                     seq_amr_dict[seqid] = dict()
                 with open(os.path.join(output_dir, 'reports', 'amr_summary.csv')) as csvfile:
                     reader = csv.DictReader(csvfile)
@@ -476,20 +475,20 @@ def check_amr_summary_tasks():
                             seq_amr_dict[seqid] = dict()
                         seq_amr_dict[seqid][gene] = location
                 for seqid in seq_amr_dict:
-                    AMRDetail.objects.create(amr_request=amr_task,
+                    AMRDetail.objects.create(amr_request=amr_object,
                                              seqid=seqid,
                                              amr_results=seq_amr_dict[seqid])
                 # Finally, do some cleanup
                 shutil.rmtree(output_dir)
                 os.remove(output_dir + '.zip')
-                amr_task.download_link = sas_url
-                amr_task.status = 'Complete'
-                amr_task.save()
+                amr_object.download_link = sas_url
+                amr_object.status = 'Complete'
+                amr_object.save()
 
             else:
-                amr_task.status = 'Error'
-                amr_task.save()
-            AMRAzureRequest.objects.filter(id=task.id).delete()
+                amr_object.status = 'Error'
+                amr_object.save()
+            AMRAzureRequest.objects.filter(id=amr_task.id).delete()
 
 
 def check_vir_typer_tasks():
@@ -564,9 +563,9 @@ def check_prokka_tasks():
     prokka_tasks = ProkkaAzureRequest.objects.filter()
     credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
-    for task in prokka_tasks:
-        prokka_task = ProkkaRequest.objects.get(pk=task.prokka_request.pk)
-        batch_job_name = 'prokka-{}'.format(task.prokka_request.pk)
+    for prokka_task in prokka_tasks:
+        prokka_object = ProkkaRequest.objects.get(pk=prokka_task.prokka_request.pk)
+        batch_job_name = 'prokka-{}'.format(prokka_task.prokka_request.pk)
         # Check if tasks related with this amrsummary job have finished.
         tasks_completed = True
         try:
@@ -574,9 +573,9 @@ def check_prokka_tasks():
                 if cloudtask.state != batchmodels.TaskState.completed:
                     tasks_completed = False
         except:  # If something errors first time through job can't get deleted. In that case, give up.
-            ProkkaRequest.objects.filter(pk=task.prokka_request.pk).update(status='Error')
+            ProkkaRequest.objects.filter(pk=prokka_task.prokka_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            ProkkaAzureRequest.objects.filter(id=task.id).delete()
+            ProkkaAzureRequest.objects.filter(id=prokka_task.id).delete()
             continue
         # If tasks have completed, check if they were successful.
         if tasks_completed:
@@ -599,20 +598,20 @@ def check_prokka_tasks():
                 if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
                     os.remove(os.path.join(output_dir, 'batch_config.txt'))
                 shutil.make_archive(output_dir, 'zip', output_dir)
-                prokka_result_container = 'prokka-result-{}'.format(prokka_task.pk)
+                prokka_result_container = 'prokka-result-{}'.format(prokka_object.pk)
                 sas_url = generate_download_link(blob_client=blob_client,
                                                  container_name=prokka_result_container,
                                                  output_zipfile=output_dir + '.zip',
                                                  expiry=8)
-                prokka_task.download_link = sas_url
-                prokka_task.status = 'Complete'
-                prokka_task.save()
+                prokka_object.download_link = sas_url
+                prokka_object.status = 'Complete'
+                prokka_object.save()
                 shutil.rmtree(output_dir)
                 os.remove(output_dir + '.zip')
             else:
-                prokka_task.status = 'Error'
-                prokka_task.save()
-            ProkkaAzureRequest.objects.filter(id=task.id).delete()
+                prokka_object.status = 'Error'
+                prokka_object.save()
+            ProkkaAzureRequest.objects.filter(id=prokka_task.id).delete()
 
 
 @shared_task
