@@ -5,9 +5,6 @@ from olc_webportalv2.users.models import User
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 from selenium.webdriver.firefox.options import Options
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 # TODO: This has made me realize that sometimes I have buttons as links that look like buttons, and
  # sometimes I have them as actual buttons. Should standardize to one or the other.
 
@@ -36,12 +33,8 @@ class GeneSeekrIntegrationTest(LiveServerTestCase):
         self.driver.find_element_by_xpath('//button[text()="Analyze"]').click()
         self.driver.find_element_by_link_text('Find Genes').click()
         # Now move to create query button.
-        WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.LINK_TEXT, 'Create A GeneSeekr Query'))
-            )
         self.driver.find_element_by_link_text('Create A GeneSeekr Query').click()
-        print(self.driver.current_url)
-        # # Now actually submit a query.
+        # Now actually submit a query.
         self.driver.find_element_by_id('id_name').send_keys('NewQuery')
         self.driver.find_element_by_id('id_query_sequence').send_keys(query_sequence)
         self.driver.find_element_by_xpath('//button[text()="Run Query"]').click()
