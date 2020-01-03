@@ -204,13 +204,12 @@ def escape_ansi(line):
     return ansi_escape.sub('', line)
 
 
-def check_cowbat_progress(batch_client, batch_job_name, sequencing_run, azure_task):
+def check_cowbat_progress(batch_client, batch_job_name, sequencing_run):
     """
 
     :param batch_client:
     :param batch_job_name:
     :param sequencing_run:
-    :param azure_task
     :return:
     """
     node_files = batch_client.file.list_from_task(job_id=batch_job_name, task_id=batch_job_name, recursive=True)
@@ -343,7 +342,7 @@ def check_cowbat_tasks():
                 sequencing_run.errors.append(e)
                 sequencing_run.save()
         else:
-            check_cowbat_progress(batch_client, batch_job_name, sequencing_run, azure_task)
+            check_cowbat_progress(batch_client, batch_job_name, sequencing_run)
 
 
 def check_tree_tasks():
@@ -414,7 +413,7 @@ def check_tree_tasks():
             else:
                 Tree.objects.filter(pk=task.tree_request.pk).update(status='Error')
             # Delete task so we don't keep iterating over it.
-            TreeAzureRequest.objects.filter(id=task.id).delete()
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
 
 
 def check_amr_summary_tasks():
