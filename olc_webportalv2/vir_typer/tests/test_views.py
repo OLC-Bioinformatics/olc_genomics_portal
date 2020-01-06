@@ -102,7 +102,7 @@ class SampleTestCase(TestCase):
         resp = self.client.get(reverse('vir_typer:vir_typer_results', kwargs={'vir_typer_pk': project.pk}))
         self.assertEqual(resp.status_code, 200)
         results = VirTyperResults.objects.all()
-        self.assertEquals([result.trimmed_quality_stdev for result in results], ['5.59', '6.10', '6.23', '5.59'])
+        self.assertEquals([result.trimmed_quality_stdev for result in results], ['5.59', '6.23','6.10', '5.59'])
 
     def test_report_parse(self):
         testpath = os.path.abspath(os.path.dirname(__file__))
@@ -114,7 +114,7 @@ class SampleTestCase(TestCase):
         parse_report(vir_typer_json=json_data,
                      vir_typer_samples=vir_typer_samples)
         results = VirTyperResults.objects.all()
-        self.assertEquals([result.allele for result in results], ['00069', '00069', '00057', '00069'])
+        self.assertEquals([result.allele for result in results], ['00069', '00057', '00069', '00069'])
 
     def test_sequence_html(self):
         vir_typer_pk = VirTyperProject.objects.get(project_name='test_views').pk
