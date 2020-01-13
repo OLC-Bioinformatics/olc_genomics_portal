@@ -60,7 +60,8 @@ def vir_typer_request(request):
                     putative_classification = form.cleaned_data.get('putative_classification')
                     analyst_name = form.cleaned_data.get('analyst_name')
                     # Set the subunit to 0 is it not provided (None), otherwise use the cleaned value
-                    subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
+                    if form.cleaned_data.get('subunit') is not None:
+                        subunit = form.cleaned_data.get('subunit')
                     # Only add the data if all the fields (except subunit, which is optional) have been supplied
                     if sample_name and date_received and lab_id and lsts_id and isolate_source and \
                             putative_classification and analyst_name:
@@ -101,6 +102,7 @@ def vir_typer_request(request):
                 out_str += tombstone_form.errors['project_name']
             out_str += sample_form_set.non_form_errors()
             messages.error(request, out_str)
+
     else:
         sample_form_set = sample_form_set_factory()
     return render(request,
