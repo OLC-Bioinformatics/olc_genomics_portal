@@ -12,9 +12,9 @@ from Bio.SeqUtils import MeltingTemp
 # Primer_Val-specific code
 from .forms import PrimerForm
 from .models import PrimerVal
-# from .tasks import run_primer_val
+from .tasks import run_primer_val
 
-# Primer_val Views
+# Primer_Val Views
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_home(request):
@@ -38,51 +38,57 @@ def primer_request(request):
     if request.method == "POST":
         form = PrimerForm(request.POST)
         if form.is_valid():
-            target = request.POST["target"]
-            organism = str(target).replace('.hash', "").replace('_', " ").title().replace('Ncbi', 'NCBI').replace('Cfia', 'CFIA')
-            forward_text = request.POST["forwardPrimer"]
-            reverse_text = request.POST["reversePrimer"]
-            mism = request.POST["mism"]
-            tag = ""
-            if "tag" in request.POST:
-                tag = request.POST["tag"]
+            name = form.cleaned_data.get('name')
+            path = form.cleaned_data.get('path')
+            sequence_path = form.cleaned_data.get('sequence_path')
+            primer_file = form.cleaned_data.get('primer_file')
+            mismatches = form.cleaned_data.get('mismatches')
+            analysistype = form.cleaned_data.get('analysistype')
+            
+            # create primer request
+            primer_request = PrimerVal.objects.create(name = name,
+                                                      path = path,
+                                                      sequence_path = sequence_path,
+                                                      primer_file = primer_file,
+                                                      mismatches = mismatches,
+                                                      analysistype = analysistype)
 
-            forward_split = forward_text.splitlines()
-            reverse_split = reverse_text.splitlines()
-
-            for primer in range(len(forward_split)):
-                forward = forward_split[primer]
-                forward = forward.upper()
-                forward = forward.replace(" ", "")
-                forward_gc = round(MeltingTemp.TM_GC(forward, strict = False), 2)
-
-                reverse = reverse_split[primer]
-                reverse = reverse.upper()
-                reverse = reverse.replace(" ", "")
-                reverse_gc = round(MeltingTemp.TM_GC(forward, strict = False), 2)
-
-# create primer request
-            primer_request = PrimerVal.objects.create(target = target,
-                                                      organism = organism,
-                                                      forward = forward,
-                                                      reverse = reverse,
-                                                      forward_gc = forward_gc,
-                                                      reverse_gc = reverse_gc,
-                                                      mism = mism
-
-            )
+            
             primer_request.status = 'Processing'
             primer_request.save()
-            # primer_task.apply_async(queue='', args=(primer_request_pk,), countdown=10)
+            run_primer_val.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
 
         return render(request, 'primer/primer_request.html', {'form': form})
 
+
+@login_required
+def primer_upload(request, primer_request_pk):
+    primer_request = get_object_or_404(PrimerVal, pk=primer_request_pk)
+    if request.method == 'POST':
+        seq_files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
+        if seq_files:
+            container_name = PrimerVal.objects.get(pk=primer_request_pk).container_namer()
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            blob_client.create_container(container_name)
+            primer_request.status = 'Processing'
+            primer_request.save()
+            run_primer_val.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
+        return redirect('primer:primer_home')
+    return render(request,
+                  'primer/primer_upload.html',
+                  {
+                      'primer_request': primer_request,
+                  })
+
+
+
        
 @login_required
-def primer_rename(request, primer_request_pk)
+def primer_rename(request, primer_request_pk):
     form = NameForm()
     primer_request = get_object_or_404(PrimerVal, pk=primer_request_pk)
-    if request.method = "POST":
+    if request.method == "POST":
         form = NameForm(request.POST)
         if form.is_valid():
             primer_request.name = form.cleaned_data['name']

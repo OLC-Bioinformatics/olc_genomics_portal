@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class PrimerValConfig(AppConfig):
-    name = 'primer'
+    name = 'olc_webportalv2.primer'
+
