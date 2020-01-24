@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>{%trans "Primer Validation Request"%}</h2>
+  <form action='' enctype="multipart/form-data" method="post">
+   {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+  {% csrf_token %}
+   <div class="col-4" style="padding-left:0;">
+      {{ form.name|as_crispy_field }}
+      {{ form.analysistype|as_crispy_field }}
+      {{ form.mismatches|as_crispy_field }}   
+    <div id='custom'>  
+      {{ form.primer_file|as_crispy_field }}
+      {{ form.ampliconsize|as_crispy_field }}                
+      {{ form.export_amplicons|as_crispy_field }}
+    </div> 
+    </div>
+  <button type="submit" class="btn btn-primary btn-lg">{%trans "Create Request"%}</button>
+  </form>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script type="text/javascript">
+  $(document).ready(function () { 
+    var atype = {{form.analysistype.auto_id}};
+  $(atype).change(function()
+  {
+    var selected = $(atype).find('option:selected');
+    if($(selected).val() === "vtyper"){
+      $('#custom').hide();
+    }
+    else{
+      $('#custom').show();
+    }
+  });
+    
+  });
+  </script>
+{% endblock %}
