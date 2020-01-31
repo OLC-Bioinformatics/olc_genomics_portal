@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import PrimerAzureRequest, PrimerVal
 
-# Register your models here.
+admin.site.register(PrimerAzureRequest)
+admin.site.register(PrimerVal)
+
