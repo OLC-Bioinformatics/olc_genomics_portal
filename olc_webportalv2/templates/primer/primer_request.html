@@ -27,6 +27,10 @@
   <script type="text/javascript">
   $(document).ready(function () { 
     var atype = {{form.analysistype.auto_id}};
+    var selected = $(atype).find('option:selected');
+    if(selected.val() === 'vtyper'){
+      $('#custom').toggle();
+    }
     $(atype).change(function()
     {
       var selected = $(atype).find('option:selected');
