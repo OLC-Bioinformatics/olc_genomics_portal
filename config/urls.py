@@ -29,7 +29,7 @@ urlpatterns += i18n_patterns(
     url(r'^geneseekr/', include(('olc_webportalv2.geneseekr.urls', 'geneseekr'), namespace='geneseekr')),
     url(r'^metadata/', include(('olc_webportalv2.metadata.urls', 'metadata'), namespace='metadata')),
     url(r'^vir_typer/', include(('olc_webportalv2.vir_typer.urls', 'vir_typer'), namespace='vir_typer')),
-    url(r'^primer/', include(('olc_webportalv2.primer.urls', 'primer'), namespace='primer')),
+    url(r'^primer_finder/', include(('olc_webportalv2.primer_finder.urls', 'primer_finder'), namespace='primer_finder')),
     url(r'^api/', include(('olc_webportalv2.api.urls', 'api'), namespace='api')),
 ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

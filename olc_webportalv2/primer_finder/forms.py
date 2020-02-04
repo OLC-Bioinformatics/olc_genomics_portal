@@ -3,13 +3,13 @@ from django.forms.formsets import BaseFormSet
 from django.forms import ModelForm, FileInput
 from django import forms
 
-from .models import PrimerVal
+from .models import PrimerFinder
 
 class PrimerForm(ModelForm):
 
    class Meta:
-        model = PrimerVal
-        fields = ['name','analysistype','mismatches', 'primer_file', 'ampliconsize' , 'export_amplicons']
+        model = PrimerFinder
+        fields = ['name','analysistype','mismatches','primer_file', 'ampliconsize' , 'export_amplicons']
         labels = {
             'name': _('Name'),
             'analysistype': _('Analysis Type'),

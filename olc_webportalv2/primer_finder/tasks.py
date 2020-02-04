@@ -22,7 +22,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 
-from .models import PrimerVal, PrimerAzureRequest
+from .models import PrimerFinder, PrimerAzureRequest
 
 
 def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file,
@@ -68,10 +68,10 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
         f.write('COMMAND:={}\n'.format(command))
 
 @shared_task
-def run_primer_val(primer_request_pk):
-    primer_request = PrimerVal.objects.get(pk=primer_request_pk)
+def run_primer_finder(primer_request_pk):
+    primer_request = PrimerFinder.objects.get(pk=primer_request_pk)
     try:
-        container_name = PrimerVal.objects.get(pk=primer_request_pk).container_namer()
+        container_name = PrimerFinder.objects.get(pk=primer_request_pk).container_namer()
         run_folder = os.path.join('olc_webportalv2/media/{cn}'.format(cn=container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
@@ -83,7 +83,7 @@ def run_primer_val(primer_request_pk):
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
         command = 'source $CONDA/activate /envs/primer && mkdir {cn}'.format(cn=container_name)
         #
-        command += ' && virustyper -r {container_name} -s sequences/'.format(container_name=container_name)
+        command += ' && primer -r {container_name} -s sequences/'.format(container_name=container_name)
         make_config_file(job_name=container_name,
                          sequences=sequences,
                          input_data_folder='sequences',

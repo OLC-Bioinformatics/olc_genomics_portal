@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-01-29 17:05+0000\n"
+"POT-Creation-Date: 2020-02-04 16:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -286,13 +286,14 @@ msgid "Must enter at least one SeqID or upload at least one file."
 msgstr ""
 "Vous devez saisir au moins un SeqID ou télécharger au moins un fichier."
 
-#: olc_webportalv2/geneseekr/forms.py:314 olc_webportalv2/primer/forms.py:14
+#: olc_webportalv2/geneseekr/forms.py:314
+#: olc_webportalv2/primer_finder/forms.py:14
 #: olc_webportalv2/templates/geneseekr/amr_home.html:20
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:20
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:20
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:20
 #: olc_webportalv2/templates/geneseekr/tree_home.html:20
-#: olc_webportalv2/templates/primer/primer_home.html:16
+#: olc_webportalv2/templates/primer_finder/primer_home.html:16
 #: olc_webportalv2/templates/users/user_detail.html:18
 #: olc_webportalv2/users/models.py:13
 msgid "Name"
@@ -462,47 +463,51 @@ msgstr "Passe + Référence"
 msgid "All"
 msgstr "Tous"
 
-#: olc_webportalv2/primer/forms.py:15
+#: olc_webportalv2/primer_finder/forms.py:15
 msgid "Analysis Type"
 msgstr "Type d'analyse"
 
-#: olc_webportalv2/primer/forms.py:16
+#: olc_webportalv2/primer_finder/forms.py:16
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:64
 msgid "Mismatches"
 msgstr "Discordances"
 
-#: olc_webportalv2/primer/forms.py:17
+#: olc_webportalv2/primer_finder/forms.py:17
 msgid "Primer File"
 msgstr "Fichier d'amorces"
 
-#: olc_webportalv2/primer/forms.py:18
+#: olc_webportalv2/primer_finder/forms.py:18
 msgid "Amplicon Size"
 msgstr "Taille de l'amplicon"
 
-#: olc_webportalv2/primer/forms.py:19
+#: olc_webportalv2/primer_finder/forms.py:19
 msgid "Export Amplicons"
 msgstr "Amplicon d'exportation"
 
-#: olc_webportalv2/primer/models.py:17
+#: olc_webportalv2/primer_finder/models.py:17
 msgid "Custom EPCR"
 msgstr " ERCP Personnalisé"
 
-#: olc_webportalv2/primer/models.py:18
+#: olc_webportalv2/primer_finder/models.py:18
 msgid "Verotoxin"
 msgstr "Vérotoxine"
 
-#: olc_webportalv2/primer/urls.py:10
+#: olc_webportalv2/primer_finder/urls.py:10
 msgid "^request/"
 msgstr "^requête/"
 
-#: olc_webportalv2/primer/urls.py:11
-msgid "^results/(?P<primer_pk>\\d+)/$"
-msgstr "^résultats/(?P<primer_pk>\\d+)/$"
+#: olc_webportalv2/primer_finder/urls.py:11
+msgid "^results/(?P<primer_request_pk>\\d+)/$"
+msgstr "^résultats/(?P<primer_request_pk>\\d+)/$"
 
-#: olc_webportalv2/primer/urls.py:12
-msgid "^edit/(?P<primer_pk>\\d+)/$"
-msgstr "^modifier/(?P<primer_pk>\\d+)/$"
+#: olc_webportalv2/primer_finder/urls.py:12
+msgid "^edit/(?P<primer_request_pk>\\d+)/$"
+msgstr "^modifier/(?P<primer_request_pk>\\d+)/$"
+
+#: olc_webportalv2/primer_finder/views.py:51
+msgid "Primer file is required"
+msgstr "Un fichier d'amorce est requis."
 
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
@@ -834,7 +839,7 @@ msgstr "Trouver les voisins proches "
 
 #: olc_webportalv2/templates/base.html:88
 msgid "Primer Finder"
-msgstr ""
+msgstr "Chercheur d'amorce"
 
 #: olc_webportalv2/templates/base.html:116
 msgid "Profile"
@@ -965,7 +970,8 @@ msgstr "Téléchargement du rapport"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:82
 #: olc_webportalv2/templates/geneseekr/tree_home.html:36
 #: olc_webportalv2/templates/geneseekr/tree_result.html:79
-#: olc_webportalv2/templates/primer/primer_home.html:29
+#: olc_webportalv2/templates/primer_finder/primer_home.html:29
+#: olc_webportalv2/templates/primer_finder/primer_results.html:27
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:29
 msgid "Complete"
 msgstr "Complet"
@@ -984,7 +990,8 @@ msgstr "Complet"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:20
 #: olc_webportalv2/templates/geneseekr/tree_home.html:38
 #: olc_webportalv2/templates/geneseekr/tree_result.html:19
-#: olc_webportalv2/templates/primer/primer_home.html:31
+#: olc_webportalv2/templates/primer_finder/primer_home.html:31
+#: olc_webportalv2/templates/primer_finder/primer_results.html:21
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:31
 msgid "Processing"
 msgstr "En traitement"
@@ -1003,7 +1010,8 @@ msgstr "En traitement"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:77
 #: olc_webportalv2/templates/geneseekr/tree_home.html:40
 #: olc_webportalv2/templates/geneseekr/tree_result.html:75
-#: olc_webportalv2/templates/primer/primer_home.html:33
+#: olc_webportalv2/templates/primer_finder/primer_home.html:33
+#: olc_webportalv2/templates/primer_finder/primer_results.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:33
 msgid "Error"
 msgstr "Erreur"
@@ -1026,7 +1034,8 @@ msgstr "Erreur de téléchargement"
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:73
 #: olc_webportalv2/templates/geneseekr/tree_home.html:42
 #: olc_webportalv2/templates/geneseekr/tree_result.html:72
-#: olc_webportalv2/templates/primer/primer_home.html:35
+#: olc_webportalv2/templates/primer_finder/primer_home.html:35
+#: olc_webportalv2/templates/primer_finder/primer_results.html:15
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:35
 msgid "Unprocessed"
 msgstr "Non traité"
@@ -1044,8 +1053,8 @@ msgstr "Non traité"
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:46
 #: olc_webportalv2/templates/geneseekr/tree_home.html:17
 #: olc_webportalv2/templates/geneseekr/tree_home.html:46
-#: olc_webportalv2/templates/primer/primer_home.html:18
-#: olc_webportalv2/templates/primer/primer_home.html:38
+#: olc_webportalv2/templates/primer_finder/primer_home.html:18
+#: olc_webportalv2/templates/primer_finder/primer_home.html:38
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:38
 msgid "Download"
@@ -1058,7 +1067,7 @@ msgstr "Télécharger"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:45
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:48
 #: olc_webportalv2/templates/geneseekr/tree_home.html:48
-#: olc_webportalv2/templates/primer/primer_home.html:40
+#: olc_webportalv2/templates/primer_finder/primer_home.html:40
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:40
 msgid "Not Available"
 msgstr "Indisponible"
@@ -1097,6 +1106,7 @@ msgstr "Réessayer le téléchargement de séquence pour"
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:41
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:104
+#: olc_webportalv2/templates/primer_finder/primer_results.html:30
 msgid "Run Progress"
 msgstr "Progression de l'exécution"
 
@@ -1172,6 +1182,7 @@ msgstr ""
 "exécution."
 
 #: olc_webportalv2/templates/cowbat/cowbat_processing.html:113
+#: olc_webportalv2/templates/primer_finder/primer_results.html:39
 msgid "Download Reports and Assemblies for"
 msgstr "Télécharger les rapports et assemblages pour"
 
@@ -1184,6 +1195,7 @@ msgstr "Télécharger les rapports et assemblages pour"
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:120
 #: olc_webportalv2/templates/geneseekr/prokka_result.html:91
 #: olc_webportalv2/templates/geneseekr/tree_result.html:118
+#: olc_webportalv2/templates/primer_finder/primer_results.html:43
 msgid "Shareable link:"
 msgstr "Lien partageable:"
 
@@ -1212,7 +1224,7 @@ msgstr "Fichier"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:16
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:16
 #: olc_webportalv2/templates/geneseekr/tree_home.html:16
-#: olc_webportalv2/templates/primer/primer_home.html:17
+#: olc_webportalv2/templates/primer_finder/primer_home.html:17
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:17
 msgid "Status"
 msgstr "Statut"
@@ -1450,7 +1462,7 @@ msgstr ""
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:18
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:18
 #: olc_webportalv2/templates/geneseekr/tree_home.html:18
-#: olc_webportalv2/templates/primer/primer_home.html:19
+#: olc_webportalv2/templates/primer_finder/primer_home.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:19
 msgid "Request Date"
 msgstr "Date de la demande"
@@ -1542,7 +1554,7 @@ msgstr "Effacer"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:90
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:96
 #: olc_webportalv2/templates/geneseekr/tree_home.html:96
-#: olc_webportalv2/templates/primer/primer_home.html:85
+#: olc_webportalv2/templates/primer_finder/primer_home.html:85
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:85
 msgid "Are you sure?"
 msgstr "Êtes-vous sûr?"
@@ -1552,7 +1564,7 @@ msgstr "Êtes-vous sûr?"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:91
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:97
 #: olc_webportalv2/templates/geneseekr/tree_home.html:97
-#: olc_webportalv2/templates/primer/primer_home.html:86
+#: olc_webportalv2/templates/primer_finder/primer_home.html:86
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:86
 msgid "You will not be able to revert this!"
 msgstr "Vous ne pouvez pas reprendre ceci!"
@@ -1562,7 +1574,7 @@ msgstr "Vous ne pouvez pas reprendre ceci!"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:95
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:101
 #: olc_webportalv2/templates/geneseekr/tree_home.html:101
-#: olc_webportalv2/templates/primer/primer_home.html:91
+#: olc_webportalv2/templates/primer_finder/primer_home.html:91
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:91
 msgid "Yes, delete it!"
 msgstr "Oui, effacez-le !"
@@ -1572,7 +1584,7 @@ msgstr "Oui, effacez-le !"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:96
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:102
 #: olc_webportalv2/templates/geneseekr/tree_home.html:102
-#: olc_webportalv2/templates/primer/primer_home.html:89
+#: olc_webportalv2/templates/primer_finder/primer_home.html:89
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:89
 msgid "Cancel"
 msgstr "Annuler"
@@ -1582,7 +1594,7 @@ msgstr "Annuler"
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:101
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:107
 #: olc_webportalv2/templates/geneseekr/tree_home.html:107
-#: olc_webportalv2/templates/primer/primer_home.html:96
+#: olc_webportalv2/templates/primer_finder/primer_home.html:96
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:96
 msgid "Deleted!"
 msgstr "Effacé"
@@ -1600,7 +1612,7 @@ msgstr "Votre fichier a été effacé."
 #: olc_webportalv2/templates/geneseekr/neighbor_home.html:120
 #: olc_webportalv2/templates/geneseekr/prokka_home.html:126
 #: olc_webportalv2/templates/geneseekr/tree_home.html:126
-#: olc_webportalv2/templates/primer/primer_home.html:115
+#: olc_webportalv2/templates/primer_finder/primer_home.html:115
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:115
 msgid "Cancelled!"
 msgstr "Annulé!"
@@ -2182,42 +2194,52 @@ msgstr "Anglais"
 msgid "French"
 msgstr "Français"
 
-#: olc_webportalv2/templates/primer/primer_home.html:9
+#: olc_webportalv2/templates/primer_finder/primer_home.html:9
 msgid "Create A Primer Validation Request"
 msgstr "Créer une demande de validation de l'amorce"
 
-#: olc_webportalv2/templates/primer/primer_home.html:11
+#: olc_webportalv2/templates/primer_finder/primer_home.html:11
 msgid "Primer Validator"
 msgstr "Validateur d'amorces"
 
-#: olc_webportalv2/templates/primer/primer_home.html:21
+#: olc_webportalv2/templates/primer_finder/primer_home.html:21
 #: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:8
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:21
 msgid "Edit Project"
 msgstr "Modifier le projet"
 
-#: olc_webportalv2/templates/primer/primer_home.html:45
+#: olc_webportalv2/templates/primer_finder/primer_home.html:45
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:45
 msgid "Delete "
 msgstr "Effacer"
 
-#: olc_webportalv2/templates/primer/primer_home.html:97
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
-msgid "Your project has been deleted."
-msgstr "Votre projet a été effacé."
+#: olc_webportalv2/templates/primer_finder/primer_home.html:97
+msgid "Your request has been deleted."
+msgstr "Votre demande a été effacée."
 
-#: olc_webportalv2/templates/primer/primer_home.html:116
+#: olc_webportalv2/templates/primer_finder/primer_home.html:116
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:116
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
-#: olc_webportalv2/templates/primer/primer_request.html:8
+#: olc_webportalv2/templates/primer_finder/primer_request.html:8
 msgid "Primer Validation Request"
 msgstr "Demande de validation de l'amorce"
 
-#: olc_webportalv2/templates/primer/primer_request.html:24
+#: olc_webportalv2/templates/primer_finder/primer_request.html:24
 msgid "Create Request"
 msgstr "Créer une demande"
+
+#: olc_webportalv2/templates/primer_finder/primer_results.html:7
+msgid "Primer Validator Results"
+msgstr "Demande de validation de l'amorce"
+
+#: olc_webportalv2/templates/primer_finder/primer_results.html:23
+msgid ""
+"This page will automatically refresh. Validation usually takes a few minutes"
+msgstr ""
+"Cette page sera automatiquement rafraîchie. La validation prend généralement "
+"quelques minutes"
 
 #: olc_webportalv2/templates/users/user_detail.html:11
 msgid "Personal Info"
@@ -2311,6 +2333,10 @@ msgstr "Créer une requête de Virus Typer"
 #: olc_webportalv2/vir_typer/forms.py:80
 msgid "Project Name"
 msgstr "Nom du projet"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:97
+msgid "Your project has been deleted."
+msgstr "Votre projet a été effacé."
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:11
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:17
