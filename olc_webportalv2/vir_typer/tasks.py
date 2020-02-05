@@ -1,9 +1,12 @@
-from sentry_sdk import capture_exception
+# Django-related imports
 from django.conf import settings
-from celery import shared_task
-import subprocess
+# Standard libraries
 import os
-
+import subprocess
+# Useful things!
+from celery import shared_task
+from sentry_sdk import capture_exception
+# VirusTyper-specific code
 from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest
 
 

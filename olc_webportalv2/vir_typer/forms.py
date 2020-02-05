@@ -1,9 +1,10 @@
+# Django-related imports
+from django import forms
+from django.forms import ModelForm
+from django.forms.formsets import BaseFormSet
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from django.forms.formsets import BaseFormSet
-from django.forms import ModelForm
-from django import forms
-
+# VirusTyper-specific code
 from .models import VirTyperProject, VirTyperRequest
 
 

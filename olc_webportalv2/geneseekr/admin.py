@@ -1,6 +1,9 @@
+# Django-related imports
 from django.contrib import admin
+# Geneseekr-specific code
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TreeAzureRequest, Tree, \
     AMRSummary, AMRAzureRequest, AMRDetail, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
+
 
 # Register your models here.
 admin.site.register(GeneSeekrRequest)

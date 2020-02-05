@@ -1,8 +1,10 @@
-from django.utils.translation import ugettext_lazy as _
-from olc_webportalv2.users.models import User
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+# Django-related imports
 from django import forms
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
+from django.core.validators import MaxValueValidator, MinValueValidator
+# Portal-sepcific 
+from olc_webportalv2.users.models import User
 
 
 class PrimerFinder(models.Model):
@@ -23,6 +25,7 @@ class PrimerFinder(models.Model):
     ampliconsize = models.IntegerField(default=1000, validators=[MaxValueValidator(10000), MinValueValidator(1000)])
     mismatches = models.IntegerField(default=0, validators=[MaxValueValidator(3), MinValueValidator(0)])
     export_amplicons = models.BooleanField(default=True)
+    # Primer_file not required for Verotoxin analysis types
     primer_file = models.FileField(blank=True)
 
 class PrimerAzureRequest(models.Model):

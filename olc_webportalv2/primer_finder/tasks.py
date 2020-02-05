@@ -1,27 +1,27 @@
+# Django-related imports
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+# Standard libraries
 import os
+import csv
 import glob
 import shutil
+import smtplib
 import datetime
 import subprocess
-from Bio import SeqIO, Seq
 import multiprocessing
 from io import StringIO
-from django.conf import settings
-from sentry_sdk import capture_exception
-from itertools import product
-
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-
-import csv
-from django.shortcuts import get_object_or_404
-
-from celery import shared_task
-
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import smtplib
-
+from email.mime.multipart import MIMEMultipart
+# Azure!
+from azure.storage.blob import BlobPermissions
+from azure.storage.blob import BlockBlobService
+# Useful things!
+from Bio import SeqIO, Seq
+from itertools import product
+from celery import shared_task
+from sentry_sdk import capture_exception
+# Primer-specific code
 from .models import PrimerFinder, PrimerAzureRequest
 
 

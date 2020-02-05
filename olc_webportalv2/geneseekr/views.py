@@ -1,22 +1,23 @@
 # Django-related imports
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
 # Standard libraries
+import os
 import datetime
-# Portal-specific things
-from olc_webportalv2.geneseekr.forms import GeneSeekrForm, TreeForm, AMRForm, ProkkaForm, NameForm, EmailForm, \
+# Azure!
+from azure.storage.blob import BlockBlobService
+# Geneseekr-specific things
+from olc_webportalv2.geneseekr.forms import GeneSeekrForm, TreeForm, AMRForm, ProkkaForm,EmailForm, \
     NearNeighborForm
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, AMRSummary, \
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_mash, run_amr_summary, run_prokka, \
     run_nearest_neighbors
 from olc_webportalv2.metadata.views import id_sync
-from azure.storage.blob import BlockBlobService
-import os
 
 
 # Geneseekr Views-----------------------------------------------------------------------------------
@@ -39,33 +40,12 @@ def geneseekr_home(request):
 
 
 @login_required
-def geneseekr_name(request, geneseekr_request_pk):
-    form = NameForm()
-    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
-    if request.method == "POST":  
-        form = NameForm(request.POST)
-        if form.is_valid():
-            geneseekr_request.name = form.cleaned_data['name']
-            geneseekr_request.save()
-        return redirect('geneseekr:geneseekr_home')
-        
-    return render(request,
-                  'geneseekr/geneseekr_name.html',
-                  {
-                      'geneseekr_request': geneseekr_request,  
-                      'form': form
-                  })
-                  
-
-@login_required
 def geneseekr_query(request):
     form = GeneSeekrForm()
-    form_name = NameForm()
     if request.method == 'POST':
         form = GeneSeekrForm(request.POST, request.FILES)
-        form_name = NameForm(request.POST)
         if form.is_valid():
-            seqids, query_sequence = form.cleaned_data
+            seqids, query_sequence, name = form.cleaned_data
             geneseekr_request = GeneSeekrRequest.objects.create(user=request.user,
                                                                 seqids=seqids)
             # Use query sequence if entered. Otherwise, read in the FASTA file provided.
@@ -78,18 +58,17 @@ def geneseekr_query(request):
                 input_sequence = input_sequence_file.read().decode('utf-8')
                 geneseekr_request.query_sequence = input_sequence
             geneseekr_request.status = 'Processing'
+            if(name):
+                geneseekr_request.name = name
             geneseekr_request.save()
             run_geneseekr.apply_async(queue='geneseekr', args=(geneseekr_request.pk, ), countdown=10)
-            if form_name.is_valid():
-                geneseekr_request.name = form_name.cleaned_data['name']
-                geneseekr_request.save()
+
             return redirect('geneseekr:geneseekr_processing', geneseekr_request_pk=geneseekr_request.pk)
 
     return render(request,
                   'geneseekr/geneseekr_query.html',
                   {
                      'form': form, 
-                     'formName': form_name,
                   })
 
 
@@ -132,7 +111,23 @@ def geneseekr_results(request, geneseekr_request_pk):
                       'idDict': id_dict,
                   })
 
-
+@login_required
+def geneseekr_rename(request, geneseekr_request_pk):
+    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+    name = {'name': geneseekr_request.name}
+    form = GeneSeekrForm(initial=name)
+    if request.method == "POST": 
+            geneseekr_request.name = request.POST["name"]
+            geneseekr_request.save()
+            return redirect('geneseekr:geneseekr_home')
+        
+    return render(request,
+                  'rename.html',
+                  {
+                      'geneseekr_request': geneseekr_request,  
+                      'form': form
+                  })
+                  
 # Tree Views--------------------------------------------------------------------------------------------------
 @csrf_exempt  # needed or IE explodes
 @login_required
@@ -216,18 +211,17 @@ def tree_result(request, tree_request_pk):
 
 
 @login_required
-def tree_name(request, tree_request_pk):
-    form = NameForm()
+def tree_rename(request, tree_request_pk):
     tree_request = get_object_or_404(Tree, pk=tree_request_pk)
-    if request.method == "POST":  
-        form = NameForm(request.POST)
-        if form.is_valid():
-            tree_request.name = form.cleaned_data['name']
+    name = {'name':tree_request.name}
+    form = GeneSeekrForm(initial=name)
+    if request.method == "POST": 
+            tree_request.name = request.POST["name"]
             tree_request.save()
-        return redirect('geneseekr:tree_home')
+            return redirect('geneseekr:tree_home')
         
     return render(request,
-                  'geneseekr/tree_name.html',
+                  'rename.html',
                   {
                       'tree_request': tree_request,  
                       'form': form
@@ -323,22 +317,20 @@ def amr_result(request, amr_request_pk):
 
 
 @login_required
-def amr_name(request, amr_request_pk):
-    form = NameForm()
+def amr_rename(request, amr_request_pk):
     amr_request_object = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    name = {'name':amr_request_object.name}
+    form = AMRForm(initial=name)
     if request.method == "POST":  
-        form = NameForm(request.POST)
-        if form.is_valid():
-            amr_request_object.name = form.cleaned_data['name']
-            amr_request_object.save()
+        amr_request_object.name = request.POST["name"]
+        amr_request_object.save()
         return redirect('geneseekr:amr_home')
     return render(request,
-                  'geneseekr/amr_name.html',
+                  'rename.html',
                   {
                       'amr_request': amr_request_object,
                       'form': form
                   })
-
 
 # Prokka Views----------------------------------------------------------------------------------------------->
 @csrf_exempt  # needed or IE explodes
@@ -417,18 +409,17 @@ def prokka_result(request, prokka_request_pk):
 
 
 @login_required
-def prokka_name(request, prokka_request_pk):
-    form = NameForm()
+def prokka_rename(request, prokka_request_pk):
     prokka_request_object = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
+    name = {'name':prokka_request_object.name}
+    form = ProkkaForm(initial=name)
     if request.method == "POST":  
-        form = NameForm(request.POST)
-        if form.is_valid():
-            prokka_request_object.name = form.cleaned_data['name']
-            prokka_request_object.save()
+        prokka_request_object.name = request.POST["name"]
+        prokka_request_object.save()
         return redirect('geneseekr:prokka_home')
         
     return render(request,
-                  'geneseekr/prokka_name.html',
+                  'rename.html',
                   {
                       'prokka_request': prokka_request_object,
                       'form': form
@@ -523,18 +514,17 @@ def neighbor_home(request):
 
 
 @login_required
-def neighbor_name(request, neighbor_request_pk):
-    form = NameForm()
+def neighbor_rename(request, neighbor_request_pk):
     neighbor_request_object = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
+    name = {'name': neighbor_request_object.name}
+    form = NearNeighborForm(initial=name)
     if request.method == "POST":
-        form = NameForm(request.POST)
-        if form.is_valid():
-            neighbor_request_object.name = form.cleaned_data['name']
-            neighbor_request_object.save()
+        neighbor_request_object.name = request.POST["name"]
+        neighbor_request_object.save()
         return redirect('geneseekr:neighbor_home')
 
     return render(request,
-                  'geneseekr/neighbor_name.html',
+                  'rename.html',
                   {
                       'neighbor_request': neighbor_request_object,
                       'form': form

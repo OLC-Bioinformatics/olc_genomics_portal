@@ -1,7 +1,10 @@
+# Django-related imports
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.fields import ArrayField
+# Portal-sepcific 
 from olc_webportalv2.users.models import User
+
 
 # GeneSeekr Models ------------------------------------------------------------------------------------------------------------------------------------
 class GeneSeekrRequest(models.Model):

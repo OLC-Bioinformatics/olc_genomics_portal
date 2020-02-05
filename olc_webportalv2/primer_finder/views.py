@@ -1,23 +1,24 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils.translation import ugettext_lazy as _
-from django.views.decorators.csrf import csrf_exempt
-from azure.storage.blob import BlockBlobService
-from django.contrib import messages
-from weasyprint import HTML, CSS
-from django.conf import settings
+# Django-related imports
 from django import forms
-
-from Bio.SeqUtils import MeltingTemp
-from sentry_sdk import capture_exception
+from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import ValidationError
-
-# Primer_Val-specific code
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+# Azure!
+from azure.storage.blob import BlockBlobService
+# Useful things!
+from weasyprint import HTML, CSS
+from sentry_sdk import capture_exception
+# Primer-specific code
 from .forms import PrimerForm
 from .models import PrimerFinder
 from .tasks import run_primer_finder
 
-# Primer_Val Views
+
+# Primer_Finder Views
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_home(request):
@@ -125,7 +126,7 @@ def primer_rename(request, primer_request_pk):
         return redirect('primer_finder:primer_home')
 
     return render(request,
-                  'primer_finder/primer_rename.html',
+                  'rename.html',
                   {
                       'primer_request': primer_request,  
                       'form': form

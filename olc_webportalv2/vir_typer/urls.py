@@ -1,9 +1,11 @@
-from django.utils.translation import gettext_lazy as _
+# Django-related imports
 from django.conf.urls import url, include
-
+from django.utils.translation import gettext_lazy as _
+# VirusTyper-specific code
 from olc_webportalv2.vir_typer import views
 
 app_name = 'vir_typer'
+
 urlpatterns = [
     # Vir_typer Stuff
     url(r'^$', views.vir_typer_home, name='vir_typer_home'),

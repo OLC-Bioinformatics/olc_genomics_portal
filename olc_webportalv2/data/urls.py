@@ -1,6 +1,9 @@
-from olc_webportalv2.data import views
+# Django-related imports
 from django.conf.urls import url, include
 from django.utils.translation import gettext_lazy as _
+# Data-specific code
+from olc_webportalv2.data import views
+
 
 urlpatterns = [
     url(_(r'^data_home/'), views.data_home, name='data_home'),

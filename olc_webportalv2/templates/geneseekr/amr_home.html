@@ -58,7 +58,7 @@
         {% else %}
           <td></td>
         {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'geneseekr:amr_name'  amr_request.pk %}">{{amr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:amr_rename'  amr_request.pk %}">{{amr_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
      </tr>
      {% endfor %}
   </tbody>

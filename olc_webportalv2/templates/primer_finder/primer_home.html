@@ -13,7 +13,7 @@
     <table id="primer-request-table" class="table table-hover">
         <thead>
         <tr style="text-align:center">
-            <th>{% trans "Name" %}</th>
+            <th>{% trans "Analysis Type" %}</th>
             <th>{% trans "Status" %}</th>
             <th>{% trans "Download" %}</th>
             <th>{% trans "Request Date" %}</th>
@@ -24,7 +24,7 @@
         <tbody>
         {% for primer_request in primer_requests %}
             <tr id="row{{primer_request.pk}}" style="text-align:center">
-                <td><p style="text-align:center">{{ primer_request.name }}</p></td>
+                <td><p style="text-align:center">{{ primer_request.get_analysistype_display }}</p></td>
                 {% if primer_request.status == 'Complete' %}
                     <td><a href="{% url 'primer_finder:primer_results' primer_request_pk=primer_request.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
                 {% elif primer_request.status == 'Processing' %}
@@ -48,7 +48,7 @@
                 {% else %}
                     <td></td>
                 {% endif %}
-                <td style="text-indent: 5px"><a href="{% url 'primer_finder:primer_rename' primer_request_pk=primer_request.pk %}">   <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+                <td style="text-indent: 5px"><a href="{% url 'primer_finder:primer_rename' primer_request_pk=primer_request.pk %}"> {{primer_request.name}}  <i class="fas fa-pen" aria-hidden="true"></i></a></td>
             </tr>
         {% endfor %}
         </tbody>

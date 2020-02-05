@@ -1,4 +1,6 @@
+# Django-related imports
 from django.contrib import admin
+# VirusTyper-specific code
 from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
 
 admin.site.register(VirTyperProject)

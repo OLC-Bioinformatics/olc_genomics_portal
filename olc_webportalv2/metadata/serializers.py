@@ -1,5 +1,6 @@
+# Useful things!
 from rest_framework import serializers
-
+# MetaData-specific things
 from olc_webportalv2.metadata.models import SequenceData, OLNID
 
 

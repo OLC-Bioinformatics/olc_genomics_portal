@@ -1,8 +1,9 @@
-from django.utils.translation import ugettext_lazy as _
+# Django-related imports
+from django import forms
 from django.forms.formsets import BaseFormSet
 from django.forms import ModelForm, FileInput
-from django import forms
-
+from django.utils.translation import ugettext_lazy as _
+# Primer-specific things
 from .models import PrimerFinder
 
 class PrimerForm(ModelForm):

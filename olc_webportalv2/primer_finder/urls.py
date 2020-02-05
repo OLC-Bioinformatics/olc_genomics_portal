@@ -1,9 +1,11 @@
-from django.utils.translation import gettext_lazy as _
+# Django-related imports
 from django.conf.urls import url, include
-
+from django.utils.translation import gettext_lazy as _
+# Primer-specific code
 from olc_webportalv2.primer_finder import views
 
 app_name = 'primer_finder'
+
 urlpatterns = [
     # Primer Validator Stuff
     url(r'^$', views.primer_home, name='primer_home'),
