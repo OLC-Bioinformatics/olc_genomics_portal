@@ -103,7 +103,7 @@
                 <select name="language" class="form-control sel-lang" onchange="this.form.submit()">
                   {% for language in LANGUAGES %}
                   <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected" {% endif %}>
-                    {{ language.1 }} 
+                    {{ language.1 }}
                   </option>
                   {% endfor %}
                 </select>
@@ -140,7 +140,6 @@
         </ul>
       </div>
     </nav>
-
   </div>
 
   <div class="container">
@@ -153,119 +152,141 @@
     </div>
     {% endfor %}
     {% endif %}
+    <br>
 
     {% block content %}
-      
+    <p class="lead h6" style="text-align:center">
+      <span class="h1">
+        <b>{% trans "Welcome to the CFIA FoodPort" %}</b>
+        <i class="fas fa-dna"></i>
+      </span>
+      <br>
+    </p>
 
-<br>
-	<p class="lead h6" style="text-align:center">
-		<span class="h1">
-			<b>{% trans "Welcome to the CFIA FoodPort" %}</b>
-			<i class="fas fa-dna"></i>
-		</span>
-		<br>
-		</p>
-		<br>
-			<div class="h-100 justify-content-center">
-				<div class="container">
-					<div class="card-deck mb-3 text-center">
+    <br>
+    <div class="h-100 justify-content-center">
+      <div class="container">
+        <div class="card-deck mb-3 text-center">
 
-						<div class="row">
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Explore Data" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article1">{% trans "Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'metadata:metadata_home' %}">{% trans "Explore Data" %}</a>
-								</div>
-							</div>
-
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Get Data" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article2">{% trans "Retrieve copies of files stored at OLC to analyze locally." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'data:data_home' %}">{% trans "Get Data" %}</a>
-								</div>
-							</div>
-
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Assembly" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article3">{% trans "For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly" %}</a>
-								</div>
-							</div>
+          <div class="row">
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Explore Data" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article1">
+                  {% trans "Identify sequences for analysis. Search based on genus/species/serotype/MLST and get a list of SeqIDs/LabIDs." %}
+                </p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'metadata:metadata_home' %}">{% trans "Explore Data" %}</a>
+              </div>
             </div>
 
-						<div class="row">
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Find Genes" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article4">{% trans "Use GeneSeekr to search for any gene of interest in our assembly database." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes" %}</a>
-								</div>
-							</div>
-
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Create a Tree" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article5">{% trans "Create phylogenetic trees of assemblies." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}</a>
-								</div>
-							</div>
-
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Investigate AMR" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article5">{% trans "Look for AMR genes in assemblies, and find out if they're present on mobile elements or the chromosome." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR" %}</a>
-								</div>
-							</div>
-						</div>
-
-						<div class="row mx-auto">
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>{% trans "Annotate Genomes" %}</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article5">{% trans "Annotate assemblies with Prokka." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate Genomes" %}</a>
-								</div>
-							</div>
-              
-							<div class="card mb-4 box-shadow">
-								<div class="card-header">
-									<h3>Virus Typer</h3>
-								</div>
-								<div class="card-body d-flex flex-column">
-									<p id="article5">{% trans "Perform typing on viral sequences." %}</p>
-									<a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer</a>
-								</div>
-							</div>
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Get Data" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article2">{% trans "Retrieve copies of files stored at OLC to analyze locally." %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'data:data_home' %}">{% trans "Get Data" %}</a>
+              </div>
             </div>
-            
-					</div>
-				</div>
-      </div>
-      </div>
 
-    {% endblock content %}
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Assembly" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article3">
+                  {% trans "For submission of raw sequence data for assembly. You can also use this to get reports and assemblies from previous runs." %}
+                </p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly" %}</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Find Genes" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article4">
+                  {% trans "Use GeneSeekr to search for any gene of interest in our assembly database." %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes" %}</a>
+              </div>
+            </div>
+
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Create a Tree" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article5">{% trans "Create phylogenetic trees of assemblies." %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}</a>
+              </div>
+            </div>
+
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Investigate AMR" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article6">
+                  {% trans "Look for AMR genes in assemblies, and find out if they're present on mobile elements or the chromosome." %}
+                </p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR" %}</a>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Annotate Genomes" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article7">{% trans "Annotate assemblies with Prokka." %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate Genomes" %}</a>
+              </div>
+            </div>
+
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>Virus Typer</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article8">{% trans "Perform typing on viral sequences." %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'vir_typer:vir_typer_home' %}">Virus
+                  Typer</a>
+              </div>
+            </div>
+
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Primer Finder"%}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article9">{% trans "Perform typing on viral sequences.sfdfsdsfdsdfsdf" %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'primer_finder:primer_home' %}">{% trans "Primer Finder"%}</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock content %}
 
   </div>
-
-  {% block modal %}{% endblock modal %}
 
   <!-- JavaScript
     ================================================== -->
@@ -290,17 +311,18 @@
       document.getElementById("leafy").style.height = "50px";
       document.getElementsByClassName('card-deck')[0].style.display = 'inline';
     }
-    if (bowser.name == "Firefox") {      
-    document.getElementsByTagName("select")[0].className = "fox";
+    if (bowser.name == "Firefox") {
+      document.getElementsByTagName("select")[0].className = "fox";
     }
+
     function getLanguage() {
-    var lang = document.documentElement.lang;
-    if (lang=== "fr"){
-      return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+      var lang = document.documentElement.lang;
+      if (lang === "fr") {
+        return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+      }
     }
-  }
   </script>
-  
   {% endblock javascript %}
 </body>
+
 </html>
