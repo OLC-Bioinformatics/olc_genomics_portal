@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-20 15:40+0000\n"
+"POT-Creation-Date: 2020-02-13 19:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -660,7 +660,7 @@ msgstr "Définir le mot de passe"
 
 #: olc_webportalv2/templates/account/signup.html:6
 #: olc_webportalv2/templates/account/signup.html:10
-#: olc_webportalv2/templates/account/signup.html:20
+#: olc_webportalv2/templates/account/signup.html:27
 #: olc_webportalv2/templates/base.html:133
 msgid "Sign Up"
 msgstr "S'inscrire"
@@ -2125,8 +2125,8 @@ msgid "OLNID"
 msgstr "OLNID"
 
 #: olc_webportalv2/templates/metadata/metadata_submit.html:10
-msgid "Metadata Forms"
-msgstr "Fiches de métadonnées"
+msgid "WGS Isolate Submission Forms"
+msgstr "Formulaires de soumission isolés du WGS"
 
 #: olc_webportalv2/templates/metadata/metadata_submit.html:13
 msgid "English"
@@ -2285,25 +2285,30 @@ msgstr "Organisme"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:24
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:60
-msgid "Trimmed Sequence"
-msgstr "Séquence ajustée"
+msgid "Identifier"
+msgstr ""
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:25
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:61
-msgid "Allele"
-msgstr "Allèle"
+msgid "Trimmed Sequence"
+msgstr "Séquence ajustée"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:26
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:62
-msgid "Length"
-msgstr "Longueur"
+msgid "Allele"
+msgstr "Allèle"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:27
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:63
+msgid "Length"
+msgstr "Longueur"
+
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:28
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:64
 msgid "Mismatches"
 msgstr "Discordances"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:35
+#: olc_webportalv2/templates/vir_typer/vir_typer_results.html:36
 msgid "Create PDF Report"
 msgstr "Créer un rapport PDF"
 
@@ -2331,11 +2336,11 @@ msgstr "ACIA Burnaby"
 msgid "CFIA St. Hyacinthe"
 msgstr "ACIA St.Hyacinthe"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:64
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:65
 msgid "Quality Mean"
 msgstr "Qualité moyenne"
 
-#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:65
+#: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:66
 msgid "Quality Stdev"
 msgstr "Qualité écart-type"
 
@@ -2397,6 +2402,7 @@ msgid "Required"
 msgstr "Champs obligatoires"
 
 #: olc_webportalv2/vir_typer/forms.py:91 olc_webportalv2/vir_typer/views.py:95
+#: olc_webportalv2/vir_typer/views.py:429
 msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
@@ -2448,10 +2454,13 @@ msgstr "^modifier/(?P<vir_typer_pk>\\d+)/$"
 msgid "You have created project "
 msgstr "Vous avez créé le projet "
 
-#: olc_webportalv2/vir_typer/views.py:412
+#: olc_webportalv2/vir_typer/views.py:423
 msgid "Project"
 msgstr "Projet"
 
-#: olc_webportalv2/vir_typer/views.py:412
+#: olc_webportalv2/vir_typer/views.py:423
 msgid "updated"
 msgstr "mis à jour"
+
+#~ msgid "Metadata Forms"
+#~ msgstr "Fiches de métadonnées"
