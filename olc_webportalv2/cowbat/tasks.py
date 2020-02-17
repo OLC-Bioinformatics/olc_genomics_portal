@@ -259,9 +259,8 @@ def check_cowbat_progress(batch_client, batch_job_name, sequencing_run):
                 status = ' '.join(final_line.split(' ')[2:])
                 sequencing_run.progress = status
                 sequencing_run.save()
-            except Exception as e:
-                sequencing_run.errors.append(e)
-                sequencing_run.save()
+            except:
+                pass
     # Save the files
     try:
         for file_name, content_object in text_files.items():
@@ -271,9 +270,8 @@ def check_cowbat_progress(batch_client, batch_job_name, sequencing_run):
             with open(os.path.join(out_dir, parent_dir, os.path.basename(file_name)), 'w') as text_output:
                 for content_chunk in content_object:
                     text_output.write(content_chunk.decode())
-    except Exception as e:
-        sequencing_run.errors.append(e)
-        sequencing_run.save()
+    except:
+        pass
 
 
 def check_cowbat_tasks():
@@ -613,7 +611,7 @@ def check_prokka_tasks():
             ProkkaAzureRequest.objects.filter(id=prokka_task.id).delete()
 
 
-@shared_task
+@shared_task()
 def monitor_tasks():
     # Keep track of jobs that have been submitted to Azure Batch Service.
     # Call each type of task we submit to Batch separately, and have sentry tell us if anything goes wrong.
