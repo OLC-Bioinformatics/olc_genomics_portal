@@ -102,7 +102,7 @@ class VirTyperSampleForm(BaseModelForm):
             'subunit': _('Subunit'),
             'putative_classification': _('Putative classification'),
             'isolate_source': _('Isolate source'),
-            'analyst_name': _('Analyst name')
+            'analyst_name': _('Analyst Name')
             }
         error_messages = {
             'sample_name': {'required': _('Sample Name is required')},

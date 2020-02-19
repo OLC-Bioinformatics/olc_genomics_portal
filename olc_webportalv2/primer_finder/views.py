@@ -46,6 +46,7 @@ def primer_request(request):
             analysistype = form.cleaned_data.get('analysistype')
             mismatches = form.cleaned_data.get('mismatches')
             if analysistype == "custom":
+                # catches if primerfile is empty on Custome EPCR request
                 if len(request.FILES) != 0:
                     primer_file = request.FILES['primer_file']
                 else:
@@ -62,12 +63,20 @@ def primer_request(request):
                                                         primer_file = primer_file,
                                                         ampliconsize = ampliconsize,
                                                         export_amplicons = export_amplicons)
-                    primer_request.status = 'Processing'
                     primer_request.save()
+                    container_name = PrimerFinder.objects.get(pk=primer_request_pk).container_namer()
+                    blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,account_key=settings.AZURE_ACCOUNT_KEY)
+                    blob_client.create_container(container_name)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.analysistype,blob=primer_request.analysistype)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.mismatches,blob=primer_request.mismatches)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.primer_file,blob=primer_request.primer_file.read())
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.ampliconsize,blob=primer_request.ampliconsize)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.export_amplicons,blob=primer_request.export_amplicons)
+                    run_primer_finder.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
                     return redirect('primer_finder:primer_results', primer_request_pk=primer_request.pk)
-                #catches 
                 except Exception as e:
-                    pass
+                    capture_exception(e)
+
             else:
                 # create primer request vtyper
                 try:
@@ -76,16 +85,17 @@ def primer_request(request):
                                                         analysistype = analysistype,
                                                         mismatches = mismatches,
                                                         )
-                    primer_request.status = 'Processing'
                     primer_request.save()
+                    container_name = PrimerFinder.objects.get(pk=primer_request_pk).container_namer()
+                    blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,account_key=settings.AZURE_ACCOUNT_KEY)
+                    blob_client.create_container(container_name)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.analysistype,blob=primer_request.analysistype)
+                    blob_client.create_blob_from_bytes(container_name=container_name,blob_name=primer_request.mismatches,blob=primer_request.mismatches)
+                    run_primer_finder.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
                     return redirect('primer_finder:primer_results', primer_request_pk=primer_request.pk)
                 except Exception as e:
-                    raise forms.ValidationError(e) 
+                    capture_exception(e)
 
-            # primer_request.status = 'Processing'
-            # primer_request.save()
-            # run_primer_finder.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
-            # return redirect('primer_finder:primer_results', primer_request_pk=primer_request.pk)
         else:
             messages.error(request,form.errors)       
     return render(request,
@@ -98,21 +108,10 @@ def primer_request(request):
 @login_required
 def primer_results(request, primer_request_pk):
     primer_request = get_object_or_404(PrimerFinder, pk=primer_request_pk)
-    if request.method == 'POST':
-        primer_file = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
-        if primer_file:
-            container_name = PrimerFinder.objects.get(pk=primer_request_pk).container_namer()
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(container_name)
-            primer_request.status = 'Processing'
-            primer_request.save()
-            run_primer_finder.apply_async(queue='default', args=(primer_request_pk,), countdown=10)
-        return redirect('primer_finder:primer_home')
     return render(request,
                   'primer_finder/primer_results.html',
                   {
-                      'primer_request': primer_request,
+                      'primer_request': primer_request, 
                   })
 
        

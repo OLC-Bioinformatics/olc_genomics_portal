@@ -70,16 +70,13 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
 @shared_task
 def run_primer_finder(primer_request_pk):
     primer_request = PrimerFinder.objects.get(pk=primer_request_pk)
+    if not primer_request.name:
+        primer_request.name = primer_request_pk
     try:
         container_name = PrimerFinder.objects.get(pk=primer_request_pk).container_namer()
         run_folder = os.path.join('olc_webportalv2/media/{cn}'.format(cn=container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
-        sequences = list()
-        for sample in vir_typer_samples:
-            vir_files = list(VirTyperFiles.objects.filter(sample_name__pk=sample.pk))
-            for vir_file in vir_files:
-                sequences.append(vir_file.sequence_file)
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
         command = 'source $CONDA/activate /envs/primer && mkdir {cn}'.format(cn=container_name)
         #
@@ -93,7 +90,7 @@ def run_primer_finder(primer_request_pk):
         # With that done, we can submit the file to batch with our package and create a tracking object.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        PrimerAzureRequest.objects.create(name=primer_request,
+        PrimerAzureRequest.objects.create(name=primer_request.name,
                                             exit_code_file='NA')
         primer_request.status = 'Processing'
         primer_request.save()
