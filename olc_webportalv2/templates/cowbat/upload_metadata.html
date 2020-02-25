@@ -9,16 +9,18 @@
 <h2>{% trans "Step 1 of 3: Upload Metadata Files and Name Run"%}</h2>
   <p>{% blocktrans %} Enter a run name and drag and drop the files found in the following table to upload. Once all files have been uploaded,
   you can proceed to the next page. {% endblocktrans %}</p>
-  <br><br>
   <br>
- <form action={% url 'cowbat:upload_metadata' %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
-       <div style="position:absolute; top:-85px;left:-2px;"> <strong>{{form|crispy}}</strong> </div>
-        <div class="dz-message needsclick">
-        {% trans "Drop files to upload or click here" %}<br>
-        <i class="fas fa-cloud-upload-alt fa-4x"></i>
-        </div>
-  {% csrf_token %}
-  </form>
+  <script src="{% static 'js/uppy.min.js'%}"></script>
+  <script src="{% static 'js/ru_RU.min.js'%}"></script>
+ 
+  <form id="dashboard" action={% url 'cowbat:upload_metadata' %} enctype="multipart/form-data" method="post" name="file-form">
+   {% csrf_token %} 
+   <strong>{{form|crispy}}</strong>
+
+     
+
+  </form> 
+
   <table id="files-required-table" class="table table-hover compact small">
     <thead>
         <tr style="font-size: 1.25rem;">
@@ -53,10 +55,9 @@
         </tr>
     </tbody>
   </table>
-  
-  <div class="btnVal"><button id="validate" class="btn btn-primary">{% trans "Validate Metadata Files"%}</button></div>
   <br>
-  <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Metadata Files"%}</button>
+  <br>
+  <button id="submit" class="btn btn-lg btn-success" onclick="document.getElementById('dashboard').submit();" disabled>{% trans "Upload Metadata Files"%}</button>
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
   <script src="{% static 'js/dropzone.js' %}"></script>
@@ -90,214 +91,184 @@
       }
       return true
     }
-  Dropzone.options.myDropzone = {
-
-    // Prevents Dropzone from uploading dropped files immediately
-    autoProcessQueue: false,
-    addRemoveLinks: true,
-    acceptedFiles: '.xml, .csv',
-    maxFilesize: 1024, // This is in MB. Shouldn't ever have files bigger than this.
-    parallelUploads: 200, // Number of files allowed to upload at one. Shouldn't ever be bigger than this
-    uploadMultiple: true,
-    maxFiles: 200,
-    timeout: 3600000,
-
-    init : function() {
-                var submitButton = document.querySelector("#submit");
-                var validateButton = document.querySelector("#validate");
-                var myDropzone = this;
-
-                this.on("queuecomplete", function () {
-                  $("#myDropzone").submit();
-                });
-
-                validateButton.addEventListener("click", function(e) {
-                      validateForm();
-                      var filesAccepted = myDropzone.getAcceptedFiles();
-                      var filesTable = document.getElementById('files-required-table');
-                      // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
-                      // if those files have been uploaded.
-                      var filesAcceptedNames = [];
-                     // Get all the names put into array for validation.
-                      for(var i=0; i<filesAccepted.length; i++) {
-                        filesAcceptedNames.push(filesAccepted[i].name)
-                      }
-                      for(var i = 1; i < filesTable.rows.length;)
-                      {
-                          filesTable.deleteRow(i);
-                      }
-                      var validationSuccess = true;
-                      var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml','runParameters.xml', 'RunParameters.xml', 'SampleSheet.csv'];
-                      for(var i=0; i<requiredFiles.length; i++ ) {
-                        if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
-                          var row = filesTable.insertRow();
-                          var cell1 = row.insertCell();
-                          var cell2 = row.insertCell();
-                          cell1.innerHTML=requiredFiles[i];
-                          cell2.classList.add('table-success');
-                          cell2.align = 'center';
-                          cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
-                        } 
-                        else {
-                          // table formatting to allow only one of run/Run Parameters
-                          if (requiredFiles[i] == 'runParameters.xml' && (filesAcceptedNames.indexOf('RunParameters.xml') !== -1)){}
-                          else if (requiredFiles[i] == 'RunParameters.xml' && (filesAcceptedNames.indexOf('runParameters.xml') !== -1)){}
-                          else if (requiredFiles[i] == 'RunParameters.xml') {}
-                          else {
-                            var row = filesTable.insertRow();
-                            var cell1 = row.insertCell();
-                            var cell2 = row.insertCell();
-                            cell1.innerHTML=requiredFiles[i];
-                            cell2.classList.add('table-danger');
-                            cell2.align = 'center';
-                            cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
-                            validationSuccess = false;}}
-                      }
-                      // Removal of unnecessary files and alert populated with names of files
-                      let del_text = "{% trans 'Following files are unnecessary and have been removed: ' %}";
-                      for(var i=0; i<filesAcceptedNames.length; i++ ) {
-                        if (requiredFiles.indexOf(filesAcceptedNames[i]) == -1) {
-                        del_text += filesAcceptedNames[i] + ', ';
-                        myDropzone.removeFile(filesAccepted[i]);        
-                        }
-                      }
-                      // if there are files names added to del_text, then alert
-                      if (del_text.length > 69) {
-                        Swal.fire({
-                        title: "{% trans 'Unnecessary Files' %}",
-                        text: del_text,
-                        type: 'warning',
-                        showConfirmButton: false
-                        })
-                        validationSuccess = false;
-                        return false
-                      }
-                      // Removal of duplicate files and alert populated with names of files
-                      let dup_text = "{% trans 'Following files are duplicates and have been removed: ' %}";
-                      let findDuplicates = arr => arr.filter((item, index) => arr.indexOf(item) != index);
-                      let duplicates = findDuplicates(filesAcceptedNames);
-                      if (duplicates.length > 0) {
-                        for(var i=0; i<duplicates.length; i++ ) {
-                          dup_text += duplicates[i] + ', ';
-                          myDropzone.removeFile(filesAccepted[(filesAcceptedNames.indexOf(duplicates[i]))]);
-                        }
-                        Swal.fire({
-                        title: "{% trans 'Duplicate Files' %}",
-                        text: dup_text,
-                        type: 'warning',
-                        showConfirmButton: false
-                        })
-                        validationSuccess = false;
-                        return false
-                      }
-                      
-                      // Also check that all SEQIDs submitted are valid.
-                      // in this list.
-                      var seqid_validated = true;
-                      var checked_samplesheet = false;
-                      for(var i=0; i < filesAccepted.length; i++) {
-                        if (filesAccepted[i].name.indexOf('SampleSheet.csv') !== -1) {
-                          var reader = new FileReader();
-                          var good_seqid_list = [];
-                          checked_samplesheet = true;
-                          reader.readAsText(filesAccepted[i]);
-                          reader.onload = function (event) {
-                            var csv = event.target.result;
-                            var csvdata = Papa.parse(csv);
-                            // at this point we should try to get a list of SEQIDs out of the SampleSheet - Make sure
-                            // that they're in the correct format, and raise an error if not.
-                            var sampleSheetData = csvdata['data'];
-                            var seqidstart = false;
-                            var seqidregex = /\d{4}-[A-Z]+-\d{4}$/;
-                            var seqidlist = []; // Keep things that are supposed to be SEQIDs but not properly formatted
-                            // Make a regex to tell of SEQID matches.
-                            for (var i = 0; i < sampleSheetData.length; i++) {
-                              // Check that we are on the SEQIDs but not blank (sometimes get a blank row at EOF)
-                              if (seqidstart === true && sampleSheetData[i][0] !== '') {
-                                if (sampleSheetData[i][0].search(seqidregex) === -1) {
-                                  seqidlist.push(sampleSheetData[i][0]);
-                                }
-                                else {
-                                  good_seqid_list.push(sampleSheetData[i][0].toString())
-                                }
-                              }
-                              if (sampleSheetData[i][0] === 'Sample_ID') {
-                                seqidstart = true;
-                              }
-                            }
-                            if(seqidlist.length > 0) {
-                              seqid_validated = false;
-                              $('#submit').prop('disabled', true);
-                              filesTable.rows[6].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
-                              filesTable.rows[6].cells[1].classList.add('table-danger');
-                              alert('One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.\n' +
-                                'Correct format is YYYY-LAB-####.\nIncorrectly formatted SEQIDs: ' + seqidlist.toString());
-                            }
-                          }
-                        }
-                      }
-                      // Also need to parse GenerateFASTQRunStatistics.xml and make sure names there are the same
-                      // as SeqIDs - have run into issues with this before where people give the wrong file or
-                      // mess with names in SampleSheet.  TODO: Not working yet.
-                      var fastq_run_stats_validated = true;
-                      for(var i=0; i < filesAccepted.length; i++) {
-                        if (filesAccepted[i].name.indexOf('GenerateFASTQRunStatistics.xml') !== -1 && checked_samplesheet === true) {
-                          var reader = new FileReader();
-                          reader.readAsText(filesAccepted[i]);
-                          reader.onload = function (event) {
-                            var bad_seqids_in_run_stats = [];
-                             var txt = event.target.result;
-                             if (window.DOMParser) {
-                                parser = new DOMParser();
-                                xmlDoc = parser.parseFromString(txt, "text/xml");
-                              }
-                              else {  // This is for Explorer support.
-                                xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
-                                xmlDoc.async = false;
-                                xmlDoc.loadXML(txt);
-                              }
-                              x = xmlDoc.getElementsByTagName('SampleName');
-                              for (i = 0; i < x.length; i++) {
-                                // Check element is in our list of good SeqIDs.
-                                var seqid_in_run_stats = x[i].childNodes[0].nodeValue.toString();
-                                if (good_seqid_list.indexOf(seqid_in_run_stats) === -1) {
-                                  bad_seqids_in_run_stats.push(seqid_in_run_stats);
-                                }
-                              }
-                            if (bad_seqids_in_run_stats.length > 0) {
-                              fastq_run_stats_validated = false;
-                              $('#submit').prop('disabled', true);
-                              filesTable.rows[3].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
-                              filesTable.rows[3].cells[1].classList.add('table-danger');
-                              alert('One or more SEQIDs specified in GenerateFASTQRunStatistics.xml was not found in your SampleSheet.\n' +
-                                'You\'ll need to remove your xml file, modify it, and reupload. IDs that were not found in SampleSheet are: ' + bad_seqids_in_run_stats.toString());
-                            }
-                          }
-                        }
-                      }
-                      var form_is_valid = validateForm();
-                      if (validationSuccess === true && form_is_valid === true && seqid_validated === true && fastq_run_stats_validated === true) {
-                        $('#submit').prop('disabled', false);
-                      }
-                });
-                submitButton.addEventListener("click", function(e) {
-                    {#e.preventDefault();#}
-                    {#e.stopPropagation();#}
-                    myDropzone.processQueue();
-                    // Tell Dropzone to process all queued files.
-                });
-      }
-    };
-    
+//validates name whenever it has been changed
+var name = document.getElementById("id_run_name");
+$("#id_run_name").on("change", function() {validateForm()});
 </script>
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script type="text/javascript">
-  $(document).ready(function () {
-  //add tooltips
-  var dropzone = document.getElementById('myDropzone');
-  $(dropzone).attr('data-tooltip','tooltip');
-  $(dropzone).attr('title',"{%trans 'Drop or click to add files' %}");
-  });
 
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script>
+      var uppy = Uppy.Core({ debug: true,
+      autoProceed: false,
+      restrictions: {
+        maxNumberOfFiles: 6,
+        minNumberOfFiles: 1,
+        allowedFileTypes: ['.xml', '.csv'],
+        }
+      })
+      .use(Uppy.Dashboard, {
+        inline: true,
+        target: '#dashboard',
+        showProgressDetails: true,
+        animateOpenClose: true,
+        browserBackButtonClose: true,
+      })
+      /*.use(Uppy.Form, {
+        target: '#dashboard',
+        addResultToForm: true,
+      })*/
+      .use(Uppy.XHRUpload, {
+      endpoint: '{% url "cowbat:upload_metadata" %}',
+      limit: 6,
+      formData: true,
+      bundle:true,
+      })
+      uppy.on('complete', (result) => {
+        console.log('successful files:', result.successful)
+        console.log('failed files:', result.failed)
+        console.log(validateForm());
+
+        var requiredFiles = ['config.xml', 'CompletedJobInfo.xml', 'GenerateFASTQRunStatistics.xml', 'RunInfo.xml','runParameters.xml', 'RunParameters.xml', 'SampleSheet.csv'];
+        var filesTable = document.getElementById('files-required-table');
+        var filesAccepted = uppy.getFiles();
+        var validationSuccess = true;
+        // Change classes for SampleSheet, RunInfo, whatever else to green checkmark
+        // if those files have been uploaded.
+        var filesAcceptedNames = [];
+        // Get all the names put into array for validation.
+        for(var i=0; i<filesAccepted.length; i++) {
+          filesAcceptedNames.push(filesAccepted[i].name)
+        }
+
+        for(var i = 1; i < filesTable.rows.length;)
+        {
+            filesTable.deleteRow(i);
+        }
+        for(var i=0; i<requiredFiles.length; i++ ) {
+          if (filesAcceptedNames.indexOf(requiredFiles[i]) !== -1) {
+            var row = filesTable.insertRow();
+            var cell1 = row.insertCell();
+            var cell2 = row.insertCell();
+            cell1.innerHTML=requiredFiles[i];
+            cell2.classList.add('table-success');
+            cell2.align = 'center';
+            cell2.innerHTML = '<i class=\"fa fa-check-circle fa-1x\"></i>';
+          }
+          else {
+          // table formatting to allow only one of run/Run Parameters
+            if (requiredFiles[i] == 'runParameters.xml' && (filesAcceptedNames.indexOf('RunParameters.xml') !== -1)){}
+            else if (requiredFiles[i] == 'RunParameters.xml' && (filesAcceptedNames.indexOf('runParameters.xml') !== -1)){}
+            else if (requiredFiles[i] == 'RunParameters.xml') {}
+            else {
+              var row = filesTable.insertRow();
+              var cell1 = row.insertCell();
+              var cell2 = row.insertCell();
+              cell1.innerHTML=requiredFiles[i];
+              cell2.classList.add('table-danger');
+              cell2.align = 'center';
+              cell2.innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+              validationSuccess = false;}
+              }
+          }
+          // Also check that all SEQIDs submitted are valid.
+          // in this list.
+          var seqid_validated = true;
+          var checked_samplesheet = false;
+          for(var i=0; i < filesAccepted.length; i++) {
+            if (filesAccepted[i].name.indexOf('SampleSheet.csv') !== -1) {
+              var reader = new FileReader();
+              // Need to provide file as blob for uppy
+              var sampleSheet = filesAccepted[i];
+              var myBlob = new Blob([sampleSheet.data], {type : sampleSheet.type});  
+              var good_seqid_list = [];
+              checked_samplesheet = true;
+              //could use Blob.text() but not supported on Edge or IE
+              reader.readAsText(myBlob);
+              console.log("179");
+              reader.onload = function (event) {
+                var csv = event.target.result;
+                var csvdata = Papa.parse(csv);
+                // at this point we should try to get a list of SEQIDs out of the SampleSheet - Make sure
+                // that they're in the correct format, and raise an error if not.
+                var sampleSheetData = csvdata['data'];
+                var seqidstart = false;
+                var seqidregex = /\d{4}-[A-Z]+-\d{4}$/;
+                var seqidlist = []; // Keep things that are supposed to be SEQIDs but not properly formatted
+                // Make a regex to tell of SEQID matches.
+                for (var i = 0; i < sampleSheetData.length; i++) {
+                  // Check that we are on the SEQIDs but not blank (sometimes get a blank row at EOF)
+                  if (seqidstart === true && sampleSheetData[i][0] !== '') {
+                    if (sampleSheetData[i][0].search(seqidregex) === -1) {
+                      seqidlist.push(sampleSheetData[i][0]);
+                    }
+                    else {
+                      good_seqid_list.push(sampleSheetData[i][0].toString())
+                    }
+                  }
+                  if (sampleSheetData[i][0] === 'Sample_ID') {
+                    seqidstart = true;
+                  }
+                }
+                if(seqidlist.length > 0) {
+                  seqid_validated = false;
+                  $('#submit').prop('disabled', true);
+                  filesTable.rows[6].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                  filesTable.rows[6].cells[1].classList.add('table-danger');
+                  alert('One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.\n' +
+                    'Correct format is YYYY-LAB-####.\nIncorrectly formatted SEQIDs: ' + seqidlist.toString());
+                }
+              }
+            }
+          }
+          // Also need to parse GenerateFASTQRunStatistics.xml and make sure names there are the same
+          // as SeqIDs - have run into issues with this before where people give the wrong file or
+          // mess with names in SampleSheet.  TODO: Not working yet.
+          var fastq_run_stats_validated = true;
+          for(var i=0; i < filesAccepted.length; i++) {
+            if (filesAccepted[i].name.indexOf('GenerateFASTQRunStatistics.xml') !== -1 && checked_samplesheet === true) {
+              var reader = new FileReader();
+              // Need to provide file as blob for uppy
+              var generateFASTQ = filesAccepted[i] ;
+              var myBlob = new Blob([generateFASTQ.data], {type : generateFASTQ.type});  
+              console.log(myBlob instanceof Blob);
+              //could use Blob.text() but not supported on Edge or IE
+              reader.readAsText(myBlob);
+              console.log("225");
+              reader.onload = function (event) {
+                var bad_seqids_in_run_stats = [];
+                  var txt = event.target.result;
+                  if (window.DOMParser) {
+                    parser = new DOMParser();
+                    xmlDoc = parser.parseFromString(txt, "text/xml");
+                  }
+                  else {  // This is for Explorer support.
+                    xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+                    xmlDoc.async = false;
+                    xmlDoc.loadXML(txt);
+                  }
+                  x = xmlDoc.getElementsByTagName('SampleName');
+                  for (i = 0; i < x.length; i++) {
+                    // Check element is in our list of good SeqIDs.
+                    var seqid_in_run_stats = x[i].childNodes[0].nodeValue.toString();
+                    if (good_seqid_list.indexOf(seqid_in_run_stats) === -1) {
+                      bad_seqids_in_run_stats.push(seqid_in_run_stats);
+                    }
+                  }
+                if (bad_seqids_in_run_stats.length > 0) {
+                  fastq_run_stats_validated = false;
+                  $('#submit').prop('disabled', true);
+                  filesTable.rows[3].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
+                  filesTable.rows[3].cells[1].classList.add('table-danger');
+                  alert('One or more SEQIDs specified in GenerateFASTQRunStatistics.xml was not found in your SampleSheet.\n' +
+                    'You\'ll need to remove your xml file, modify it, and reupload. IDs that were not found in SampleSheet are: ' + bad_seqids_in_run_stats.toString());
+                }
+              }
+            }
+          }
+          if (validationSuccess === true && seqid_validated === true && fastq_run_stats_validated === true) {
+            $('#submit').prop('disabled', false);
+          }
+        })
   </script>
 {% endblock %}
