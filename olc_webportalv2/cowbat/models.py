@@ -1,10 +1,10 @@
+# Django-related imports
 from django.db import models
+from django.forms.widgets import EmailInput
 from django.contrib.postgres.fields import ArrayField, JSONField
+# Standard libraries
 import os
 
-from django.forms.widgets import EmailInput
-
-# Create your models here.
 # TODO: InterOp file doesn't (I don't think) get used at all any more.
 # Actually delete it once verified that deleting it doesn't break everything.
 

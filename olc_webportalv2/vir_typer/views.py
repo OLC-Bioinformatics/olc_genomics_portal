@@ -1,20 +1,23 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils.translation import ugettext_lazy as _
-from django.views.decorators.csrf import csrf_exempt
-from django.forms.formsets import formset_factory
-from azure.storage.blob import BlockBlobService
-from django.db import IntegrityError
-from django.contrib import messages
-from weasyprint import HTML, CSS
+# Django-related imports
 from django.conf import settings
-import json
+from django.contrib import messages
+from django.db import IntegrityError
+from django.forms.formsets import formset_factory
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+# Standard libraries
 import os
-
+import json
+# Azure!
+from azure.storage.blob import BlockBlobService
+# Useful things!
+from weasyprint import HTML, CSS
 # VirusTyper-specific code
-from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
-from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
 from .tasks import run_vir_typer
+from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
+from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
 
 
 # Vir_Typer Views

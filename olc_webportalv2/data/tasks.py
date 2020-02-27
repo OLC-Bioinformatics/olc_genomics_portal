@@ -1,19 +1,19 @@
 # Django-related imports
 from django.conf import settings
 # Standard libraries
-import datetime
-import fnmatch
-import shutil
 import os
-# Portal-specific things
-from olc_webportalv2.data.models import DataRequest
+import shutil
+import fnmatch
+import datetime
 # Azure!
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
-# Celery Task Management
+# Useful things!
 from celery import shared_task, task
-# Sentry, send me error reports
 from sentry_sdk import capture_exception
+# Data-specific things
+from olc_webportalv2.data.models import DataRequest
+
 
 @shared_task
 def get_assembled_data(data_request_pk):

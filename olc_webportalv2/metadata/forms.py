@@ -1,14 +1,17 @@
+# Django-related imports
 from django import forms
-from dal import autocomplete
-from olc_webportalv2.metadata.models import Genus, Species, Serotype, MLST, RMLST
 from django.utils.translation import ugettext_lazy as _
+# Useful things!
+from dal import autocomplete
+# MetaData-specific things
+from olc_webportalv2.metadata.models import Genus, Species, Serotype, MLST, RMLST
+
 
 quality_choices = (
     (_('Pass'), _('All sequences except for low quality or contaminated sequences.')),
     (_('Reference'), _('Highest quality, gold standard sequences.')),
     (_('Fail'), _('All sequences - may include contaminated or otherwise very low quality sequences. Use with caution.'))
 )
-
 
 def make_genus_choice_list():
     choices = Genus.objects.filter()

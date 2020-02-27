@@ -1,37 +1,38 @@
 # Django-related imports
-from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
-from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
-    AMRDetail, ProkkaRequest, ProkkaAzureRequest
-from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
-# Standard python stuff
-import subprocess
-import datetime
-from datetime import timezone
-import csv
-# For whatever reason tasks.py doesn't get django settings properly, so send_mail from django doesn't work.
-# Use SMTPlib combined with os.environ.get to get around this.
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import smtplib
-import fnmatch
-import shutil
+# Standard libraries
 import os
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-import azure.batch.batch_service_client as batch
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-from strainchoosr import strainchoosr
 import re
+import csv
 import ete3
 import json
-# Celery Task Management
-from celery import shared_task, task
-# Sentry
-from sentry_sdk import capture_exception
+import shutil
+import fnmatch
+import smtplib
+import datetime
+import subprocess
+from datetime import timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+# For whatever reason tasks.py doesn't get django settings properly, so send_mail from django doesn't work.
+# Use SMTPlib combined with os.environ.get to get around this.
+# Azure!
+import azure.batch.models as batchmodels
+import azure.batch.batch_auth as batch_auth
+from azure.storage.blob import BlobPermissions
+from azure.storage.blob import BlockBlobService
+import azure.batch.batch_service_client as batch
 from azure.batch.models import BatchErrorException
+# Useful things!
+from celery import shared_task, task
+from strainchoosr import strainchoosr
+from sentry_sdk import capture_exception
+# COWBAT-specific things
+from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
+from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
+from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
+    AMRDetail, ProkkaRequest, ProkkaAzureRequest
 
 
 @shared_task

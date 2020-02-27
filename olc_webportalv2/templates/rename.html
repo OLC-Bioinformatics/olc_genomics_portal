@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+    <h2>{%  trans "Edit Name" %}</h2>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% csrf_token %}
+        <div class="col-3" style="padding-left:0;">
+            {{ form.name|as_crispy_field }}
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Update Project" %}</button>
+    </form>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+{% endblock %}

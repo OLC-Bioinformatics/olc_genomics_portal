@@ -1,14 +1,16 @@
-#!/usr/bin/env python3
-from olc_webportalv2.users.models import User
+# Django-related imports
 from django.test import TestCase
 from django.urls import reverse
+# Standard libraries
 import json
 import os
-
+# VirusTyper-specific code
+from olc_webportalv2.users.models import User
 from olc_webportalv2.vir_typer.views import parse_report, sequence_consensus, sequence_html_string
 from olc_webportalv2.vir_typer.models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
-__author__ = 'adamkoziol'
 
+
+__author__ = 'adamkoziol'
 
 class SampleTestCase(TestCase):
     @classmethod

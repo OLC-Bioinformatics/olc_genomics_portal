@@ -1,49 +1,20 @@
+# Django-related imports
 from django import forms
-from Bio import SeqIO
-from io import StringIO
-import re
-from olc_webportalv2.metadata.models import SequenceData
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest
-
 from django.forms.widgets import EmailInput
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-
-
-class NearNeighborForm(forms.Form):
-    name = forms.CharField(max_length=56, label=_('Name: '), required=False)
-    seqid = forms.CharField(max_length=24, label='SeqID: ', required=False)
-    uploaded_file = forms.FileField(label='', required=False)
-    number_neighbors = forms.IntegerField(label=_('Number neighbors: '), initial=2, required=True)
-
-    def clean(self):
-        MIN_NUM_NEIGHBORS = 1
-        MAX_NUM_NEIGHBORS = 250
-        super().clean()
-        seqid = self.cleaned_data.get('seqid')
-        name = self.cleaned_data.get('name')
-        number_neighbors = self.cleaned_data.get('number_neighbors')
-        uploaded_file = self.cleaned_data.get('uploaded_file')
-        sequence_data_objects = SequenceData.objects.filter()
-        seqids_in_database = list()
-        for sequence_data in sequence_data_objects:
-            seqids_in_database.append(sequence_data.seqid)
-        if uploaded_file is None and seqid == '':
-            raise forms.ValidationError(_('Must enter at least one of SeqID or uploaded file.'))
-        elif seqid != '' and uploaded_file is not None:
-            raise forms.ValidationError(_('Only enter one of SeqID and uploaded file.'))
-        elif uploaded_file is not None:
-            if not uploaded_file.name.endswith('.fasta'):
-                raise forms.ValidationError(_('Uploaded file must be in FASTA format and filename must end with .fasta'))
-        elif seqid not in seqids_in_database:
-            raise forms.ValidationError(_('Requested SEQID is not in the database. Correct format for SeqID is '
-                                        'YYYY-LAB-####. Please check your SEQID and try again.'))
-        if not MIN_NUM_NEIGHBORS <= number_neighbors <= MAX_NUM_NEIGHBORS:
-            raise forms.ValidationError(_('Invalid number of nearest neighbors requested. Valid values are from 1 to 250.'))
-        return seqid, name, number_neighbors, uploaded_file
+# Standard libraries
+import re
+# Useful things!
+from Bio import SeqIO
+from io import StringIO
+# Geneseekr-specific things
+from olc_webportalv2.metadata.models import SequenceData
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 
 class GeneSeekrForm(forms.Form):
+    name = forms.CharField(label=_('Name'), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
     query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea(attrs={'placeholder': _('>Gene \n ACGTACGT')}), label='', required=False)
     query_file = forms.FileField(label='', required=False)
@@ -52,6 +23,7 @@ class GeneSeekrForm(forms.Form):
 
     def clean(self):
         super().clean()
+        name = self.cleaned_data.get('name')
         seqid_input = self.cleaned_data.get('seqids')
         query_sequence = self.cleaned_data.get('query_sequence')
         query_file = self.cleaned_data.get('query_file')
@@ -146,7 +118,7 @@ class GeneSeekrForm(forms.Form):
             if num_nucleotides > 10000:
                 raise forms.ValidationError(_('FASTA sequence length maximum is 10000 bases. Your input sequence '
                                             'had %s bases.') % num_nucleotides)
-        return seqid_list, query_sequence
+        return seqid_list, query_sequence, name
 
 
 class TreeForm(forms.Form):
@@ -309,9 +281,38 @@ class ProkkaForm(forms.Form):
 
         return seqid_list, name, other_files
 
+class NearNeighborForm(forms.Form):
+    name = forms.CharField(max_length=56, label=_('Name: '), required=False)
+    seqid = forms.CharField(max_length=24, label='SeqID: ', required=False)
+    uploaded_file = forms.FileField(label='', required=False)
+    number_neighbors = forms.IntegerField(label=_('Number neighbors: '), initial=2, required=True)
 
-class NameForm(forms.Form):
-    name = forms.CharField(label=_('Name'), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    def clean(self):
+        MIN_NUM_NEIGHBORS = 1
+        MAX_NUM_NEIGHBORS = 250
+        super().clean()
+        seqid = self.cleaned_data.get('seqid')
+        name = self.cleaned_data.get('name')
+        number_neighbors = self.cleaned_data.get('number_neighbors')
+        uploaded_file = self.cleaned_data.get('uploaded_file')
+        sequence_data_objects = SequenceData.objects.filter()
+        seqids_in_database = list()
+        for sequence_data in sequence_data_objects:
+            seqids_in_database.append(sequence_data.seqid)
+        if uploaded_file is None and seqid == '':
+            raise forms.ValidationError(_('Must enter at least one of SeqID or uploaded file.'))
+        elif seqid != '' and uploaded_file is not None:
+            raise forms.ValidationError(_('Only enter one of SeqID and uploaded file.'))
+        elif uploaded_file is not None:
+            if not uploaded_file.name.endswith('.fasta'):
+                raise forms.ValidationError(_('Uploaded file must be in FASTA format and filename must end with .fasta'))
+        elif seqid not in seqids_in_database:
+            raise forms.ValidationError(_('Requested SEQID is not in the database. Correct format for SeqID is '
+                                        'YYYY-LAB-####. Please check your SEQID and try again.'))
+        if not MIN_NUM_NEIGHBORS <= number_neighbors <= MAX_NUM_NEIGHBORS:
+            raise forms.ValidationError(_('Invalid number of nearest neighbors requested. Valid values are from 1 to 250.'))
+        return seqid, name, number_neighbors, uploaded_file
+
 
 class EmailForm(forms.Form):
     email = forms.CharField(max_length=50,label= "Email ", required=False)

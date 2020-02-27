@@ -1,25 +1,26 @@
 # Django-related imports
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
 # Standard libraries
+import os
 import logging
 import fnmatch
-import os
-# Portal-specific things
-from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm
-from olc_webportalv2.cowbat.tasks import run_cowbat_batch
-from olc_webportalv2.geneseekr.forms import EmailForm
 # Azure!
+import azure.batch.models as batchmodels
+import azure.batch.batch_auth as batch_auth
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_service_client as batch
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-# Task Management
+# Useful things!
 from kombu import Queue
+# COWBAT-specific things
+from olc_webportalv2.geneseekr.forms import EmailForm
+from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.cowbat.models import SequencingRun, DataFile
+from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm
+
 
 log = logging.getLogger(__name__)
 

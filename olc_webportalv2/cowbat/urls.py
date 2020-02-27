@@ -1,6 +1,8 @@
-from olc_webportalv2.cowbat import views
+# Django-related imports
 from django.conf.urls import url, include
 from django.utils.translation import gettext_lazy as _
+# COWBAT-specific things
+from olc_webportalv2.cowbat import views
 
 urlpatterns = [
     url(_(r'^cowbat_processing/(?P<sequencing_run_pk>\d+)/$'), views.cowbat_processing, name='cowbat_processing'),

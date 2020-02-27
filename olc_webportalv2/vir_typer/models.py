@@ -1,5 +1,7 @@
-from olc_webportalv2.users.models import User
+# Django-related imports
 from django.db import models
+# Portal-sepcific 
+from olc_webportalv2.users.models import User
 
 
 class VirTyperProject(models.Model):

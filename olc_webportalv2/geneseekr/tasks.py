@@ -1,29 +1,30 @@
+# Django-related imports
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+# Standard libraries
 import os
+import csv
 import glob
 import shutil
+import smtplib
 import datetime
 import subprocess
-from Bio import SeqIO
 import multiprocessing
 from io import StringIO
-from django.conf import settings
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
-    TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+# Azure!
+from azure.storage.blob import BlobPermissions
+from azure.storage.blob import BlockBlobService
+# Useful things!
+from Bio import SeqIO
+from celery import shared_task
+from sentry_sdk import capture_exception
+# Geneseekr-specific code
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
-from sentry_sdk import capture_exception
-
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-
-import csv
-from django.shortcuts import get_object_or_404
-
-from celery import shared_task
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import smtplib
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
+    TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 
 
 def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file,
@@ -533,7 +534,7 @@ def get_blast_top_hits(blast_result_file, geneseekr_task, num_hits=50):
         query_hit_count[query.id] = 0
         gene_targets.append(query.id)
 
-    geneseekr_task.gene_targets = gene_targets
+    geneseekr_task.gene_targets = gene_targets 
     geneseekr_task.save()
     with open(blast_result_file) as f:
         for result_line in f:
