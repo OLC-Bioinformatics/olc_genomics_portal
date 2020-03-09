@@ -141,6 +141,8 @@
       </div>
     </nav>
   </div>
+  <br>  
+  <div class="browserAlert" style='display: none;'><i class="fas fa-exclamation-triangle fa-lg"></i> <b> {% trans "You are using Internet Explorer, which is no longer supported. Chrome, Firefox or Edge is recommended for use of the FoodPort. "%} </b> </div>
 
   <div class="container">
     {#This is where alert messages will appear (i.e. successful signin)#}
@@ -152,6 +154,7 @@
     </div>
     {% endfor %}
     {% endif %}
+  
     <br>
 
     {% block content %}
@@ -310,6 +313,7 @@
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
       document.getElementsByClassName('card-deck')[0].style.display = 'inline';
+      document.getElementsByClassName('browserAlert')[0].style.display = 'block';
     }
     if (bowser.name == "Firefox") {
       document.getElementsByTagName("select")[0].className = "fox";

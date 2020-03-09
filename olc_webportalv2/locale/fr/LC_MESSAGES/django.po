@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-02-05 20:20+0000\n"
+"POT-Creation-Date: 2020-03-09 19:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -503,7 +503,7 @@ msgstr "^résultats/(?P<primer_request_pk>\\d+)/$"
 msgid "^edit/(?P<primer_request_pk>\\d+)/$"
 msgstr "^modifier/(?P<primer_request_pk>\\d+)/$"
 
-#: olc_webportalv2/primer_finder/views.py:52
+#: olc_webportalv2/primer_finder/views.py:53
 msgid "Primer file is required"
 msgstr "Un fichier d'amorce est requis."
 
@@ -818,7 +818,7 @@ msgid "Find Genes "
 msgstr "Trouver des gènes"
 
 #: olc_webportalv2/templates/base.html:78
-#: olc_webportalv2/templates/base.html:222
+#: olc_webportalv2/templates/base.html:233
 #: olc_webportalv2/templates/geneseekr/tree_request.html:27
 msgid "Create Tree "
 msgstr "Créer un arbre phylogénétique "
@@ -836,6 +836,8 @@ msgid "Find Near Neighbors "
 msgstr "Trouver les voisins proches "
 
 #: olc_webportalv2/templates/base.html:88
+#: olc_webportalv2/templates/base.html:277
+#: olc_webportalv2/templates/base.html:282
 msgid "Primer Finder"
 msgstr "Chercheur d'amorce"
 
@@ -851,16 +853,22 @@ msgstr "Se Déconnecter"
 msgid "Login"
 msgstr "S'identifier"
 
+#: olc_webportalv2/templates/base.html:145
+msgid ""
+"You are using Internet Explorer, which is no longer supported. Chrome, "
+"Firefox or Edge is recommended for use of the FoodPort. "
+msgstr "Vous utilisez Internet Explorer, qui n'est plus pris en charge. Chrome, Firefox ou Edge est recommandé pour l'utilisation du AliPort."
+
 #: olc_webportalv2/templates/base.html:163
 msgid "Welcome to the CFIA FoodPort"
 msgstr "Bienvenue à AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:176
-#: olc_webportalv2/templates/base.html:180
+#: olc_webportalv2/templates/base.html:177
+#: olc_webportalv2/templates/base.html:184
 msgid "Explore Data"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:179
+#: olc_webportalv2/templates/base.html:181
 msgid ""
 "Identify sequences for analysis. Search based on genus/species/serotype/MLST "
 "and get a list of SeqIDs/LabIDs."
@@ -868,21 +876,21 @@ msgstr ""
 "Identifier les séquences pour l'analyse. Recherche basée sur genre/espèce/"
 "sérotype/MLST et obtenir une liste de SeqIDs/LabIDs."
 
-#: olc_webportalv2/templates/base.html:186
 #: olc_webportalv2/templates/base.html:190
+#: olc_webportalv2/templates/base.html:195
 msgid "Get Data"
 msgstr "Retrouver"
 
-#: olc_webportalv2/templates/base.html:189
+#: olc_webportalv2/templates/base.html:193
 msgid "Retrieve copies of files stored at OLC to analyze locally."
 msgstr "Retrouver les assemblages chez LOC pour effectuer des analyses locales"
 
-#: olc_webportalv2/templates/base.html:196
-#: olc_webportalv2/templates/base.html:200
+#: olc_webportalv2/templates/base.html:201
+#: olc_webportalv2/templates/base.html:208
 msgid "Assembly"
 msgstr "Assemblage"
 
-#: olc_webportalv2/templates/base.html:199
+#: olc_webportalv2/templates/base.html:205
 msgid ""
 "For submission of raw sequence data for assembly. You can also use this to "
 "get reports and assemblies from previous runs."
@@ -890,32 +898,32 @@ msgstr ""
 "Pour la soumission des séquences pour l'assemblage. Vous pouvez également "
 "obtenir des rapports et des assemblages d'anciennes exécutions."
 
-#: olc_webportalv2/templates/base.html:208
-#: olc_webportalv2/templates/base.html:212
+#: olc_webportalv2/templates/base.html:216
+#: olc_webportalv2/templates/base.html:222
 msgid "Find Genes"
 msgstr "Trouver des gènes"
 
-#: olc_webportalv2/templates/base.html:211
+#: olc_webportalv2/templates/base.html:220
 msgid ""
 "Use GeneSeekr to search for any gene of interest in our assembly database."
 msgstr ""
 "Utilise GeneSeekr pour trouver des gènes dans notre base de données "
 "d'assemblage"
 
-#: olc_webportalv2/templates/base.html:218
+#: olc_webportalv2/templates/base.html:228
 msgid "Create a Tree"
 msgstr "Créer un arbre phylogénétique"
 
-#: olc_webportalv2/templates/base.html:221
+#: olc_webportalv2/templates/base.html:231
 msgid "Create phylogenetic trees of assemblies."
 msgstr "Créer des arbres phylogénétiques d'assemblages."
 
-#: olc_webportalv2/templates/base.html:228
-#: olc_webportalv2/templates/base.html:232
+#: olc_webportalv2/templates/base.html:239
+#: olc_webportalv2/templates/base.html:246
 msgid "Investigate AMR"
 msgstr "Enquêter sur la résistance antimicrobiens"
 
-#: olc_webportalv2/templates/base.html:231
+#: olc_webportalv2/templates/base.html:243
 msgid ""
 "Look for AMR genes in assemblies, and find out if they're present on mobile "
 "elements or the chromosome."
@@ -923,17 +931,23 @@ msgstr ""
 "Enquêter sur la résistance antimicrobiens dans les assemblages et déterminez "
 "leur emplacement"
 
-#: olc_webportalv2/templates/base.html:240
-#: olc_webportalv2/templates/base.html:244
+#: olc_webportalv2/templates/base.html:255
+#: olc_webportalv2/templates/base.html:260
 msgid "Annotate Genomes"
 msgstr "Annoter"
 
-#: olc_webportalv2/templates/base.html:243
+#: olc_webportalv2/templates/base.html:258
 msgid "Annotate assemblies with Prokka."
 msgstr "Annoter les assemblages avec Prokka"
 
-#: olc_webportalv2/templates/base.html:253
+#: olc_webportalv2/templates/base.html:269
 msgid "Perform typing on viral sequences."
+msgstr "Caractériser les séquences virales"
+
+#: olc_webportalv2/templates/base.html:280
+#, fuzzy
+#| msgid "Perform typing on viral sequences."
+msgid "Perform typing on viral sequences.sfdfsdsfdsdfsdf"
 msgstr "Caractériser les séquences virales"
 
 #: olc_webportalv2/templates/cowbat/assembly_home.html:8
@@ -1202,20 +1216,19 @@ msgid "Step 2 of 3: Upload InterOp Files for Run"
 msgstr "Étape 2 de 3 : Télécharger les fichiers InterOp pour l'exécution"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:11
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:17
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:12
 #: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:13
 msgid "Drop files to upload or click here"
 msgstr "Déposer des fichiers à télécharger ou cliquez ici"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:19
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:25
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:27
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:29
 msgid "File"
 msgstr "Fichier"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:20
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:26
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:28
 #: olc_webportalv2/templates/data/data_home.html:18
 #: olc_webportalv2/templates/geneseekr/amr_home.html:16
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:16
@@ -1236,23 +1249,19 @@ msgid "Upload InterOp Files"
 msgstr "Télécharger des fichiers InterOp"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:132
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:157
 msgid "Following files are unnecessary and have been removed: "
 msgstr "Les fichiers suivants sont inutiles et ont été supprimés: "
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:143
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:167
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:304
 msgid "Unnecessary Files"
 msgstr "Fichiers inutiles"
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:152
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:176
 msgid "Following files are duplicates and have been removed: "
 msgstr "Les fichiers suivants sont des doublons et ont été supprimés: "
 
 #: olc_webportalv2/templates/cowbat/upload_interop.html:161
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:185
 msgid "Duplicate Files"
 msgstr "Fichiers en double"
 
@@ -1272,31 +1281,22 @@ msgstr ""
 "le tableau suivant pour les télécharger. Une fois que tous les fichiers ont "
 "été téléchargés, vous pouvez passer à la page suivante. "
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:57
-msgid "Validate Metadata Files"
-msgstr "Valider les fichiers de métadonnées"
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:59
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:60
 msgid "Upload Metadata Files"
 msgstr "Télécharger des fichiers de métadonnées"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:73
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:84
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:74
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:85
 msgid "Invalid"
 msgstr "Invalide"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:74
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:75
 msgid "Run name cannot be blank!"
 msgstr "Le nom de l'exécution ne peut pas être vide!"
 
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:85
+#: olc_webportalv2/templates/cowbat/upload_metadata.html:86
 msgid "Run name must be in YYMMDD_LAB format!"
 msgstr "Le nom de l'exécution doit être au format AAMMJJ_LAB!"
-
-#: olc_webportalv2/templates/cowbat/upload_metadata.html:299
-#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
-msgid "Drop or click to add files"
-msgstr "Déposer ou cliquer pour ajouter des fichiers"
 
 #: olc_webportalv2/templates/cowbat/upload_sequence_data.html:6
 msgid "Step 3 of 3: Upload Sequence Files and Begin Assembly"
@@ -2404,6 +2404,10 @@ msgstr "Fichiers de séquence "
 msgid "Upload Sequence Files"
 msgstr "Télécharger des fichiers de séquence"
 
+#: olc_webportalv2/templates/vir_typer/vir_typer_upload_sequences.html:165
+msgid "Drop or click to add files"
+msgstr "Déposer ou cliquer pour ajouter des fichiers"
+
 #: olc_webportalv2/users/admin.py:17
 msgid "This username has already been taken."
 msgstr "Ce nom d'utilisateur a déjà été pris"
@@ -2454,7 +2458,7 @@ msgid "Isolate source"
 msgstr "Source de l'échantillon"
 
 #: olc_webportalv2/vir_typer/forms.py:105
-msgid "Analyst name"
+msgid "Analyst Name"
 msgstr "Nom de l'analyste"
 
 #: olc_webportalv2/vir_typer/forms.py:108
@@ -2504,6 +2508,9 @@ msgstr "Projet"
 #: olc_webportalv2/vir_typer/views.py:428
 msgid "updated"
 msgstr "mis à jour"
+
+#~ msgid "Validate Metadata Files"
+#~ msgstr "Valider les fichiers de métadonnées"
 
 #~ msgid "AMR Summary Rename"
 #~ msgstr "Renommer le résumé de la AMR"
