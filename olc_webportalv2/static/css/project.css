@@ -245,3 +245,12 @@ margin-left: -5%;
   background-position-y: calc(100% - 8px);
   background-repeat: no-repeat;
 }
+
+.browserAlert {
+background-color: #ED4F32;
+color: white;
+text-align: center;
+display:block;
+padding: 10px;
+width: auto;
+}
