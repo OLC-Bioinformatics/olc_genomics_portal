@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 schema_view = get_schema_view(title='Metadata API')
 
 urlpatterns = [
-    url(_(r'^database_search/'), views.database_search, name='database_search'),
+    url(_(r'^database_filter/'), views.database_filter, name='database_filter'),
     url(_(r'^database_results/(?P<database_request_pk>\d+)/$'), views.database_results, name='database_results'),
     url(_(r'^database_filter_results/'), views.database_filter_results, name='database_filter_results'),
     url(_(r'^database_browse/'), views.database_browse, name='database_browse'),

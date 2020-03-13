@@ -3,7 +3,6 @@ from datetime import datetime
 import django
 import pandas
 import os
-
 django.setup()
 from olc_webportalv2.sequence_database.models import GeneSeekr, Genus, LookupTable, NameTable, MLST, MLSTCC, RMLST, \
     SequenceData, Serovar, Species, Vtyper, UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, \
