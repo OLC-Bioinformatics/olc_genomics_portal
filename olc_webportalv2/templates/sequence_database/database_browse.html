@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>{% trans 'Databse Browse'%}</h2>
+  <table id="database-browse-table" class="table table-hover">
+    <thead>
+      <tr>
+        <th>{% trans 'SeqID'%}</th>
+        <th>{% trans 'LabID'%}</th>
+        <th>{% trans 'Genus'%}</th>
+        <th>{% trans 'Species'%}</th>
+        <th>{% trans 'Serotype'%}</th>
+        <th>{% trans 'MLST'%}</th>
+        <th>{% trans 'rMLST'%}</th>
+        <th>{% trans 'Assembly Quality'%}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sequence in sequence_data %}
+        <tr>
+          <td>{{ sequence.seqid }}</td>
+          <td>{{ sequence.labid.labid }}</td>
+          <td>{{ sequence.genus }}</td>
+          <td>{{ sequence.species }}</td>
+          <td>{{ sequence.serotype }}</td>
+          <td>{{ sequence.mlst }}</td>
+          <td>{{ sequence.rmlst }}</td>
+          <td>{% trans sequence.quality %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+  $(document).ready(function () {
+    var lang = document.documentElement.lang;
+    var i = 'All';
+    if (lang == "fr"){
+      var i = 'Tout';
+    }
+    $('#database-browse-table').DataTable(
+      {language : {
+        url: getLanguage()
+    }, "lengthMenu": [[100, -1], ['100', i]],
+    });
+  });
+  </script>
+{% endblock %}

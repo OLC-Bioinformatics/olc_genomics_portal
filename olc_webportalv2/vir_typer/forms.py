@@ -70,7 +70,7 @@ class BaseModelForm(ModelForm):
                     field.widget = forms.TextInput(
                         attrs={
                             'class': 'datepicker',
-                            'autocomplete' : 'off',
+                            'autocomplete': 'off',
                         }
                     )
 

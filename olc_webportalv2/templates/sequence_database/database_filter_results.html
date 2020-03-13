@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
+{% block content %}
+  <h2>{% trans 'Database Results'%}</h2>
+  <br>
+  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">{% trans 'View SEQIDs'%}</button>
+  <div id="criteria" class="collapse">
+  <br>
+  {% for seqid in seqids %}
+    <p>{% trans seqid %}</p>
+  {% endfor %}
+  </div>
+  <br>
+  <br>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ seqids|length }}</strong> {% trans 'results.'%}</p>
+  <!--idList passed in from view -->
+  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{ seqids }}')">{% trans 'Copy SeqIDs'%}</button>
+  <br>
+  <br>
+  <div class="alert alert-success" id="success" style="float:right;display:none">{% trans 'Copied to clipboard!'%}</div>
+  <br>
+  <br>
+  <br>
+    <table class="dbtable">
+        {% render_table table %}
+    </table>
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+
+  <!--function for copying SeqIDs to Clipboard -->
+  <script type="text/javascript">
+  function copySeq(text) {
+    var seqText = document.createElement("textarea");
+    document.body.appendChild(seqText);
+    seqText.value = text;
+    console.log(text);
+    seqText.select();
+    document.execCommand("copy");
+    document.body.removeChild(seqText);
+    var success = document.getElementById("success");
+    success.style.display ="initial";
+    $(success).fadeOut(1000);
+  }
+  </script>
+
+  {% endblock %}
