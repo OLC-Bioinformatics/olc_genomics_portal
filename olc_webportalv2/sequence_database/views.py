@@ -4,6 +4,7 @@ from django.conf import settings
 from olc_webportalv2.sequence_database.forms import DatabaseRequestForm
 from olc_webportalv2.sequence_database.models import DatabaseRequest, DatabaseRequestIDs, SequenceData, OLNID
 from olc_webportalv2.sequence_database.serializers import SequenceDataSerializer, OLNSerializer
+from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper
 import datetime
 from django.contrib.auth.decorators import login_required
 from dal import autocomplete
@@ -75,60 +76,6 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
                              'seqid': seqid,
                              'download_link': sas_url})
 
-
-# class GenusAutoCompleter(autocomplete.Select2ListView):
-#     def get_list(self):
-#         return make_genus_choice_list()
-
-
-# class SpeciesAutoCompleter(autocomplete.Select2ListView):
-#     def get_list(self):
-#         return make_species_choice_list()
-
-
-# class SerotypeAutoCompleter(autocomplete.Select2ListView):
-#     def get_list(self):
-#         return make_serotype_choice_list()
-
-
-# class MLSTAutoCompleter(autocomplete.Select2ListView):
-#     def get_list(self):
-#         return make_mlst_choice_list()
-
-
-# class RMLSTAutoCompleter(autocomplete.Select2ListView):
-#     def get_list(self):
-#         return make_rmlst_choice_list()
-
-
-from dal import autocomplete
-from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper
-# from olc_webportalv2.sequence_database.forms import DatabaseRequestForm
-
-# def find_list(name):
-#     categories = {'genus': Genus.objects.all(),
-#                   'species': Species.objects.all(),
-#                   'mlst': MLST.objects.all(),
-#                   'mlstcc': MLSTCC.objects.all(),
-#                   'rmlst': RMLST.objects.all(),
-#                   'geneseekr': GeneSeekr.objects.all(),
-#                   'serovar': Serovar.objects.all(),
-#                   'vtyper': Vtyper.objects.all()
-#                   }
-import itertools
-class GenericAutoCompleter(object):
-
-    def main(self):
-        print(list(itertools.permutations(self.permutations)))
-        for permutation in range(1, len(self.permutations) + 1):
-            for subset in itertools.combinations(self.permutations, permutation):
-                print(subset)
-
-    def __init__(self, permutations):
-        self.permutations = permutations
-        self.main()
-
-
 class GenusAutoCompleter(autocomplete.Select2ListView):
 
     def get_list(self):
@@ -136,28 +83,45 @@ class GenusAutoCompleter(autocomplete.Select2ListView):
         mlst = self.forwarded.get('mlst', None)
         rmlst = self.forwarded.get('rmlst', None)
         mlstcc = self.forwarded.get('mlstcc', None)
-        # ('species')
-        if species:
+        # ('species', 'mlst', 'rmlst', 'mlstcc')
+        if species and mlst and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
+            qs = qs.filter(species__species__iexact=species,
+                           mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('mlst')
-        elif mlst:
+        # ('species', 'mlst', 'rmlst')
+        elif species and mlst and rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
+            qs = qs.filter(species__species__iexact=species,
+                           mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('rmlst')
-        elif rmlst:
+        # ('species', 'mlst', 'mlstcc')
+        elif species and mlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(species__species__iexact=species,
+                           mlst__mlst__exact=mlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('mlstcc')
-        elif mlstcc:
+        # ('species', 'rmlst', 'mlstcc')
+        elif species and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(species__species__iexact=species,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
+            if self.q:
+                qs.filter(genus__genus__contains=self.q)
+        # ('mlst', 'rmlst', 'mlstcc')
+        elif mlst and rmlst and mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
         #  ('species', 'mlst')
@@ -202,45 +166,28 @@ class GenusAutoCompleter(autocomplete.Select2ListView):
                            mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlst', 'rmlst')
-        elif species and mlst and rmlst:
+        # ('species')
+        elif species:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(species__species__iexact=species)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlst', 'mlstcc')
-        elif species and mlst and mlstcc:
+        # ('mlst')
+        elif mlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(mlst__mlst__exact=mlst)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('species', 'rmlst', 'mlstcc')
-        elif species and rmlst and mlstcc:
+        # ('rmlst')
+        elif rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
-        # ('mlst', 'rmlst', 'mlstcc')
-        elif mlst and rmlst and mlstcc:
+        # ('mlstcc')
+        elif mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlst', 'rmlst', 'mlstcc')
-        elif species and mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
         else:
@@ -257,28 +204,45 @@ class SpeciesAutoCompleter(autocomplete.Select2ListView):
         mlst = self.forwarded.get('mlst', None)
         rmlst = self.forwarded.get('rmlst', None)
         mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus',)
-        if genus:
+        # ('genus', 'mlst', 'rmlst', 'mlstcc')
+        if genus and mlst and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('mlst',)
-        elif mlst:
+        # ('genus', 'mlst', 'rmlst')
+        elif genus and mlst and rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('rmlst',)
-        elif rmlst:
+        # ('genus', 'mlst', 'mlstcc')
+        elif genus and mlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           mlst__mlst__exact=mlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
+        # ('genus', 'rmlst', 'mlstcc')
+        elif genus and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
+            if self.q:
+                qs.filter(species__species__icontains=self.q)
+        # ('mlst', 'rmlst', 'mlstcc')
+        elif mlst and rmlst and mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(mlst__mlst__exact=mlst,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
         # ('genus', 'mlst')
@@ -323,45 +287,28 @@ class SpeciesAutoCompleter(autocomplete.Select2ListView):
                            mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst', 'rmlst')
-        elif genus and mlst and rmlst:
+        # ('genus',)
+        elif genus:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(genus__genus__iexact=genus)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst', 'mlstcc')
-        elif genus and mlst and mlstcc:
+        # ('mlst',)
+        elif mlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(mlst__mlst__exact=mlst)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('genus', 'rmlst', 'mlstcc')
-        elif genus and rmlst and mlstcc:
+        # ('rmlst',)
+        elif rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
-        # ('mlst', 'rmlst', 'mlstcc')
-        elif mlst and rmlst and mlstcc:
+        # ('mlstcc',)
+        elif mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst', 'rmlst', 'mlstcc')
-        elif genus and mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
         else:
@@ -379,28 +326,45 @@ class MLSTAutoCompleter(autocomplete.Select2ListView):
         species = self.forwarded.get('species', None)
         rmlst = self.forwarded.get('rmlst', None)
         mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus',)
-        if genus:
+        # ('genus', 'species', 'rmlst', 'mlstcc')
+        if genus and species and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           species__species__iexact=species,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('species',)
-        elif species:
+        # ('genus', 'species', 'rmlst')
+        elif genus and species and rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           species__species__iexact=species,
+                           rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('rmlst',)
-        elif rmlst:
+        # ('genus', 'species', 'mlstcc')
+        elif genus and species and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           species__species__iexact=species,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
+        # ('genus', 'rmlst', 'mlstcc')
+        elif genus and rmlst and mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(genus__genus__iexact=genus,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
+            if self.q:
+                qs.filter(mlst__mlst__icontains=self.q)
+        # ('species', 'rmlst', 'mlstcc')
+        elif species and rmlst and mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(species__species__iexact=species,
+                           rmlst__rmlst__exact=rmlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
         # ('genus', 'species')
@@ -445,45 +409,28 @@ class MLSTAutoCompleter(autocomplete.Select2ListView):
                            mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species', 'rmlst')
-        elif genus and species and rmlst:
+        # ('genus',)
+        elif genus:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
+            qs = qs.filter(genus__genus__iexact=genus)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species', 'mlstcc')
-        elif genus and species and mlstcc:
+        # ('species',)
+        elif species:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(species__species__iexact=species)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'rmlst', 'mlstcc')
-        elif genus and rmlst and mlstcc:
+        # ('rmlst',)
+        elif rmlst:
             qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(rmlst__rmlst__exact=rmlst)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
-        # ('species', 'rmlst', 'mlstcc')
-        elif species and rmlst and mlstcc:
+        # ('mlstcc',)
+        elif mlstcc:
             qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species', 'rmlst', 'mlstcc')
-        elif genus and species and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
+            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
         else:
@@ -502,69 +449,12 @@ class RMLSTAutoCompleter(autocomplete.Select2ListView):
         species = self.forwarded.get('species', None)
         mlst = self.forwarded.get('mlst', None)
         mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus',)
-        if genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species',)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlst',)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'species')
-        elif genus and species:
+        # ('genus', 'species', 'mlst', 'mlstcc')
+        if genus and species and mlst and mlstcc:
             qs = SequenceData.objects.all()
             qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'mlst')
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'mlstcc')
-        elif genus and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species', 'mlst')
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species', 'mlstcc')
-        elif species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlst', 'mlstcc')
-        elif mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
+                           species__species__iexact=species,
+                           mlst__mlst__exact=mlst,
                            mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(rmlst__rmlst__icontains=self.q)
@@ -600,13 +490,72 @@ class RMLSTAutoCompleter(autocomplete.Select2ListView):
                            mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'species', 'mlst', 'mlstcc')
-        elif genus and species and mlst and mlstcc:
+        # ('genus', 'species')
+        elif genus and species:
             qs = SequenceData.objects.all()
             qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
+                           species__species__iexact=species)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('genus', 'mlst')
+        elif genus and mlst:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(genus__genus__iexact=genus,
+                           mlst__mlst__exact=mlst)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('genus', 'mlstcc')
+        elif genus and mlstcc:
+            print('genus and mlstcc', genus, mlstcc)
+            qs = SequenceData.objects.all()
+            qs = qs.filter(genus__genus__iexact=genus,
                            mlst_cc__mlst_cc__exact=mlstcc)
+            print(len(qs))
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('species', 'mlst')
+        elif species and mlst:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(species__species__iexact=species,
+                           mlst__mlst__exact=mlst)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('species', 'mlstcc')
+        elif species and mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(species__species__iexact=species,
+                           mlst_cc__mlst_cc__exact=mlstcc)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('mlst', 'mlstcc')
+        elif mlst and mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(mlst__mlst__exact=mlst,
+                           mlst_cc__mlst_cc__exact=mlstcc)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('genus',)
+        elif genus:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(genus__genus__iexact=genus)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('species',)
+        elif species:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(species__species__iexact=species)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('mlst',)
+        elif mlst:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(mlst__mlst__exact=mlst)
+            if self.q:
+                qs.filter(rmlst__rmlst__icontains=self.q)
+        # ('mlstcc',)
+        elif mlstcc:
+            qs = SequenceData.objects.all()
+            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
             if self.q:
                 qs.filter(rmlst__rmlst__icontains=self.q)
         else:
@@ -615,105 +564,6 @@ class RMLSTAutoCompleter(autocomplete.Select2ListView):
                 qs.filter(rmlst__icontains=self.q)
         int_output = sorted(list(set(int(str(result.rmlst)) for result in qs if str(result.rmlst) != 'ND')))
         return [str(integer) for integer in int_output]
-
-
-class GeneseekrAutoCompleter(autocomplete.Select2ListView):
-    def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
-
-        if genus and species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus and species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus and species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(geneseekr__geneseekr__icontains=self.q)
-        else:
-            qs = UniqueGeneSeekr.objects.all()
-            if self.q:
-                qs.filter(geneseekr__icontains=self.q)
-        return sorted(list(set(str(result.geneseekr) for result in qs)))
 
 
 class MLSTCCAutoCompleter(autocomplete.Select2ListView):
@@ -813,220 +663,6 @@ class MLSTCCAutoCompleter(autocomplete.Select2ListView):
             if self.q:
                 qs.filter(mlst_cc__icontains=self.q)
         return sorted(list(set(str(result.mlst_cc) for result in qs)))
-
-
-class SerovarAutoCompleter(autocomplete.Select2ListView):
-    def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
-
-        if genus and species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus and species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus and species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
-        else:
-            qs = UniqueSerovar.objects.all()
-            print(self.q)
-            if self.q:
-                qs.filter(serotype__icontains=self.q)
-        return sorted(list(set(str(result.serovar) for result in qs)))
-
-
-class VtyperAutoCompleter(autocomplete.Select2ListView):
-    def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
-
-        if genus and species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus and species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus and species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(vtyper__vtyper__icontains=self.q)
-        else:
-            qs = UniqueVtyper.objects.all()
-            if self.q:
-                qs.filter(vtyper__icontains=self.q)
-        return sorted(list(set(str(result.vtyper) for result in qs)))
-# # @login_required
-# class DatabaseSearch(autocomplete.Select2QuerySetView):
-#
-#     def get_queryset(self):
-#         qs = SequenceData.objects.all()
-#
-#         genus = self.forwarded.get('genus', None)
-#
-#         if genus:
-#             qs = qs.filter(genus__genus__istartswith=genus)
-#
-#         if self.q:
-#             qs.filter(species__species__istartswith=self.q)
-#
-#         return qs
 
 
 # Create your views here.
