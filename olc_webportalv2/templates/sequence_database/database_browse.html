@@ -2,53 +2,66 @@
 {#Head container#}
 {% load staticfiles %}
 {% load bootstrap %}
+{% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
 {% block content %}
-  <h2>{% trans 'Databse Browse'%}</h2>
-  <table id="database-browse-table" class="table table-hover">
-    <thead>
-      <tr>
-        <th>{% trans 'SeqID'%}</th>
-        <th>{% trans 'LabID'%}</th>
-        <th>{% trans 'Genus'%}</th>
-        <th>{% trans 'Species'%}</th>
-        <th>{% trans 'Serotype'%}</th>
-        <th>{% trans 'MLST'%}</th>
-        <th>{% trans 'rMLST'%}</th>
-        <th>{% trans 'Assembly Quality'%}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for sequence in sequence_data %}
-        <tr>
-          <td>{{ sequence.seqid }}</td>
-          <td>{{ sequence.labid.labid }}</td>
-          <td>{{ sequence.genus }}</td>
-          <td>{{ sequence.species }}</td>
-          <td>{{ sequence.serotype }}</td>
-          <td>{{ sequence.mlst }}</td>
-          <td>{{ sequence.rmlst }}</td>
-          <td>{% trans sequence.quality %}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <h2>{% trans "Database Query Design" %}</h2>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% csrf_token %}
+        <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans 'Enter the assembly range'%}  <br>From: {{ date.start_date }} to: {{ date.end_date }} </p>
+        {{ form_set.management_form }}
+        {% for query in form_set %}
+            <div class="sample_formset">
+                <div class="form-row">
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                        {{ query.database_fields|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                        {{ query.query_operators|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                        {{ query.qualifiers|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                        {{ query.query|as_crispy_field }}
+                    </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'js/datatables.min.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
-  <script type="text/javascript">
-  $(document).ready(function () {
-    var lang = document.documentElement.lang;
-    var i = 'All';
-    if (lang == "fr"){
-      var i = 'Tout';
-    }
-    $('#database-browse-table').DataTable(
-      {language : {
-        url: getLanguage()
-    }, "lengthMenu": [[100, -1], ['100', i]],
-    });
-  });
-  </script>
+        <br>
+        <br>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create samples" %}</button>
+    </form>
+    <table class="dbtable">
+        {% render_table database_result %}
+    </table>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+    <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> // Allows adding and removal of formsets
+        $('.sample_formset').formset({
+            addText: '<i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
+            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %} <br></br><br>'
+        });
+        $('.datepicker').datepicker({
+            format: "yyyy-mm-dd",
+            language: "{{LANGUAGE_CODE}}",
+            orientation: "bottom auto"
+        });
+        </script>
+    <script type="text/javascript">
+        $('.add-row').click(function(){
+            $('.datepicker').datepicker({
+                format: "yyyy-mm-dd",
+                language: "{{LANGUAGE_CODE}}",
+                orientation: "bottom auto"
+            });
+        })
+        </script>
 {% endblock %}

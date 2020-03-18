@@ -1,17 +1,20 @@
 from olc_webportalv2.sequence_database import views
+from olc_webportalv2.sequence_database.models import SequenceData
+from olc_webportalv2.sequence_database.filters import SequenceDatabaseFilter
 from django.conf.urls import url, include
 from django.urls import path
 from rest_framework.urlpatterns import format_suffix_patterns
 from rest_framework.schemas import get_schema_view
 from django.utils.translation import gettext_lazy as _
-
+from django_filters.views import FilterView
 schema_view = get_schema_view(title='Metadata API')
 
 urlpatterns = [
     url(_(r'^database_filter/'), views.database_filter, name='database_filter'),
     url(_(r'^database_results/(?P<database_request_pk>\d+)/$'), views.database_results, name='database_results'),
     url(_(r'^database_filter_results/'), views.database_filter_results, name='database_filter_results'),
-    url(_(r'^database_browse/'), views.database_browse, name='database_browse'),
+    url(_(r'^database_browse/$'), views.database_browse, name='database_browse'),
+    # url(_(r'^database_browse/$'), views.database_browse, name='database_browse'),
 
 
     # Views for autocompletion
@@ -30,15 +33,6 @@ urlpatterns = [
     url(r'^rmlst_autocompleter/$',
         views.RMLSTAutoCompleter.as_view(),
         name='rmlst_autocompleter'),
-    # url(r'^geneseekr_autocompleter/$',
-    #     views.GeneseekrAutoCompleter.as_view(),
-    #     name='geneseekr_autocompleter'),
-    # url(r'^serovar_autocompleter/$',
-    #     views.SerovarAutoCompleter.as_view(),
-    #     name='serovar_autocompleter'),
-    # url(r'^vtyper_autocompleter/$',
-    #     views.VtyperAutoCompleter.as_view(),
-    #     name='vtyper_autocompleter'),
 
     # REST API Stuff
     path('sequencedata/', views.SequenceDataList.as_view()),

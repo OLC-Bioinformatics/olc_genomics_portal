@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load static %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load widget_tweaks %}
+
+{% block content %}
+  <form method="get">
+    <div class="well">
+      <h4 style="margin-top: 0">Filter</h4>
+      <div class="row">
+        <div class="form-group col-sm-4 col-md-3">
+          {{ filter.form.genus.label_tag }}
+          {% render_field filter.form.genus class="form-control" %}
+        </div>
+        <div class="form-group col-sm-4 col-md-3">
+          {{ filter.form.species.label_tag }}
+          {% render_field filter.form.species class="form-control" %}
+        </div>
+        <div class="form-group col-sm-4 col-md-3">
+          {{ filter.form.mlst.label_tag }}
+          {% render_field filter.form.mlst class="form-control" %}
+        </div>
+        <div class="form-group col-sm-4 col-md-3">
+          {{ filter.form.rmlst.label_tag }}
+          {% render_field filter.form.rmlst class="form-control" %}
+        </div>
+        <div class="form-group col-sm-4 col-md-3">
+          {{ filter.form.mlst_cc.label_tag }}
+          {% render_field filter.form.mlst_cc class="form-control" %}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <span class="glyphicon glyphicon-search"></span> Search
+      </button>
+    </div>
+  </form>
+
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Genus</th>
+        <th>Species</th>
+        <th>MLST Profile</th>
+        <th>rMLST Profile</th>
+        <th>MLST CC</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in filter.qs %}
+        <tr>
+          <td>{{ user.genus }}</td>
+          <td>{{ user.species }}</td>
+          <td>{{ user.mlst }}</td>
+          <td>{{ user.rmlst }}</td>
+          <td>{{ user.mlst_cc }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5">No data</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

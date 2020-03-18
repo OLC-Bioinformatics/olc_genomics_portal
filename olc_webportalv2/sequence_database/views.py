@@ -798,25 +798,105 @@ def database_results(request, database_request_pk):
                       'database_result': database_result, 'idList': id_list
                   })
 
+from django.db.models import Q
+from django.forms.formsets import formset_factory
+from olc_webportalv2.sequence_database.filters import SequenceDatabaseFilter
+from olc_webportalv2.sequence_database.forms import DatabaseFieldForm, SequenceDatabaseBaseFormSet, DatabaseDateForm
 
-@login_required
+def form_lookup(form):
+    lookup_dict = {
+        'GENUS': 'genus__genus',
+        'SPECIES': 'species__species',
+        'MLST': 'mlst__mlst',
+        'RMLST': 'rmlst__rmlst',
+        'MLSTCC': 'mlst_cc__mlst_cc',
+        'GENESEEKR': 'geneseekr__geneseekr',
+        'SEROVAR': 'serovar__serovar',
+        'VTYPER': 'vtyper__vtyper',
+        'PIPELINE VERSION': 'version',
+        'CONTAINS': 'icontains',
+        'EXACT': 'iexact'
+    }
+    field = lookup_dict[form.cleaned_data.get('database_fields')]
+    qualifier = lookup_dict[form.cleaned_data.get('qualifiers')]
+
+    return field, qualifier
+
+@login_required()
 def database_browse(request):
-    sequence_data = SequenceData.objects.filter().select_related('labid')
+    database_date = DatabaseDateForm()
+    database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
+    query_set = SequenceData.objects.all()
+    if request.method == 'POST':
+        database_date = DatabaseDateForm(request.POST)
+        database_form_set = database_formset_factory(request.POST)
+        if database_date.is_valid() and database_form_set.is_valid():
+            start = database_date.cleaned_data.get('start_date')
+            end = database_date.cleaned_data.get('end_date')
+            print('start', start, 'end', end)
+            if start is None:
+                start = datetime.datetime.strptime("-".join(['1900', '1', '1']), '%Y-%m-%d')
+            if end is None:
+                end = datetime.date.today()
+                end = end.strftime('%Y-%m-%d')
+            print('before date', len(query_set))
+            query_set = query_set.filter(typing_date__range=[start, end])
+            print('after date', len(query_set))
+            print('VALID!')
+            # Uses logic from: https://djangosnippets.org/snippets/1700/
+            q = Q()
+            for form in database_form_set:
+                if form.cleaned_data:
+                    print(form.cleaned_data)
+                    # field = form.cleaned_data.get('database_fields')
+                    # qualifier = form.cleaned_data.get('qualifiers')
+                    field, qualifier = form_lookup(form=form)
+                    operator = form.cleaned_data.get('query_operators')
+                    query = form.cleaned_data.get('query')
+                    if query != '' and query is not None:
+                        kwargs = {
+                            str('{db_table}__{qualifier}'.format(db_table=field,
+                                                                 qualifier=qualifier)): str(query)
+                        }
+                        if operator == 'AND':
+                            # queries.append(q & Q(**kwargs))
+                            q = q & Q(**kwargs)
+                        elif operator == 'OR':
+                            q = q | Q(**kwargs)
+                            # queries.append(q | Q(**kwargs))
+                        elif operator == 'NOT':
+                            q = q & ~Q(**kwargs)
+                            # queries.append(q & ~Q(**kwargs))
+                        else:
+                            pass
+            print('query', str(q))
+            query_set = query_set.filter(q)
+            print(len(query_set))
+            # for query in queries:
+            #     print('query', str(query))
+            #     query_set.filter(query)
+            #     print(len(query_set))
+    else:
+        # sample_form_set = sample_form_set_factory()
+        database_form_set = database_formset_factory()
     return render(request,
                   'sequence_database/database_browse.html',
                   {
-                      'sequence_data': sequence_data
-
+                      'form_set': database_form_set,
+                      'date': database_date,
+                      'database_result': query_set
                   })
 
+from django_filters.views import FilterView
+from django_tables2.views import SingleTableMixin
 from django_tables2 import SingleTableView
 from olc_webportalv2.sequence_database.tables import SequenceDataTable
 
-
-class DatabaseFilterResults(SingleTableView):
+class DatabaseFilterResults(SingleTableMixin, FilterView):
 
     model = SequenceData
     table_class = SequenceDataTable
+    filterset_class = SequenceDatabaseFilter
 
 @login_required
 def database_filter_results(request):

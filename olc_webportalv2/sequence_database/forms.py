@@ -1,9 +1,10 @@
 from django import forms
 from dal import autocomplete, forward
 from olc_webportalv2.sequence_database.models import Genus, Species, Serovar, MLST, MLSTCC, RMLST, SequenceData, GeneSeekr, \
-    Vtyper, UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper
+    Vtyper, UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper, DatabaseQuery
 from django.utils.translation import ugettext_lazy as _
-
+from django.forms.formsets import BaseFormSet
+from django.forms import ModelForm
 
 class DatabaseRequestForm(forms.Form):
 
@@ -69,46 +70,12 @@ class DatabaseRequestForm(forms.Form):
                                                                              forward.Field('vtyper', ))),
                                    required=False
                                    )
-    # geneseekr = forms.ModelChoiceField(MLST.objects.all(),
-    #                                    widget=autocomplete.ModelSelect2(url='sequence_database:geneseekr_autocompleter',
-    #                                                                     forward=(forward.Field('genus', ),
-    #                                                                              forward.Field('species', ),
-    #                                                                              forward.Field('mlst', ),
-    #                                                                              forward.Field('mlstcc', ),
-    #                                                                              forward.Field('rmlst', ),
-    #                                                                              forward.Field('serovar', ),
-    #                                                                              forward.Field('vtyper', )))
-    #                                    )
-    # serovar = forms.ModelChoiceField(MLST.objects.all(),
-    #                                  widget=autocomplete.ModelSelect2(url='sequence_database:serovar_autocompleter',
-    #                                                                   forward=(forward.Field('genus', ),
-    #                                                                            forward.Field('species', ),
-    #                                                                            forward.Field('mlst', ),
-    #                                                                            forward.Field('mlstcc', ),
-    #                                                                            forward.Field('rmlst', ),
-    #                                                                            forward.Field('geneseekr', ),
-    #                                                                            forward.Field('vtyper', )))
-    #                                  )
-    # vtyper = forms.ModelChoiceField(MLST.objects.all(),
-    #                                 widget=autocomplete.ModelSelect2(url='sequence_database:vtyper_autocompleter',
-    #                                                                  forward=(forward.Field('genus', ),
-    #                                                                           forward.Field('species', ),
-    #                                                                           forward.Field('mlst', ),
-    #                                                                           forward.Field('mlstcc', ),
-    #                                                                           forward.Field('rmlst', ),
-    #                                                                           forward.Field('serovar', ),
-    #                                                                           forward.Field('vtyper', )))
-    #                                )
     geneseekr = forms.CharField(max_length=48, widget=forms.TextInput(),
                                 required=False)
     serovar = forms.CharField(max_length=48, widget=forms.TextInput(),
                               required=False)
     vtyper = forms.CharField(max_length=48, widget=forms.TextInput(),
                              required=False)
-    # seqids = forms.CharField(max_length=48, widget=forms.Textarea(),
-    #                          required=False)
-    # cfiaids = forms.CharField(max_length=48, widget=forms.Textarea(),
-    #                           required=False)
     start_date = forms.DateField(widget=forms.DateInput(
         attrs={
             'class': 'datepicker',
@@ -124,31 +91,60 @@ class DatabaseRequestForm(forms.Form):
     ),
         required=False)
 
-    # class Meta:
-    #     model = SequenceData
-    #     fields = ['genus', 'species', 'mlst', 'mlstcc', 'rmlst', 'geneseekr', 'serovar', 'vtyper']
-    #
-    # def is_valid(self):
-    #     valid = super(DatabaseRequestForm, self).is_valid()
-    #
-    #     if not valid:
-    #         print('Errors')
-    #         for key, value in vars(self).items():
-    #             print(key, value)
-    #     else:
-    #         print('validation')
-    #         for key, value in vars(self).items():
-    #             print(key, value)
-    #
     def clean(self):
         super().clean()
-        print('spring cleaning')
-        print(self.cleaned_data)
-    #
-    # def clean_genus(self):
-    #     # super().clean()
-    #     print('accio')
-    #     genus = self.cleaned_data.get('genus')
-    #     print('genus', genus)
-    #     if genus:
-    #         return str(genus)
+
+
+class SequenceDatabaseBaseFormSet(BaseFormSet):
+    def clean(self):
+        super().clean()
+
+
+# class BaseModelForm(ModelForm):
+#
+#     def __init__(self, *args, **kwargs):
+#         kwargs.setdefault('auto_id', '%s')
+#         kwargs.setdefault('label_suffix', '')
+#         super().__init__(*args, **kwargs)
+#         # for data in self.data:
+#         #     print('data', data)
+#         for field_name in self.fields:
+#             field = self.fields.get(field_name)
+#             if field:
+#                 field.widget.attrs.update({
+#                     'placeholder': field.help_text,
+#                 })
+#                 if field_name == 'query':
+#                     # print(self.fields['database_fields'])
+#                     # print('field', dir(field))
+#                     # for key, value in vars(self.fields['database_fields']).items():
+#                     #     print(key, value)
+#                     field.widget = forms.TextInput(
+#                         attrs={
+#                             'class': 'datepicker',
+#                             'autocomplete': 'off',
+#                         }
+#                     )
+
+class DatabaseFieldForm(ModelForm):
+
+    class Meta:
+        model = DatabaseQuery
+        fields = ['database_fields', 'query_operators', 'qualifiers', 'query']
+
+
+class DatabaseDateForm(forms.Form):
+    start_date = forms.DateField(widget=forms.DateInput(
+        attrs={
+            'class': 'datepicker',
+            'autocomplete': 'off',
+        }
+    ),
+        required=False)
+    end_date = forms.DateField(widget=forms.DateInput(
+        attrs={
+            'class': 'datepicker',
+            'autocomplete': 'off',
+        }
+    ),
+        required=False)

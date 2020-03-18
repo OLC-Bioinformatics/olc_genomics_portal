@@ -44,7 +44,7 @@ class Species(models.Model):
 class MLST(models.Model):
     seqid = models.CharField(max_length=24)
     mlst = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -54,7 +54,7 @@ class MLST(models.Model):
 class MLSTCC(models.Model):
     seqid = models.CharField(max_length=24)
     mlst_cc = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -64,7 +64,7 @@ class MLSTCC(models.Model):
 class RMLST(models.Model):
     seqid = models.CharField(max_length=24)
     rmlst = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -74,7 +74,7 @@ class RMLST(models.Model):
 class GeneSeekr(models.Model):
     seqid = models.CharField(max_length=24)
     geneseekr = models.CharField(max_length=48, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -84,7 +84,7 @@ class GeneSeekr(models.Model):
 class Vtyper(models.Model):
     seqid = models.CharField(max_length=24)
     vtyper = models.CharField(max_length=48, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -94,7 +94,7 @@ class Vtyper(models.Model):
 class Serovar(models.Model):
     seqid = models.CharField(max_length=24)
     serovar = models.CharField(max_length=512, blank=True, verbose_name=_("serovar"),)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
 
     def __str__(self):
@@ -183,7 +183,7 @@ class SequenceData(models.Model):
     seqid = models.CharField(max_length=24, verbose_name=_('SEQID'))
 
     cfiaid = models.ForeignKey(NameTable, on_delete=models.CASCADE, verbose_name=_('CFIA ID'))
-    rmlst = models.ForeignKey(RMLST, on_delete=models.CASCADE, null=True, verbose_name=_(r'MLST Profile'))  # Same as MLST. Numeric, but categorical.
+    rmlst = models.ForeignKey(RMLST, on_delete=models.CASCADE, null=True, verbose_name=_('rMLST Profile'))  # Same as MLST. Numeric, but categorical.
     mlst = models.ForeignKey(MLST, on_delete=models.CASCADE, null=True, verbose_name=_('MLST Profile'))  # MLST is numeric, but categorical, so keep as CharField
     mlst_cc = models.ForeignKey(MLSTCC, on_delete=models.CASCADE, null=True, verbose_name=_('MLST Clonal Complex'))  # MLST is numeric, but categorical, so keep as CharField
     #
@@ -217,5 +217,57 @@ class DatabaseRequest(models.Model):
     serovar = models.CharField(max_length=512)
     geneseekr = models.CharField(max_length=48)
     vtyper = models.CharField(max_length=48)
-    version = models.CharField(max_length=48, verbose_name=_('database_version'), blank=True, null=True)
+    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
     typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+
+
+class DatabaseQuery(models.Model):
+
+    SEQID = 'SEQID'
+    CFIAID = 'CFIAID'
+    GENUS = 'GENUS'
+    SPECIES = 'SPECIES'
+    MLST = 'MLST'
+    MLSTCC = 'MLSTCC'
+    RMLST = 'RMLST'
+    GENESEEKR = 'GENESEEKR'
+    SEROVAR = 'SEROVAR'
+    VTYPER = 'VTYPER'
+    VERSION = 'VERSION'
+
+    FIELDS = [
+        # (SEQID, _('SEQID')),
+        # (CFIAID, _('CFIA ID')),
+        (GENUS, _('Genus')),
+        (SPECIES, _('Species')),
+        (MLST, _('MLST Profile')),
+        (MLSTCC, _('MLST Clonal Complex')),
+        (RMLST, _('rMLST Profile')),
+        (GENESEEKR, _('GeneSeekr Profile')),
+        (SEROVAR, _('Serovar')),
+        (VTYPER, _('Vtyper Profile')),
+        (VERSION, _('Pipeline Version'))
+    ]
+
+    AND = 'AND'
+    OR = 'OR'
+    NOT = 'NOT'
+
+    OPERATORS = [
+        (AND, _('and')),
+        (OR, _('or')),
+        (NOT, _('not'))
+    ]
+
+    CONTAINS = 'CONTAINS'
+    EXACT = 'EXACT'
+
+    QUALIFIERS = [
+        (CONTAINS, _('contains')),
+        (EXACT, _('exact')),
+    ]
+    # lab_ID = models.CharField(max_length=64, choices=LABS, default=STHY, blank=False)
+    database_fields = models.CharField(max_length=24, choices=FIELDS, default=GENUS, blank=False)
+    query_operators = models.CharField(max_length=12, choices=OPERATORS, default=AND, blank=False)
+    qualifiers = models.CharField(max_length=12, choices=QUALIFIERS, default=CONTAINS, blank=False)
+    query = models.CharField(max_length=48)
