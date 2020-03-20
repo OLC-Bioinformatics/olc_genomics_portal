@@ -813,7 +813,7 @@ def form_lookup(form):
         'GENESEEKR': 'geneseekr__geneseekr',
         'SEROVAR': 'serovar__serovar',
         'VTYPER': 'vtyper__vtyper',
-        'PIPELINE VERSION': 'version',
+        'VERSION': 'version',
         'CONTAINS': 'icontains',
         'EXACT': 'iexact'
     }
@@ -828,6 +828,7 @@ def database_browse(request):
     database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
     query_set = SequenceData.objects.all()
     if request.method == 'POST':
+        query_set = SequenceData.objects.all()
         database_date = DatabaseDateForm(request.POST)
         database_form_set = database_formset_factory(request.POST)
         if database_date.is_valid() and database_form_set.is_valid():

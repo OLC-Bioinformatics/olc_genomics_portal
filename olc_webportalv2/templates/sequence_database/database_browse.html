@@ -9,7 +9,7 @@
     <h2>{% trans "Database Query Design" %}</h2>
     <form action='' enctype="multipart/form-data" method="post" novalidate>
         {% csrf_token %}
-        <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans 'Enter the assembly range'%}  <br>From: {{ date.start_date }} to: {{ date.end_date }} </p>
+        <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans '(Optional) enter the assembly range'%}  <br>From: {{ date.start_date }} to: {{ date.end_date }} </p>
         {{ form_set.management_form }}
         {% for query in form_set %}
             <div class="sample_formset">
@@ -23,17 +23,15 @@
                     <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
                         {{ query.qualifiers|as_crispy_field }}
                     </div>
-                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
                         {{ query.query|as_crispy_field }}
                     </div>
                     </div>
                 </div>
-            </div>
         {% endfor %}
-
         <br>
         <br>
-        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create samples" %}</button>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
     </form>
     <table class="dbtable">
         {% render_table database_result %}
@@ -46,8 +44,8 @@
     <script src="{% static 'js/jquery.formset.js' %}"></script>
     <script type="text/javascript"> // Allows adding and removal of formsets
         $('.sample_formset').formset({
-            addText: '<i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
-            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %} <br></br><br>'
+            addText: '<br><i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
+            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %}<br>'
         });
         $('.datepicker').datepicker({
             format: "yyyy-mm-dd",
