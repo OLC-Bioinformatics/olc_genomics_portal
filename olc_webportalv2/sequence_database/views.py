@@ -1,16 +1,19 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render
 from django.http import JsonResponse
 from django.conf import settings
-from olc_webportalv2.sequence_database.forms import DatabaseRequestForm
-from olc_webportalv2.sequence_database.models import DatabaseRequest, DatabaseRequestIDs, SequenceData, OLNID
+from olc_webportalv2.sequence_database.forms import DatabaseRequestForm, DatabaseIDsForm, DatabaseFieldForm, \
+    SequenceDatabaseBaseFormSet, DatabaseDateForm
+from olc_webportalv2.sequence_database.models import DatabaseRequest, SequenceData, OLNID, LookupTable, UniqueGenus, \
+    UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST
 from olc_webportalv2.sequence_database.serializers import SequenceDataSerializer, OLNSerializer
-from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper
 import datetime
 from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination
 from azure.storage.blob import BlockBlobService, BlobPermissions
-from django.utils.translation import ugettext_lazy as _
+# from django.utils.translation import ugettext_lazy as _
+from django.db.models import Q
+from django.forms.formsets import formset_factory
 
 
 # Not sure where to put this - create pagination.py?
@@ -76,361 +79,127 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
                              'seqid': seqid,
                              'download_link': sas_url})
 
+
+@login_required
+def database_home(request):
+    return render(request, 'sequence_database/database_home.html')
+
+
+def generic_autocompleter(non_target_dict):
+    """
+    Use Q objects to create an autocomplete filter based on the input dictionary
+    :param: non_target_dict: Dictionary of field name: query e.g. rmlst: 2124
+    :return Filtered query set
+    """
+    #  Initialise a Q object for building the queries
+    q = Q()
+    #  The query set will begin as all entries in the SequenceData model
+    qs = SequenceData.objects.all()
+    # Dictionary linking the field name to the appropriate table in the SequenceData model
+    lookup_dict = {
+        'genus': 'genus__genus',
+        'species': 'species__species',
+        'mlst': 'mlst__mlst',
+        'rmlst': 'rmlst__rmlst',
+        'mlstcc': 'mlst_cc__mlst_cc',
+    }
+    # Iterate through all the fields in the dictionary
+    for field, query in non_target_dict.items():
+        # Only update the Q object if the query string exists
+        if query:
+            # Set the kwargs as the table lookup: query e.g. rmlst__rmlst: 2124
+            kwargs = {
+                str('{db_table}'.format(db_table=lookup_dict[field])): str(query)
+            }
+            # Update the Q object with the kwargs
+            q = q & Q(**kwargs)
+    # Filter the query set with the Q object
+    qs = qs.filter(q)
+    return qs
+
+
+def category_chooser(target):
+    """
+    Create a list of non-targets from a list of all possible non-targets by eliminating the single provided target
+    :param target: Current category being investigated e.g. genus
+    :return: List of non-targets
+    """
+    # Initialise the list
+    non_targets = list()
+    # Iterate through all possible target categories
+    for category in ['genus', 'species', 'mlst', 'rmlst', 'mlstcc']:
+        # Add the current category to the list if it does not match the name of the target
+        if category != target:
+            non_targets.append(category)
+    return non_targets
+
+
 class GenusAutoCompleter(autocomplete.Select2ListView):
 
+    def __init__(self, **kwargs):
+        self.category = 'genus'
+        super().__init__(**kwargs)
+
     def get_list(self):
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
-        mlstcc = self.forwarded.get('mlstcc', None)
-        # ('species', 'mlst', 'rmlst', 'mlstcc')
-        if species and mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlst', 'rmlst')
-        elif species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlst', 'mlstcc')
-        elif species and mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'rmlst', 'mlstcc')
-        elif species and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('mlst', 'rmlst', 'mlstcc')
-        elif mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        #  ('species', 'mlst')
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'rmlst')
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species', 'mlstcc')
-        elif species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('mlst', 'rmlst')
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('mlst', 'mlstcc')
-        elif mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('rmlst', 'mlstcc')
-        elif rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('species')
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('mlst')
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('rmlst')
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(genus__genus__contains=self.q)
-        # ('mlstcc')
-        elif mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
                 qs.filter(genus__genus__contains=self.q)
         else:
             qs = UniqueGenus.objects.all()
             if self.q:
-                qs.filter(genus__contains=self.q)
-
+                qs.filter(genus__icontains=self.q)
         return sorted(list(set(str(result.genus) for result in qs)))
 
 
 class SpeciesAutoCompleter(autocomplete.Select2ListView):
+
+    def __init__(self, **kwargs):
+        self.category = 'species'
+        super().__init__(**kwargs)
+
     def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
-        mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus', 'mlst', 'rmlst', 'mlstcc')
-        if genus and mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst', 'rmlst')
-        elif genus and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst', 'mlstcc')
-        elif genus and mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'rmlst', 'mlstcc')
-        elif genus and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('mlst', 'rmlst', 'mlstcc')
-        elif mlst and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlst')
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'rmlst')
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus', 'mlstcc')
-        elif genus and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('mlst', 'rmlst')
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('mlst', 'mlstcc')
-        elif mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('rmlst', 'mlstcc')
-        elif rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('genus',)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('mlst',)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('rmlst',)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(species__species__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
                 qs.filter(species__species__icontains=self.q)
         else:
             qs = UniqueSpecies.objects.all()
             if self.q:
                 qs.filter(species__icontains=self.q)
-
         return sorted(list(set(str(result.species) for result in qs)))
 
 
 class MLSTAutoCompleter(autocomplete.Select2ListView):
 
+    def __init__(self, **kwargs):
+        self.category = 'mlst'
+        super().__init__(**kwargs)
+
     def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        rmlst = self.forwarded.get('rmlst', None)
-        mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus', 'species', 'rmlst', 'mlstcc')
-        if genus and species and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species', 'rmlst')
-        elif genus and species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species', 'mlstcc')
-        elif genus and species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'rmlst', 'mlstcc')
-        elif genus and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('species', 'rmlst', 'mlstcc')
-        elif species and rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'species')
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'rmlst')
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus', 'mlstcc')
-        elif genus and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('species', 'rmlst')
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('species', 'mlstcc')
-        elif species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('rmlst', 'mlstcc')
-        elif rmlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('genus',)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('species',)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('rmlst',)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
                 qs.filter(mlst__mlst__icontains=self.q)
         else:
@@ -443,119 +212,20 @@ class MLSTAutoCompleter(autocomplete.Select2ListView):
 
 class RMLSTAutoCompleter(autocomplete.Select2ListView):
 
+    def __init__(self, **kwargs):
+        self.category = 'rmlst'
+        super().__init__(**kwargs)
+
     def get_list(self):
-        # GenericAutoCompleter(permutations=['genus', 'species', 'mlst', 'mlstcc'])
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        mlstcc = self.forwarded.get('mlstcc', None)
-        # ('genus', 'species', 'mlst', 'mlstcc')
-        if genus and species and mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'species', 'mlst')
-        elif genus and species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'species', 'mlstcc')
-        elif genus and species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'mlst', 'mlstcc')
-        elif genus and mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species', 'mlst', 'mlstcc')
-        elif species and mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'species')
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'mlst')
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus', 'mlstcc')
-        elif genus and mlstcc:
-            print('genus and mlstcc', genus, mlstcc)
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            print(len(qs))
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species', 'mlst')
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species', 'mlstcc')
-        elif species and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlst', 'mlstcc')
-        elif mlst and mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           mlst_cc__mlst_cc__exact=mlstcc)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('genus',)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('species',)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlst',)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
-        # ('mlstcc',)
-        elif mlstcc:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst_cc__mlst_cc__exact=mlstcc)
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
                 qs.filter(rmlst__rmlst__icontains=self.q)
         else:
@@ -567,95 +237,21 @@ class RMLSTAutoCompleter(autocomplete.Select2ListView):
 
 
 class MLSTCCAutoCompleter(autocomplete.Select2ListView):
-    def get_list(self):
-        genus = self.forwarded.get('genus', None)
-        species = self.forwarded.get('species', None)
-        mlst = self.forwarded.get('mlst', None)
-        rmlst = self.forwarded.get('rmlst', None)
 
-        if genus and species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus and species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus and species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif species and mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus and species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           species__species__iexact=species)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif species and mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif species and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif mlst and rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst,
-                           rmlst__rmlst__exact=rmlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif genus:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(genus__genus__iexact=genus)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif species:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(species__species__iexact=species)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif mlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(mlst__mlst__exact=mlst)
-            if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
-        elif rmlst:
-            qs = SequenceData.objects.all()
-            qs = qs.filter(rmlst__rmlst__exact=rmlst)
+    def __init__(self, **kwargs):
+        self.category = 'mlstcc'
+        super().__init__(**kwargs)
+
+    def get_list(self):
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
                 qs.filter(mlst_cc__mlst_cc__icontains=self.q)
         else:
@@ -670,140 +266,71 @@ class MLSTCCAutoCompleter(autocomplete.Select2ListView):
 def database_filter(request):
     form = DatabaseRequestForm()
     if request.method == 'POST':
-        print('POST!')
         form = DatabaseRequestForm(request.POST)
-        # print('FORM!')
-        #
-        print('post genus', request.POST['genus'])
-        # sequence_data_matching_query = SequenceData.objects.all()
-        # genus = sequence_data_matching_query.filter(genus__genus__contains=request.POST['genus'])
-        # criteria_dict = dict()
-        # if genus:
-        #     criteria_dict['genus'] = genus
-        # seqid_list = list()
-        # for sequence_data in genus:
-        #     seqid_list.append(str(sequence_data))
-        # print(seqid_list)
-        # database_request = DatabaseRequest.objects.create(seqids=seqid_list,
-        #                                                   criteria=dict())
-        # database_request.save()
-        # return redirect('sequence_database:database_results', database_request_pk=database_request.pk)
         if form.is_valid():
-            print('VALID')
-            genus = str(form.cleaned_data.get('genus')) if form.cleaned_data.get('genus') else None
-            print('genus', genus, str(genus))
-            species = str(form.cleaned_data.get('species')) if form.cleaned_data.get('species') else None
-            print('species', species)
-            mlst = str(form.cleaned_data.get('mlst')) if form.cleaned_data.get('mlst') else None
-            print(type(mlst))
-            print('mlst', mlst)
-            mlstcc = str(form.cleaned_data.get('mlstcc')) if form.cleaned_data.get('mlstcc') else None
-            rmlst = str(form.cleaned_data.get('rmlst'))  if form.cleaned_data.get('rmlst') else None
-            print('rmlst', rmlst)
-            serovar = form.cleaned_data.get('serovar')
-            geneseekr = form.cleaned_data.get('geneseekr')
-            vtyper = form.cleaned_data.get('vtyper')
-            # seqids = form.cleaned_data.get('seqids')
-            # cfiaids = form.cleaned_data.get('cfiaids')
+            # As the date filtering field is more complex, extract only these values from the cleaned_data
             start_date = form.cleaned_data.get('start_date')
             end_date = form.cleaned_data.get('end_date')
-            # exclude = form.cleaned_data.get('everything_but')
-            sequence_data_matching_query = SequenceData.objects.all()
-            print('original', len(sequence_data_matching_query))
-            # criteria_dict = dict()
-            # Filter based on each possible criterion, if user put anything.
-            if genus is not None:
-                sequence_data_matching_query = sequence_data_matching_query.filter(genus__genus__icontains=genus)
-                print('genus', len(sequence_data_matching_query))
-                # criteria_dict['genus'] = genus
-            if species is not None:
-                sequence_data_matching_query = sequence_data_matching_query.filter(species__species__icontains=species)
-                print('species', len(sequence_data_matching_query))
-                # criteria_dict['species'] = species
-            if mlst is not None:
-                sequence_data_matching_query = sequence_data_matching_query.filter(mlst__mlst__iexact=mlst)
-                print('mlst', len(sequence_data_matching_query))
-                # criteria_dict['mlst'] = mlst
-            if mlstcc is not None:
-                sequence_data_matching_query = sequence_data_matching_query.filter(mlst_cc__mlst_cc__iexact=mlstcc)
-                print('mlstcc', len(sequence_data_matching_query))
-                # criteria_dict['mlst_cc'] = mlstcc
-            if rmlst is not None:
-                sequence_data_matching_query = sequence_data_matching_query.filter(rmlst__rmlst__iexact=rmlst)
-                print('rmlst', len(sequence_data_matching_query))
-                # criteria_dict['rmlst'] = rmlst
-            if geneseekr:
-                sequence_data_matching_query = sequence_data_matching_query.filter(geneseekr__geneseekr__icontains=geneseekr)
-                print('geneseekr', len(sequence_data_matching_query))
-                # criteria_dict['geneseekr'] = geneseekr
-            if vtyper:
-                sequence_data_matching_query = sequence_data_matching_query.filter(vtyper__vtyper__icontains=vtyper)
-                print('vtyper', len(sequence_data_matching_query))
-                # criteria_dict['vtyper'] = vtyper
-            if serovar:
-                sequence_data_matching_query = sequence_data_matching_query.filter(serovar__serovar__icontains=serovar)
-                print('serovar', len(sequence_data_matching_query))
-                # criteria_dict['serovar'] = serovar
+            # Initialise a Q object to build queries
+            q = Q()
+            # Initalise a query set from the SequenceData model
+            qs = SequenceData.objects.all()
+            # Dictionary linking the field name to the appropriate table in the SequenceData model
+            lookup_dict = {
+                'genus': 'genus__genus__iexact',
+                'species': 'species__species__iexact',
+                'mlst': 'mlst__mlst__iexact',
+                'rmlst': 'rmlst__rmlst__iexact',
+                'mlstcc': 'mlst_cc__mlst_cc__iexact',
+                'geneseekr': 'geneseekr__geneseekr__icontains',
+                'serovar': 'serovar__serovar__icontains',
+                'vtyper': 'vtyper__vtyper__icontains'
+            }
+            # Iterate through all the cleaned data
+            for field, query in form.cleaned_data.items():
+                # Ensure that the query exists, and is not None, and that 'date' is not in the field, as these are
+                # being processed separately
+                if str(query) != 'None' and str(query) and 'date' not in field:
+                    # Create the kwargs based on the category, the appropriate table and the query,
+                    # e.g. genus, Escherichia will create a dictionary entry of genus__genus__iexact: Escherichia
+                    kwargs = {
+                        str('{db_table}'.format(db_table=lookup_dict[field])): str(query)
+                    }
+                    # Update the Q object with the kwargs
+                    q = q & Q(**kwargs)
+            # Filter the query set with the Q object
+            qs = qs.filter(q)
+            # Filter based on date range separately from the other categories
             if start_date and end_date:
-                sequence_data_matching_query = sequence_data_matching_query.filter(typing_date__range=[start_date, end_date])
-                print('date ranged', len(sequence_data_matching_query))
-                # criteria_dict['serovar'] = serovar
+                qs = qs.filter(typing_date__range=[start_date, end_date])
+            # Initialise list to store the appropriate IDs
             seqid_list = list()
-            sample_data = list()
-            for sequence_data in sequence_data_matching_query:
+            cfiaid_list = list()
+            # Populate the lists with the necessary IDs
+            for sequence_data in qs:
                 seqid_list.append(sequence_data.seqid)
-                # for key, value in vars(sequence_data).items():
-                #     print(key, value)
-                print('data!!!!', sequence_data.seqid, sequence_data.cfiaid.cfiaid)
-                # database_request = DatabaseRequest(seqid=sequence_data.seqid,
-                #                                                   cfiaid=sequence_data.cfiaid.cfiaid,
-                #                                                   genus=sequence_data.genus.genus,
-                #                                                   species=sequence_data.species.species,
-                #                                                   mlst=sequence_data.mlst.mlst,
-                #                                                   mlst_cc=sequence_data.mlst_cc.mlst_cc,
-                #                                                   rmlst=sequence_data.rmlst.rmlst,
-                #                                                   geneseekr=sequence_data.geneseekr.geneseekr,
-                #                                                   serovar=sequence_data.serovar.serovar,
-                #                                                   vtyper=sequence_data.vtyper.vtyper,
-                #                                                   version=sequence_data.version,
-                #                                                   typing_date=sequence_data.typing_date)
-                # database_request.save()
-            print(len(seqid_list), seqid_list)
-            database_request = DatabaseRequestIDs(seqids=seqid_list)
-            database_request.save()
-            # return redirect('sequence_database:database_results', database_request_pk=database_request.pk)
-            # return redirect('sequence_database:database_filter_results')
+                cfiaid_list.append(sequence_data.cfiaid.cfiaid)
             return render(request,
                           'sequence_database/database_filter_results.html',
                           {
-                              'table': sequence_data_matching_query,
-                              'seqids': seqid_list
+                              'table': qs,
+                              'seqids': seqid_list,
+                              'cfiaids': cfiaid_list
                           })
-        else:
-            print('ERRORS', form.errors.as_data())
     return render(request,
                   'sequence_database/database_filter.html',
                   {
                       'form': form
                   })
 
-@login_required
-def database_results(request, database_request_pk):
-    database_result = get_object_or_404(DatabaseRequestIDs, pk=database_request_pk)
-    id_list = database_result.seqids
-    # id_list = (str(list(id_dict.keys()))).replace("'", "").replace("[", "").replace("]", "").replace(",", " ")
-    return render(request,
-                  'sequence_database/database_results.html',
-                  {
-                      'database_result': database_result, 'idList': id_list
-                  })
-
-from django.db.models import Q
-from django.forms.formsets import formset_factory
-from olc_webportalv2.sequence_database.filters import SequenceDatabaseFilter
-from olc_webportalv2.sequence_database.forms import DatabaseFieldForm, SequenceDatabaseBaseFormSet, DatabaseDateForm
 
 def form_lookup(form):
+    """
+    Extracts necessary values from a populated form, and looks up the necessary database table with the extracted values
+    :param form: Populated DatabaseFieldForm
+    :return: Extracted field table e.g. genus__genus, and qualifier e.g. icontains
+    """
+    # Dictionary linking categories to tables
     lookup_dict = {
         'GENUS': 'genus__genus',
         'SPECIES': 'species__species',
@@ -817,113 +344,154 @@ def form_lookup(form):
         'CONTAINS': 'icontains',
         'EXACT': 'iexact'
     }
+    # Extract the table name from the lookup dictionary using the value for database_field from the form
     field = lookup_dict[form.cleaned_data.get('database_fields')]
+    # Extract the qualifier from the lookup dictionary using the value for qualifiers from the form
     qualifier = lookup_dict[form.cleaned_data.get('qualifiers')]
-
     return field, qualifier
 
+
 @login_required()
-def database_browse(request):
+def database_query(request):
     database_date = DatabaseDateForm()
     database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
+    # Initialise the query set as all objects from the SequenceData model
     query_set = SequenceData.objects.all()
     if request.method == 'POST':
         query_set = SequenceData.objects.all()
+        # Populate the necessary forms with the POST data
         database_date = DatabaseDateForm(request.POST)
         database_form_set = database_formset_factory(request.POST)
         if database_date.is_valid() and database_form_set.is_valid():
+            # Process the dates first - extract the necessary values from the form's cleaned data
             start = database_date.cleaned_data.get('start_date')
             end = database_date.cleaned_data.get('end_date')
-            print('start', start, 'end', end)
+            # Update the values as required
             if start is None:
+                # If there is no start date provided, set the date to be 1900-01-01
                 start = datetime.datetime.strptime("-".join(['1900', '1', '1']), '%Y-%m-%d')
             if end is None:
+                # If there is no end date provided, set the date to be today's date
                 end = datetime.date.today()
                 end = end.strftime('%Y-%m-%d')
-            print('before date', len(query_set))
+            # Filter the query set on the date range
             query_set = query_set.filter(typing_date__range=[start, end])
-            print('after date', len(query_set))
-            print('VALID!')
-            # Uses logic from: https://djangosnippets.org/snippets/1700/
+            # Initialise a Q object for build the queries
             q = Q()
+            # Iterate through all the DatabaseFieldForms in the form set
             for form in database_form_set:
+                # Ensure that the form contains entries
                 if form.cleaned_data:
-                    print(form.cleaned_data)
-                    # field = form.cleaned_data.get('database_fields')
-                    # qualifier = form.cleaned_data.get('qualifiers')
+                    # Extract the table name e.g. genus__genus and the qualifier e.g. icontains from the form data
                     field, qualifier = form_lookup(form=form)
+                    # Extract the operate e.g. AND, and the query e.g. Escherichia
                     operator = form.cleaned_data.get('query_operators')
                     query = form.cleaned_data.get('query')
+                    # Ensure that a query exists before updating the Q object
                     if query != '' and query is not None:
+                        # Create a kwargs dictionary entry of the table name__qualifier: query
+                        # e.g. genus__genus__icontains: Escherichia
                         kwargs = {
                             str('{db_table}__{qualifier}'.format(db_table=field,
                                                                  qualifier=qualifier)): str(query)
                         }
+                        # Update the Q object appropriately depending on the operator
                         if operator == 'AND':
-                            # queries.append(q & Q(**kwargs))
                             q = q & Q(**kwargs)
                         elif operator == 'OR':
                             q = q | Q(**kwargs)
-                            # queries.append(q | Q(**kwargs))
                         elif operator == 'NOT':
                             q = q & ~Q(**kwargs)
-                            # queries.append(q & ~Q(**kwargs))
                         else:
-                            pass
-            print('query', str(q))
+                            q = q
+            # Filter the query set with the query stored in the Q object
             query_set = query_set.filter(q)
-            print(len(query_set))
-            # for query in queries:
-            #     print('query', str(query))
-            #     query_set.filter(query)
-            #     print(len(query_set))
     else:
-        # sample_form_set = sample_form_set_factory()
         database_form_set = database_formset_factory()
     return render(request,
-                  'sequence_database/database_browse.html',
+                  'sequence_database/database_query.html',
                   {
                       'form_set': database_form_set,
                       'date': database_date,
                       'database_result': query_set
                   })
 
-from django_filters.views import FilterView
-from django_tables2.views import SingleTableMixin
-from django_tables2 import SingleTableView
-from olc_webportalv2.sequence_database.tables import SequenceDataTable
-
-class DatabaseFilterResults(SingleTableMixin, FilterView):
-
-    model = SequenceData
-    table_class = SequenceDataTable
-    filterset_class = SequenceDatabaseFilter
 
 @login_required
-def database_filter_results(request):
-    # id_list = (str(list(id_dict.keys()))).replace("'", "").replace("[", "").replace("]", "").replace(",", " ")
-    table = SequenceDataTable(UniqueGenus.objects.all())
+def id_search(request):
+    id_form = DatabaseIDsForm()
+    if request.method == 'POST':
+        # Populate the form with the POST data
+        id_form = DatabaseIDsForm(request.POST)
+        if id_form.is_valid():
+            # Extract the SEQIDs and/or CFIA IDs in the form
+            ids = id_form.cleaned_data
+            # Initialise a query set of all objects in the SequenceData model
+            query_set = SequenceData.objects.all()
+            seqids = list()
+            # Initialise a Q object for building the query
+            q = Q()
+            # Initialise list to store missing and renamed IDs
+            missing_ids = list()
+            renamed_ids = list()
+            # Only proceed if the user has supplied a list of IDs
+            if ids:
+                for query_id in ids:
+                    # SEQIDs start with a digit, while CFIA IDs do not
+                    if query_id[0].isdigit():
+                        # Filter the query set with the SEQID
+                        results = query_set.filter(seqid__exact=query_id)
+                        # If the SEQID is not present in the SequenceData table, look for it in the LookupTable
+                        if not results:
+                            # Initialise a query set of LookupTable objects
+                            lookup_table = LookupTable.objects.all()
+                            # Initialise a boolean of whether the SEQID is found in the LookupTable
+                            match = False
+                            # Iterate through the entries in the LookupTable
+                            for entry in lookup_table:
+                                # Determine if the SEQID is in the other_names field of the current entry
+                                if query_id in entry.other_names:
+                                    # Update the renamed_ids list with a tuple of SEQID, CFIA ID of entry
+                                    renamed_ids.append((query_id, str(entry.cfiaid)))
+                                    # Update the current query ID to be the CFIA ID of the entry
+                                    query_id = entry.cfiaid
+                                    # Store the fact that a match was found
+                                    match = True
+                            # If the SEQID was not in the LookupTable, add it to the list of missing SEQIDs
+                            if not match:
+                                missing_ids.append(query_id)
+                            else:
+                                q = q | Q(cfiaid__cfiaid__exact=query_id)
+                        # Update the Q object with the query
+                        q = q | Q(seqid__exact=query_id)
+                    # Same general idea for CFIA IDs
+                    else:
+                        # Check to see if there are any CFIA IDs matching the supplied query ID
+                        results = query_set.filter(cfiaid__cfiaid__exact=query_id)
+                        # If there are no matches, update the list of missing IDs with the query ID
+                        if not results:
+                            missing_ids.append(query_id)
+                        # Update the query
+                        q = q | Q(cfiaid__cfiaid__exact=query_id)
+            # Filter the query set with the query build above
+            query_set = query_set.filter(q)
+            # Add the SEQIDs to the list
+            for entry in query_set:
+                seqids.append(entry.seqid)
+            return render(request,
+                          'sequence_database/database_id_search.html',
+                          {
+                              'form': id_form,
+                              'query_table': query_set,
+                              'seqids': seqids,
+                              'missing_ids': missing_ids,
+                              'renamed': renamed_ids
+                          }
+                          )
     return render(request,
-                  'sequence_database/database_filter_results.html',
+                  'sequence_database/database_id_search.html',
                   {
-                      'table': table
-                  })
-    # template_name = 'olcwebportal_v2/templates/sequence_database/database_results.html',
-    # fields = ['genus', 'species', 'mlst', 'mlstcc', 'rmlst', 'geneseekr', 'serovar', 'vtyper']
-# # Uses database_result to filter db, and then loop through queryset to compile dictionary
-# def id_sync(x):
-#     id_dict = dict()
-#     data_set = SequenceData.objects.filter(seqid__in=x)
-#     for item in data_set:
-#         if item.labid is not None:
-#             labid_result = str(item.labid)
-#         else:
-#             labid_result = 'N/A'
-#
-#         if item.olnid is not None:
-#             olnid_result = str(item.olnid)
-#         else:
-#             olnid_result = 'N/A'
-#
-#         id_dict.update({item.seqid: (labid_result, olnid_result)})
-#     return id_dict
+                      'form': id_form,
+                      'query_table': DatabaseRequest.objects.all()
+                  }
+                  )

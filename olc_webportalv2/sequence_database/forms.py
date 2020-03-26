@@ -1,10 +1,12 @@
-from django import forms
-from dal import autocomplete, forward
-from olc_webportalv2.sequence_database.models import Genus, Species, Serovar, MLST, MLSTCC, RMLST, SequenceData, GeneSeekr, \
-    Vtyper, UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueGeneSeekr, UniqueSerovar, UniqueVtyper, DatabaseQuery
+from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, \
+    UniqueRMLST, DatabaseQuery
 from django.utils.translation import ugettext_lazy as _
 from django.forms.formsets import BaseFormSet
+from dal import autocomplete, forward
 from django.forms import ModelForm
+from django import forms
+import re
+
 
 class DatabaseRequestForm(forms.Form):
 
@@ -100,32 +102,6 @@ class SequenceDatabaseBaseFormSet(BaseFormSet):
         super().clean()
 
 
-# class BaseModelForm(ModelForm):
-#
-#     def __init__(self, *args, **kwargs):
-#         kwargs.setdefault('auto_id', '%s')
-#         kwargs.setdefault('label_suffix', '')
-#         super().__init__(*args, **kwargs)
-#         # for data in self.data:
-#         #     print('data', data)
-#         for field_name in self.fields:
-#             field = self.fields.get(field_name)
-#             if field:
-#                 field.widget.attrs.update({
-#                     'placeholder': field.help_text,
-#                 })
-#                 if field_name == 'query':
-#                     # print(self.fields['database_fields'])
-#                     # print('field', dir(field))
-#                     # for key, value in vars(self.fields['database_fields']).items():
-#                     #     print(key, value)
-#                     field.widget = forms.TextInput(
-#                         attrs={
-#                             'class': 'datepicker',
-#                             'autocomplete': 'off',
-#                         }
-#                     )
-
 class DatabaseFieldForm(ModelForm):
 
     class Meta:
@@ -148,3 +124,23 @@ class DatabaseDateForm(forms.Form):
         }
     ),
         required=False)
+
+
+class DatabaseIDsForm(forms.Form):
+
+    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}),
+                             label='',
+                             required=False)
+    cfiaids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('CFIAFB00000000')}),
+                              label='',
+                              required=False)
+
+    def clean(self):
+        super().clean()
+        input_ids = self.cleaned_data.get('seqids')
+        # Concatenate the CFIA IDs to the end of the SEQID string
+        input_ids += ',' + self.cleaned_data.get('cfiaids')
+        # Split the inputs on a regex of /w (words) or - (dashes), as SEQIDs and CFIAIDs can have dashes
+        id_list = re.findall(r'[\w-]+', input_ids)
+        # TODO: Some validation!
+        return id_list

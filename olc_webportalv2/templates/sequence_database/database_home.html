@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
+{% block content %}
+<div class="h-100 justify-content-center">
+    <div class="container">
+        <div class="card-deck mb-3 text-center">
+
+            <div class="row">
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Filter Data" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article1">{% trans "Quickly filter the database." %}</p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'sequence_database:database_filter' %}">{% trans "Filter Data" %}</a>
+                    </div>
+                </div>
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Query Database" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article1">{% trans "Create complex queries on the sequence database." %}</p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'sequence_database:database_query' %}">{% trans "Query Data" %}</a>
+                    </div>
+                </div>
+
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Retrieve Entries" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article1">{% trans "Retrieve database records by supplying a list of SEQIDs or CFIA IDs" %}</p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto" href="{% url 'sequence_database:id_search' %}">{% trans "Request Data" %}</a>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </div>
+    </div>
+
+
+{% endblock %}

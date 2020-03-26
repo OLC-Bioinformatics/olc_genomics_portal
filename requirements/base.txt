@@ -139,4 +139,3 @@ XlsxWriter==1.1.5
 strainchoosr==0.1.2
 xlrd==1.2.0
 django-filter==2.2.0
-django-filter==2.2.0

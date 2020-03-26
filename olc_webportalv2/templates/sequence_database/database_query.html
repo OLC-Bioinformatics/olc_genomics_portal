@@ -1,68 +1,65 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load staticfiles %}
-{% load static %}
 {% load bootstrap %}
 {% load crispy_forms_tags %}
-{% load i18n %}
-{% load widget_tweaks %}
-
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
 {% block content %}
-  <form method="get">
-    <div class="well">
-      <h4 style="margin-top: 0">Filter</h4>
-      <div class="row">
-        <div class="form-group col-sm-4 col-md-3">
-          {{ filter.form.genus.label_tag }}
-          {% render_field filter.form.genus class="form-control" %}
-        </div>
-        <div class="form-group col-sm-4 col-md-3">
-          {{ filter.form.species.label_tag }}
-          {% render_field filter.form.species class="form-control" %}
-        </div>
-        <div class="form-group col-sm-4 col-md-3">
-          {{ filter.form.mlst.label_tag }}
-          {% render_field filter.form.mlst class="form-control" %}
-        </div>
-        <div class="form-group col-sm-4 col-md-3">
-          {{ filter.form.rmlst.label_tag }}
-          {% render_field filter.form.rmlst class="form-control" %}
-        </div>
-        <div class="form-group col-sm-4 col-md-3">
-          {{ filter.form.mlst_cc.label_tag }}
-          {% render_field filter.form.mlst_cc class="form-control" %}
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary">
-        <span class="glyphicon glyphicon-search"></span> Search
-      </button>
-    </div>
-  </form>
-
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th>Genus</th>
-        <th>Species</th>
-        <th>MLST Profile</th>
-        <th>rMLST Profile</th>
-        <th>MLST CC</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in filter.qs %}
-        <tr>
-          <td>{{ user.genus }}</td>
-          <td>{{ user.species }}</td>
-          <td>{{ user.mlst }}</td>
-          <td>{{ user.rmlst }}</td>
-          <td>{{ user.mlst_cc }}</td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5">No data</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <h2>{% trans "Database Query Design" %}</h2>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% csrf_token %}
+        <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans '(Optional) enter the assembly range'%}  <br>From: {{ date.start_date }} to: {{ date.end_date }} </p>
+        {{ form_set.management_form }}
+        {% for query in form_set %}
+            <div class="sample_formset">
+                <div class="form-row">
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                        {{ query.database_fields|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                        {{ query.query_operators|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                        {{ query.qualifiers|as_crispy_field }}
+                    </div>
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                        {{ query.query|as_crispy_field }}
+                    </div>
+                    </div>
+                </div>
+        {% endfor %}
+        <br>
+        <br>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
+    </form>
+    <table class="dbtable">
+        {% render_table database_result %}
+    </table>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+    <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> // Allows adding and removal of formsets
+        $('.sample_formset').formset({
+            addText: '<br><i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
+            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %}<br>'
+        });
+        $('.datepicker').datepicker({
+            format: "yyyy-mm-dd",
+            language: "{{LANGUAGE_CODE}}",
+            orientation: "bottom auto"
+        });
+        </script>
+    <script type="text/javascript">
+        $('.add-row').click(function(){
+            $('.datepicker').datepicker({
+                format: "yyyy-mm-dd",
+                language: "{{LANGUAGE_CODE}}",
+                orientation: "bottom auto"
+            });
+        })
+        </script>
 {% endblock %}
