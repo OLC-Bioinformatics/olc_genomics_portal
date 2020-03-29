@@ -14,16 +14,16 @@
         {% for query in form_set %}
             <div class="sample_formset">
                 <div class="form-row">
-                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title="{% trans 'Sample name e.g. VI0639' %}">
                         {{ query.database_fields|as_crispy_field }}
                     </div>
-                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title="{% trans 'LSTS ID e.g. 2019FPP00000475214' %}">
                         {{ query.query_operators|as_crispy_field }}
                     </div>
-                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title={% trans "Sample name e.g. VI0639" %}>
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title="{% trans 'Sample name e.g. VI0639'%}">
                         {{ query.qualifiers|as_crispy_field }}
                     </div>
-                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title={% trans "LSTS ID e.g. 2019FPP00000475214" %}>
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title="{% trans 'LSTS ID e.g. 2019FPP00000475214' %}">
                         {{ query.query|as_crispy_field }}
                     </div>
                     </div>
@@ -42,11 +42,7 @@
     <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
     <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
     <script src="{% static 'js/jquery.formset.js' %}"></script>
-    <script type="text/javascript"> // Allows adding and removal of formsets
-        $('.sample_formset').formset({
-            addText: '<br><i class="fas fa-plus"></i> {% trans "Add New Sample" %}',
-            deleteText: '<i class="fas fa-minus-circle"></i> {% trans "Remove" %}<br>'
-        });
+    <script type="text/javascript"> 
         $('.datepicker').datepicker({
             format: "yyyy-mm-dd",
             language: "{{LANGUAGE_CODE}}",

@@ -50,6 +50,7 @@
               <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton"
                 data-toggle="dropdown">{% trans "Explore" %}</button>
               <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
+                <a class="dropdown-item" href="{% url 'sequence_database:database_home' %}">{% trans "Database" %}</a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">{% trans "Search " %}<i
                     class="fas fa-search"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %}<i
