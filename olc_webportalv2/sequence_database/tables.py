@@ -4,4 +4,4 @@ from olc_webportalv2.sequence_database.models import SequenceData
 class SequenceDataTable(tables.Table):
     class Meta:
         model = SequenceData
-        fields = ("seqid","cfiaid",)
+        attrs = {"class": "table"}

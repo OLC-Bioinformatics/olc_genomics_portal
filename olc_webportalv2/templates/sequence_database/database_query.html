@@ -29,11 +29,10 @@
                     </div>
                 </div>
         {% endfor %}
-        <br>
-        <br>
         <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
+        <br>
+        <br>
     </form>
-    <table class="dbtable">
         {% render_table database_result %}
     </table>
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
@@ -43,19 +42,13 @@
     <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
     <script src="{% static 'js/jquery.formset.js' %}"></script>
     <script type="text/javascript"> 
+    $(document).ready( function () {
+        document.getElementsByTagName("table")[0].classList.add("table");
+    });
         $('.datepicker').datepicker({
             format: "yyyy-mm-dd",
             language: "{{LANGUAGE_CODE}}",
             orientation: "bottom auto"
         });
-        </script>
-    <script type="text/javascript">
-        $('.add-row').click(function(){
-            $('.datepicker').datepicker({
-                format: "yyyy-mm-dd",
-                language: "{{LANGUAGE_CODE}}",
-                orientation: "bottom auto"
-            });
-        })
         </script>
 {% endblock %}

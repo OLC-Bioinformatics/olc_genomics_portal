@@ -14,6 +14,7 @@ from azure.storage.blob import BlockBlobService, BlobPermissions
 # from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
 from django.forms.formsets import formset_factory
+from olc_webportalv2.sequence_database.tables import SequenceDataTable
 
 
 # Not sure where to put this - create pagination.py?
@@ -356,6 +357,7 @@ def database_query(request):
     database_date = DatabaseDateForm()
     database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
     # Initialise the query set as all objects from the SequenceData model
+    # query_set = DataTable(SequenceData.objects.all())
     query_set = SequenceData.objects.all()
     if request.method == 'POST':
         query_set = SequenceData.objects.all()
@@ -406,6 +408,7 @@ def database_query(request):
                             q = q
             # Filter the query set with the query stored in the Q object
             query_set = query_set.filter(q)
+
     else:
         database_form_set = database_formset_factory()
     return render(request,

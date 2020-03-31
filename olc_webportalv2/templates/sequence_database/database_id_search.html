@@ -41,6 +41,7 @@
                 </div>
             </div>
         </div>
+        <br>
         <button type="submit" class="btn btn-primary btn-lg">{%trans "Run Query"%}</button>
     </form>
     <br>
@@ -59,12 +60,12 @@
         <p>Renamed IDS! {{ renamed_id }}</p>
     {% endfor %}
     <br>
-    <table class="dbtable">
-        {% render_table query_table %}
-    </table>
+    {% render_table query_table %}
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
+            document.getElementsByTagName("table")[0].classList.add("table");
+
             // adds tool tips
             let query_sequence = document.getElementById('div_id_query_sequence');
             $(query_sequence).attr('data-tooltip','tooltip');
