@@ -11,7 +11,7 @@ import re
 class DatabaseRequestForm(forms.Form):
 
     genus = forms.ModelChoiceField(queryset=UniqueGenus.objects.all(),
-                                   to_field_name='genus',
+                                   to_field_name=_('genus'),
                                    widget=autocomplete.ModelSelect2(url='sequence_database:genus_autocompleter',
                                                                     forward=(forward.Field('geneseekr', ),
                                                                              forward.Field('species', ),
@@ -23,7 +23,7 @@ class DatabaseRequestForm(forms.Form):
                                    required=False
                                    )
     species = forms.ModelChoiceField(queryset=UniqueSpecies.objects.all(),
-                                     to_field_name='species',
+                                     to_field_name=_('species'),
                                      widget=autocomplete.ModelSelect2(
                                          url='sequence_database:species_autocompleter',
                                          forward=(forward.Field('genus', ),
@@ -107,6 +107,12 @@ class DatabaseFieldForm(ModelForm):
     class Meta:
         model = DatabaseQuery
         fields = ['database_fields', 'query_operators', 'qualifiers', 'query']
+        labels = {
+            'database_fields': _('Database Fields'),
+            'query_operators': _('Query Operators'),
+            'qualifiers': _('Qualifiers'),
+            'query': _('Query'),
+        }
 
 
 class DatabaseDateForm(forms.Form):

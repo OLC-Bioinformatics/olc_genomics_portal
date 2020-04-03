@@ -53,11 +53,11 @@
     </div>
     <br>
     {% for missing in missing_ids %}
-        <p>MISSING IDS! {{ missing }}</p>
+        <p>{% trans 'MISSING IDS!'%} {{ missing }}</p>
     {% endfor %}
     <br>
     {% for renamed_id in renamed %}
-        <p>Renamed IDS! {{ renamed_id }}</p>
+        <p>{% trans 'Renamed IDS!'%} {{ renamed_id }}</p>
     {% endfor %}
     <br>
     {% render_table query_table %}

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-02-13 19:32+0000\n"
+"POT-Creation-Date: 2020-04-03 20:54+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,20 +18,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: olc_webportalv2/cowbat/forms.py:10
+#: olc_webportalv2/cowbat/forms.py:11
 msgid "YYMMDD_LAB"
 msgstr "AAMMJJ_LAB"
 
-#: olc_webportalv2/cowbat/forms.py:10
+#: olc_webportalv2/cowbat/forms.py:11
 #: olc_webportalv2/templates/cowbat/assembly_home.html:16
 msgid "Run Name"
 msgstr "Nom de l'exécution"
 
-#: olc_webportalv2/cowbat/forms.py:16
+#: olc_webportalv2/cowbat/forms.py:17
 msgid "Invalid run name. Format must be YYMMDD_LAB"
 msgstr "Nom d'exécution incorrect. Le format doit être AAMMJJ_LAB "
 
-#: olc_webportalv2/cowbat/forms.py:22
+#: olc_webportalv2/cowbat/forms.py:23
 msgid "Strain names cannot have commas in them!"
 msgstr "Les noms de souches ne peuvent pas contenir de virgules!"
 
@@ -75,6 +75,7 @@ msgstr "Email enregistré"
 #: olc_webportalv2/geneseekr/forms.py:154
 #: olc_webportalv2/geneseekr/forms.py:213
 #: olc_webportalv2/geneseekr/forms.py:264
+#: olc_webportalv2/sequence_database/forms.py:137
 msgid "YYYY-LAB-####"
 msgstr "AAAA-LAB-####"
 
@@ -423,10 +424,14 @@ msgstr ""
 "mauvaise qualité. Utiliser avec prudence."
 
 #: olc_webportalv2/metadata/models.py:29
+#: olc_webportalv2/sequence_database/forms.py:14
+#: olc_webportalv2/sequence_database/models.py:24
 msgid "genus"
 msgstr "genre"
 
 #: olc_webportalv2/metadata/models.py:36
+#: olc_webportalv2/sequence_database/forms.py:26
+#: olc_webportalv2/sequence_database/models.py:32
 msgid "species"
 msgstr "espèce"
 
@@ -461,6 +466,148 @@ msgstr "Passe + Référence"
 #: olc_webportalv2/metadata/views.py:135
 msgid "All"
 msgstr "Tous"
+
+#: olc_webportalv2/sequence_database/forms.py:111
+msgid "Database Fields"
+msgstr "Champs de la base de données"
+
+#: olc_webportalv2/sequence_database/forms.py:112
+msgid "Query Operators"
+msgstr "Opérateurs de recherche"
+
+#: olc_webportalv2/sequence_database/forms.py:113
+msgid "Qualifiers"
+msgstr "Qualificateurs"
+
+#: olc_webportalv2/sequence_database/forms.py:114
+msgid "Query"
+msgstr "Requête"
+
+#: olc_webportalv2/sequence_database/forms.py:140
+msgid "CFIAFB00000000"
+msgstr "ACIAFB00000000"
+
+#: olc_webportalv2/sequence_database/models.py:41
+#: olc_webportalv2/sequence_database/models.py:51
+#: olc_webportalv2/sequence_database/models.py:61
+#: olc_webportalv2/sequence_database/models.py:71
+#: olc_webportalv2/sequence_database/models.py:81
+#: olc_webportalv2/sequence_database/models.py:91
+#: olc_webportalv2/sequence_database/models.py:214
+msgid "pipeline_version"
+msgstr "version_pipeline"
+
+#: olc_webportalv2/sequence_database/models.py:42
+#: olc_webportalv2/sequence_database/models.py:52
+#: olc_webportalv2/sequence_database/models.py:62
+#: olc_webportalv2/sequence_database/models.py:72
+#: olc_webportalv2/sequence_database/models.py:82
+#: olc_webportalv2/sequence_database/models.py:92
+#: olc_webportalv2/sequence_database/models.py:215
+msgid "typing_date"
+msgstr "saisie_de_la_date"
+
+#: olc_webportalv2/sequence_database/models.py:90
+msgid "serovar"
+msgstr "sérovar"
+
+#: olc_webportalv2/sequence_database/models.py:176
+msgid "SEQID"
+msgstr "SEQID"
+
+#: olc_webportalv2/sequence_database/models.py:177
+msgid "CFIA ID"
+msgstr "ACIA ID"
+
+#: olc_webportalv2/sequence_database/models.py:179
+#: olc_webportalv2/sequence_database/models.py:237
+msgid "rMLST Profile"
+msgstr "rMLST Profil"
+
+#: olc_webportalv2/sequence_database/models.py:181
+#: olc_webportalv2/sequence_database/models.py:235
+msgid "MLST Profile"
+msgstr "MLST Profil"
+
+#: olc_webportalv2/sequence_database/models.py:182
+#: olc_webportalv2/sequence_database/models.py:236
+msgid "MLST Clonal Complex"
+msgstr "Complexe clonal MLST"
+
+#: olc_webportalv2/sequence_database/models.py:183
+#: olc_webportalv2/sequence_database/models.py:233
+#: olc_webportalv2/templates/metadata/metadata_browse.html:13
+msgid "Genus"
+msgstr "Genre"
+
+#: olc_webportalv2/sequence_database/models.py:184
+#: olc_webportalv2/sequence_database/models.py:234
+#: olc_webportalv2/templates/metadata/metadata_browse.html:14
+msgid "Species"
+msgstr "Espèce"
+
+#: olc_webportalv2/sequence_database/models.py:185
+#: olc_webportalv2/sequence_database/models.py:239
+msgid "Serovar"
+msgstr "Sérovar"
+
+#: olc_webportalv2/sequence_database/models.py:186
+#: olc_webportalv2/sequence_database/models.py:238
+msgid "GeneSeekr Profile"
+msgstr "GeneSeekr Profil"
+
+#: olc_webportalv2/sequence_database/models.py:187
+#: olc_webportalv2/sequence_database/models.py:240
+msgid "Vtyper Profile"
+msgstr "Vtyper Profil"
+
+#: olc_webportalv2/sequence_database/models.py:188
+msgid "Database Version"
+msgstr "Version de la base de données"
+
+#: olc_webportalv2/sequence_database/models.py:189
+msgid "Typing Date"
+msgstr "Saisie de la date"
+
+#: olc_webportalv2/sequence_database/models.py:241
+msgid "Pipeline Version"
+msgstr "Version Pipeline"
+
+#: olc_webportalv2/sequence_database/models.py:249
+msgid "and"
+msgstr "et"
+
+#: olc_webportalv2/sequence_database/models.py:250
+msgid "or"
+msgstr "ou"
+
+#: olc_webportalv2/sequence_database/models.py:251
+msgid "not"
+msgstr "pas"
+
+#: olc_webportalv2/sequence_database/models.py:258
+msgid "contains"
+msgstr "contient"
+
+#: olc_webportalv2/sequence_database/models.py:259
+msgid "exact"
+msgstr "exact"
+
+#: olc_webportalv2/sequence_database/urls.py:10
+msgid "^database_home/"
+msgstr "^base_de_données_accueil/"
+
+#: olc_webportalv2/sequence_database/urls.py:11
+msgid "^database_filter/"
+msgstr "^base_de_données_filtre/"
+
+#: olc_webportalv2/sequence_database/urls.py:12
+msgid "^database_query/$"
+msgstr "^base_de_données_requête/$"
+
+#: olc_webportalv2/sequence_database/urls.py:13
+msgid "^id_search/"
+msgstr "^recherche_d'identité/"
 
 #: olc_webportalv2/templates/account/account_inactive.html:5
 #: olc_webportalv2/templates/account/account_inactive.html:8
@@ -661,7 +808,7 @@ msgstr "Définir le mot de passe"
 #: olc_webportalv2/templates/account/signup.html:6
 #: olc_webportalv2/templates/account/signup.html:10
 #: olc_webportalv2/templates/account/signup.html:27
-#: olc_webportalv2/templates/base.html:133
+#: olc_webportalv2/templates/base.html:134
 msgid "Sign Up"
 msgstr "S'inscrire"
 
@@ -745,73 +892,77 @@ msgid "Explore"
 msgstr "Examiner"
 
 #: olc_webportalv2/templates/base.html:53
+msgid "Database"
+msgstr "Base de Données"
+
+#: olc_webportalv2/templates/base.html:54
 msgid "Search "
 msgstr "Chercher "
 
-#: olc_webportalv2/templates/base.html:55
+#: olc_webportalv2/templates/base.html:56
 msgid "Browse "
 msgstr "Feuilleter "
 
-#: olc_webportalv2/templates/base.html:57
+#: olc_webportalv2/templates/base.html:58
 msgid "Forms "
 msgstr "Les Fiches"
 
-#: olc_webportalv2/templates/base.html:64
+#: olc_webportalv2/templates/base.html:65
 msgid "Retrieve "
 msgstr "Retrouver "
 
-#: olc_webportalv2/templates/base.html:69
+#: olc_webportalv2/templates/base.html:70
 msgid "Assembly "
 msgstr "Assemblage "
 
-#: olc_webportalv2/templates/base.html:74
+#: olc_webportalv2/templates/base.html:75
 msgid "Analyze"
 msgstr "Analyser"
 
-#: olc_webportalv2/templates/base.html:76
+#: olc_webportalv2/templates/base.html:77
 msgid "Find Genes "
 msgstr "Trouver des gènes"
 
-#: olc_webportalv2/templates/base.html:78
-#: olc_webportalv2/templates/base.html:220
+#: olc_webportalv2/templates/base.html:79
+#: olc_webportalv2/templates/base.html:221
 #: olc_webportalv2/templates/geneseekr/tree_request.html:27
 msgid "Create Tree "
 msgstr "Créer un arbre phylogénétique "
 
-#: olc_webportalv2/templates/base.html:80
+#: olc_webportalv2/templates/base.html:81
 msgid "Investigate AMR "
 msgstr "Enquêter sur la résistance antimicrobiens "
 
-#: olc_webportalv2/templates/base.html:82
+#: olc_webportalv2/templates/base.html:83
 msgid "Annotate "
 msgstr "Annoter "
 
-#: olc_webportalv2/templates/base.html:84
+#: olc_webportalv2/templates/base.html:85
 msgid "Find Near Neighbors "
 msgstr "Trouver les voisins proches "
 
-#: olc_webportalv2/templates/base.html:114
+#: olc_webportalv2/templates/base.html:115
 msgid "Profile"
 msgstr "Profil"
 
-#: olc_webportalv2/templates/base.html:120
+#: olc_webportalv2/templates/base.html:121
 msgid "Sign Out"
 msgstr "Se Déconnecter"
 
-#: olc_webportalv2/templates/base.html:127
+#: olc_webportalv2/templates/base.html:128
 msgid "Login"
 msgstr "S'identifier"
 
-#: olc_webportalv2/templates/base.html:161
+#: olc_webportalv2/templates/base.html:162
 msgid "Welcome to the CFIA FoodPort"
 msgstr "Bienvenue à AliPort ACIA"
 
-#: olc_webportalv2/templates/base.html:174
-#: olc_webportalv2/templates/base.html:178
+#: olc_webportalv2/templates/base.html:175
+#: olc_webportalv2/templates/base.html:179
 msgid "Explore Data"
 msgstr "Examiner"
 
-#: olc_webportalv2/templates/base.html:177
+#: olc_webportalv2/templates/base.html:178
 msgid ""
 "Identify sequences for analysis. Search based on genus/species/serotype/MLST "
 "and get a list of SeqIDs/LabIDs."
@@ -819,21 +970,21 @@ msgstr ""
 "Identifier les séquences pour l'analyse. Recherche basée sur genre/espèce/"
 "sérotype/MLST et obtenir une liste de SeqIDs/LabIDs."
 
-#: olc_webportalv2/templates/base.html:184
-#: olc_webportalv2/templates/base.html:188
+#: olc_webportalv2/templates/base.html:185
+#: olc_webportalv2/templates/base.html:189
 msgid "Get Data"
 msgstr "Retrouver"
 
-#: olc_webportalv2/templates/base.html:187
+#: olc_webportalv2/templates/base.html:188
 msgid "Retrieve copies of files stored at OLC to analyze locally."
 msgstr "Retrouver les assemblages chez LOC pour effectuer des analyses locales"
 
-#: olc_webportalv2/templates/base.html:194
-#: olc_webportalv2/templates/base.html:198
+#: olc_webportalv2/templates/base.html:195
+#: olc_webportalv2/templates/base.html:199
 msgid "Assembly"
 msgstr "Assemblage"
 
-#: olc_webportalv2/templates/base.html:197
+#: olc_webportalv2/templates/base.html:198
 msgid ""
 "For submission of raw sequence data for assembly. You can also use this to "
 "get reports and assemblies from previous runs."
@@ -841,32 +992,32 @@ msgstr ""
 "Pour la soumission des séquences pour l'assemblage. Vous pouvez également "
 "obtenir des rapports et des assemblages d'anciennes exécutions."
 
-#: olc_webportalv2/templates/base.html:206
-#: olc_webportalv2/templates/base.html:210
+#: olc_webportalv2/templates/base.html:207
+#: olc_webportalv2/templates/base.html:211
 msgid "Find Genes"
 msgstr "Trouver des gènes"
 
-#: olc_webportalv2/templates/base.html:209
+#: olc_webportalv2/templates/base.html:210
 msgid ""
 "Use GeneSeekr to search for any gene of interest in our assembly database."
 msgstr ""
 "Utilise GeneSeekr pour trouver des gènes dans notre base de données "
 "d'assemblage"
 
-#: olc_webportalv2/templates/base.html:216
+#: olc_webportalv2/templates/base.html:217
 msgid "Create a Tree"
 msgstr "Créer un arbre phylogénétique"
 
-#: olc_webportalv2/templates/base.html:219
+#: olc_webportalv2/templates/base.html:220
 msgid "Create phylogenetic trees of assemblies."
 msgstr "Créer des arbres phylogénétiques d'assemblages."
 
-#: olc_webportalv2/templates/base.html:226
-#: olc_webportalv2/templates/base.html:230
+#: olc_webportalv2/templates/base.html:227
+#: olc_webportalv2/templates/base.html:231
 msgid "Investigate AMR"
 msgstr "Enquêter sur la résistance antimicrobiens"
 
-#: olc_webportalv2/templates/base.html:229
+#: olc_webportalv2/templates/base.html:230
 msgid ""
 "Look for AMR genes in assemblies, and find out if they're present on mobile "
 "elements or the chromosome."
@@ -874,16 +1025,16 @@ msgstr ""
 "Enquêter sur la résistance antimicrobiens dans les assemblages et déterminez "
 "leur emplacement"
 
-#: olc_webportalv2/templates/base.html:238
-#: olc_webportalv2/templates/base.html:242
+#: olc_webportalv2/templates/base.html:239
+#: olc_webportalv2/templates/base.html:243
 msgid "Annotate Genomes"
 msgstr "Annoter"
 
-#: olc_webportalv2/templates/base.html:241
+#: olc_webportalv2/templates/base.html:242
 msgid "Annotate assemblies with Prokka."
 msgstr "Annoter les assemblages avec Prokka"
 
-#: olc_webportalv2/templates/base.html:251
+#: olc_webportalv2/templates/base.html:252
 msgid "Perform typing on viral sequences."
 msgstr "Caractériser les séquences virales"
 
@@ -1719,18 +1870,23 @@ msgstr "le genre sélectionné:"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:35
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:37
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:18
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:20
 msgid "Choose SeqIDs to Search"
 msgstr "Choisissez SeqIDs à rechercher"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:41
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:24
 msgid "Search the following SeqIDs:"
 msgstr "Recherchez les SeqID suivantes:"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:48
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:45
 msgid "Run Query"
 msgstr "Exécuter une requête"
 
 #: olc_webportalv2/templates/geneseekr/geneseekr_query.html:56
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:72
 msgid ""
 "Enter one or more query sequences in FASTA format, or upload a file below."
 msgstr ""
@@ -2008,6 +2164,7 @@ msgstr "Parcourir les métadonnées"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:11
 #: olc_webportalv2/templates/metadata/metadata_results.html:30
+#: olc_webportalv2/templates/sequence_database/database_results.html:30
 msgid "SeqID"
 msgstr "SeqID"
 
@@ -2015,14 +2172,6 @@ msgstr "SeqID"
 #: olc_webportalv2/templates/metadata/metadata_results.html:31
 msgid "LabID"
 msgstr "LabID"
-
-#: olc_webportalv2/templates/metadata/metadata_browse.html:13
-msgid "Genus"
-msgstr "Genre"
-
-#: olc_webportalv2/templates/metadata/metadata_browse.html:14
-msgid "Species"
-msgstr "Espèce"
 
 #: olc_webportalv2/templates/metadata/metadata_browse.html:15
 msgid "Serotype"
@@ -2045,18 +2194,22 @@ msgid "Metadata Search"
 msgstr "Recherche de métadonnées"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:18
+#: olc_webportalv2/templates/sequence_database/database_filter.html:19
 msgid "Genus of interest"
 msgstr "Genre intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:18
+#: olc_webportalv2/templates/sequence_database/database_filter.html:19
 msgid "Enter your genus of interest"
 msgstr "Saisissez votre genre intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:19
+#: olc_webportalv2/templates/sequence_database/database_filter.html:20
 msgid "Species of interest"
 msgstr "Espèces intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:19
+#: olc_webportalv2/templates/sequence_database/database_filter.html:20
 msgid "Enter your species of interest"
 msgstr "Saisissez votre espèce intéressant"
 
@@ -2073,6 +2226,7 @@ msgid "MLST of interest"
 msgstr "MLST intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:21
+#: olc_webportalv2/templates/sequence_database/database_filter.html:22
 msgid "Enter your MLST of interest"
 msgstr "Saisissez votre MLST intéressant"
 
@@ -2081,6 +2235,7 @@ msgid "rMLST of interest"
 msgstr "rMLST intéressant"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:22
+#: olc_webportalv2/templates/sequence_database/database_filter.html:24
 msgid "Enter your rMLST of interest"
 msgstr "Saisissez votre rMLST intéressant"
 
@@ -2093,6 +2248,7 @@ msgid "Choose your desired assembly quality"
 msgstr "Choisissez la qualité de montage souhaitée"
 
 #: olc_webportalv2/templates/metadata/metadata_home.html:26
+#: olc_webportalv2/templates/sequence_database/database_filter.html:36
 msgid "Get SeqIDs"
 msgstr "Obtenir les SeqIDs"
 
@@ -2101,22 +2257,33 @@ msgid "Metadata Results"
 msgstr "Résultats des métadonnées"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:9
+#: olc_webportalv2/templates/sequence_database/database_results.html:9
 msgid "View Search Criteria"
 msgstr "Voir les critères de recherche"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:18
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:57
+#: olc_webportalv2/templates/sequence_database/database_results.html:18
 msgid "Your search returned"
 msgstr "Votre recherche a retourné"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:18
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:57
+#: olc_webportalv2/templates/sequence_database/database_results.html:18
 msgid "results."
 msgstr "résultats."
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:20
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:28
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:49
+#: olc_webportalv2/templates/sequence_database/database_results.html:20
 msgid "Copy SeqIDs"
 msgstr "Copier les SeqIDs"
 
 #: olc_webportalv2/templates/metadata/metadata_results.html:23
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:53
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:52
+#: olc_webportalv2/templates/sequence_database/database_results.html:23
 msgid "Copied to clipboard!"
 msgstr "Copié dans le presse-papiers!"
 
@@ -2162,6 +2329,182 @@ msgstr "Votre projet a été effacé."
 msgid "Your project is safe."
 msgstr "Votre projet est sûr."
 
+#: olc_webportalv2/templates/sequence_database/database_filter.html:10
+msgid "Database Filter"
+msgstr "Fichiers en double"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:18
+msgid "Autocomplete Fields"
+msgstr "Champs à remplir automatiquement"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:22
+msgid "MLST profile of interest"
+msgstr "Profil d'intérêt MLST"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:23
+msgid "MLST Clonal Complex of interest"
+msgstr "Complexe clonal MLST d'intérêt"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:23
+msgid "Enter your MLST Clonal Complex of interest"
+msgstr "Entrez le complexe clonal MLST qui vous intéresse"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:24
+msgid "rMLST profile of interest"
+msgstr "Profil d'intérêt du rMLST"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:26
+msgid "Text searches"
+msgstr "Recherches dans le texte"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:27
+msgid "GeneSeekr Profile of interest"
+msgstr "Profil d'intérêt GeneSeekr"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:27
+msgid "Enter your GeneSeekr Profile of interest"
+msgstr "Entrez le profil GeneSeekr qui vous intéresse"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:28
+msgid "Serovar of interest"
+msgstr "Sérotype intéressant"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:28
+msgid "Enter your serovar of interest"
+msgstr "Entrez le sérovar qui vous intéresse"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:29
+msgid "Vtyper profile of interest"
+msgstr "Profil d'intérêt du vtyper"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:29
+msgid "Enter your Vtyper profile of interest"
+msgstr "Entrez le profil Vtyper qui vous intéresse"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:30
+#: olc_webportalv2/templates/sequence_database/database_query.html:12
+msgid "Start Date"
+msgstr "Date de début"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:30
+msgid "Enter the assembly range"
+msgstr "Entrez la gamme d'assemblé"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:30
+#: olc_webportalv2/templates/sequence_database/database_query.html:12
+msgid "From:"
+msgstr "De:"
+
+#: olc_webportalv2/templates/sequence_database/database_filter.html:30
+#: olc_webportalv2/templates/sequence_database/database_query.html:12
+msgid "to:"
+msgstr "à:"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:8
+#: olc_webportalv2/templates/sequence_database/database_results.html:7
+msgid "Database Results"
+msgstr "Résultats de la base de données"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:14
+msgid "SEQIDs"
+msgstr "SEQIDs"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:18
+msgid "View SEQIDs"
+msgstr "Voir les SEQIDs"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:33
+msgid "CFIA IDs"
+msgstr "ACIA IDs"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:37
+msgid "View CFIA IDs"
+msgstr "Voir les ACIA IDs"
+
+#: olc_webportalv2/templates/sequence_database/database_filter_results.html:47
+msgid "Copy CFIA IDs"
+msgstr "Copier les SeqIDs"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:15
+#: olc_webportalv2/templates/sequence_database/database_home.html:19
+msgid "Filter Data"
+msgstr "Filtrer les données"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:18
+msgid "Quickly filter the database."
+msgstr "Filtrez rapidement la base de données."
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:25
+msgid "Query Database"
+msgstr "Base de données des requêtes"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:28
+msgid "Create complex queries on the sequence database."
+msgstr "Créer des requêtes complexes sur la base de données des séquences."
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:29
+msgid "Query Data"
+msgstr "Données de requête"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:35
+msgid "Retrieve Entries"
+msgstr "Retrouver les entrées"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:38
+msgid "Retrieve database records by supplying a list of SEQIDs or CFIA IDs"
+msgstr ""
+"Retrouvez les enregistrements de la base de données en fournissant une liste "
+"de SEQID ou d'ID ACIA"
+
+#: olc_webportalv2/templates/sequence_database/database_home.html:39
+msgid "Request Data"
+msgstr "Demande de données"
+
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:9
+msgid "ID Search"
+msgstr "Recherche d'ID"
+
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:32
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:34
+msgid "Choose CFIA IDs to Search"
+msgstr "Choisissez les IDs de l'ACIA à rechercher"
+
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:38
+msgid "Search the following CFIA IDs:"
+msgstr "Recherchez les IDs suivants de l'ACIA :"
+
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:56
+msgid "MISSING IDS!"
+msgstr ""
+
+#: olc_webportalv2/templates/sequence_database/database_id_search.html:60
+msgid "Renamed IDS!"
+msgstr ""
+
+#: olc_webportalv2/templates/sequence_database/database_query.html:9
+msgid "Database Query Design"
+msgstr "Conception de l'interrogation de la base de données"
+
+#: olc_webportalv2/templates/sequence_database/database_query.html:12
+msgid "(Optional) enter the assembly range"
+msgstr "(Facultatif) entrer la gamme d'assemblé"
+
+#: olc_webportalv2/templates/sequence_database/database_query.html:17
+#: olc_webportalv2/templates/sequence_database/database_query.html:23
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:23
+msgid "Sample name e.g. VI0639"
+msgstr "Nom de l'échantillon p.ex. VI0639"
+
+#: olc_webportalv2/templates/sequence_database/database_query.html:20
+#: olc_webportalv2/templates/sequence_database/database_query.html:26
+#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:26
+msgid "LSTS ID e.g. 2019FPP00000475214"
+msgstr "Identifiant SIESAL p. ex. 2019FPP0000000475214"
+
+#: olc_webportalv2/templates/sequence_database/database_query.html:32
+msgid "Create query"
+msgstr "Créer une requête"
+
 #: olc_webportalv2/templates/users/user_detail.html:11
 msgid "Personal Info"
 msgstr "Informations Personnelles"
@@ -2201,14 +2544,6 @@ msgstr "Création des échantillons"
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:16
 msgid "Select a unique name for this project"
 msgstr "Sélectionnez un nom unique pour ce projet"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:23
-msgid "Sample name e.g. VI0639"
-msgstr "Nom de l'échantillon p.ex. VI0639"
-
-#: olc_webportalv2/templates/vir_typer/vir_typer_create.html:26
-msgid "LSTS ID e.g. 2019FPP00000475214"
-msgstr "Identifiant SIESAL p. ex. 2019FPP0000000475214"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_create.html:29
 msgid "Laboratory name (select from list)"

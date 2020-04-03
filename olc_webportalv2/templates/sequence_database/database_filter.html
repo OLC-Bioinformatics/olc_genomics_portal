@@ -27,7 +27,7 @@
       <p data-tooltip='tooltip' title='{% trans "GeneSeekr Profile of interest"%}'>{% trans 'Enter your GeneSeekr Profile of interest'%} : {{ form.geneseekr }}</p>
     <p data-tooltip='tooltip' title='{% trans "Serovar of interest"%}'>{% trans 'Enter your serovar of interest'%} : {{ form.serovar }}</p>
     <p data-tooltip='tooltip' title='{% trans "Vtyper profile of interest"%}'>{% trans 'Enter your Vtyper profile of interest'%} : {{ form.vtyper }}</p>
-    <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans 'Enter the assembly range'%}  <br>From: {{ form.start_date }} to: {{ form.end_date }} </p>
+    <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans 'Enter the assembly range'%}  <br>{% trans 'From:'%} {{ form.start_date }}{% trans 'to:'%}{{ form.end_date }} </p>
 {#    <p data-tooltip='tooltip' title='{% trans "List of SEQIDs"%}'>{% trans 'Provide list of SEQIDS'%} : {{ form.seqids }}</p>#}
 {#    <p data-tooltip='tooltip' title='{% trans "List of CFIAIDs"%}'>{% trans 'Provide list of CFIAIDs'%} : {{ form.cfiaids }}</p>#}
 {#    <p data-tooltip='tooltip' title='{% trans "Desired assembly quality"%}'>{% trans 'Choose your desired assembly quality'%} : {{ form.quality|add_class:"form-control" }}</p>#}

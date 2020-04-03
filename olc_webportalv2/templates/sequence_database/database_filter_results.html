@@ -57,12 +57,15 @@
   <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ seqids|length }}</strong> {% trans 'results.'%}</p>
   <!--idList passed in from view -->
   <br>
-    <table class="dbtable">
-        {% render_table table %}
-    </table>
+   {% render_table table %}
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
+    <script type="text/javascript"> 
+    $(document).ready( function () {
+        document.getElementsByTagName("table")[0].classList.add("table");
+    });
+    </script>
   <!--function for copying SeqIDs to Clipboard -->
   <script type="text/javascript">
   function copySeq(text) {

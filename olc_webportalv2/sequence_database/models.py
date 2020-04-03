@@ -4,12 +4,6 @@ from django.utils.translation import ugettext_lazy as _
 
 # verbose names are needed for translation!
 
-# quality_choices = (
-#     (_('Fail'), _('Fail')),
-#     (_('Pass'), _('Pass'),),
-#     (_('Reference'), _('Reference'))
-# )
-
 
 class LabID(models.Model):
     labid = models.CharField(max_length=24,)
