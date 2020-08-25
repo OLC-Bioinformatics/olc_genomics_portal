@@ -65,10 +65,6 @@ label.col-sm-2.control-label {
 }
 
 /*Home Page Cards*/
-.card-deck { 
-  display: flex;
-  }
- 
 .card:hover{ 
     box-shadow: 1px 8px 20px grey;
  }
