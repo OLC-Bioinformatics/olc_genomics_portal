@@ -1,6 +1,7 @@
 import os, xlrd
 from olctools.accessoryFunctions.accessoryFunctions import relative_symlink
 
+# Set these for on the NAS - Files will be big
 thisdir = '/home/b/Downloads/sequence_database_fastas'
 metadata = "/home/b/metadata_table.xlsx"
 sal = "/home/b/salmonella"
@@ -8,11 +9,13 @@ lis = "/home/b/listeria"
 cam = "/home/b/campy"
 ecoli = "/home/b/ecoli"
 
+# Making Directories for sequences
 # os.mkdir(sal)
 # os.mkdir(lis)
 # os.mkdir(cam)
 # os.mkdir(ecoli)
 
+# Checking total number is consisent 
 # a = (len(os.listdir(sal)))
 # b = (len(os.listdir(lis)))
 # c = (len(os.listdir(cam)))
@@ -22,7 +25,7 @@ ecoli = "/home/b/ecoli"
 # print(total)
 # print(len(os.listdir(thisdir)))
 
-
+# Checks if everything is symlinked
 # for x in os.listdir(sal):
 #         if os.path.islink(sal+"/"+x):
 #                 print("True - "+x)
@@ -40,7 +43,7 @@ ecoli = "/home/b/ecoli"
 #                 print("True - "+x)
 
 
-
+# Finds sequence from Cathy's csv and symlinks them
 # wb = xlrd.open_workbook(metadata)
 # sheet = wb.sheet_by_index(0)
 # sheet2 = wb.sheet_by_index(1)
@@ -88,7 +91,7 @@ ecoli = "/home/b/ecoli"
 #         if sheet.cell(row,1).value == seq:
 #             print(seq + row)'Downloads/sequence_database_fastas'
 
-
+# Makes maps and hashes in env with bioconda, conda-forge and olcbioinformatics
 # os.system('{famap} -b {outfile}.famap {fasta}'.format(famap='/home/b/miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/famap',outfile=sal,fasta=os.path.join('/home/b/salmonella', '*.fasta')))
 # os.system('{famap} -b {outfile}.famap {fasta}'.format(famap='/home/b/miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/famap',outfile=lis,fasta=os.path.join('/home/b/listeria', '*.fasta')))
 # os.system('{famap} -b {outfile}.famap {fasta}'.format(famap='/home/b/miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/famap',outfile=ecoli,fasta= os.path.join('/home/b/ecoli', '*.fasta')))
@@ -102,6 +105,7 @@ ecoli = "/home/b/ecoli"
 # os.system('{fahash} -b {file}.hash {out}.famap'.format(fahash='/home/b/miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/fahash',file="/home/b/all",out='/media/b/External/CFIA/all'))
 
 
+#The actual primer finding part
 # primers = 'vtx_subtyping_primers.txt'
 # os.system('{rePCR} -S {outfile}.hash -r + -m {ampsize} -n {mismatches} -g 0 -G -q -o {outfile}.txt {primers}'.format(rePCR='./miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/re-PCR',
 #                             outfile='/media/b/External/CFIA/ecoli',
