@@ -1,8 +1,8 @@
+# Django-related imports
 from django.db import models
-from django.contrib.postgres.fields import ArrayField, JSONField
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.postgres.fields import ArrayField, JSONField
 
-# verbose names are needed for translation!
 
 quality_choices = (
     (_('Fail'), _('Fail')),

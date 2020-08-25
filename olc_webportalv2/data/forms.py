@@ -1,7 +1,10 @@
+# Django-related imports
 from django import forms
-from olc_webportalv2.metadata.models import SequenceData
-import re
 from django.utils.translation import ugettext_lazy as _
+# Standard libraries
+import re
+# Data-specific things
+from olc_webportalv2.metadata.models import SequenceData
 
 
 class DataRequestForm(forms.Form):

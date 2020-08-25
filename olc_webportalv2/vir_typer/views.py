@@ -1,20 +1,23 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils.translation import ugettext_lazy as _
-from django.views.decorators.csrf import csrf_exempt
-from django.forms.formsets import formset_factory
-from azure.storage.blob import BlockBlobService
-from django.db import IntegrityError
-from django.contrib import messages
-from weasyprint import HTML, CSS
+# Django-related imports
 from django.conf import settings
-import json
+from django.contrib import messages
+from django.db import IntegrityError
+from django.forms.formsets import formset_factory
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+# Standard libraries
 import os
-
+import json
+# Azure!
+from azure.storage.blob import BlockBlobService
+# Useful things!
+from weasyprint import HTML, CSS
 # VirusTyper-specific code
-from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
-from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
 from .tasks import run_vir_typer
+from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
+from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
 
 
 # Vir_Typer Views
@@ -60,7 +63,8 @@ def vir_typer_request(request):
                     putative_classification = form.cleaned_data.get('putative_classification')
                     analyst_name = form.cleaned_data.get('analyst_name')
                     # Set the subunit to 0 is it not provided (None), otherwise use the cleaned value
-                    subunit = 0 if form.cleaned_data['subunit'] is None else form.cleaned_data.get('subunit')
+                    if form.cleaned_data.get('subunit') is not None:
+                        subunit = form.cleaned_data.get('subunit')
                     # Only add the data if all the fields (except subunit, which is optional) have been supplied
                     if sample_name and date_received and lab_id and lsts_id and isolate_source and \
                             putative_classification and analyst_name:
@@ -101,6 +105,7 @@ def vir_typer_request(request):
                 out_str += tombstone_form.errors['project_name']
             out_str += sample_form_set.non_form_errors()
             messages.error(request, out_str)
+
     else:
         sample_form_set = sample_form_set_factory()
     return render(request,

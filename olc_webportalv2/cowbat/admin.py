@@ -1,4 +1,6 @@
+# Django-related imports
 from django.contrib import admin
+# COWBAT-specific things
 from .models import DataFile, SequencingRun, InterOpFile
 
 

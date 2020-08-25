@@ -6,49 +6,49 @@
 {% load i18n %}
 {% block content %}
 <br>
-    <a href="{% url 'primer_val:primer_val_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Virus Typer Query" %}</strong></a>
+    <a href="{% url 'primer_finder:primer_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Primer Validation Request" %}</strong></a>
     <br>
-    <h2>Primer Validator</h2>
+    <h2>{% trans "Primer Validator"%}</h2>
     <br>
-    <table id="primer_val-request-table" class="table table-hover">
+    <table id="primer-request-table" class="table table-hover">
         <thead>
         <tr style="text-align:center">
-            <th>{% trans "Name" %}</th>
+            <th>{% trans "Analysis Type" %}</th>
             <th>{% trans "Status" %}</th>
             <th>{% trans "Download" %}</th>
             <th>{% trans "Request Date" %}</th>
             <th data-orderable="false"></th>
-            <th>{% trans "Edit Project" %}</th>
+            <th>{% trans "Edit Name" %}</th>
         </tr>
         </thead>
         <tbody>
-        {% for primer_val_obj in primer_val_objs %}
-            <tr id="row{{primer_val_obj.pk}}" style="text-align:center">
-                <td><p style="text-align:center">{{ primer_val_obj }}</p></td>
-                {% if primer_val_obj.status == 'Complete' %}
-                    <td><a href="{% url 'primer_val:primer_val_results' primer_val_pk=primer_val_obj.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
-                {% elif primer_val_obj.status == 'Processing' %}
+        {% for primer_request in primer_requests %}
+            <tr id="row{{primer_request.pk}}" style="text-align:center">
+                <td><p style="text-align:center">{{ primer_request.get_analysistype_display }}</p></td>
+                {% if primer_request.status == 'Complete' %}
+                    <td><a href="{% url 'primer_finder:primer_results' primer_request_pk=primer_request.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
+                {% elif primer_request.status == 'Processing' %}
                     <td><button class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button"> {% trans "Processing" %} </button></td>
-                {% elif primer_val_obj.status == 'Error' %}
-                    <td><a href="{% url 'primer_val:primer_val_results' primer_val_pk=primer_val_obj.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
-                {% elif primer_val_obj.status == 'Unprocessed' %}
+                {% elif primer_request.status == 'Error' %}
+                    <td><a href="{% url 'primer_finder:primer_results' primer_request_pk=primer_request.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
+                {% elif primer_request.status == 'Unprocessed' %}
                     <td><button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
                 {% endif %}
-                {% if primer_val_obj.status == 'Complete' %}
-                    <td><a href="{{ primer_val_obj.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
+                {% if primer_request.status == 'Complete' %}
+                    <td><a href="{{ primer_request.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
                 {% else %}
                     <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button></td>
                 {% endif %}
-                <td>{{ primer_val_obj.created_at }}</td>
-                {% if primer_val_obj.status != 'Processing' and 'Unprocessed' %}
-                    <form id="form{{primer_val_obj.pk}}" method="post">
-                        <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{primer_val_obj.pk}}" name="delBtn" value={{primer_val_obj.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
-                        <input type='hidden' id="delete{{primer_val_obj.pk}}" name="delete" value={{primer_val_obj.pk}}>
+                <td>{{ primer_request.date }}</td>
+                {% if primer_request.status != 'Processing' and 'Unprocessed' %}
+                    <form id="form{{primer_request.pk}}" method="post">
+                        <td text-align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{primer_request.pk}}" name="delBtn" value={{primer_request.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
+                        <input type='hidden' id="delete{{primer_request.pk}}" name="delete" value={{primer_request.pk}}>
                     </form>
                 {% else %}
                     <td></td>
                 {% endif %}
-                <td style="text-indent: 5px"><a href="{% url 'primer_val:primer_val_rename' primer_val_pk=primer_val_obj.pk %}">   <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+                <td style="text-indent: 5px"><a href="{% url 'primer_finder:primer_rename' primer_request_pk=primer_request.pk %}"> {{primer_request.name}}  <i class="fas fa-pen" aria-hidden="true"></i></a></td>
             </tr>
         {% endfor %}
         </tbody>
@@ -58,7 +58,7 @@
     <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
     <script type="text/javascript">
         $(document).ready(function () {
-            let table = $('#primer_val-request-table').DataTable({
+            let table = $('#primer-request-table').DataTable({
                 language : {
                     url: getLanguage()
                 }
@@ -69,8 +69,8 @@
                 .draw();
         });
         setInterval(function () {
-            {% for primer_val_obj in primer_val_objs %}
-                {% if primer_val_obj.status == 'Processing' %}
+            {% for primer_request in primer_requests %}
+                {% if primer_request.status == 'Processing' %}
                     window.location = window.location.href;
                     {% endif %}
             {% endfor %}
@@ -94,7 +94,7 @@
                 if (result.value === true) {
                     Swal.fire({
                         title: '{% trans "Deleted!" %}',
-                        text: '{% trans "Your project has been deleted." %}',
+                        text: '{% trans "Your request has been deleted." %}',
                         type: 'success',
                         showConfirmButton: false
                     }).then(function(cont) {

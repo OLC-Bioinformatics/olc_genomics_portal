@@ -1,5 +1,7 @@
-from olc_webportalv2.users.models import User
+# Django-related imports
 from django.db import models
+# Portal-sepcific 
+from olc_webportalv2.users.models import User
 
 
 class VirTyperProject(models.Model):
@@ -43,14 +45,15 @@ class VirTyperRequest(models.Model):
     ]
 
     project_name = models.ForeignKey(VirTyperProject, on_delete=models.CASCADE, related_name='project_request')
+    sample_name = models.CharField(max_length=64, blank=False,)
+    LSTS_ID = models.CharField(max_length=64, blank=False,)
     lab_ID = models.CharField(max_length=64, choices=LABS, default=STHY, blank=False)
-    isolate_source = models.CharField(max_length=64, blank=False)
-    LSTS_ID = models.CharField(max_length=64, blank=False)
-    putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
-    sample_name = models.CharField(max_length=64, blank=False)
+    isolate_source = models.CharField(max_length=64, blank=False,)
     subunit = models.PositiveIntegerField(null=True, blank=True)
-    date_received = models.DateField(blank=False)
-    analyst_name = models.CharField(max_length=64, blank=False)
+    putative_classification = models.CharField(max_length=50, choices=VIRUSES, default=NORI, blank=False)
+    analyst_name = models.CharField(max_length=64, blank=False,)
+    date_received = models.DateField(blank=False,)
+    
 
     class Meta:
         unique_together = (('sample_name', 'project_name'), ('LSTS_ID', 'project_name'))

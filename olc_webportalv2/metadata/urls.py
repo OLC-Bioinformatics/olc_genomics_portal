@@ -1,9 +1,13 @@
-from olc_webportalv2.metadata import views
-from django.conf.urls import url, include
+# Django-related imports
 from django.urls import path
-from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework.schemas import get_schema_view
+from django.conf.urls import url, include
 from django.utils.translation import gettext_lazy as _
+# Useful things!
+from rest_framework.schemas import get_schema_view
+from rest_framework.urlpatterns import format_suffix_patterns
+# MetaData-specific things
+from olc_webportalv2.metadata import views
+
 
 schema_view = get_schema_view(title='Metadata API')
 

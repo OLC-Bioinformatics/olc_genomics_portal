@@ -36,7 +36,7 @@ services:
 
   postgres:
     restart: always
-    image: postgres:9.6
+    image: postgres:12.1
     volumes:
       - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./backups/postgresql:/backup
@@ -47,7 +47,7 @@ services:
       - "5432"
 
   redis:
-    image: redis:3.0
+    image: redis:5.0
 
   celeryworker:
     # https://github.com/docker/compose/issues/3220

@@ -1,17 +1,22 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
-from django.conf import settings
+# Django-related imports
 from django.db.models import Q
-from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
-    make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
-from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID, OLNID
-from olc_webportalv2.metadata.serializers import SequenceDataSerializer, OLNSerializer
-import datetime
+from django.conf import settings
+from django.http import JsonResponse
+from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
+# Standard libraries
+import datetime
+# Azure!
+from azure.storage.blob import BlockBlobService, BlobPermissions
+# Useful things!
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination, views, parsers, response
-from azure.storage.blob import BlockBlobService, BlobPermissions
-from django.utils.translation import ugettext_lazy as _
+# MetaData-specific things
+from olc_webportalv2.metadata.serializers import SequenceDataSerializer, OLNSerializer
+from olc_webportalv2.metadata.models import MetaDataRequest, SequenceData, LabID, OLNID
+from olc_webportalv2.metadata.forms import MetaDataRequestForm, make_species_choice_list, make_genus_choice_list, \
+    make_mlst_choice_list, make_rmlst_choice_list, make_serotype_choice_list
 
 
 # Not sure where to put this - create pagination.py?
@@ -96,7 +101,6 @@ class RMLSTAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
         return make_rmlst_choice_list()
 
-# Create your views here.
 @login_required
 def metadata_home(request):
     form = MetaDataRequestForm()

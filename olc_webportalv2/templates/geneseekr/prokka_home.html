@@ -58,7 +58,7 @@
         {% else %}
           <td></td>
         {% endif %}
-        <td style="text-indent: 5px"><a href="{% url 'geneseekr:prokka_name' prokka_request.pk %}">{{prokka_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
+        <td style="text-indent: 5px"><a href="{% url 'geneseekr:prokka_rename' prokka_request.pk %}">{{prokka_request.name}} <i class="fas fa-pen" aria-hidden="true"></i></a></td>
      </tr>
      {% endfor %}
   </tbody>

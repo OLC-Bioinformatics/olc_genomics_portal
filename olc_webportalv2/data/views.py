@@ -1,14 +1,15 @@
 # Django-related imports
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
 # Standard libraries
 import datetime
-# Portal-specific things
-from olc_webportalv2.data.tasks import get_assembled_data, get_raw_data
-from olc_webportalv2.data.forms import DataRequestForm
+# Data-specific things
 from olc_webportalv2.data.models import DataRequest
-# Task Management
+from olc_webportalv2.data.forms import DataRequestForm
+from olc_webportalv2.data.tasks import get_assembled_data, get_raw_data
+# Useful things!
 from kombu import Queue
+
 
 @login_required
 def data_home(request):
