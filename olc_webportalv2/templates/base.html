@@ -142,8 +142,6 @@
     </nav>
   </div>
   <br>  
-  <div class="browserAlert" style='display: none;'><i class="fas fa-exclamation-triangle fa-lg"></i> <b> {% trans "You are using Internet Explorer, which is no longer supported. Chrome, Firefox or Edge is recommended for use of the FoodPort. "%} </b> </div>
-
   <div class="container">
     {#This is where alert messages will appear (i.e. successful signin)#}
     <br>
@@ -312,7 +310,6 @@
       //IE doesn't like nice things - this adjusts the image so it is not distorted
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
-      document.getElementsByClassName('browserAlert')[0].style.display = 'block';
     }
     if (bowser.name == "Firefox") {
       document.getElementsByTagName("select")[0].className = "fox";
