@@ -1,6 +1,7 @@
 # Django-related imports
 from django import forms
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MaxValueValidator, MinValueValidator
 # Portal-sepcific 
@@ -27,6 +28,7 @@ class PrimerFinder(models.Model):
     export_amplicons = models.BooleanField(default=True)
     # Primer_file not required for Verotoxin analysis types
     primer_file = models.FileField(blank=True)
+    primer_seq = ArrayField(models.CharField(max_length=1048,blank=True))
 
 class PrimerAzureRequest(models.Model):
     name = models.ForeignKey(PrimerFinder, on_delete=models.CASCADE, related_name='primer_azure_request')

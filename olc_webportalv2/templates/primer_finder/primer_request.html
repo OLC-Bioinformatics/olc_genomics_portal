@@ -16,11 +16,16 @@
       <div class="col-2" style="padding-left:0;">
       {{ form.mismatches|as_crispy_field }}   
       </div>
-    <div class="col-4" style="padding-left:0;" id='custom'>  
-      {{ form.primer_file|as_crispy_field }}
+    <div id='custom'>  
+      <div class="form-row" style="padding-left:0;">
+        <div class="form-group col-md-6 mb-0">{{ form.primer_seq|as_crispy_field}} </div>
+        <div class="form-group col-md-6 mb-0"> {{ form.primer_file|as_crispy_field }} </div>    
+      </div>
+     <div class="col-4" style="padding-left:0;">
       {{ form.ampliconsize|as_crispy_field }}                
       {{ form.export_amplicons|as_crispy_field }}
     </div>
+  </div>
   <button type="submit" class="btn btn-primary btn-lg">{%trans "Create Request"%} </button>
   </form>
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>

@@ -49,9 +49,12 @@ def primer_request(request):
                 # catches if primerfile is empty on Custome EPCR request
                 if len(request.FILES) != 0:
                     primer_file = request.FILES['primer_file']
+                # elif len(form.primer_seq) != 0:
+                #     primer_seq = form.cleaned_data.get('primer_seq')    
                 else:
-                    error = _('Primer file is required')
+                    error = _('Primer is required')
                     messages.error(request,error)
+
                 ampliconsize = form.cleaned_data.get('ampliconsize')
                 export_amplicons = form.cleaned_data.get('export_amplicons')
                 # create primer request for custom
@@ -61,6 +64,7 @@ def primer_request(request):
                                                         analysistype = analysistype,
                                                         mismatches = mismatches,
                                                         primer_file = primer_file,
+                                                        # primer_seq = primer_seq,
                                                         ampliconsize = ampliconsize,
                                                         export_amplicons = export_amplicons)
                     primer_request.save()
