@@ -66,7 +66,8 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
             output_data_folder += '/'
         f.write('OUTPUT:={}\n'.format(output_data_folder))
         f.write('COMMAND:={}\n'.format(command))
-
+        
+# TODO: Make primerfinder run on cloud VM
 @shared_task
 def run_primer_finder(primer_request_pk):
     primer_request = PrimerFinder.objects.get(pk=primer_request_pk)
@@ -78,15 +79,19 @@ def run_primer_finder(primer_request_pk):
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        command = 'source $CONDA/activate /envs/primer && mkdir {cn}'.format(cn=container_name)
-        #
-        command += ' && primer -r {container_name} -s sequences/'.format(container_name=container_name)
-        make_config_file(job_name=container_name,
-                         sequences=sequences,
-                         input_data_folder='sequences',
-                         output_data_folder=container_name,
-                         command=command,
-                         config_file=batch_config_file)
+        # TODO: needs to run against all hashes, use primer-hashing as guide to make hashes and maps on NAS
+        make_config_file(seqids=primer_request.seqids,
+                             job_name=container_name,
+                             input_data_folder='sequences',
+                             output_data_folder=container_name,
+                            #  TODO: Needs correct input and output
+                             command='source $CONDA/activate /envs/primer && mkdir {container_name} && primer -r {container_name} -s sequences/ && {rePCR} -S {outfile}.hash -r + -m {ampsize} -n {mismatches} -g 0 -G -q -o {outfile}.txt {primers}'.format(container_name=container_name,rePCR='./miniconda/envs/primer/lib/python3.6/site-packages/genemethods/assemblypipeline/ePCR/re-PCR',
+                                outfile='/media/b/External/CFIA/ecoli',
+                                ampsize=primer_request.ampsize,
+                                mismatches=primer_request.mismatches,
+                                primers=primer_request.primer_file),
+                             config_file=batch_config_file,
+                             vm_size=vm_size)
         # With that done, we can submit the file to batch with our package and create a tracking object.
         subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
                         '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
@@ -99,4 +104,3 @@ def run_primer_finder(primer_request_pk):
         primer_request.status = 'Error'
         primer_request.save()
 
- 
