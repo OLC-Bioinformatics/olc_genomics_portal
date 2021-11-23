@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
+{% block content %}
+    <h2>{%trans "ID Search"%}</h2>
+    <form action='' enctype="multipart/form-data" method="post">
+        {% if form.errors %}
+            <div class="alert alert-danger" role="alert" align="center">
+                {{ form.non_field_errors|escape }}
+            </div>
+        {% endif %}
+        {% csrf_token %}
+        <div class="accordion" id="accordionExample">
+            <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose SeqIDs to Search"%}'
+                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                {%trans "Choose SeqIDs to Search"%}
+            </button>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                <div class="card-body">
+                    <p>{%trans "Search the following SeqIDs:"%}</p>
+                    {{ form.seqids }}
+                    <br>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="accordion" id="accordionExample">
+            <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose CFIA IDs to Search"%}'
+                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                {%trans "Choose CFIA IDs to Search"%}
+            </button>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                <div class="card-body">
+                    <p>{%trans "Search the following CFIA IDs:"%}</p>
+                    {{ form.cfiaids }}
+                    <br>
+                </div>
+            </div>
+        </div>
+        <br>
+        <button type="submit" class="btn btn-primary btn-lg">{%trans "Run Query"%}</button>
+    </form>
+    <br>
+    <button class="btn btn-primary" style="float: right" onclick="copySeq({{ seqids }})">
+                        {% trans 'Copy SeqIDs'%}
+                    </button>
+    <div class="alert alert-success" id="success" style="float:right;display:none">
+        {% trans 'Copied to clipboard!'%}
+    </div>
+    <br>
+    {% for missing in missing_ids %}
+        <p>{% trans 'MISSING IDS!'%} {{ missing }}</p>
+    {% endfor %}
+    <br>
+    {% for renamed_id in renamed %}
+        <p>{% trans 'Renamed IDS!'%} {{ renamed_id }}</p>
+    {% endfor %}
+    <br>
+    {% render_table query_table %}
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            document.getElementsByTagName("table")[0].classList.add("table");
+
+            // adds tool tips
+            let query_sequence = document.getElementById('div_id_query_sequence');
+            $(query_sequence).attr('data-tooltip','tooltip');
+            $(query_sequence).attr('title',"{%trans 'Enter one or more query sequences in FASTA format, or upload a file below.' %}");
+        });
+            </script>
+    <!--function for copying SeqIDs to Clipboard -->
+  <script type="text/javascript">
+  function copySeq(text) {
+      let seqText = document.createElement("textarea");
+      document.body.appendChild(seqText);
+      seqText.value = text;
+      {#console.log(text);#}
+      let seqList = "";
+      for (let j = 0; j < text.length; j++) {
+        {#console.log(text[j] + '\t');#}
+        seqList = seqList + text[j] + '\n';
+      }
+        seqText.value = seqList;
+      seqText.select();
+      document.execCommand("copy");
+      document.body.removeChild(seqText);
+
+
+      let success = document.getElementById("success");
+      success.style.display ="initial";
+      $(success).fadeOut(1000);
+  }
+  </script>
+{% endblock %}

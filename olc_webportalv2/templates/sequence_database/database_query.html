@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
+{% block content %}
+    <h2>{% trans "Database Query Design" %}</h2>
+    <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% csrf_token %}
+        <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans '(Optional) enter the assembly range'%}  <br> {% trans 'From:'%} {{ date.start_date }} {% trans 'to:'%}  {{ date.end_date }} </p>
+        {{ form_set.management_form }}
+        {% for query in form_set %}
+            <div class="sample_formset">
+                <div class="form-row">
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title="{% trans 'Sample name e.g. VI0639' %}">
+                        {{ query.database_fields|as_crispy_field }}
+                    </div> 
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title="{% trans 'LSTS ID e.g. 2019FPP00000475214' %}">
+                        {{ query.query_operators|as_crispy_field }}
+                    </div> 
+                    <div class="form-group col-md-2 mb-0" data-tooltip='tooltip' title="{% trans 'Sample name e.g. VI0639'%}">
+                        {{ query.qualifiers|as_crispy_field }}
+                    </div> 
+                    <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title="{% trans 'LSTS ID e.g. 2019FPP00000475214' %}">
+                        {{ query.query|as_crispy_field }}
+                    </div>
+                    </div>
+                </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
+        <br>
+        <br>
+    </form>
+        {% render_table database_result %}
+    </table>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+    <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> 
+    $(document).ready( function () {
+        document.getElementsByTagName("table")[0].classList.add("table");
+    });
+        $('.datepicker').datepicker({
+            format: "yyyy-mm-dd",
+            language: "{{LANGUAGE_CODE}}",
+            orientation: "bottom auto"
+        });
+        </script>
+{% endblock %}

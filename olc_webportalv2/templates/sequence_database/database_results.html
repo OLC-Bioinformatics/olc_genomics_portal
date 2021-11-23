@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+  <h2>{% trans 'Database Results'%}</h2>
+  <br>
+  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">{% trans 'View Search Criteria'%}</button>
+  <div id="criteria" class="collapse">
+  <br>
+  {% for criteria, value in database_result.criteria.items %}
+    <p><strong>{% trans criteria %}:</strong> {% trans value %}</p>
+  {% endfor %}
+  </div>
+  <br>
+  <br>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ database_result.seqids|length }}</strong> {% trans 'results.'%}</p>
+  <!--idList passed in from view -->
+  <button class="btn btn-primary" style="float: right" onclick="copySeq('{{idList}}')">{% trans 'Copy SeqIDs'%}</button>
+  <br>
+  <br>
+  <div class="alert alert-success" id="success" style="float:right;display:none">{% trans 'Copied to clipboard!'%}</div>
+  <br>
+  <br>
+  <br>
+  <table class="table table-hover" id="table_results">
+  <thead>
+    <tr>
+      <th>{% trans 'SeqID'%}</th>
+{#      <th>{% trans 'LabID'%}</th>#}
+{#      <th>{% trans 'OLNID'%}</th>#}
+    </tr>
+  </thead>
+  <tbody>
+    {% for seqid in database_result.seqids %}
+      <tr>
+        <td>{{ seqid }}</td>
+{#        {% for key, value in idDict.items %}#}
+{#        {% if key == seqid%}#}
+{#        <td>{{value.0}}</td>#}
+{#        <td>{{value.1}}</td>#}
+{#      </tr>#}
+{#      {% endif %}#}
+{#    {% endfor %}#}
+    {% endfor %}
+  </tbody>
+  </table>
+
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+
+  <!--function for copying SeqIDs to Clipboard -->
+  <script type="text/javascript">
+  function copySeq(text) {
+    var seqText = document.createElement("textarea");
+    document.body.appendChild(seqText);
+    seqText.value = text;
+    seqText.select();
+    document.execCommand("copy");
+    document.body.removeChild(seqText);
+    var success = document.getElementById("success");
+    success.style.display ="initial";
+    $(success).fadeOut(1000);
+  }
+  </script>
+
+  {% endblock %}

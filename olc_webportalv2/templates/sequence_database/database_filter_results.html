@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load render_table from django_tables2 %}
+{% block content %}
+    <h2>{% trans 'Database Results'%}</h2>
+    <div class="h-100 justify-content-center">
+        <div class="container">
+            <div class="row">
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "SEQIDs" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">
+                            {% trans 'View SEQIDs'%}
+                        </button>
+                        <div id="criteria" class="collapse">
+                            <br>
+                            {% for seqid in seqids %}
+                                <p>{{seqid}}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                <button class="btn btn-primary" style="float: right" onclick="copySeq({{ seqids }})">
+                        {% trans 'Copy SeqIDs'%}
+                    </button>
+                </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "CFIA IDs" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">
+                            {% trans 'View CFIA IDs'%}
+                        </button>
+                        <div id="criteria" class="collapse">
+                            <br>
+                            {% for cfiaid in cfiaids %}
+                                <p>{{ cfiaid }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                <button class="btn btn-primary" style="float: right" onclick="copySeq({{ cfiaids }})">
+                        {% trans 'Copy CFIA IDs'%}
+                    </button>
+                </div>
+            </div>
+        </div>
+    <div class="alert alert-success" id="success" style="float:right;display:none">
+        {% trans 'Copied to clipboard!'%}
+    </div>
+    </div>
+  <br>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ seqids|length }}</strong> {% trans 'results.'%}</p>
+  <!--idList passed in from view -->
+  <br>
+   {% render_table table %}
+  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/datatables.min.js' %}"></script>
+
+    <script type="text/javascript"> 
+    $(document).ready( function () {
+        document.getElementsByTagName("table")[0].classList.add("table");
+    });
+    </script>
+  <!--function for copying SeqIDs to Clipboard -->
+  <script type="text/javascript">
+  function copySeq(text) {
+      let seqText = document.createElement("textarea");
+      document.body.appendChild(seqText);
+      seqText.value = text;
+      {#console.log(text);#}
+      let seqList = "";
+      for (let j = 0; j < text.length; j++) {
+        {#console.log(text[j] + '\t');#}
+        seqList = seqList + text[j] + '\n';
+      }
+        seqText.value = seqList;
+      seqText.select();
+      document.execCommand("copy");
+      document.body.removeChild(seqText);
+
+
+      let success = document.getElementById("success");
+      success.style.display ="initial";
+      $(success).fadeOut(1000);
+  }
+  </script>
+
+  {% endblock %}

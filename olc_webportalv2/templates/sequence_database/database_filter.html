@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load static %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% block content %}
+  <h2>{% trans 'Database Filter'%}</h2>
+  <br>
+  <form action='' method="post">
+     {% if form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ form.non_field_errors|escape }}
+    </div>
+   {% endif %}
+   <h4>{% trans 'Autocomplete Fields'%}</h4>
+    <p data-tooltip='tooltip' title='{% trans "Genus of interest"%}'>{% trans 'Enter your genus of interest'%} : {{ form.genus }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Species of interest"%}'>{% trans 'Enter your species of interest'%} : {{ form.species }}</p>
+{#    <p data-tooltip='tooltip' title='{% trans "Serotype of interest"%}'>{% trans 'Enter your serotype of interest'%} : {{ form.serotype }}</p>#}
+    <p data-tooltip='tooltip' title='{% trans "MLST profile of interest"%}'>{% trans 'Enter your MLST of interest'%} : {{ form.mlst }}</p>
+    <p data-tooltip='tooltip' title='{% trans "MLST Clonal Complex of interest"%}'>{% trans 'Enter your MLST Clonal Complex of interest'%} : {{ form.mlstcc }}</p>
+    <p data-tooltip='tooltip' title='{% trans "rMLST profile of interest"%}'>{% trans 'Enter your rMLST of interest'%} : {{ form.rmlst }}</p>
+
+  <h4>{% trans 'Text searches'%}</h4>
+      <p data-tooltip='tooltip' title='{% trans "GeneSeekr Profile of interest"%}'>{% trans 'Enter your GeneSeekr Profile of interest'%} : {{ form.geneseekr }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Serovar of interest"%}'>{% trans 'Enter your serovar of interest'%} : {{ form.serovar }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Vtyper profile of interest"%}'>{% trans 'Enter your Vtyper profile of interest'%} : {{ form.vtyper }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Start Date"%}'>{% trans 'Enter the assembly range'%}  <br>{% trans 'From:'%} {{ form.start_date }}{% trans 'to:'%}{{ form.end_date }} </p>
+{#    <p data-tooltip='tooltip' title='{% trans "List of SEQIDs"%}'>{% trans 'Provide list of SEQIDS'%} : {{ form.seqids }}</p>#}
+{#    <p data-tooltip='tooltip' title='{% trans "List of CFIAIDs"%}'>{% trans 'Provide list of CFIAIDs'%} : {{ form.cfiaids }}</p>#}
+{#    <p data-tooltip='tooltip' title='{% trans "Desired assembly quality"%}'>{% trans 'Choose your desired assembly quality'%} : {{ form.quality|add_class:"form-control" }}</p>#}
+  {% csrf_token %}
+    <br>
+  <button type="submit" class="btn btn-primary btn-lg">{% trans 'Get SeqIDs' %}</button>
+  </form>
+  {{ form.media }}
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
+    <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
+    <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> //
+        $('.datepicker').datepicker({
+            format: "yyyy-mm-dd",
+            language: "{{LANGUAGE_CODE}}",
+            orientation: "bottom auto"
+        });
+        </script>
+{% endblock %}
