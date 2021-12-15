@@ -11,6 +11,7 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
     TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
+from olc_webportalv2.cowbat.methods import AzureBatch
 from sentry_sdk import capture_exception
 
 from azure.storage.blob import BlockBlobService
@@ -120,8 +121,19 @@ def run_prokka(prokka_request_pk):
                          config_file=batch_config_file,
                          other_input_files=prokka_request.other_input_files)
         # With that done, we can submit the file to batch with our package and create a tracking object.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            vm_size='Standard_D8s_v3',
+            no_clean=True,
+        )
         ProkkaAzureRequest.objects.create(prokka_request=prokka_request,
                                           exit_code_file='NA')
         # Delete any downloaded fasta files that were used in zip creation if necessary.
@@ -155,8 +167,19 @@ def run_sistr(sistr_request_pk):
                          config_file=batch_config_file)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            vm_size='Standard_D8s_v3',
+            no_clean=True,
+        )
         # TODO: Have a SISTR request object get created and tracked.
         # Also TODO: add the SISTR request to monitor_tasks in olc_webportalv2/cowbat/tasks
         # Delete any downloaded fasta files that were used in zip creation if necessary.
@@ -197,8 +220,19 @@ def run_amr_summary(amr_summary_pk):
                          config_file=batch_config_file,
                          other_input_files=amr_summary_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            vm_size='Standard_D8s_v3',
+            no_clean=True,
+        )
         AMRAzureRequest.objects.create(amr_request=amr_summary_request,
                                        exit_code_file='NA')
         # Delete any downloaded fasta files that were used in zip creation if necessary.
@@ -246,8 +280,19 @@ def run_mash(tree_request_pk):
                              other_input_files=tree_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            vm_size='Standard_D8s_v3',
+            no_clean=True,
+        )
         TreeAzureRequest.objects.create(tree_request=tree_request,
                                           exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
         # Delete any downloaded fasta files that were used in zip creation if necessary.
@@ -317,7 +362,8 @@ def run_geneseekr(geneseekr_request_pk):
                                                 threads=threads_to_use)
 
         subprocess.call(cmd, shell=True)
-
+        #subprocess.call(cmd, shell=True, stdout=open(os.path.join('olc_webportalv2', 'media', 'out'), 'w'), 
+        #                                 stderr=open(os.path.join('olc_webportalv2', 'media', 'err'), 'w'))
         print('Reading geneseekr results')
         get_blast_results(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
                             geneseekr_task=geneseekr_request)
@@ -331,7 +377,7 @@ def run_geneseekr(geneseekr_request_pk):
         rewrite_blast_report(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
                              geneseekr_task=geneseekr_request)
 
-       # Get sequence report
+        # Get sequence report
         geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
         geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
         #opens document, consolidates info from geneseekr_request and geneseekr_details dictionaries into csv
@@ -499,12 +545,19 @@ def rewrite_blast_report(blast_result_file, geneseekr_task):
     # Need to keep track of what SEQIDs have what genes. To do this, populate a dictionary where keys are SEQIDs and
     # values are a list of the target genes. Whenever we find a hit, remove the target gene from the list. Once done
     # iterating through the blast result file, write the things that are still there as missing.
+    bork = open('olc_webportalv2/media/seqids.txt', 'w')
+    mork = open('olc_webportalv2/media/genes.txt', 'w')
+    cork = open('olc_webportalv2/media/blast_seqids.txt', 'w')
     genes_not_present = dict()
     for seqid in geneseekr_task.seqids:
         genes_not_present[seqid] = list()
+        bork.write('{}\n'.format(seqid))
         for query_gene in geneseekr_task.gene_targets:
             genes_not_present[seqid].append(query_gene)
-
+    for query_gene in geneseekr_task.gene_targets:
+        mork.write('{}\n'.format(query_gene))
+    bork.close()
+    mork.close()
     # Now iterate through the backup file, writing to the new file as we go.
     with open(blast_backup_file) as infile:
         with open(blast_result_file, 'w') as outfile:
@@ -512,6 +565,7 @@ def rewrite_blast_report(blast_result_file, geneseekr_task):
                           '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
             for result_line in infile:
                 blast_result = BlastResult(result_line)
+                cork.write('{}\n'.format(blast_result.seqid))
                 if blast_result.seqid in geneseekr_task.seqids:
                     outfile.write(result_line)
                     try:  # Remove the gene found from the genes_not_present since we found it.
@@ -523,6 +577,7 @@ def rewrite_blast_report(blast_result_file, geneseekr_task):
             for seqid in genes_not_present:
                 for query_gene in genes_not_present[seqid]:
                     outfile.write('{}\t{}\t0\t0\t0\t0\t0\t0\t0\tNA\n'.format(query_gene, seqid))
+    cork.close()
 
 
 def get_blast_top_hits(blast_result_file, geneseekr_task, num_hits=50):

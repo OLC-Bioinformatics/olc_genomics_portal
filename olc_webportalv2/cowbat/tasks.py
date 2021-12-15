@@ -3,6 +3,7 @@ from olc_webportalv2.cowbat.models import SequencingRun, AzureTask
 from olc_webportalv2.geneseekr.models import TreeAzureRequest, Tree, AMRSummary, AMRAzureRequest, \
     AMRDetail, ProkkaRequest, ProkkaAzureRequest
 from olc_webportalv2.vir_typer.models import VirTyperAzureRequest, VirTyperProject
+from .methods import AzureBatch
 # For some reason settings get imported from base.py - in views they come from prod.py. Weird.
 from django.conf import settings  # To access azure credentials
 # Standard python stuff
@@ -33,16 +34,16 @@ from celery import shared_task, task
 from sentry_sdk import capture_exception
 from azure.batch.models import BatchErrorException
 
-
 @shared_task
-def run_cowbat_batch(sequencing_run_pk, vm_size='Standard_D32s_v3'):
+def run_cowbat_batch(sequencing_run_pk, vm_size='Standard_D16s_v3'):
+    sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
+    run_folder = 'olc_webportalv2/media/{run_name}'.format(run_name=str(sequencing_run))
     try:
         blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
                                        account_name=settings.AZURE_ACCOUNT_NAME)
-        sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
+
         # Check that all files are actually present. If not, some upload managed to fail.
         # Change status to 'UploadError', which will allow user to retry the upload.
-        run_folder = 'olc_webportalv2/media/{run_name}'.format(run_name=str(sequencing_run))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
@@ -89,12 +90,28 @@ def run_cowbat_batch(sequencing_run_pk, vm_size='Standard_D32s_v3'):
                     .format(run_name=str(sequencing_run)))
 
         # With that done, we can submit the file to batch with our package.
-        # Use Popen to run in background so that task is considered complete.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            no_clean=True,
+            vm_size='Standard_D16s_v3'
+        )
+
         AzureTask.objects.create(sequencing_run=sequencing_run,
                                  exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
     except Exception as e:
+        import logging
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        fh = logging.FileHandler(os.path.join(run_folder, 'error'))
+        fh.setLevel(logging.INFO)
+        logger.addHandler(fh)
+        logger.exception(e)
         capture_exception(e)
         SequencingRun.objects.filter(pk=sequencing_run_pk).update(status='Error')
 

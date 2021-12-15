@@ -29,6 +29,7 @@
                     </div>
                 </div>
         {% endfor %}
+        <br>        
         <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
         <br>
         <br>
@@ -41,6 +42,12 @@
     <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
     <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
     <script src="{% static 'js/jquery.formset.js' %}"></script>
+    <script type="text/javascript"> // Allows adding and removal of formsets
+        $('.sample_formset').formset({
+            addText: '<i class="fas fa-plus"></i> {% trans "Add additional query" %}<br>',
+            deleteText: '<i class="fas fa-minus"></i> {% trans "Remove query" %}<br><br>'
+        });
+    </script>
     <script type="text/javascript"> 
     $(document).ready( function () {
         document.getElementsByTagName("table")[0].classList.add("table");

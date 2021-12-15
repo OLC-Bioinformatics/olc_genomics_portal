@@ -3,6 +3,11 @@ from datetime import datetime
 import django
 import pandas
 import os
+
+parentdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.sys.path.insert(0, parentdir)
+print(parentdir)
+os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.prod'
 django.setup()
 from olc_webportalv2.sequence_database.models import GeneSeekr, Genus, LookupTable, NameTable, MLST, MLSTCC, RMLST, \
     SequenceData, Serovar, Species, Vtyper, UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, \

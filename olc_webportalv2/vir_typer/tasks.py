@@ -1,7 +1,7 @@
+from olc_webportalv2.cowbat.methods import AzureBatch
 from sentry_sdk import capture_exception
 from django.conf import settings
 from celery import shared_task
-import subprocess
 import os
 
 from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest
@@ -75,8 +75,18 @@ def run_vir_typer(vir_typer_request_pk):
                          command=command,
                          config_file=batch_config_file)
         # With that done, we can submit the file to batch with our package and create a tracking object.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            no_clean=True,
+        )
         VirTyperAzureRequest.objects.create(project_name=vir_typer_project,
                                             exit_code_file='NA')
         vir_typer_project.status = 'Processing'

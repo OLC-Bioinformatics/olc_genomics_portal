@@ -1,0 +1,73 @@
+version: '2'
+
+services:
+  web: &web
+    restart: always
+    extra_hosts:
+      - "cfiaolc.canadacentral.batch.azure.com:10.148.57.14"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8000"
+      - "587"
+    links:
+      #- postgres:postgres
+      - redis:redis
+    env_file: env
+    volumes:
+      - ./:/data/web
+      #- /data/sequences:/sequences
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+      - /sequence_data:/sequences
+    environment:
+      #- POSTGRES_USER=myproject_web
+      - USE_DOCKER=yes
+      - DOCKER_SOCKET=/var/run/docker.sock
+      - DOCKER_GROUP=dockerhost
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - "8000"
+      - "587"
+    command: /bin/bash -c "gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
+
+  nginx:
+    restart: always
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile-https
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes_from:
+      - web
+    links:
+      - web:web
+
+  redis:
+    restart: always
+    image: redis:3.0
+    expose:
+      - "6379"
+
+  celeryworker:
+    <<: *web
+    depends_on:
+      - redis
+    command: ./worker_launcher.sh
+
+  celerybeat:
+    <<: *web
+    depends_on:
+      - redis
+    ports: []
+    command: celery -A olc_webportalv2.taskapp beat -l info
+
+  flower:
+    <<: *web
+    depends_on:
+      - celeryworker
+      - celerybeat
+    command: ["flower", "--address=0.0.0.0","--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD", "--broker=redis://redis:6379/0", "--port=8888"]
+    ports:
+      - 8888:8888
