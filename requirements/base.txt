@@ -73,7 +73,7 @@ azure-storage-file==1.4.0
 Babel==2.6.0
 billiard==3.5.0.5
 biopython==1.73
-certifi==2018.11.29
+certifi==2022.12.7
 cffi==1.12.2
 chardet==3.0.4
 Click==7.0
