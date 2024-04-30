@@ -57,6 +57,8 @@
                     class="fas fa-book"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %} <i
                     class="fas fa-file-pdf"></i></a>
+                <a class="dropdown-item" href="{% url 'filezone:filezone' %}">{% trans "FileZone " %} <i
+                  class="fas fa-folder"></i></a>
               </div>
             </div>
           </li>
@@ -74,6 +76,8 @@
             <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton"
               data-toggle="dropdown">{% trans "Analyze" %}</button>
             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+               <a class="dropdown-item" href="{% url 'cowbat:research_assembly' %}">{% trans "Research Assembly " %}<i
+                class="fas fa-cogs"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes " %}<i
                   class="fas fa-microscope"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}<i
@@ -84,8 +88,14 @@
                   class="far fa-comment-alt"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">{% trans "Find Near Neighbors " %}<i
                   class="fas fa-code-branch"></i></a>
-              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">Virus Typer <i
+              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">VirusTyper <i
                   class="fas fa-pastafarianism"></i></a>
+              <a class="dropdown-item" href="{% url 'primer_finder:primer_home' %}">{% trans "Find Primers " %}
+                <i class="fas fa-align-right"></i></a>
+              <a class="dropdown-item" href="{% url 'ampliseq:ampliseq' %}">{% trans "16S rRNA Analyses " %}
+                <i class="fas fa-barcode"></i></a>
+              <a class="dropdown-item" href="{% url 'cowsnphr:cowsnphr' %}">{% trans "Locate SNVs " %}
+                <i class="fas fa-tractor"></i></a>
               </div>
           </div>
 
@@ -94,7 +104,7 @@
         <ul class="navbar-nav settings">
           {# Language selection #}
           <li class="nav-item active">
-            <form action="{% url "set_language" %}" method="post" class="dropdown">
+            <form action="{% url 'set_language' %}" method="post" class="dropdown">
               {% csrf_token %}
               {% get_current_language as LANGUAGE_CODE %}
               {% get_available_languages as LANGUAGES %}
@@ -115,6 +125,8 @@
             <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "Profile" %} <i
                 class="fas fa-user-circle"></i></a>
           </li>
+
+<!--'microsoft_authentication:microsoft_authentication_logout'-->
 
           <li class="nav-item active">
             {# URL provided by django-allauth/account/urls.py #}
@@ -140,7 +152,7 @@
       </div>
     </nav>
   </div>
-  <br>  
+  <br>
   <div class="browserAlert" style='display: none;'><i class="fas fa-exclamation-triangle fa-lg"></i> <b> {% trans "You are using Internet Explorer, which is no longer supported. Chrome, Firefox or Edge is recommended for use of the FoodPort. "%} </b> </div>
 
   <div class="container">
@@ -153,13 +165,13 @@
     </div>
     {% endfor %}
     {% endif %}
-  
+
     <br>
 
     {% block content %}
     <p class="lead h6" style="text-align:center">
       <span class="h1">
-        <b>{% trans "Welcome to the CFIA FoodPort" %}</b>
+        <b>{% trans "CFIA FoodPort" %}</b>
         <i class="fas fa-dna"></i>
       </span>
       <br>
@@ -170,7 +182,7 @@
       <div class="container">
         <div class="card-deck mb-3 text-center">
 
-          <div class="row">
+          <div class="row mx-auto">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
                 <h3>{% trans "Explore Data" %}</h3>
@@ -209,7 +221,7 @@
             </div>
           </div>
 
-          <div class="row">
+          <div class="row mx-auto">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
                 <h3>{% trans "Find Genes" %}</h3>
@@ -248,13 +260,13 @@
             </div>
           </div>
 
-          <div class="row">
+          <div class="row mx-auto">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
                 <h3>{% trans "Annotate Genomes" %}</h3>
               </div>
               <div class="card-body d-flex flex-column">
-                <p id="article7">{% trans "Annotate assemblies with Prokka." %}</p>
+                <p id="article7">{% trans "Use Prokka to perform annotations on genome assemblies." %}</p>
                 <a class="btn btn-primary btn-lg btn-block mt-auto"
                   href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate Genomes" %}</a>
               </div>
@@ -270,15 +282,56 @@
                   Typer</a>
               </div>
             </div>
-
-             </div>
+            <!--Primer Finding-->
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>PrimerFinder</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article9">{% trans "Determine primer binding to assemblies" %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                   href="{% url 'primer_finder:primer_home' %}">PrimerFinder</a>
+              </div>
+            </div>
+          </div>
+           <div class="row mx-auto">
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Analyse 16S rRNA" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article10">{% trans "Use AmpliSeq to analyse 16S rRNA FASTQ files" %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'ampliseq:ampliseq' %}">{% trans "Ampliseq" %}</a>
+              </div>
+            </div>
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "Analyse SNVs" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article11">{% trans "Use COWSNPhR to locate SNVs using FASTQ files" %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR" %}</a>
+              </div>
+            </div>
+            <div class="card mb-4 box-shadow">
+              <div class="card-header">
+                <h3>{% trans "FileZone" %}</h3>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <p id="article11">{% trans "Use FileZone to upload, download, or rename files in containers" %}</p>
+                <a class="btn btn-primary btn-lg btn-block mt-auto"
+                  href="{% url 'filezone:filezone' %}">{% trans "FileZone" %}</a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
   {% endblock content %}
 
-  </div>
 
   <!-- JavaScript
     ================================================== -->
