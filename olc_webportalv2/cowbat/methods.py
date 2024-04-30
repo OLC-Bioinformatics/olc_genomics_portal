@@ -4,7 +4,7 @@ import azure.batch.batch_auth as batch_auth
 import azure.batch.batch_service_client as batch
 from azure.storage.blob import BlobPermissions
 import azure.batch.models as batchmodels
-from time import time
+from time import sleep, time
 import datetime
 import fnmatch
 import logging
@@ -13,6 +13,16 @@ import random
 import string
 import glob
 import os
+
+
+# Local imports
+from olc_webportalv2.geneseekr.models import (
+    AMRSummary,
+    GeneSeekrRequest,
+    NearestNeighbors,
+    ProkkaRequest,
+    Tree
+)
 
 
 class BatchClass:
@@ -44,12 +54,22 @@ class BatchClass:
             raise AttributeError('Hyphens are allowed in the job name, but you can have no more than one hyphen in '
                                  'a row, and the job name cannot end with a hyphen.')
         if job_name.replace('-', '').isalnum() is False:
-            raise AttributeError('Job names must contain only letters, numbers and hyphens. Special characters are '
-                                 'not allowed.')
+            raise AttributeError('There is an issue with your job name {name}. '
+                                 'Job names must contain only letters, numbers and hyphens.'
+                                 'Special characters are not allowed.'.format(name=job_name))
         return True
 
     @staticmethod
-    def create_pool(azurebatch, settings, container_name, vm_size='Standard_D2s_v3', num_nodes=1):
+    def create_pool(azurebatch, settings, container_name, vm_size='Standard_D2s_v3', num_nodes=1,
+                    vm_image='VM_IMAGE'):
+        node_agent_sku_id = 'batch.node.ubuntu 20.04'
+        if vm_image == 'VM_IMAGE':
+            vm_image = settings.VM_IMAGE
+        elif vm_image == 'AMPLISEQ_IMAGE':
+            vm_image = settings.AMPLISEQ_IMAGE
+        elif vm_image == 'COWSNPHR_IMAGE':
+            vm_image = settings.COWSNPHR_IMAGE
+            node_agent_sku_id = 'batch.node.ubuntu 22.04'
         credentials = ServicePrincipalCredentials(
             client_id=azurebatch.vm_client_id,
             secret=azurebatch.vm_secret,
@@ -61,9 +81,10 @@ class BatchClass:
             id=container_name,
             virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
                 image_reference=batchmodels.ImageReference(
-                    virtual_machine_image_id=settings.VM_IMAGE,
+                    virtual_machine_image_id=vm_image
                 ),
-                node_agent_sku_id='batch.node.ubuntu 20.04'),
+                node_agent_sku_id=node_agent_sku_id
+            ),
             vm_size=vm_size,
             target_dedicated_nodes=num_nodes,
             target_low_priority_nodes=0
@@ -232,11 +253,16 @@ class BatchClass:
         """
         Creates a job. Must have a pool created BEFORE you attempt to run this.
         If a job with the same name already exists, this won't work.
-        Returns False is job wasn't able to be created, True if the job create worked.
+        Returns False is job wasn't created, True if the job create worked.
         """
 
         if batch_client.pool.exists(pool_id=pool_name):
-            job = batch.models.JobAddParameter(id=job_name, pool_info=batch.models.PoolInformation(pool_id=pool_name))
+            # Give a sixteen-hour timeout for the job
+            # https://docs.microsoft.com/en-us/python/api/azure-batch/azure.batch.models.jobconstraints?view=azure-python
+            job_constraints = batch.models.JobConstraints(max_wall_clock_time="PT16H")
+            job = batch.models.JobAddParameter(id=job_name,
+                                               constraints=job_constraints,
+                                               pool_info=batch.models.PoolInformation(pool_id=pool_name))
         else:
             raise AttributeError('Job {} was added to a pool that does not exist. Pool must exist before a '
                                  'job can be added to that pool.'.format(job_name))
@@ -246,6 +272,19 @@ class BatchClass:
             return False
         return True
 
+    def create_job_preparation_task(self, batch_client, task_name, command_id, integer, command):
+        preparation_task = batchmodels.JobPreparationTask(
+            id=task_name + command_id + "-preparation-" + str(integer),
+            command_line="/bin/bash -c \"{}\"".format(command),
+            environment_settings=[batchmodels.EnvironmentSetting(name='CONDA', value='/usr/bin/miniconda/bin'),]
+        )
+        try:
+            batch_client.task.add(job_id=task_name, task=preparation_task)
+        except batchmodels.batch_error_py3.BatchErrorException as e:
+            logging.error(e)
+            return False
+        return True
+    
     def create_task(self, batch_client, input_files, command_id, job_name,
                     container_name, task_name):
         blob_service = BlockBlobService(account_key=self.storage_account_key,
@@ -263,18 +302,35 @@ class BatchClass:
         output_files = self.prepare_output_resource_files(sas_url=sas_url,
                                                           output_id=command_id,
                                                           job_name=job_name)
+        # Give a sixteen-hour timeout for the task
+        # https://docs.microsoft.com/en-us/python/api/azure-batch/azure.batch.models.taskconstraints?view=azure-python
+        task_constraints = batch.models.TaskConstraints(max_wall_clock_time="PT16H")
+        user = batchmodels.UserIdentity(
+            auto_user=batchmodels.AutoUserSpecification(
+            elevation_level=batchmodels.ElevationLevel.admin,
+            scope=batchmodels.AutoUserScope.pool)
+        )
+        print()
+        print(task_name + command_id)
+        print("/bin/bash -c \"{}\"".format(self.command[command_id]))
+        print(input_files)
+        print(output_files)
+        print()
         task = batch.models.TaskAddParameter(
             id=task_name + command_id,
+            constraints=task_constraints,
             command_line="/bin/bash -c \"{}\"".format(self.command[command_id]),
             resource_files=input_files,
             output_files=output_files,
+            user_identity=user,
             # Add this in so user doesn't have to type the entirety of the path to conda.
             # Completely unclear on why I can't just modify the $PATH in order to make this work.
-            environment_settings=[batchmodels.EnvironmentSetting(name='CONDA', value='/usr/bin/miniconda/bin')]
+            environment_settings=[batchmodels.EnvironmentSetting(name='CONDA', value='/usr/bin/miniconda/bin'),]
         )
         try:
             batch_client.task.add(job_id=job_name, task=task)
-        except batchmodels.batch_error_py3.BatchErrorException:
+        except batchmodels.batch_error_py3.BatchErrorException as e:
+            logging.error(e)
             return False
         return True
 
@@ -289,7 +345,7 @@ class BatchClass:
             for task in tasks:
                 if task.state != batchmodels.TaskState.completed:
                     all_tasks_completed = False
-            time.sleep(30)
+            sleep(30)
 
     @staticmethod
     def check_task_exit_codes(batch_client, job_name):
@@ -373,15 +429,15 @@ class BatchClass:
 
     def login_to_batch(self):
         """
-        Uses credentials stored in object to login to Azure batch.
+        Uses credentials stored in object to log in to Azure batch.
         :return: an instance of batch_client (azure.batch.batch_service_client)
         """
         credentials = batch_auth.SharedKeyCredentials(self.batch_account_name, self.batch_account_key)
         batch_client = batch.BatchServiceClient(credentials, base_url=self.batch_account_url)
         try:  # Try an operation that will error if the batch client credentials were not correct.
-            batch_client.pool.get_all_lifetime_statistics()
+            batch_client.pool.list()
         except batchmodels.BatchErrorException:  # This exception occurs if KEY or NAME is incorrect.
-            raise AttributeError('Batch client could not be authenticated. Likely cause is your BATCH_ACCOUNT_KEY or'
+            raise AttributeError('Batch client could not be authenticated. Likely cause is your BATCH_ACCOUNT_KEY or '
                                  'BATCH_ACCOUNT_NAME being incorrect.')
         except msrest.exceptions.ClientRequestError:  # This occurs when the provided URL is incorrect.
             raise AttributeError(
@@ -397,7 +453,7 @@ class BatchClass:
         self.storage_account_key = None
         self.job_name = None
         self.vm_image = None
-        self.vm_size = 'Standard_D16s_v3'  # This should be sufficient for essentially anything. User can customize
+        self.vm_size = 'Standard_D32s_v3'  # This should be sufficient for essentially anything. User can customize
         # if they really need something bigger (or smaller to save money)
         # Things needed for authentication through active directory, which is apparently necessary.
         self.vm_client_id = None
@@ -422,8 +478,9 @@ class AzureBatch(object):
 
     @staticmethod
     def main(configuration_file, job_name, settings, output_dir, exit_code_file=None, no_clean=False,
-             download_output_files=True, keep_input_container=False, vm_size='Standard_D2s_v3'):
-        logging.info('Reading in configuration file {}...'.format(configuration_file))
+             download_output_files=True, keep_input_container=False, vm_size='Standard_D2s_v3',
+             vm_image='VM_IMAGE'):
+        logging.info('Reading in configuration file %s...', configuration_file)
         azurebatch = AzureBatch.parse_configuration_file(configuration_file)
         AzureBatch.check_no_attributes_none(azurebatch)
         azurebatch.validate_job_name(job_name=job_name)
@@ -435,7 +492,8 @@ class AzureBatch(object):
                                settings=settings,
                                container_name=job_name,
                                vm_size=vm_size,
-                               num_nodes=len(azurebatch.command))
+                               num_nodes=len(azurebatch.command),
+                               vm_image=vm_image)
         batch_client = azurebatch.login_to_batch()
         logging.info('Uploading files...')
         # TODO: Add progress bar for each file for more user feedback?
@@ -456,6 +514,7 @@ class AzureBatch(object):
                                             exit_code_file=exit_code_file,
                                             command=azurebatch.command)
 
+        print('\nCloud input: ', azurebatch.cloud_input, '\n\n')
         # Also use cloud files already in blob storage as input, if specified.
         for input_id in azurebatch.cloud_input:
             cloud_resource = azurebatch.prepare_cloud_input_resource_files(
@@ -469,6 +528,7 @@ class AzureBatch(object):
                 else:
                     resource_files[input_id] = [resource]
         logging.info('Running tasks...')
+        print('Running tasks...')
         job_create_successful = azurebatch.create_job(
             batch_client=batch_client,
             pool_name=job_name,
@@ -481,9 +541,37 @@ class AzureBatch(object):
                 command=azurebatch.command,
                 job_name=job_name,
                 exit_code_file=exit_code_file)
-
+        task_create_successful = True
+        logging.debug('azurebatch.command: %s', azurebatch.command)
+        logging.debug('job name: %s', job_name)
+        logging.debug('Batch client details: %s', vars(batch_client))
+        for key, value in vars(batch_client).items():
+            # logging.debug('%s %s', key, value)
+            try:
+                logging.debug('%s %s %s', key, value, value[key])
+            except TypeError:
+                logging.warning('Error! %s %s', key, value)
+        logging.debug('task %s', vars(batch_client.task))
         for command_id in azurebatch.command:
-            azurebatch.create_task(
+            logging.debug('Task command id: %s', command_id)
+            files = resource_files[command_id]
+            logging.debug('Resource files: %s', files)
+            # preparation_task_status = azurebatch.create_job_preparation_task(
+            #     batch_client=batch_client,
+            #     command_id=command_id,
+            #     integer=1,
+            #     command='az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID && -c primer-validator-vtec && mv primer-validator-vtec inclusivity',
+            #     task_name=job_name
+            # )
+            # preparation_task_status = azurebatch.create_job_preparation_task(
+            #     batch_client=batch_client,
+            #     command_id=command_id,
+            #     integer=2,
+            #     command='source $CONDA/activate /envs/azure_storage && AzureDownload container -a carlingst01 -c primer-validator-escherichia && mv primer-validator-escherichia exlusivity',
+            #     task_name=job_name
+            # )
+            
+            task_create_status = azurebatch.create_task(
                 batch_client=batch_client,
                 input_files=resource_files[command_id],
                 command_id=command_id,
@@ -491,6 +579,20 @@ class AzureBatch(object):
                 container_name=job_name,
                 task_name=job_name
             )
+            logging.debug('Task create status: %s', task_create_status)
+            if not task_create_status:
+                task_create_successful = False
+        if task_create_successful is False:
+            logging.error('ERROR: Tasks were not created successfully.')
+            print('ERROR: Tasks were not created successfully.')
+            azurebatch.delete_job(batch_client=batch_client,
+                                  job_name=job_name)
+            azurebatch.delete_pool(batch_client=batch_client,
+                                   pool_name=job_name)
+            azurebatch.write_exit_code_file(
+                command=azurebatch.command,
+                job_name=job_name,
+                exit_code_file=exit_code_file)
         # With tasks submitted, wait for all to reach a 'completed' state.
         if no_clean is False:
             azurebatch.wait_for_tasks_to_complete(batch_client=batch_client,
@@ -542,7 +644,7 @@ class AzureBatch(object):
         """
         Given a file on a local machine, creates a resource file that Azure Batch can work with so that the input
         files will be uploaded to Batch service
-        :param blob_service: Instatiated block_blob_service object (azure.storage.blob.BlockBlobService)
+        :param blob_service: Instantiated block_blob_service object (azure.storage.blob.BlockBlobService)
         :param file_to_upload: Path to file to upload on local machine.
         :param input_container_name: Name of the container to be used to store the input files. Must already have been
         created.
@@ -584,8 +686,8 @@ class AzureBatch(object):
     @staticmethod
     def parse_configuration_file(config_file):
         """
-        Parse the configuration file a user provides and return an insantiated object that can do all the things - seems
-        to most likely be the best way to do things.
+        Parse the configuration file a user provides and return an instantiated object that can do all the things -
+        seems to most likely be the best way to do things.
         It seems that the best way to do this may, sadly, be to make users write a config file.
         Things we'll need in the config file:
         # Azure-related things - should be able to have these pre-filled for people.
@@ -692,10 +794,13 @@ class AzureBatch(object):
 
         # Check that no options were submitted that were not recognized.
         if len(unrecognized_options) > 0:
-            raise AttributeError('The following options were specified in configuration file {config_file},'
-                                 ' but not recognized: {options}'.format(options=unrecognized_options,
-                                                                         config_file=config_file))
-
+            raise AttributeError(
+                'The following options were specified in configuration file {config_file},'
+                ' but not recognized: {options}'.format(
+                    options=unrecognized_options,
+                    config_file=config_file
+                )
+            )
         return azurebatch
 
     @staticmethod
@@ -721,29 +826,43 @@ class AzureBatch(object):
                 if len(attrs[attr]) == 0:
                     missing_attributes.append(attr.upper())
         if len(missing_attributes) > 0:
-            raise AttributeError('The following options are required, but were not found in your '
-                                 'configuration file: {}'.format(missing_attributes))
+            raise AttributeError(
+                'The following options are required, but were not found in your '
+                'configuration file: {}'.format(missing_attributes)
+            )
 
     @staticmethod
     def check_input_output_command_match(azurebatch_object):
         # Check input has corresponding outputs and commands.
         for input_id in azurebatch_object.input:
             if input_id not in azurebatch_object.output:
-                raise AttributeError('Input ID {} is present, but there is no corresponding output ID.')
+                raise AttributeError(
+                    'Input ID {id} is present, but there is no corresponding output ID.'.format(id=input_id)
+                )
             if input_id not in azurebatch_object.command:
-                raise AttributeError('Input ID {} is present, but there is no corresponding command ID.')
+                raise AttributeError(
+                    'Input ID {id} is present, but there is no corresponding command ID.'.format(id=input_id)
+                )
         # Check output has corresponding inputs and commands.
         for output_id in azurebatch_object.output:
             if output_id not in azurebatch_object.input and output_id not in azurebatch_object.cloud_input:
-                raise AttributeError('Output ID {} is present, but there is no corresponding input ID.')
+                raise AttributeError(
+                    'Output ID {id} is present, but there is no corresponding input ID.'.format(id=output_id)
+                )
             if output_id not in azurebatch_object.command:
-                raise AttributeError('Output ID {} is present, but there is no corresponding command ID.')
-        # Check commands have correspoding inputs and outputs
+                raise AttributeError(
+                    'Output ID {id} is present, but there is no corresponding command ID.'.format(id=output_id)
+                )
+        # Check commands have corresponding inputs and outputs
         for command_id in azurebatch_object.command:
             if command_id not in azurebatch_object.input and command_id not in azurebatch_object.cloud_input:
-                raise AttributeError('Command ID {} is present, but there is no corresponding input ID.')
+                raise AttributeError(
+                    'Command ID {id} is present, but there is no corresponding input ID.'.format(id=command_id)
+                )
             if command_id not in azurebatch_object.output:
-                raise AttributeError('Command ID {} is present, but there is no corresponding output ID.')
+                raise AttributeError(
+                    'Command ID {id} is present, but there is no corresponding output ID.'.format(id=command_id)
+                )
 
     @staticmethod
     def download_container(blob_service, container_name, output_dir):
@@ -758,7 +877,7 @@ class AzureBatch(object):
                     # download the files to this directory
                     blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, head, tail))
                 else:
-                    # create the diretcory and download the file to it
+                    # create the directory and download the file to it
                     os.makedirs(os.path.join(output_dir, head))
                     blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, head, tail))
             else:
@@ -767,3 +886,4 @@ class AzureBatch(object):
     @staticmethod
     def random_string(string_length):
         return ''.join(random.choice(string.ascii_letters) for m in range(string_length))
+    
