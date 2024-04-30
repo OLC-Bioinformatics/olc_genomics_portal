@@ -29,6 +29,9 @@ urlpatterns = [
     url(r'^rmlst_autocompleter/$',
         views.RMLSTAutoCompleter.as_view(),
         name='rmlst_autocompleter'),
+    url(r'^serovar_autocompleter/$',
+        views.SerovarAutoCompleter.as_view(),
+        name='serovar_autocompleter'),
 
     # REST API Stuff
     path('sequencedata/', views.SequenceDataList.as_view()),
