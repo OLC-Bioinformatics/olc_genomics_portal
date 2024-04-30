@@ -79,11 +79,11 @@ def primer_request(request):
 
        
 @login_required
-def primer_rename(request, primer_request_pk)
-    form = NameForm()
+def primer_rename(request, primer_request_pk):
+    form = PrimerForm()
     primer_request = get_object_or_404(PrimerVal, pk=primer_request_pk)
-    if request.method = "POST":
-        form = NameForm(request.POST)
+    if request.method == "POST":
+        form = PrimerForm(request.POST)
         if form.is_valid():
             primer_request.name = form.cleaned_data['name']
             primer_request.save()
