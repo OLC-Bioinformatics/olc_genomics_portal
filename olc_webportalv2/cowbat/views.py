@@ -4,14 +4,17 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
 import logging
 import fnmatch
 import os
+import re
 # Portal-specific things
-from olc_webportalv2.cowbat.models import SequencingRun, DataFile
-from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm
+from olc_webportalv2.cowbat.models import SequencingRun, DataFile, ResearchRun, SummaryMetadata
+from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm, RunRequestForm, CustomRunForm
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.filezone.methods import calculate_checksum
 from olc_webportalv2.geneseekr.forms import EmailForm
 # Azure!
 from azure.storage.blob import BlockBlobService
@@ -20,6 +23,9 @@ import azure.batch.batch_auth as batch_auth
 import azure.batch.models as batchmodels
 # Task Management
 from kombu import Queue
+# Autocomplete
+from dal import autocomplete
+from django.db.models import Q
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +44,7 @@ def find_percent_complete(sequencing_run):
         if final_num_reports == 0:
             percent_completed = 1
         else:
-            percent_completed = int(100.0 * (current_subfolders/final_num_reports))
+            percent_completed = int(100.0 * (current_subfolders / final_num_reports))
 
     except batchmodels.BatchErrorException:  # Means task and job have not yet been created
         percent_completed = 1
@@ -73,12 +79,12 @@ def check_uploaded_seqids(sequencing_run):
         #     sequencing_run.uploaded_seqids.append(seqid)
         # else:
         #     seqids_to_upload.append(seqid)
-    # for seqid in seqids_to_upload:
-    #     if seqid not in sequencing_run.seqids_to_upload:
-    #         sequencing_run.seqids_to_upload.append(seqid)
-    # for seqid in uploaded_seqids:
-    #     if seqid not in sequencing_run.uploaded_seqids:
-    #         sequencing_run.uploaded_seqids.append(seqid)
+        # for seqid in seqids_to_upload:
+        #     if seqid not in sequencing_run.seqids_to_upload:
+        #         sequencing_run.seqids_to_upload.append(seqid)
+        # for seqid in uploaded_seqids:
+        #     if seqid not in sequencing_run.uploaded_seqids:
+        #         sequencing_run.uploaded_seqids.append(seqid)
         sequencing_run.save()
 
 
@@ -86,9 +92,11 @@ def check_uploaded_seqids(sequencing_run):
 @login_required
 def cowbat_processing(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    container = sequencing_run.container
+    summary_results = SummaryMetadata.objects.filter(sequencing_run_id=sequencing_run_pk)
     if sequencing_run.status == 'Unprocessed':
         SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Processing')
-        run_cowbat_batch.apply_async(queue='cowbat', args=(sequencing_run.pk, ))
+        run_cowbat_batch.apply_async(queue='cowbat', args=(sequencing_run.pk,))
 
     # Find percent complete (approximately). Not sure that having calls to azure batch API in views is a good thing.
     # Will have to see if performance is terrible because of it.
@@ -103,17 +111,18 @@ def cowbat_processing(request, sequencing_run_pk):
         if form.is_valid():
             Email = form.cleaned_data.get('email')
             if Email not in sequencing_run.emails_array:
-                    sequencing_run.emails_array.append(Email)
-                    sequencing_run.save()
-                    form = EmailForm()
-                    messages.success(request, _('Email saved'))
-            
+                sequencing_run.emails_array.append(Email)
+                sequencing_run.save()
+                form = EmailForm()
+                messages.success(request, _('Email saved'))
+
     return render(request,
                   'cowbat/cowbat_processing.html',
                   {
-                      'sequencing_run': sequencing_run, 
-                      'form':form,
-                      'progress': str(progress)
+                      'sequencing_run': sequencing_run,
+                      'form': form,
+                      'progress': str(progress),
+                      'summary_results': summary_results
                   })
 
 
@@ -134,7 +143,7 @@ def upload_metadata(request):
         form = RunNameForm(request.POST)
         if form.is_valid():
             if not SequencingRun.objects.filter(run_name=form.cleaned_data.get('run_name')).exists():
-                sequencing_run, created = SequencingRun.objects\
+                sequencing_run, created = SequencingRun.objects \
                     .update_or_create(run_name=form.cleaned_data.get('run_name'),
                                       seqids=list())
             else:
@@ -145,15 +154,20 @@ def upload_metadata(request):
                                            account_key=settings.AZURE_ACCOUNT_KEY)
             blob_client.create_container(container_name)
             for item in files:
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=item.name,
-                                                   blob=item.read())
+                # Calculate the checksum
+                blob_headers = calculate_checksum(item=item)
+                # Upload to blob storage
+                blob_client.create_blob_from_bytes(
+                    container_name=container_name,
+                    blob_name=item.name,
+                    blob=item.read(),
+                    content_settings=blob_headers
+                )
                 if item.name == 'SampleSheet.csv':
-                    instance = DataFile(sequencing_run=sequencing_run,
-                                        data_file=item)
+                    instance = DataFile(sequencing_run=sequencing_run, data_file=item)
                     instance.save()
                     with open('olc_webportalv2/media/{run_name}/SampleSheet.csv'
-                                      .format(run_name=str(sequencing_run))) as f:
+                              .format(run_name=str(sequencing_run))) as f:
                         lines = f.readlines()
                     seqid_start = False
                     seqid_list = list()
@@ -250,17 +264,22 @@ def verify_realtime(request, sequencing_run_pk):
 def upload_interop(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     if request.method == 'POST':
-            container_name = sequencing_run.run_name.lower().replace('_', '-')
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(container_name)
-            files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
-            for item in files:
-
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=os.path.join('InterOp', item.name),
-                                                   blob=item.read())
-            return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
+        container_name = sequencing_run.run_name.lower().replace('_', '-')
+        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        blob_client.create_container(container_name)
+        files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
+        for item in files:
+            # Calculate the checksum
+            blob_headers = calculate_checksum(item=item)
+            # Upload to blob storage
+            blob_client.create_blob_from_bytes(
+                container_name=container_name,
+                blob_name=os.path.join('InterOp', item.name),
+                blob=item.read(),
+                content_settings=blob_headers
+            )
+        return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/upload_interop.html',
                   {
@@ -281,9 +300,15 @@ def upload_sequence_data(request, sequencing_run_pk):
         blob_client.create_container(container_name)
         for i in range(0, len(request.FILES)):
             item = request.FILES.get('file[%d]' % i)
-            blob_client.create_blob_from_bytes(container_name=container_name,
-                                               blob_name=item.name,
-                                               blob=item.read())
+            # Calculate the checksum
+            blob_headers = calculate_checksum(item=item)
+            # Upload to blob storage
+            blob_client.create_blob_from_bytes(
+                container_name=container_name,
+                blob_name=item.name,
+                blob=item.read(),
+                content_settings=blob_headers
+            )
 
         # return redirect('cowbat:cowbat_processing', sequencing_run_pk=sequencing_run.pk)
     return render(request,
@@ -299,3 +324,153 @@ def retry_sequence_data_upload(request, sequencing_run_pk):
     sequencing_run.status = 'Unprocessed'
     sequencing_run.save()
     return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
+
+
+def find_research_runs():
+    blob_client = BlockBlobService(
+        account_name=settings.AZURE_ACCOUNT_NAME,
+        account_key=settings.AZURE_ACCOUNT_KEY
+    )
+    containers = blob_client.list_containers()
+    # Initialise a set to store all the unique run names
+    run_set = set()
+    for container in containers:
+        if re.match('\d{6}-[a-z0-9]', container.name) and '-output' not in container.name:
+            run_set.add(container.name)
+    return sorted(list(run_set))
+
+
+class RunAutoCompleter(autocomplete.Select2ListView):
+
+    def __init__(self, **kwargs):
+        self.category = 'run'
+        super().__init__(**kwargs)
+
+    def get_list(self):
+        qs = ResearchRun.objects.all()
+        if self.q:
+            qs.filter(run_name__icontains=self.q)
+        #
+        return sorted(list(set(str(result.run_name) for result in qs)))
+
+
+@login_required
+def research_assembly(request):
+    # Clear out all the previous data
+    ResearchRun.objects.all().delete()
+    form = RunRequestForm()
+    run_list = find_research_runs()
+    for run in run_list:
+        ResearchRun.objects.get_or_create(run_name=run)
+    custom_form = CustomRunForm()
+    if request.method == 'POST':
+        custom_form = CustomRunForm(request.POST)
+        # form = RunRequestForm(request.POST)
+        if custom_form.is_valid():
+            sequencing_run = custom_form.save(commit=False)
+            sequencing_run.basic_assembly = custom_form.cleaned_data.get('basic_assembly')
+            sequencing_run.preprocess = custom_form.cleaned_data.get('preprocess')
+            sequencing_run.run_name = custom_form.cleaned_data.get('run_name')
+            sequencing_run.nextseq = custom_form.cleaned_data.get('nextseq')
+            sequencing_run.container = str()
+            sequencing_run.seqids = list()
+            sequencing_run.save()
+            return redirect('cowbat:cowbat_processing', sequencing_run_pk=sequencing_run.pk)
+
+    return render(request,
+                  'cowbat/research_assembly.html',
+                  {
+                      'form': form,
+                      'custom_form': custom_form
+                  })
+
+
+@login_required
+def assembly_results(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    # Extract the summary metadata object using the sequencing run pk
+    summary_results = get_object_or_404(SummaryMetadata, sequencing_run_id=sequencing_run_pk)
+    headers = ['SeqID', 'SampleName', 'Genus', 'E_coli_Serotype', 'SISTR_serovar', 'GeneSeekr_Profile',
+               'Vtyper_Profile', ' rMLST_Result', ' MLST_Result', 'N50', 'NumContigs', 'TotalLength',
+               'AverageCoverageDepth', 'ConfindrContamSNVs', 'SequencingDate', 'Analyst', 'Flowcell',
+               'MachineName', 'AssemblyDate', 'PipelineVersion', 'Database']
+
+    # Convert keys to integers and sort the dictionary
+    sorted_results = {
+        int(k): v for k, v in sorted(
+            summary_results.summary_results.items(),
+            key=lambda item: int(item[0]),
+            reverse=True
+        )
+    }
+    return render(request,
+                  'cowbat/assembly_results.html',
+                  {
+                      'headers': headers,
+                      'summary_results': sorted_results,
+                      'sequencing_run': sequencing_run,
+                  })
+
+
+@csrf_exempt  # needed or IE explodes
+@login_required
+def research_assembly_home(request):
+    return render(request,
+                  'cowbat/research_assembly_home.html',
+                  {}
+                  )
+
+
+@csrf_exempt  # needed or IE explodes
+@login_required
+def custom_run_request(request):
+    custom_form = CustomRunForm()
+    if request.method == 'POST':
+        custom_form = CustomRunForm(request.POST)
+        if custom_form.is_valid():
+            #
+            sequencing_run = custom_form.save()
+            #
+            error_str = str()
+            sequencing_run.basic_assembly = custom_form.cleaned_data.get('basic_assembly')
+            sequencing_run.preprocess = custom_form.cleaned_data.get('preprocess')
+            sequencing_run.run_name = custom_form.cleaned_data.get('run_name')
+            sequencing_run.nextseq = custom_form.cleaned_data.get('nextseq')
+            sequencing_run.save()
+            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                           account_key=settings.AZURE_ACCOUNT_KEY)
+            blob_client.create_container(sequencing_run.run_name)
+            return redirect('cowbat:upload_assembly_upload', sequencing_run_pk=sequencing_run.pk)
+
+    return render(request,
+                  'cowbat/custom_assembly_create.html',
+                  {
+                      'custom_form': custom_form,
+                  })
+
+
+@csrf_exempt  # needed or IE explodes
+@login_required
+def custom_run_upload(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    if request.method == 'POST':
+        container_name = sequencing_run.run_name
+        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
+                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        for i in range(0, len(request.FILES)):
+            item = request.FILES.get('file[%d]' % i)
+            # Calculate the checksum
+            blob_headers = calculate_checksum(item=item)
+            # Upload to blob storage
+            blob_client.create_blob_from_bytes(
+                container_name=container_name,
+                blob_name=item.name,
+                blob=item.read(),
+                content_settings=blob_headers
+            )
+
+    return render(request,
+                  'cowbat/custom_assembly_upload.html',
+                  {
+                      'sequencing_run': sequencing_run,
+                  })
