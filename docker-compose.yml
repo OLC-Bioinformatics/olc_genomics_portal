@@ -12,6 +12,7 @@ services:
     env_file: env
     volumes:
       - ./:/data/web
+      - ../AzureBatch:/data/AzureBatch
       - ./sequences:/sequences
       # - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
     environment:
@@ -56,7 +57,7 @@ services:
       - redis
       - postgres
     command: ./worker_launcher.sh
-      
+
 
   celerybeat:
     # https://github.com/docker/compose/issues/3220
@@ -74,6 +75,6 @@ services:
        - celerybeat
      command: ["flower", "--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD","--broker=redis://redis:6379/0", "--port=8888"]
      ports:
-      - 8888:8888
+      - "8888:8888"
 
 
