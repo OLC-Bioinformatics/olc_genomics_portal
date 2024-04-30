@@ -190,7 +190,7 @@ def id_sync(x):
         if item.olnid is not None:
             olnid_result = str(item.olnid)
         else:
-            olnid_result = 'N/A'  
+            olnid_result = 'N/A'
 
         idDict.update({item.seqid:(labid_result,olnid_result)})
     return idDict
