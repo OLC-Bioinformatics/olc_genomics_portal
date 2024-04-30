@@ -1,5 +1,5 @@
 from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, \
-    UniqueRMLST, DatabaseQuery
+    UniqueRMLST, UniqueSerovar, DatabaseQuery
 from django.utils.translation import ugettext_lazy as _
 from django.forms.formsets import BaseFormSet
 from dal import autocomplete, forward
@@ -9,9 +9,8 @@ import re
 
 
 class DatabaseRequestForm(forms.Form):
-
     genus = forms.ModelChoiceField(queryset=UniqueGenus.objects.all(),
-                                   to_field_name=_('genus'),
+                                   to_field_name='genus',
                                    widget=autocomplete.ModelSelect2(url='sequence_database:genus_autocompleter',
                                                                     forward=(forward.Field('geneseekr', ),
                                                                              forward.Field('species', ),
@@ -23,7 +22,7 @@ class DatabaseRequestForm(forms.Form):
                                    required=False
                                    )
     species = forms.ModelChoiceField(queryset=UniqueSpecies.objects.all(),
-                                     to_field_name=_('species'),
+                                     to_field_name='species',
                                      widget=autocomplete.ModelSelect2(
                                          url='sequence_database:species_autocompleter',
                                          forward=(forward.Field('genus', ),
@@ -72,10 +71,22 @@ class DatabaseRequestForm(forms.Form):
                                                                              forward.Field('vtyper', ))),
                                    required=False
                                    )
+    serovar = forms.ModelChoiceField(queryset=UniqueSerovar.objects.all(),
+                                     to_field_name='serovar',
+                                     widget=autocomplete.ModelSelect2(url='sequence_database:serovar_autocompleter',
+                                                                      forward=(forward.Field('genus', ),
+                                                                               forward.Field('species', ),
+                                                                               forward.Field('mlst', ),
+                                                                               forward.Field('mlstcc', ),
+                                                                               forward.Field('geneseekr', ),
+                                                                               forward.Field('rmlst', ),
+                                                                               forward.Field('vtyper', ))),
+                                     required=False
+                                     )
     geneseekr = forms.CharField(max_length=48, widget=forms.TextInput(),
                                 required=False)
-    serovar = forms.CharField(max_length=48, widget=forms.TextInput(),
-                              required=False)
+    # serovar = forms.CharField(max_length=48, widget=forms.TextInput(),
+    #                           required=False)
     vtyper = forms.CharField(max_length=48, widget=forms.TextInput(),
                              required=False)
     start_date = forms.DateField(widget=forms.DateInput(
@@ -103,7 +114,6 @@ class SequenceDatabaseBaseFormSet(BaseFormSet):
 
 
 class DatabaseFieldForm(ModelForm):
-
     class Meta:
         model = DatabaseQuery
         fields = ['database_fields', 'query_operators', 'qualifiers', 'query']
@@ -133,7 +143,6 @@ class DatabaseDateForm(forms.Form):
 
 
 class DatabaseIDsForm(forms.Form):
-
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}),
                              label='',
                              required=False)
