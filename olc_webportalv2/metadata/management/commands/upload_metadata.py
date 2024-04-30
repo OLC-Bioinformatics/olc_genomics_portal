@@ -92,14 +92,25 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
         if seqdata_dict[seqid].serotype not in serotypes_present:
             Serotype.objects.create(serotype=seqdata_dict[seqid].serotype)
             serotypes_present.append(seqdata_dict[seqid].serotype)
-
-        if seqdata_dict[seqid].mlst not in mlst_present:
-            MLST.objects.create(mlst=seqdata_dict[seqid].mlst)
-            mlst_present.append(seqdata_dict[seqid].mlst)
+        try:
+            if seqdata_dict[seqid].mlst not in mlst_present:
+                MLST.objects.create(mlst=seqdata_dict[seqid].mlst)
+                mlst_present.append(seqdata_dict[seqid].mlst)
+        except:
+            seqdata_dict[seqid].mlst = 'NA'
+            if seqdata_dict[seqid].mlst not in mlst_present:
+                MLST.objects.create(mlst=seqdata_dict[seqid].mlst)
+                mlst_present.append(seqdata_dict[seqid].mlst)
 
         if seqdata_dict[seqid].rmlst not in rmlst_present:
-            RMLST.objects.create(rmlst=seqdata_dict[seqid].rmlst)
-            rmlst_present.append(seqdata_dict[seqid].rmlst)
+            try:
+                RMLST.objects.create(rmlst=seqdata_dict[seqid].rmlst)
+                rmlst_present.append(seqdata_dict[seqid].rmlst)
+            except:
+                seqdata_dict[seqid].rmlst = 'NA'
+            if seqdata_dict[seqid].rmlst not in rmlst_present:
+                RMLST.objects.create(rmlst=seqdata_dict[seqid].rmlst)
+                rmlst_present.append(seqdata_dict[seqid].rmlst)
 
         # Create a SequenceData object, if needed. Otherwise, update!
         if not SequenceData.objects.filter(seqid=seqid).exists():
