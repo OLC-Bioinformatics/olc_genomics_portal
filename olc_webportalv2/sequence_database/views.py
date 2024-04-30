@@ -4,7 +4,7 @@ from django.conf import settings
 from olc_webportalv2.sequence_database.forms import DatabaseRequestForm, DatabaseIDsForm, DatabaseFieldForm, \
     SequenceDatabaseBaseFormSet, DatabaseDateForm
 from olc_webportalv2.sequence_database.models import DatabaseRequest, SequenceData, OLNID, LookupTable, UniqueGenus, \
-    UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST
+    UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueSerovar
 from olc_webportalv2.sequence_database.serializers import SequenceDataSerializer, OLNSerializer
 import datetime
 from django.contrib.auth.decorators import login_required
@@ -15,6 +15,9 @@ from azure.storage.blob import BlockBlobService, BlobPermissions
 from django.db.models import Q
 from django.forms.formsets import formset_factory
 from olc_webportalv2.sequence_database.tables import SequenceDataTable
+from django.core.paginator import Paginator
+from django_tables2.paginators import LazyPaginator
+from django_tables2.config import RequestConfig
 
 
 # Not sure where to put this - create pagination.py?
@@ -103,6 +106,7 @@ def generic_autocompleter(non_target_dict):
         'mlst': 'mlst__mlst',
         'rmlst': 'rmlst__rmlst',
         'mlstcc': 'mlst_cc__mlst_cc',
+        'serovar': 'serovar__serovar'
     }
     # Iterate through all the fields in the dictionary
     for field, query in non_target_dict.items():
@@ -128,7 +132,7 @@ def category_chooser(target):
     # Initialise the list
     non_targets = list()
     # Iterate through all possible target categories
-    for category in ['genus', 'species', 'mlst', 'rmlst', 'mlstcc']:
+    for category in ['genus', 'species', 'mlst', 'rmlst', 'mlstcc', 'serovar']:
         # Add the current category to the list if it does not match the name of the target
         if category != target:
             non_targets.append(category)
@@ -182,7 +186,7 @@ class SpeciesAutoCompleter(autocomplete.Select2ListView):
             qs = UniqueSpecies.objects.all()
             if self.q:
                 qs.filter(species__icontains=self.q)
-        return sorted(list(set(str(result.species) for result in qs)))
+        return sorted(list(set(str(result.species) for result in qs if str(result.species) != 'ND')))
 
 
 class MLSTAutoCompleter(autocomplete.Select2ListView):
@@ -262,6 +266,31 @@ class MLSTCCAutoCompleter(autocomplete.Select2ListView):
         return sorted(list(set(str(result.mlst_cc) for result in qs)))
 
 
+class SerovarAutoCompleter(autocomplete.Select2ListView):
+
+    def __init__(self, **kwargs):
+        self.category = 'serovar'
+        super().__init__(**kwargs)
+
+    def get_list(self):
+        non_targets = category_chooser(target=self.category)
+        non_target_dict = dict()
+        query = False
+        for non_target in non_targets:
+            non_target_dict[non_target] = self.forwarded.get(non_target, None)
+            if non_target_dict[non_target] != '':
+                query = True
+        if query:
+            qs = generic_autocompleter(non_target_dict=non_target_dict)
+            if self.q:
+                qs.filter(serovar__serovar__icontains=self.q)
+        else:
+            qs = UniqueSerovar.objects.all()
+            if self.q:
+                qs.filter(serovar__icontains=self.q)
+        return sorted(list(set(str(result.serovar) for result in qs)))
+
+
 # Create your views here.
 @login_required
 def database_filter(request):
@@ -274,7 +303,7 @@ def database_filter(request):
             end_date = form.cleaned_data.get('end_date')
             # Initialise a Q object to build queries
             q = Q()
-            # Initalise a query set from the SequenceData model
+            # Initialise a query set from the SequenceData model
             qs = SequenceData.objects.all()
             # Dictionary linking the field name to the appropriate table in the SequenceData model
             lookup_dict = {
@@ -284,7 +313,7 @@ def database_filter(request):
                 'rmlst': 'rmlst__rmlst__iexact',
                 'mlstcc': 'mlst_cc__mlst_cc__iexact',
                 'geneseekr': 'geneseekr__geneseekr__icontains',
-                'serovar': 'serovar__serovar__icontains',
+                'serovar': 'serovar__serovar__iexact',
                 'vtyper': 'vtyper__vtyper__icontains'
             }
             # Iterate through all the cleaned data
@@ -311,10 +340,15 @@ def database_filter(request):
             for sequence_data in qs:
                 seqid_list.append(sequence_data.seqid)
                 cfiaid_list.append(sequence_data.cfiaid.cfiaid)
+            headers = ['SeqID', 'CFIA ID', 'rMLST Profile', 'MLST Profile', 'MLST Clonal Complex', 'Genus', 'Species',
+                       'Serovar', 'GeneSeekr Profile', 'Vtyper Profile', 'Database Version', 'Typing Date']
+            paginator = Paginator(qs.order_by('seqid'), 100)
+            result = paginator.page(1)
             return render(request,
                           'sequence_database/database_filter_results.html',
                           {
-                              'table': qs,
+                              'query_set': result,
+                              'headers': headers,
                               'seqids': seqid_list,
                               'cfiaids': cfiaid_list
                           })
@@ -357,10 +391,22 @@ def database_query(request):
     database_date = DatabaseDateForm()
     database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
     # Initialise the query set as all objects from the SequenceData model
-    # query_set = DataTable(SequenceData.objects.all())
     query_set = SequenceData.objects.all()
+    table = SequenceDataTable(query_set, order_by="seqid")
+
+    # query_set.order_by('seqid')
+    # paginator = Paginator(query_set.order_by('seqid'), request.GET.get('page_length', 25))
+    # page = request.GET.get('page')
+    # result = paginator.get_page(page)
+
+    import operator
+    # Initialise list to store the appropriate IDs
+    seqid_list = list()
+    cfiaid_list = list()
+    headers = ['SeqID', 'CFIA ID', 'rMLST Profile', 'MLST Profile', 'MLST Clonal Complex', 'Genus', 'Species',
+               'Serovar', 'GeneSeekr Profile', 'Vtyper Profile', 'Database Version', 'Typing Date']
     if request.method == 'POST':
-        query_set = SequenceData.objects.all()
+        # query_set = SequenceData.objects.all()
         # Populate the necessary forms with the POST data
         database_date = DatabaseDateForm(request.POST)
         database_form_set = database_formset_factory(request.POST)
@@ -386,7 +432,7 @@ def database_query(request):
                 if form.cleaned_data:
                     # Extract the table name e.g. genus__genus and the qualifier e.g. icontains from the form data
                     field, qualifier = form_lookup(form=form)
-                    # Extract the operate e.g. AND, and the query e.g. Escherichia
+                    # Extract the operator e.g. AND, and the query e.g. Escherichia
                     operator = form.cleaned_data.get('query_operators')
                     query = form.cleaned_data.get('query')
                     # Ensure that a query exists before updating the Q object
@@ -409,15 +455,56 @@ def database_query(request):
             # Filter the query set with the query stored in the Q object
             query_set = query_set.filter(q)
 
+        # Populate the lists with the necessary IDs
+        for sequence_data in query_set:
+            seqid_list.append(sequence_data.seqid)
+            cfiaid_list.append(sequence_data.cfiaid.cfiaid)
+        # paginator = Paginator(query_set.order_by('seqid'), request.GET.get('page_length', 25))
+        # page = request.GET.get('page')
+        # result = paginator.get_page(page)
+        # query_set.order_by('seqid')
+        table = SequenceDataTable(query_set, order_by="seqid")
+        table.orderable = False
+        RequestConfig(request, paginate={"paginator_class": LazyPaginator}).configure(table)
+        return render(request,
+                      'sequence_database/database_query.html',
+                      {
+                          'form_set': database_form_set,
+                          'date': database_date,
+                          'database_result': table,
+                          'headers': headers,
+                          'count': query_set.count(),
+                          'seqids': seqid_list,
+                          'cfiaids': cfiaid_list,
+                      })
+
+    # elif request.method == 'GET':
     else:
+        RequestConfig(request, paginate={"paginator_class": LazyPaginator}).configure(table)
         database_form_set = database_formset_factory()
-    return render(request,
-                  'sequence_database/database_query.html',
-                  {
-                      'form_set': database_form_set,
-                      'date': database_date,
-                      'database_result': query_set
-                  })
+        return render(request,
+                      'sequence_database/database_query.html',
+                      {
+                          'form_set': database_form_set,
+                          'date': database_date,
+                          'database_result': table,
+                          'headers': headers,
+                          'count': query_set.count(),
+                          'seqids': seqid_list,
+                          'cfiaids': cfiaid_list,
+                      })
+    # else:
+    #     database_form_set = database_formset_factory()
+    #     return render(request,
+    #                   'sequence_database/database_query.html',
+    #                   {
+    #                       'form_set': database_form_set,
+    #                       'date': database_date,
+    #                       'database_result': [],
+    #                       'headers': headers,
+    #                       'seqids': seqid_list,
+    #                       'cfiaids': cfiaid_list,
+    #                   })
 
 
 @login_required
