@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
 <a href="{% url 'data:assembled_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>{% trans "Get Processed (FASTA) Data "%}</strong></a>
+<a href="{% url 'data:raw_data' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>{% trans "Get Raw (FASTQ) Data "%}</strong></a>
 <br>
   <h2>{% trans "Data Collection" %}</h2>
   <br>
