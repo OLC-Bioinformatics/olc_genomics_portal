@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
@@ -29,15 +29,64 @@
                     </div>
                 </div>
         {% endfor %}
-        <br>        
-        <button type="submit" class="btn btn-primary btn-lg">{% trans "Create query" %}</button>
         <br>
+        <a class="btn btn-warning btn-lg" href="{% url 'sequence_database:database_query' %}">{% trans "Reset Query" %}</a>
+        <button type="submit" class="btn btn-primary btn-lg">{% trans "Run query" %}</button>
+        <br><br>
+        </form>
+
+        {% if cfiaids|length != 0 %}
         <br>
-    </form>
-        {% render_table database_result %}
-    </table>
+        <input type="button" class="btn btn-dark btn-sm" style="float: left" id="myButton1" value="Show Lists of IDs" onclick="hideList()"></input>
+        <br><br>
+        <div id="myDIV" style="display:none;">
+        <div class="h-100 justify-content-center">
+        <div class="container">
+            <div class="row">
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <button class="btn btn-primary" onclick="copySeq({{ seqids }})">
+                        {% trans 'Copy SeqIDs to clipboard'%}
+                    </button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                            <br>
+                            {% for seqid in seqids %}
+                                <p>{{seqid}}</p>
+                            {% endfor %}
+                        </div>
+                </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <button class="btn btn-primary" onclick="copySeq({{ cfiaids }})">
+                        {% trans 'Copy CFIA IDs to clipboard'%}
+                    </button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <br>
+                        {% for cfiaid in cfiaids %}
+                        <p>{{ cfiaid }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    <div class="alert alert-success" id="success" style="float:right;display:none">
+        {% trans 'Copied to clipboard!'%}
+    </div>
+    </div>
+</div>
+    {% endif %}
+
+<h6>{% trans 'Your query returned' %} <strong>{{ count }}</strong> {% trans 'results.'%}</h6>
+<br>
+
+<body>
+{% render_table database_result %}
+</body>
+
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>
     <script src="{% static '/js/bootstrap-datepicker.fr.min.js' %}"></script>
@@ -58,4 +107,64 @@
             orientation: "bottom auto"
         });
         </script>
+    <!--function for copying SeqIDs to Clipboard -->
+  <script type="text/javascript">
+  function copySeq(text) {
+      let seqText = document.createElement("textarea");
+      document.body.appendChild(seqText);
+      seqText.value = text;
+      {#console.log(text);#}
+      let seqList = "";
+      for (let j = 0; j < text.length; j++) {
+        {#console.log(text[j] + '\t');#}
+        seqList = seqList + text[j] + '\n';
+      }
+        seqText.value = seqList;
+      seqText.select();
+      document.execCommand("copy");
+      document.body.removeChild(seqText);
+
+
+      let success = document.getElementById("success");
+      success.style.display ="initial";
+      $(success).fadeOut(1000);
+  }
+  </script>
+
+  <script type="text/javascript">
+    function hideList() {
+        let x = document.getElementById("myDIV");
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+    if (document.getElementById("myButton1").value === 'Show Lists of IDs') {
+         document.getElementById("myButton1").value = "Hide Lists of IDs";
+    } else {
+        document.getElementById("myButton1").value = 'Show Lists of IDs'
+    }
+    }
+  </script>
+<script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+<!--  <script type="text/javascript">-->
+<!--    //Sorting of page based on first column descending.-->
+<!--    $(document).ready(function () {-->
+<!--        let table = $('#assembly-table').DataTable({-->
+<!--            language : {-->
+<!--                url: getLanguage()-->
+<!--            },-->
+<!--            scrollX: true,-->
+<!--            searching: false,-->
+<!--            responsive: true,-->
+<!--            serverSide: true,-->
+<!--            processing: true,-->
+<!--        });-->
+<!--        table-->
+<!--        .column( '0:visible' )-->
+<!--        .order( 'asc' )-->
+<!--        .draw();-->
+<!--    });-->
+<!--  </script>-->
 {% endblock %}
