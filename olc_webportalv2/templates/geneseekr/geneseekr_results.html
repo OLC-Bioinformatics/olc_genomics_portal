@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -14,7 +14,7 @@
             <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top BLAST Hits"%}</a></li>
         </ul>
         <div class="tab-content">
-            <div id="overall" class="tab-pane fade">
+            <div id="overall" class="tab-pane active">
                 <br>
                 <p>{%trans "This graph shows the percentage of sequences in which each query gene was found."%}</p>
                 <div id="container" style="height: 500px;"></div>
@@ -59,11 +59,15 @@
                     {% for geneseekr_detail in geneseekr_details %}
                         <tr>
                             <td>{{ geneseekr_detail.seqid }}</td>
-                            {% for key, value in idDict.items %}
-                                {% if key == geneseekr_detail.seqid %}
-                                    <td>{{value.0}}</td>
-                                {% endif %}
-                            {% endfor %}
+                            {% if geneseekr_request.benchmark %}
+                                <td>{% trans "NA" %}</td>
+                            {% else %}
+                                {% for key, value in idDict.items %}
+                                    {% if key == geneseekr_detail.seqid %}
+                                        <td>{{value.0}}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
                             {% for gene, percent_id in geneseekr_detail.geneseekr_results.items %}
                                 {% if percent_id == 0.0 %}
                                     <td style="color: #800f16">{{ percent_id }}</td>
@@ -133,12 +137,12 @@
     {% else %}
         <h2>{%trans "GeneSeekr request not completed."%}</h2>
     {% endif %}
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script src="{% static 'js/datatables.min.js' %}"></script>
     <script src="{% static 'js/highcharts.js' %}"></script>
     <script src="{% static 'js/highcharts-more.js' %}"></script>
     <script src="{% static 'js/modules/data.js' %}"></script>
     <script src="{% static 'js/modules/exporting.js' %}"></script>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
     <script>
         Highcharts.chart('container', {
@@ -153,6 +157,7 @@
                     text: "{%trans 'Gene'%}"
                 },
                 marginLeft: 100,
+                type: 'category',
             },
             yAxis: {
                 min: 0,
@@ -170,15 +175,17 @@
             }
         });
         {% for gene in geneseekr_request.gene_targets %}
-            let query_sequence_length = 100;  // Default value
-            let blast_hit_names = [];
-            let query_start_stops = [];
+            var query_sequence_length = 100;  // Default value
+            var blast_hit_names = [];
+            var query_start_stops = [];
+            var low_position = 0;
+            var high_position = 100;
             {% for gene_target, top_blast_hits in gene_top_hits.items %}
                 {% if top_blast_hits %}
                     {% if gene_target == gene %}
                         {% for top_blast_hit in top_blast_hits %}
-                            let low_position = Number({{ top_blast_hit.query_start_position }});
-                            let high_position = Number({{ top_blast_hit.query_end_position }});
+                            low_position = Number({{ top_blast_hit.query_start_position }});
+                            high_position = Number({{ top_blast_hit.query_end_position }});
                             blast_hit_names.push("{{ top_blast_hit.contig_name }}");
                             {% if top_blast_hit.percent_identity > 99 %}
                                 color_position = {low: low_position, high: high_position, color: '#0f6b2a'};
@@ -220,7 +227,6 @@
             });
             {% endfor %}
     </script>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             //Assigns Class each element with a SEQID and its location
@@ -239,7 +245,7 @@
                 }
             }
             {% for gene, top_blast_hits in gene_top_hits.items %}
-                let table = $('#{{ gene|slugify }}-table').DataTable({
+                var table = $('#{{ gene|slugify }}-table').DataTable({
                     "pageLength": 50
                 });
                 table.order([5, 'asc'], [2, 'desc'], [1, 'desc']).draw();
