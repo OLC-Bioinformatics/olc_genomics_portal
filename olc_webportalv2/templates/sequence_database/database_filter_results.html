@@ -1,51 +1,43 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% load render_table from django_tables2 %}
 {% block content %}
-    <h2>{% trans 'Database Results'%}</h2>
+
+<h2>{% trans 'Database Filtering Results'%}</h2>
+<input type="button" class="btn btn-dark btn-sm" style="float: left" id="myButton1" value="Show Lists of IDs"
+       onclick="hideList()"/>
+<br><br>
+<div id="myDIV" style="display:none;">
     <div class="h-100 justify-content-center">
         <div class="container">
             <div class="row">
                 <div class="card mb-4 box-shadow">
                     <div class="card-header">
-                        <h3>{% trans "SEQIDs" %}</h3>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">
-                            {% trans 'View SEQIDs'%}
-                        </button>
-                        <div id="criteria" class="collapse">
-                            <br>
-                            {% for seqid in seqids %}
-                                <p>{{seqid}}</p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                <button class="btn btn-primary" style="float: right" onclick="copySeq({{ seqids }})">
+                        <button class="btn btn-primary" onclick="copySeq({{ seqids }})">
                         {% trans 'Copy SeqIDs'%}
                     </button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        {% for seqid in seqids %}
+                        <p>{{seqid}}</p>
+                        {% endfor %}
+                    </div>
+
                 </div>
                 <div class="card mb-4 box-shadow">
                     <div class="card-header">
-                        <h3>{% trans "CFIA IDs" %}</h3>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">
-                            {% trans 'View CFIA IDs'%}
-                        </button>
-                        <div id="criteria" class="collapse">
-                            <br>
-                            {% for cfiaid in cfiaids %}
-                                <p>{{ cfiaid }}</p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                <button class="btn btn-primary" style="float: right" onclick="copySeq({{ cfiaids }})">
+                        <button class="btn btn-primary" onclick="copySeq({{ cfiaids }})">
                         {% trans 'Copy CFIA IDs'%}
                     </button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        {% for cfiaid in cfiaids %}
+                        <p>{{ cfiaid }}</p>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -53,11 +45,32 @@
         {% trans 'Copied to clipboard!'%}
     </div>
     </div>
-  <br>
-  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ seqids|length }}</strong> {% trans 'results.'%}</p>
+</div>
+
+<a class="btn btn-warning" href="{% url 'sequence_database:database_filter' %}">{% trans "Change database filters" %}</a>
+<br><br>
+  <p id="insertbefore">{% trans 'Your search returned' %} <strong>{{ seqids|length }}</strong> {% trans 'results. Note that the maximum number of results that can be loaded into the table is 100.'%}</p>
   <!--idList passed in from view -->
-  <br>
-   {% render_table table %}
+
+<table id="assembly-table" class="table table-hover display nowrap" style="width:100%">
+    <thead>
+    {% for header in headers %}
+    <th>{{header}}</th>
+    {% endfor %}
+    </thead>
+    <tbody>
+    {% for seq_data in query_set %}
+    <tr style="text-align:center">
+    <td>{{seq_data}}</td><td>{{seq_data.cfiaid}}</td><td>{{seq_data.rmlst}}</td><td>{{seq_data.mlst}}</td>
+        <td>{{seq_data.mlst_cc}}</td><td>{{seq_data.genus}}</td><td>{{seq_data.species}}</td>
+        <td>{{seq_data.serovar}}</td><td>{{seq_data.geneseekr}}</td><td>{{seq_data.vtyper}}</td>
+        <td>{{seq_data.version}}</td><td>{{seq_data.typing_date}}</td>
+    </tr>
+
+    {% endfor %}
+    </tbody>
+</table>
+
   <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
@@ -88,6 +101,40 @@
       success.style.display ="initial";
       $(success).fadeOut(1000);
   }
+  </script>
+<script type="text/javascript">
+    function hideList() {
+        let x = document.getElementById("myDIV");
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+    if (document.getElementById("myButton1").value === 'Show Lists of IDs') {
+         document.getElementById("myButton1").value = "Hide Lists of IDs";
+    } else {
+        document.getElementById("myButton1").value = 'Show Lists of IDs'
+    }
+    }
+  </script>
+
+<script src="{% static 'js/datatables.min.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+  <script type="text/javascript">
+    //Sorting of page based on first column descending.
+    $(document).ready(function () {
+        let table = $('#assembly-table').DataTable({
+            language : {
+                url: getLanguage()
+            },
+            scrollX: true,
+            searching: false,
+        });
+        table
+        .column( '0:visible' )
+        .order( 'asc' )
+        .draw();
+    });
   </script>
 
   {% endblock %}
