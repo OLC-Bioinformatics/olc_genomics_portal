@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
+
+<p style="text-align: right"> <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
+
   <h2>{% trans "Download Data"%}</h2>
   <br>
   {% if data_request.missing_seqids|length > 0 %}
@@ -22,7 +25,7 @@
     <p>{% trans "These files will be available for 7 days."%}</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {% trans "Download Assemblies"%}</a>
+        <a href="{{ data_request.download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {% trans "Download Files"%}</a>
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
