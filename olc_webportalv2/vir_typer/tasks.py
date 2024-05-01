@@ -8,10 +8,10 @@ from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyp
 
 
 def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file,
-                     vm_size='Standard_D8s_v3'):
+                     vm_size='Standard_D2s_v3'):
     """
     Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
-    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names
+    KubeJobSub package. Also, this assumes that you have settings imported, so you have access to storage/batch names
     and keys
     :param sequences: List of sequences that are going to be analyzed.
     :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
@@ -37,7 +37,7 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
         f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
         f.write('VM_SIZE:={}\n'.format(vm_size))
         f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-        # Desire format:
+        # Desired format:
         # CLOUDIN:=container_name/file1 container_name/file_2 sequences
         f.write('CLOUDIN:=')
         for seq in sequences:
