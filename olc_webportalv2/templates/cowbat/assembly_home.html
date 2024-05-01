@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -31,7 +31,9 @@
           {% elif sequencing_run.status == 'UploadError' %} 
             <td><a href="{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-warning btn-block" role="button">{% trans "Upload Error"%}</a></td>
           {% elif sequencing_run.status == 'Unprocessed' %}
-          <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
+            <td><button class="btn btn-secondary btn-block" disabled>{% trans "Unprocessed"%}</button></td>
+          {% elif sequencing_run.status == 'Resize Error' %}
+            <td><button class="btn btn-secondary btn-block" disabled>{% trans "Queued"%}</button></td>
           {% endif %}
           <td>
           {% if sequencing_run.status == 'Complete' %}
