@@ -6,7 +6,7 @@ from django.forms.formsets import formset_factory
 from azure.storage.blob import BlockBlobService
 from django.db import IntegrityError
 from django.contrib import messages
-from weasyprint import HTML, CSS
+#from weasyprint import HTML, CSS
 from django.conf import settings
 import json
 import os
@@ -24,7 +24,7 @@ def vir_typer_home(request):
     vir_typer_projects = VirTyperProject.objects.filter(user=request.user)
 
     if request.method == "POST":
-        if request.POST.get('delete'): 
+        if request.POST.get('delete'):
             query = VirTyperProject.objects.filter(pk=request.POST.get('delete'))
             query.delete()
 
@@ -134,7 +134,6 @@ def vir_typer_upload(request, vir_typer_pk):
                 #                                    sn=str(sample.sample_name))
                 for seq_file in seq_files:
                     if str(sample.LSTS_ID) in str(seq_file):
-
                         vir_files = VirTyperFiles(sample_name_id=sample.pk,
                                                   sequence_file=seq_file)
                         vir_files.save()
@@ -166,17 +165,19 @@ def parse_report(vir_typer_json, vir_typer_samples):
             vir_sample = os.path.splitext(vir_file.sequence_file)[0]
             try:
                 file_dict = json_data[vir_sample]
-                vir_results = VirTyperResults(sequence_file_id=vir_file.id,
-                                              allele=file_dict['allele'],
-                                              orientation=file_dict['orientation'],
-                                              forward_primer=[key for key in file_dict['primer_matches']['forward']][0],
-                                              reverse_primer=[key for key in file_dict['primer_matches']['reverse']][0],
-                                              trimmed_sequence=file_dict['trimmed_seq'],
-                                              trimmed_sequence_len=len(file_dict['trimmed_seq']),
-                                              trimmed_quality_max=file_dict['trimmed_quality_max'],
-                                              trimmed_quality_mean=file_dict['trimmed_quality_mean'],
-                                              trimmed_quality_min=file_dict['trimmed_quality_min'],
-                                              trimmed_quality_stdev=file_dict['trimmed_quality_stdev'])
+                vir_results = VirTyperResults(
+                    sequence_file_id=vir_file.id,
+                    allele=file_dict['allele'],
+                    orientation=file_dict['orientation'],
+                    forward_primer=[key for key in file_dict['primer_matches']['forward']][0],
+                    reverse_primer=[key for key in file_dict['primer_matches']['reverse']][0],
+                    trimmed_sequence=file_dict['trimmed_seq'],
+                    trimmed_sequence_len=len(file_dict['trimmed_seq']),
+                    trimmed_quality_max=file_dict['trimmed_quality_max'],
+                    trimmed_quality_mean=file_dict['trimmed_quality_mean'],
+                    trimmed_quality_min=file_dict['trimmed_quality_min'],
+                    trimmed_quality_stdev=file_dict['trimmed_quality_stdev']
+                )
                 vir_results.save()
             except KeyError:
                 pass
@@ -202,7 +203,7 @@ def sequence_html_string(sequence, consensus_sequence):
             try:
                 html_code = consensus_span_dict[nt.upper()]
             except KeyError:
-                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>"\
+                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>" \
                     .format(nt=nt.upper())
         else:
             variable_locations += 1
@@ -378,24 +379,25 @@ def vir_typer_results(request, vir_typer_pk):
                                            'vir_typer_samples': vir_typer_samples,
                                        })
         # Create an HTML object from the HTML string
-        html = HTML(string=html_string, base_url=request.build_absolute_uri())
+        # TODO Fix!
+        #html = HTML(string=html_string, base_url=request.build_absolute_uri())
         # Set the links to the CSS files
-        bootstrap_css = CSS(filename='olc_webportalv2/static/css/bootstrap.min.css')
-        project_css = CSS(filename='olc_webportalv2/static/css/project.css')
-        all_css = CSS(filename='olc_webportalv2/static/fonts/css/all.css')
+        # bootstrap_css = CSS(filename='olc_webportalv2/static/css/bootstrap.min.css')
+        # project_css = CSS(filename='olc_webportalv2/static/css/project.css')
+        # all_css = CSS(filename='olc_webportalv2/static/fonts/css/all.css')
         # Create a custom CSS string to make the page letter sized, with landscape orientation
-        page_css = CSS(string='@page { size: Letter landscape; margin: 1cm }')
+        # page_css = CSS(string='@page { size: Letter landscape; margin: 1cm }')
         #
-        html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport_{pn}.pdf'
-                       .format(pk=vir_typer_pk,
-                               pn=vir_typer_project.project_name),
-                       stylesheets=[bootstrap_css, project_css, all_css, page_css],
-                       presentational_hints=True)
+        # html.write_pdf(target='olc_webportalv2/media/vir_typer/{pk}/VirusTyperReport_{pn}.pdf'
+        #                .format(pk=vir_typer_pk,
+        #                        pn=vir_typer_project.project_name),
+        #                stylesheets=[bootstrap_css, project_css, all_css, page_css],
+        #                presentational_hints=True)
         # Download
         fs = FileSystemStorage('olc_webportalv2/media/vir_typer/{pk}/'.format(pk=vir_typer_pk))
         with fs.open("VirusTyperReport_{pn}.pdf".format(pn=vir_typer_project.project_name)) as pdf:
             response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="VirusTyperReport_{pn}.pdf"'\
+            response['Content-Disposition'] = 'attachment; filename="VirusTyperReport_{pn}.pdf"' \
                 .format(pn=vir_typer_project.project_name)
             return response
     return render(request,
