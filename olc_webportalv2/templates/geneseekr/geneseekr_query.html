@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
     <h2>{%trans "GeneSeekr Query"%}</h2>
+    <br>
+    <h3>Please only use 50 or fewer sequences, or your GeneSeekr analyses will (likely) fail!</h3>
+    <br>
     <form action='' enctype="multipart/form-data" method="post">
         {% if form.errors %}
             <div class="alert alert-danger" role="alert" align="center">
@@ -20,11 +23,11 @@
         <br>
         <br>
         <div class="accordion" id="accordionExample">
-            <button class="btn btn-block btn-outline-dark" type="button" data-toggle="collapse" data-target="#collapseOne" data-tooltip='tooltip' title='{%trans "Choose Genus to Search"%}'
+            <button class="btn btn-block btn-secondary" type="button" data-toggle="collapse" data-target="#collapseOne" data-tooltip='tooltip' title='{%trans "Choose Genus to Search"%}'
                     aria-expanded="true" aria-controls="collapseOne">
                 {%trans "Choose Genus to Search"%}
             </button>
-            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+            <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Enter the genus you want to search. If you want to search all sequences, leave this blank."%}</p>
                     <p>{%trans "Enter your genus of interest: "%}{{ form.genus }}</p>
@@ -43,11 +46,30 @@
                     <br>
                 </div>
             </div>
+            <br>
+            <button class="btn collapsed btn-block btn-secondary" type="button" 
+                data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Select a Benchmark Dataset"%}'
+                    data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                {%trans "Select Benchmark Dataset"%}
+            </button>
+            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+                <div class="card-body">
+                    <p>{%trans "Search a benchmark database:"%}</p>
+                    {{ form.benchmark_db|as_crispy_field }}
+                    <br>
+                </div>
+            </div>
         </div>
         <br>
         <button type="submit" class="btn btn-primary btn-lg">{%trans "Run Query"%}</button>
     </form>
+    {{ form.media }}
+    
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    
+    
     <script type="text/javascript">
         $(document).ready(function () {
             // adds tool tips
