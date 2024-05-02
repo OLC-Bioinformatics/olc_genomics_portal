@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load static %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% block content %}
+
+{% if form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+    {% for category, error in form.errors.items %}
+         {{ error }}
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if custom_form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+    {% for category, error in custom_form.errors.items %}
+        {{ error }}
+    {% endfor %}
+</div>
+{% endif %}
+
+<p style="text-align: right"> <a href="{% url 'cowbat:research_assembly' %}">{%trans "Research Assembly Home"%}</a></p>
+<br>
+
+<h2>{% trans 'Research Run'%}</h2>
+<br>
+<form action='' method="post">
+    <p data-tooltip='tooltip' title={% trans "Research Run"%}>{% trans 'Enter run to assemble'%} : {{ form.run_name }}</p>
+    {% csrf_token %}
+    <br>
+      {{custom_form.basic_assembly|as_crispy_field}}
+      {{custom_form.preprocess|as_crispy_field}}
+      {{ custom_form.nextseq|as_crispy_field}}
+
+  <button type="submit" class="btn btn-primary btn-lg">{% trans 'Assemble Run!' %}</button>
+</form>
+{{ form.media }}
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="{% static 'js/jquery.formset.js' %}"></script>
+{% endblock %}
