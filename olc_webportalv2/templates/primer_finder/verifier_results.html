@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+<h4>Summary Report for {{ primer_verifier_request.project_name }} </h4>
+
+<table class="table table-hover display nowrap" style="width:100%">
+    <thead>
+    <th>Primer</th>
+    <th>Panel</th>
+    <th>Positive</th>
+    <th>Total</th>
+    <th>Percent</th>
+    </thead>
+    <tbody>
+    <!--Populate the table with report information -->
+    {% for sorted_primer in primers %}
+    {% for primer_name, clean_primer in clean_primers.items %}
+    {% for primer, panel_dict in mismatch_details.items %}
+    {% if primer == sorted_primer %}
+    {% if primer_name == primer %}
+    <tr>
+        <td>{{ primer }}</td>
+        <td></td><td></td><td></td><td></td>
+    </tr>
+
+    {% for sorted_panel in panels %}
+    {% for panel, detail_dict in panel_dict.items %}
+    {% if panel == sorted_panel %}
+
+    <tr>
+        <td>
+            {% if panel == 'inclusivity' %}
+            <input type="button" class="btn btn-outline-success btn-sm" style="float: right" id="{{ clean_primer }}{{ panel }}Button"
+                   value="Show {{ panel }} details"
+               onclick="{{ clean_primer }}{{ panel }}hideList()"/>
+            {% else %}
+            <input type="button" class="btn btn-outline-danger btn-sm" style="float: right" id="{{ clean_primer }}{{ panel }}Button"
+                   value="Show {{ panel }} details"
+               onclick="{{ clean_primer }}{{ panel }}hideList()"/>
+            {% endif %}
+        </td>
+        <td>
+            <!-- Button trigger modal -->
+            {% if detail_dict.combined.keys %}
+            {% if panel == 'inclusivity' %}
+
+            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}Modal" style="color: green">
+                <strong>{{ panel }}</strong>
+            </a>
+
+            {% else %}
+            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}Modal" style="color: red">
+                <strong>{{ panel }}</strong>
+            </a>
+            {% endif %}
+            {% else %}
+            <strong>{{ panel }}</strong>
+            {% endif %}
+
+            <!-- Modal -->
+            <div class="modal fade" id="{{ clean_primer }}{{ panel }}Modal" tabindex="-1" role="dialog"
+                 aria-labelledby="{{ clean_primer }}{{ panel }}ModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{primer}} {{panel}} details</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="table table-hover display nowrap" style="width:100%">
+                                <tr>
+                                    <td colspan="2">Forward Mismatches</td>
+                                    <td colspan="2">Forward Mismatch Details</td>
+                                    <td colspan="2">Reverse Mismatches</td>
+                                    <td colspan="2">Reverse Mismatch Details</td>
+                                <tr>
+                                <td>Number of Mismatches</td><td>Hits</td>
+                                <td>Mismatch Details</td><td>Hits</td>
+                                <td>Number of Mismatches</td><td>Hits</td>
+                                <td>Mismatch Details</td><td>Hits</td>
+                            </tr>
+                                <tr>
+                                    <td>
+                                        {% if detail_dict.combined.forward_mismatches %}
+                                        {% for mismatch in detail_dict.combined.forward_mismatches %}
+                                        {{ mismatch.0 }} <br>
+                                        {% endfor %}
+                                        {% else %}
+                                        0
+                                        {% endif %}
+                                    </td>
+                                <td>
+                                    {% for mismatch in detail_dict.combined.forward_mismatches %}
+                                    {{ mismatch.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if detail_dict.combined.forward_details %}
+                                    {% for detail in detail_dict.combined.forward_details %}
+                                    {{ detail.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for detail in detail_dict.combined.forward_details %}
+                                    {{ detail.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if detail_dict.combined.reverse_mismatches %}
+                                    {% for mismatch in detail_dict.combined.reverse_mismatches %}
+                                    {{ mismatch.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for mismatch in detail_dict.combined.reverse_mismatches %}
+                                    {{ mismatch.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if detail_dict.combined.reverse_details %}
+                                    {% for detail in detail_dict.combined.reverse_details %}
+                                    {{ detail.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for detail in detail_dict.combined.reverse_details %}
+                                    {{ detail.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>{{detail_dict.positive}}</td>
+        <td>{{detail_dict.total}}</td>
+        <td>{{detail_dict.percent}}</td>
+    </tr>
+
+    {% for sorted_genus in genera %}
+    {% for genus, hit_dict in detail_dict.items %}
+    {% if genus == sorted_genus %}
+
+    <!-- style="display: none"-->
+    <tr id="{{ clean_primer }}{{ panel }}{{ genus }}Row" style="display: none">
+
+        <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+        <script type="text/javascript">
+
+            function {{ clean_primer }}{{ panel }}hideList() {
+                const genera_string = "{{genera}}"
+                let genera = [];
+                for (let s = 0; s < genera_string.split(',').length; s++) {
+                    // Strip off illegal characters, and trim to get rid of whitespace
+                    genera.push(genera_string.split(',')[s].replace(/[\[\]|&;$%@"<>()+,'#39\n]/g, "").trim())
+                }
+
+                const generaLength = genera.length;
+                for (let i = 0; i < generaLength; i++) {
+
+                    try {
+                        let x = document.getElementById("{{ clean_primer }}{{ panel }}" + genera[i] + "Row");
+                        if (x.style.display === "none") {
+                            $("#{{ clean_primer }}{{ panel }}" + genera[i] + "Row").show();
+                        } else {
+                            x.style.display = "none";
+                        }
+                    } catch (e) {}
+                }
+
+                if (document.getElementById("{{ clean_primer }}{{ panel }}Button").value === 'Show {{panel}} details') {
+                    document.getElementById("{{ clean_primer }}{{ panel }}Button").value = "Hide {{panel}} details";
+                } else {
+                    document.getElementById("{{ clean_primer }}{{ panel }}Button").value = 'Show {{panel}} details'
+                }
+            }
+        </script>
+
+        <td></td>
+        <td>
+            <!-- Make an appropriately coloured hyperlink if there are any mismatches in the forward or
+            reverse primers -->
+            {% if hit_dict.forward_details or hit_dict.reverse_details %}
+            <!-- Button trigger modal -->
+            {% if panel == 'inclusivity' %}
+            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
+               style="color: green">
+                <em>{{genus}}</em>
+            </a>
+            {% else %}
+            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
+               style="color: red">
+                <em>{{genus}}</em>
+            </a>
+            {% endif %} <!--- if panel == 'inclusivity' --->
+            <!--- Otherwise, simply print the genus without formatting --->
+            {% else %}
+            <em>{{genus}}</em>
+            {% endif %} <!--- if hit_dict.forward_details or hit_dict.reverse_details --->
+
+            <!-- Modal -->
+            <div class="modal fade" id="{{ clean_primer }}{{ panel }}{{ genus }}Modal" tabindex="-1" role="dialog"
+                 aria-labelledby="{{ clean_primer }}{{ panel }}{{ genus }}ModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{primer}} {{panel}} {{ genus }} details</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="table table-hover display nowrap" style="width:100%">
+                                <tr>
+                                    <td colspan="2">Forward Mismatches</td>
+                                    <td colspan="2">Forward Mismatch Details</td>
+                                    <td colspan="2">Reverse Mismatches</td>
+                                    <td colspan="2">Reverse Mismatch Details</td>
+                                <tr>
+                                <td>Number of Mismatches</td><td>Hits</td>
+                                <td>Mismatch Details</td><td>Hits</td>
+                                <td>Number of Mismatches</td><td>Hits</td>
+                                <td>Mismatch Details</td><td>Hits</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {% if hit_dict.forward_mismatches %}
+                                    {% for mismatch in hit_dict.forward_mismatches %}
+                                    {{ mismatch.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for mismatch in hit_dict.forward_mismatches %}
+                                    {{ mismatch.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if hit_dict.forward_details %}
+                                    {% for detail in hit_dict.forward_details %}
+                                    {{ detail.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for detail in hit_dict.forward_details %}
+                                    {{ detail.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if hit_dict.reverse_mismatches%}
+                                    {% for mismatch in hit_dict.reverse_mismatches %}
+                                    {{ mismatch.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for mismatch in hit_dict.reverse_mismatches %}
+                                    {{ mismatch.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if hit_dict.reverse_details %}
+                                    {% for details in hit_dict.reverse_details %}
+                                    {{ details.0 }} <br>
+                                    {% endfor %}
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for details in hit_dict.reverse_details %}
+                                    {{ details.1 }} <br>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>{{hit_dict.positive}}</td>
+        <td>{{hit_dict.total}}</td>
+        <td>{{hit_dict.percent}}</td>
+    </tr>
+    {% endif %} <!-- if genus == sorted_genus -->
+    {% endfor %} <!-- for genus, hit_dict in detail_dict.items -->
+    {% endfor %} <!-- for sorted_genus in genera -->
+    {% endif %} <!-- if panel == sorted_panel -->
+    {% endfor %} <!-- for panel, detail_dict in panel_dict.items -->
+    {% endfor %} <!-- for sorted_panel in panels -->
+    {% endif %} <!-- if primer_name == primer -->
+    {% endif %} <!-- if primer == sorted_primer -->
+    {% endfor %} <!-- for primer_name, clean_primer in clean_primers.items -->
+    {% endfor %} <!-- for primer, panel_dict in mismatch_details.items -->
+    {% endfor %} <!-- for sorted primer in primers -->
+    </tbody>
+</table>
+
+{% endblock %}
+

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+{{error}}
+
+<h2>{%trans "PrimerValidator Request"%}</h2>
+<form action='' enctype="multipart/form-data" method="post">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert" align="center">
+        {{ form.non_field_errors|escape }}
+    </div>
+    {% endif %}
+    {{ form.project_name|as_crispy_field }}
+    {{ form.forward_primer|as_crispy_field }}
+    {{ form.reverse_primer|as_crispy_field }}
+
+    <!--Probe-->
+    <div class="container">
+        <div class="row">
+            <div style="margin-right: 2em">
+                {{ form.probe_sequence|as_crispy_field}}
+            </div>
+        </div>
+    </div>
+
+    <!-- Inclusivity panel-->
+    <label>
+        {{ form.inclusivity_panel.label }}
+    </label>
+    <div class="container">
+        <div class="row">
+            <div class="btn-group">
+                {% for checkbox in form.inclusivity_panel %}
+                <label class="btn btn-success">
+                    {{ checkbox.tag }} {{ checkbox.choice_label }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerValidator" %}</button>
+</form>
+
+
+<script type="text/javascript">
+    // Create a listener for any changes in the document. Will be used to disable the corresponding checkbox in the
+    // opposite panel when a genus is selected
+
+    // Filter the document for all elements with .btn-group (limited to the inclusivity/exclusivity panels)
+    const selects = document.querySelectorAll('.btn-group');
+    // Iterate through all the individual entries in the group
+    selects.forEach((elem) => {
+        // Create a listener for any changes in the page
+        elem.addEventListener('change', (event) => {
+            // Find the name of the target of the change e.g. inclusivity_panel
+            let clicked_panel = event.target.name;
+            // Extract the id of the target e.g. id_inclusivity_panel_3
+            let element_id = event.target.id;
+            // Split of the index from the end of the id e.g. id_inclusivity_panel_3 -> [id inclusivity panel 3] -> 3
+            let index = element_id.split('_')[3];
+            // Iterate through all the instances of the .btn-group
+            for (const select of selects) {
+                // Ensure that the current element is for the inclusivity panel
+                if (clicked_panel === 'inclusivity_panel') {
+                    // Javascript magic. Use the index extracted above to ensure that we're looking at non-target
+                    // genera each time. The 'children' key is used to extract the child element from the button
+                    // group. Finally, use the panel as the key to extract the object containing the checkbox
+                    // attribute
+                    let children = select['children'];
+                    for (let alternate_index = 0; alternate_index < children.length; alternate_index++) {
+                        // Ensure that we're looking at a different index than the clicked one
+                        if (alternate_index !== parseInt(index)) {
+                            // Check to see if the clicked button has a checkmark
+                            if (select['children'][index]['children'].hasOwnProperty(clicked_panel)) {
+                                // Define the non-target panel to avoid typing this out multiple times
+                                let opposing_panel = select['children'][alternate_index]['children'][clicked_panel];
+                                // If the current panel is checked, disable the opposing panel, and remove any checks
+                                if (event.target.checked) {
+                                    opposing_panel.disabled = true;
+                                    opposing_panel.checked = false;
+                                } else {
+                                    opposing_panel.disabled = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+<h2>{%trans "PrimerValidator Results"%}</h2>
+<br>
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+  {{ form.non_field_errors|escape }}
+  </div>
+  {% endif %}
+
+  {% if primer_validator_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
+      <br>
+      <p>{%trans "This page will automatically refresh. Your PrimerValidator request should be complete in a few minutes."%}</p>
+      <p>{%trans "You don't have to remain on this page - this PrimerValidator request will be visible on"%} <a href="{% url 'primer_finder:validator_home' %}">{%trans "PrimerValidator Home"%}</a> </p>
+   
+    <!--Email Block--> 
+      {% if request.user.email in primer_validator_request.emails_array %}
+      <p>{%trans "Your email is already on the list to be notified."%} </p>
+      {%trans "Would you like to add another email?"%} <label for='cbx'></label><input type='checkbox' id='cbx' onclick="cbxCheck()">
+      {% else %}
+      <p>{%trans "Would you like an email upon completion?"%}</p>
+      {% endif %}
+
+      <form method="post" id='addEmail'>
+        {% csrf_token %}
+        {{form.email.label_tag}}
+        {{form.email}}
+        <button class='btn btn-success' type="submit">{%trans "Save"%}</button>
+        <br>
+        <br>
+      </form>
+
+      <script>
+          const checkbox = document.getElementById('cbx').checked;
+          const form = document.getElementById('addEmail');
+          if (checkbox != true){
+          form.style.visibility ="hidden";}
+        else {
+            form.style.visibility ="visible";}
+        function cbxCheck(){
+            const checkbox = document.getElementById('cbx').checked;
+            const form = document.getElementById('addEmail');
+            if (checkbox == true){
+            form.style.visibility ="visible";}
+          else{
+            form.style.visibility ="hidden";} 
+            }
+      </script>
+      
+    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
+    <div id="emails-button" class="collapse">
+      <br>
+      {% if primer_validator_request.emails_array|length == 0 %}
+        <p>{%trans "No users have signed up to receive an email for this run."%}</p>
+      {% else %}
+          {% for email in primer_validator_request.emails_array %}
+            <p>{{ email }}</p>
+          {% endfor %}
+      {% endif %}
+    </div>
+    <!--End Email Block--> 
+    
+  {% elif primer_validator_request.status == 'Unprocessed' %}
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
+    <br>
+  {% elif primer_validator_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
+    <br>
+    <p>{%trans "Return to "%} <a href="{% url 'primer_finder:validator_home' %}">{%trans "PrimerValidator Home"%}</a> </p>
+
+  {% elif primer_validator_request.status == 'Complete' %}
+    <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+    <br>
+    <p>{%trans "These results will be available for 7 days."%}</p>
+    <br>
+    <div style="text-align: center">
+        <a href="{{ primer_validator_request.report_download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "PrimerValidator JSON Report "%}</a>
+        <a href="{{ primer_validator_request.summary_download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "Summary JSON Report "%}</a>
+        <a href="{% url 'primer_finder:validator_report' validator_pk=primer_validator_request.pk %}" class="btn btn-success" role="button"><i class="fas fa-download"></i> {%trans "Summary PDF Report "%}</a>
+
+        <br><br>
+        <a href="{% url 'primer_finder:validator_results' validator_pk=primer_validator_request.pk %}" class="btn btn-outline-primary" role="button"><i class="fas fa-eye"></i> {%trans "View Results"%}</a>
+
+        <br>
+        <br>
+    <div class="alert alert-primary" role="alert" align="center">
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "PrimerValidator report link:"%}</b> {{ primer_validator_request.report_download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "Summary report link:"%}</b> {{ primer_validator_request.summary_download_link }}</p>
+
+    </div>
+    </div>
+  {% endif %}
+
+  <script type="text/javascript">
+    setInterval(function () {
+      {% if primer_validator_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    }, 15000) // This should refresh the page every 15 seconds as long as run status is processing
+   </script>
+{% endblock %}

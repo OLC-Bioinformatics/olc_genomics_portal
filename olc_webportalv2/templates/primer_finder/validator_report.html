@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+
+<h4>Report for {{ primer_validator_request.project_name }} </h4>
+
+<br>
+
+<h6>Forward Primer: <span style="font-family: monospace">{{ forward }}</span></h6>
+<h6>Reverse Primer: <span style="font-family: monospace">{{ reverse }}</span></h6>
+
+
+<table class="table-striped" style="width:100%">
+    <thead>
+        <tr>
+            <th rowspan="3" style="text-align: center;">{{primer_validator_request.inclusivity_panel.0|title}} Panel</th>
+            <th rowspan="3">Positive</th>
+            <th rowspan="3">Total</th>
+            <th rowspan="3">Percent</th>
+<!--            <th colspan="4" style="text-align: center;">Details</th>-->
+<!--        </tr>-->
+<!--        <tr style="background-color:rgba(0,0,0,.05)">-->
+<!--            <th colspan="2" style="text-align: center; border-right: 2px black">Forward Primer</th>-->
+<!--            <th colspan="2" style="text-align: center;">Reverse Primer</th>-->
+<!--        </tr>-->
+        <tr>
+            <th>Total Mismatches</th>
+            <th>Mismatch Frequency</th>
+
+            <th>Mismatch Details</th>
+            <th>Details Frequency</th>
+        </tr>
+    </thead>
+    <tbody>
+    <!--Populate the table with report information -->
+    {% for sorted_primer in primers %}
+    {% for primer_name, clean_primer in clean_primers.items %}
+    {% for primer, panel_dict in mismatch_details.items %}
+    {% if primer == sorted_primer %}
+    {% if primer_name == primer %}
+    {% for sorted_panel in panels %}
+    {% for panel, detail_dict in panel_dict.items %}
+    {% if panel == sorted_panel %}
+    {% for total_primer, total_dict in totals.items %}
+    {% for total_panel, total_detail_dict in total_dict.items %}
+    {% if primer == total_primer %}
+    {% if total_panel == sorted_panel %}
+    <tr>
+        <td>
+            <strong>{{ panel }}</strong>
+        </td>
+        <td>{{detail_dict.positive}}</td>
+        <td>{{detail_dict.total}}</td>
+        <td>{{detail_dict.percent}}</td>
+
+<!--style="text-align: left"-->
+        <td>
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_detail_dict.combined.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+                {{total_mismatch}} <br>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+             <td>
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_detail_dict.combined.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+ {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+        {% if mismatch_detail == 'totals' %}
+            {{frequency}} <br>
+            {% endif %}
+
+         {% endfor %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+        <td style="text-align: left">
+        {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_detail_dict.combined.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+            {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+        {% if mismatch_detail != 'totals' %}
+            {{mismatch_detail}} <br>
+            {% endif %}
+
+         {% endfor %}
+        {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+        <td>
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_detail_dict.combined.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+            {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+            {% if mismatch_detail != 'totals' %}
+                {{frequency}} <br>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </td>
+
+    </tr>
+
+    {% for sorted_genus in genera %}
+    {% for genus, hit_dict in detail_dict.items %}
+    {% if genus == sorted_genus %}
+
+
+
+    <tr>
+        <td>
+            <em>{{genus}}</em>
+        </td>
+        <td>{{hit_dict.positive}}</td>
+        <td>{{hit_dict.total}}</td>
+        <td>{{hit_dict.percent}}</td>
+
+        <td>
+            {% for total_genus, total_mismatches_dict in total_detail_dict.items %}
+        {% if total_genus == sorted_genus %}
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_mismatches_dict.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+                {{total_mismatch}} <br>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+{% endif %} <!-- if total_genus == sorted_genus -->
+    {% endfor %} <!--  -->
+        </td>
+        <td>
+             {% for total_genus, total_mismatches_dict in total_detail_dict.items %}
+        {% if total_genus == sorted_genus %}
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_mismatches_dict.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+                 {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+        {% if mismatch_detail == 'totals' %}
+            {{frequency}} <br>
+            {% endif %}
+
+         {% endfor %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% endif %} <!-- if total_genus == sorted_genus -->
+    {% endfor %} <!--  -->
+        </td>
+        <td style="text-align: left">
+             {% for total_genus, total_mismatches_dict in total_detail_dict.items %}
+        {% if total_genus == sorted_genus %}
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_mismatches_dict.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+                 {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+        {% if mismatch_detail != 'totals' %}
+            {{mismatch_detail}} <br>
+            {% endif %}
+
+         {% endfor %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% endif %} <!-- if total_genus == sorted_genus -->
+    {% endfor %} <!--  -->
+        </td>
+        <td>
+             {% for total_genus, total_mismatches_dict in total_detail_dict.items %}
+        {% if total_genus == sorted_genus %}
+            {% for integer in allowed_mismatches %}
+            {% for total_mismatch, total_mismatches_details_dict in total_mismatches_dict.total_mismatch.items %}
+            {% if integer == total_mismatch|add:"0" %}
+                 {% for mismatch_detail, frequency in total_mismatches_details_dict.items %}
+        {% if mismatch_detail != 'totals' %}
+            {{frequency}} <br>
+            {% endif %}
+
+         {% endfor %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% endif %} <!-- if total_genus == sorted_genus -->
+    {% endfor %} <!--  -->
+        </td>
+
+    </tr>
+
+    {% endif %} <!-- if genus == sorted_genus -->
+    {% endfor %} <!-- for genus, hit_dict in detail_dict.items -->
+    {% endfor %} <!-- for sorted_genus in genera -->
+
+    {% endif %} <!--    if total_panel == sorted_panel -->
+    {% endif %}  <!--   if primer == total_primer -->
+    {% endfor %} <!--    for total_panel, total_detail_dict in total_dict.items -->
+    {% endfor %} <!--    for total_primer, total_dict in mismatch_details.items -->
+
+    {% endif %} <!-- if panel == sorted_panel -->
+    {% endfor %} <!-- for panel, detail_dict in panel_dict.items -->
+    {% endfor %} <!-- for sorted_panel in panels -->
+    {% endif %} <!-- if primer_name == primer -->
+    {% endif %} <!-- if primer == sorted_primer -->
+    {% endfor %} <!-- for primer_name, clean_primer in clean_primers.items -->
+    {% endfor %} <!-- for primer, panel_dict in mismatch_details.items -->
+    {% endfor %} <!-- for sorted primer in primers -->
+    </tbody>
+</table>
+
+<style>
+    td {
+        text-align: center;
+    }
+</style>
+
+{% endblock %}
+

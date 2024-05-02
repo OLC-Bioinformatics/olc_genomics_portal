@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load crispy_forms_tags %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+
+<h2>{%trans "PrimerVerifier Request"%}</h2>
+<form action='' enctype="multipart/form-data" method="post">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert" align="center">
+        {{ form.non_field_errors|escape }}
+    </div>
+    {% endif %}
+    {{ form.project_name|as_crispy_field }}
+    {{ form.primer_sequences|as_crispy_field }}
+
+    <!-- Inclusivity panel-->
+    <label>
+        {{ form.inclusivity_panel.label }}
+    </label>
+    <div class="container">
+        <div class="row">
+            <div class="btn-group">
+                {% for checkbox in form.inclusivity_panel %}
+                <label class="btn btn-success">
+                    {{ checkbox.tag }} {{ checkbox.choice_label }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!--Exclusivity panel-->
+    <label>
+        {{ form.exclusivity_panel.label }}
+    </label>
+    <div class="container">
+
+        <div class="row">
+            <!-- Inclusivity-->
+            <div class="btn-group">
+                {% for checkbox in form.exclusivity_panel %}
+                <label class="btn btn-warning">
+                    {{ checkbox.tag }} {{ checkbox.choice_label }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div style="margin-right: 2em">
+                {{ form.mismatches|as_crispy_field}}
+            </div>
+            <div style="margin-right: 2em">
+                {{ form.min_amplicon_size|as_crispy_field}}
+            </div>
+            <div style="margin-right: 2em">
+                {{ form.max_amplicon_size|as_crispy_field}}
+            </div>
+            <div id="range" style="margin-right: 2em">
+                {{ form.range_buffer|as_crispy_field}}
+            </div>
+        </div>
+    </div>
+    {{ form.contig_breaks|as_crispy_field}}
+    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerVerifier" %}</button>
+</form>
+
+
+<script type="text/javascript">
+    // Create a listener for any changes in the document. Will be used to disable the corresponding checkbox in the
+    // opposite panel when a genus is selected
+
+    // Filter the document for all elements with .btn-group (limited to the inclusivity/exclusivity panels)
+    const selects = document.querySelectorAll('.btn-group');
+    // Iterate through all the individual entries in the group
+    selects.forEach((elem) => {
+        // Create a listener for any changes in the page
+        elem.addEventListener('change', (event) => {
+            // Find the name of the target of the change e.g. inclusivity_panel
+            let clicked_panel = event.target.name;
+            // Extract the id of the target e.g. id_inclusivity_panel_3
+            let element_id = event.target.id;
+            // Split of the index from the end of the id e.g. id_inclusivity_panel_3 -> [id inclusivity panel 3] -> 3
+            let index = element_id.split('_')[3];
+            // Iterate through all the instances of the .btn-group (both inclusivity and exclusivity)
+            for (const select of selects) {
+                // Both the inclusivity and exclusivity panel need to be evaluated
+                for (const panel of ['inclusivity_panel', 'exclusivity_panel']) {
+                    // Ensure that the current element is for the opposing panel
+                    if (clicked_panel !== panel) {
+                        // Javascript magic. Use the index extracted above to ensure that we're looking at the same
+                        // genus each time. The 'children' key is used to extract the child element from the button
+                        // group. Finally, use the panel as the key to extract the object containing the checkbox
+                        // attribute
+                        if (select['children'][index]['children'].hasOwnProperty(panel)) {
+                            let opposing_panel = select['children'][index]['children'][panel];
+                            // If the current panel is checked, disable the opposing panel, and remove any checkmarks
+                            if (event.target.checked) {
+                                opposing_panel.disabled = true;
+                                opposing_panel.checked = false;
+                            } else {
+                                opposing_panel.disabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // The on 'change' listener on works when of the checkboxes in changed. If the page refreshes, the disabling of the
+    // opposing checkbox is lost
+
+    // Initialise a dictionary to store the corresponding opposite panels
+    const panel_dict = {
+        'inclusivity_panel': 'exclusivity_panel',
+        'exclusivity_panel': 'inclusivity_panel',
+    };
+    // Initialise a dictionary to store the panel name: genus name: 'checked', check status
+    const status_dict = {};
+    // Create an event listener for page loads
+    window.addEventListener('load', () => {
+        // Iterate through the list of .btn-group filtered elements defined above
+        for (const select of selects) {
+            // Since there is no target index like in the on 'change' above, we need to use an iterator in its place
+            let iterator = 0;
+            // Iterate through each button in the children of the group
+            for (const button of select['children']) {
+                // Initialise variables to store the extracted object, and panel name
+                let checkbox_object = {};
+                let panel = '';
+                // Ensure that the 'inclusivity_panel' key is present in the children of the element
+                if (select['children'][iterator]['children'].hasOwnProperty('inclusivity_panel')) {
+                    // Set the panel and object
+                    panel = 'inclusivity_panel'
+                    checkbox_object = select['children'][iterator]['children'][panel];
+                }
+                // Exclusivity panel
+                if (select['children'][iterator]['children'].hasOwnProperty('exclusivity_panel')) {
+                    panel = 'exclusivity_panel'
+                    checkbox_object = select['children'][iterator]['children'][panel];
+                }
+                // Initialise the panel key in the dictionary as required
+                if (!status_dict.hasOwnProperty(panel)) {
+                    status_dict[panel] = {};
+                }
+                // Add the genus name to the dictionary with a value of 'checked': object.checked.
+                status_dict[panel][checkbox_object.value] = {
+                    'checked': checkbox_object.checked,
+                }
+                // Increment the iterator for the next genus in the panel
+                iterator++;
+            }
+        }
+        // Use the populated status_dict to extract the status of the opposing checkboxes
+
+        // Iterate through all the .btn-group elements again
+        for (const select of selects) {
+            // Same logic as above; need an iterator to extract corresponding genus from opposite panel
+            let iterator = 0;
+            for (const button of select['children']) {
+                let checkbox_object = {};
+                let panel = '';
+                if (select['children'][iterator]['children'].hasOwnProperty('inclusivity_panel')) {
+                    panel = 'inclusivity_panel'
+                    checkbox_object = select['children'][iterator]['children'][panel];
+                }
+                if (select['children'][iterator]['children'].hasOwnProperty('exclusivity_panel')) {
+                    panel = 'exclusivity_panel'
+                    checkbox_object = select['children'][iterator]['children'][panel];
+                }
+                // Use panel_dict to determine the opposite panel
+                let opposite_panel = panel_dict[panel];
+                // Determine the status of the opposing checkbox object. Use the opposite panel name and the genus name
+                // to extract the value
+                let opposite_checked = status_dict[opposite_panel][checkbox_object.value]['checked'];
+                // If the opposite checkbox is checked, disable, and uncheck this checkbox
+                if (opposite_checked) {
+                    checkbox_object.disabled = true;
+                    checkbox_object.checked = false;
+                }
+                // Increment the iterator to process the next genus
+                iterator++;
+            }
+        }
+    });
+
+    const t = document.getElementById('range');
+    console.log(t.textContent);
+
+</script>
+
+{% endblock %}
