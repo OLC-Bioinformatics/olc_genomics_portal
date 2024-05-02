@@ -104,8 +104,10 @@ env
 # # mypy
 # .mypy_cache/
 
-# Rando
+# Others
 .idea
 celerybeat-schedule.db
 *.fasta
 olc_webportalv2/media/
+celerybeat.pid
+nginx/
