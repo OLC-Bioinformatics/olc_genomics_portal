@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+<br>
+
+<div id='archive-div'>
+    {% if sas_url %}
+        <a href="{{ sas_url }}" class="btn btn-info btn-block"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
+        <br><br>
+    {% endif %}
+    </div>
+
+<form id="blob-form" action='' method="post" enctype="multipart/form-data">
+    <input type="hidden" id="desired_container" name="desired_container" value="">
+    <input type="hidden" id="form-action" name="form-action" value="empty">
+    <input type="hidden" id="blob_pk" name="blob_pk" value="empty">
+    <input type="hidden" id="blob_name" name="blob_name" value="empty"> 
+    <input type="hidden" id="blob_copy" name="blob_copy" value="empty">
+    <input type="hidden" id="selected_options" name="selected_options" value="empty">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-dark" name="download">{% trans "Download Archive"%}</button>
+    <button type="submit" class="btn btn-success" name="copy">{% trans "Copy blobs to container"%}</button>
+    </br></br>
+    <table id="blob-table" class="table table-hover" style="width:100%">
+        <thead>
+            <tr style="text-align:center">
+            <th><input title="Select All/None" type="checkbox" class="selectAll" name="selectAll"  value="yes" onclick="checkPage(this)">  </th>
+            <th>{% trans "Container"%}</th>
+            <th>{% trans "Blob Name"%}</th>
+            <th>{% trans "Blob Size"%}</th>
+            <th>{% trans "Blob Date"%}</th>
+            <th>{% trans "Blob MD5 Checksum"%}</th>
+            <th></th>
+            {% comment %} <th></th> {% endcomment %}
+            {% comment %} <th></th> {% endcomment %}
+        </tr>
+    </thead>
+</table>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/file-size.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+<script type="text/javascript">
+    //Sorting of page based on first column descending.
+    $(document).ready(function () {
+        var table = $('#blob-table').DataTable({
+        ajax: "{{ json_results }}",
+        "pageLength": 25,
+        columnDefs : [
+            {
+                targets: 0,
+                data: null,
+                defaultContent: '',
+                orderable: false,
+                className: 'select-checkbox'
+            },
+            {
+                targets: [0, 6],
+                orderable: false,
+            },
+        ],
+        
+        "columns": [
+            { "data": null, defaultContent: '' },
+            { "data": "container_name" },
+            { "data": "blob_name" },
+            { "data": "blob_size" },
+            { "data": "blob_date" },
+            { "data": "blob_md5" },
+            {"mRender": function(data, type, full) {
+                return '<a href=\'' + full["blob_download_link"] + '\' class="btn btn-primary"  role="button">{% trans "Download" %} </a>';
+                }
+            },
+        ],
+
+        });
+        table.on('click', 'tbody tr', function (e) {
+            e.currentTarget.classList.toggle('selected');
+        });
+        $(".selectAll").on( "click", function(e) {
+            if ($(this).is( ":checked" )) {
+                table.rows(  ).select();        
+            } else {
+                table.rows(  ).deselect(); 
+            }
+    });
+}); 
+</script>
+
+<script type="text/javascript">
+
+    $(document).on("click", '.btn-dark', function(e){
+        // Archive button SweetAlerts
+        e.preventDefault();
+        var table = $("#blob-table").DataTable();
+        var selected_rows = table.rows('.selected').data().toArray();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'download';
+        var selected_options = document.getElementById("selected_options");
+        var pks = [];
+        for (const row of selected_rows){
+            console.log(row.pk);
+            pks.push(row.pk)
+        }
+        selected_options.value = pks;
+
+        var selected = selected_rows.length;
+        
+        if(selected > 1) { 
+            Swal.fire({
+                title: '{% trans "Download" %}',
+                text: '{% trans "Create an archive containing the selected files?" %}',
+                showCancelButton: true,
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Create Archive"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value == true) {
+                    Swal.fire({
+                        title: '{% trans "Submitted" %}',
+                        text: '{% trans "Your download request was submitted"%}',
+                        type: 'success',
+                        showConfirmButton: false
+                    });
+                    form.submit();
+                } else {
+                    Swal.fire({
+                        title: '{% trans "Cancelled!" %}',
+                        text: '{% trans "Archive Creation Cancelled!"%}',
+                        type: 'error',
+                        showConfirmButton: false
+                    })
+                }
+            })
+        } else {
+        Swal.fire({
+            text: '{% trans "Please select at least two files for an archive to be created!"%}',
+            type: 'error',
+            showConfirmButton: false
+        })
+    }
+    });
+
+    function isAlphanumeric(str) {
+        return /^[a-zA-Z0-9\-]+$/.test(str);
+      };
+
+    $(document).on("click", '.btn-success', function(e){
+        // Copy button SweetAlerts
+        e.preventDefault();
+        var table = $("#blob-table").DataTable();
+        var selected_rows = table.rows('.selected').data().toArray();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'copy';
+        var selected_options = document.getElementById("selected_options");
+        var pks = [];
+        for (const row of selected_rows){
+            pks.push(row.pk)
+        }
+        selected_options.value = pks;
+
+        var selected = selected_rows.length;
+        var destination = document.getElementById('desired_container');
+        if(selected) {
+            var grammar = '{% trans "iles" %}';
+            if(selected == 1) {
+                grammar = '{% trans "ile" %}';
+            }
+            Swal.fire({
+                title: '{% trans "Copy" %}',
+                text: '{% trans "Select destination container. Note that your supplied container name will be converted to lowercase, and any underscores will be replaced with dashes" %}',
+                width: '800px',
+                input: 'text',
+                inputPlaceholder: '{% trans "Destination Container" %}',
+                showCancelButton: true,
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Select Destination Container"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                reverseButtons: true,
+                inputValidator: function(value) {
+                    if(value === '') { 
+                    return '{% trans "You need to provide a container name!" %}'
+                    } else {
+                        value = value.replace('_', '-');
+                        var valid = isAlphanumeric(value);
+                        
+                        if (! valid) {
+                            return '{% trans "Special characters are not allowed" %}'
+                        }
+                        if (value.length < 3) {
+                            return '{% trans "Container names must be at least three characters" %}'
+                        }
+                        if (value.length > 64) {
+                            return '{% trans "Container names have a maximum length of 64 characters" %}'
+                        }
+                        if (value.startsWith('-')) {
+                            return '{% trans "Container names cannot begin with a dash" %}'
+                        }
+                        if (value.endsWith('-')) {
+                            return '{% trans "Container names cannot end with a dash" %}'
+                        }
+                        if (value.includes('--')) {
+                            return '{% trans "Container names cannot include consecutive dashes" %}'
+                        }
+                    }
+                    destination.value = value.toLowerCase();
+                    }
+                }).then(function(result) {
+                    if (result.value) {
+                        Swal.fire({
+                            title: '{% trans "Copy" %}',
+                            text: '{% trans "Copy the selected f" %}' + grammar + '{% trans " to " %}' + destination.value + "?",
+                            showCancelButton: true,
+                            confirmButtonColor: '#2BBE26',
+                            confirmButtonText: '{% trans "Copy F" %}' + grammar,
+                            cancelButtonText:'{% trans "Cancel"%}',
+                            reverseButtons: true
+                        }).then(function(result) {
+                            if (result.value == true) {
+                                Swal.fire({
+                                    title: '{% trans "Submitted" %}',
+                                    text: '{% trans "Your copy request was submitted"%}',
+                                    type: 'success',
+                                    showConfirmButton: false
+                                });
+                                form.submit();
+                            } else {
+                                Swal.fire({
+                                    title: '{% trans "Cancelled!" %}',
+                                    text: '{% trans "Copy Request Cancelled!"%}',
+                                    type: 'error',
+                                    showConfirmButton: false
+                                })
+                            }
+                        })
+                    } else {
+                        Swal.fire({
+                            title: '{% trans "Cancelled!" %}',
+                            text: '{% trans "Copy Request Cancelled!"%}',
+                            type: 'error',
+                            showConfirmButton: false
+                        })
+                    }
+                })
+        
+        } else {
+            Swal.fire({
+                text: '{% trans "Please select at least one file to copy!"%}',
+                type: 'error',
+                showConfirmButton: false
+            
+            })
+        }
+    })
+    
+</script>
+
+<script type="text/javascript">
+    const el = document.getElementById('archive-button');
+        if (el) {
+            el.addEventListener('click', hideshow, false);
+        }
+
+    function hideshow() {
+        document.getElementById('archive-div').style.display = 'block'; 
+        this.style.display = 'none'
+    }   
+</script>
+
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+<br>
+  <form action='' method="post">
+    {% if file_select_form.errors.container_regex %}
+      <div class="alert alert-danger" role="alert" align="center">
+        {{ file_select_form.errors.container_regex|escape }}
+      </div>
+    {% endif %}
+    <p data-tooltip='tooltip' title='{% trans "Full or Partial Container Name(s)"%}'> {{ file_select_form.container_regex|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Terms to exclude from Container Name(s)"%}'> {{ file_select_form.container_exclude_regex|as_crispy_field }}</p>
+    
+    <br>
+    {% if file_select_form.errors.file_regex %}
+      <div class="alert alert-danger" role="alert" align="center">
+        {{ file_select_form.errors.file_regex|escape }}
+      </div>
+    {% endif %}
+    <p data-tooltip='tooltip' title='{% trans "Full or Partial File Name(s)"%}'> {{ file_select_form.file_regex|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Terms to exclude from File Name(s)"%}'> {{ file_select_form.file_exclude_regex|as_crispy_field }}</p>
+
+  {% csrf_token %}
+  <br>
+  <button type="submit" class="btn btn-primary btn-lg">{% trans 'Locate Files' %}</button>
+
+  </form>
+
+  <br>
+{% endblock %}

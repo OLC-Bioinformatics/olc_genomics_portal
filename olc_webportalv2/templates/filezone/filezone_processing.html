@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+
+<h2>{%trans "FileZone Results"%}</h2>
+<br>
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert" align="center">
+  {{ form.non_field_errors|escape }}
+  </div>
+  {% endif %}
+
+  {% if filezone_request.status == 'Processing' %}
+      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
+      <br>
+      <p>{%trans "This page will automatically refresh. Your FileZone filezone_request will be complete in a seconds to minutes, depending on the complexity of the query."%}</p>
+      <p>{%trans "You don't have to remain on this page - this FileZone filezone_request will be visible on"%} <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a> </p>
+   
+    
+  {% elif filezone_request.status == 'Unprocessed' %}
+    <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
+    <br>
+  {% elif filezone_request.status == 'Error' %}
+    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
+    <br>
+    <p>{%trans "Return to "%} <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a> </p>
+
+  {% elif filezone_request.status == 'Complete' %}
+    <div style="text-align: right">
+      <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a>
+      <br><br>
+    </div>
+    <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+    <br><br>
+    <div style="text-align: center">
+      <a href="{% url 'filezone:file_view' filezone_pk=filezone_request.pk %}" class="btn btn-primary" role="button"><i ></i> {%trans "View Files"%}</a>
+    </div>
+  {% endif %}
+
+  <script type="text/javascript">
+    setInterval(function () {
+      {% if filezone_request.status == 'Processing' %}
+        window.location = window.location.href;
+      {% endif %}
+    }, 15000) // This should refresh the page every 15 seconds as long as run status is processing
+   </script>
+{% endblock %}

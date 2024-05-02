@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+<br>
+
+<div id='archive-div'>
+    {% if sas_url %}
+        <a href="{{ sas_url }}" class="btn btn-info btn-block"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
+        <br><br>
+    {% endif %}
+</div>
+
+<h3>Container {{container.container_name}} </h3>
+
+<div id="upload-div" class="center" style="width: 300px;"></div>
+    <br>
+    <form action={% url 'filezone:container_view' filezone_pk=container.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+        <div class="dz-message needsclick">
+            {% trans "Drop files to upload or click here"%}<br>
+            <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+    {% csrf_token %}
+
+    </form>
+    <br>
+<button id="submit" class="btn btn-lg btn-success">{% trans "Upload Files"%}</button>
+
+<br><br><br>
+<form id="blob-form" action='' method="post" enctype="multipart/form-data">
+    <input type="hidden" id="form-action" name="form-action" value="empty">
+    <input type="hidden" id="blob_pk" name="blob_pk" value="empty">
+    <input type="hidden" id="blob_name" name="blob_name" value="empty"> 
+    <input type="hidden" id="blob_rename" name="blob_rename" value="empty"> 
+    {% csrf_token %}
+    <button type="submit" class="btn btn-dark" name="download">{% trans "Download Archive"%}</button>
+    {% if request.user.is_superuser == True %}
+    <button type="submit" class="btn btn-danger" name="delete">{% trans "Delete"%}</button>
+    {% endif %}
+    
+    </br>
+    <table id="blob-table" class="table table-hover" style="width:100%">
+        <thead>
+            <tr style="text-align:center">
+            
+            <th><input type="checkbox" name="pageCheck"  value="yes" onclick="checkPage(this)">{% trans " Select All/None"%}</th>
+          <th>{% trans "Blob Name"%}</th>
+          <th>{% trans "Blob Size"%}</th>
+          <th>{% trans "Blob Date"%}</th>
+          <th>{% trans "Blob MD5 Checksum"%}</th>
+          <th></th>
+          <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for blob in blobs %}
+      <tr style="text-align:center">
+        <td><input type="checkbox" id="selected_options" name="selected_options" value={{blob.pk}}></td>
+        <td>{{ blob.blob_name }}</td>
+        <td>{{ blob.blob_size }}</td>
+        <td>{{ blob.blob_date }}</td>
+        <td>{{ blob.blob_md5 }}</td>
+            {% csrf_token %}
+            <td>
+                <button type="submit" class="btn btn-warning" value={{blob.pk}} id="{{blob.blob_name}}" name="rename">{% trans "Rename"%}</button>
+            
+            </td>
+            <td>
+                <a href="{{ blob.blob_download_link }}" class="btn btn-primary btn-block"  role="button">{% trans "Download" %} </a>
+            </td>
+
+      </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</form>
+
+<link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+<link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+<script src="{% static 'js/dropzone.js' %}"></script>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script type="text/javascript">
+    function progressSpinner() {
+      var spinnerdiv = document.getElementById('upload-div');
+      let ele = document.getElementById('spindiv');
+      if (ele === null){
+          let div = document.createElement('div');
+          div.setAttribute('class', 'loader');
+          div.id = 'spindiv';
+          let text = document.createElement('H4');
+          let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+          text.appendChild(message);
+          spinnerdiv.appendChild(text);
+          spinnerdiv.appendChild(div);
+      }
+  }
+  Dropzone.options.myDropzone = {
+   // Prevents Dropzone from uploading dropped files immediately
+   autoProcessQueue: false,
+   addRemoveLinks: true,
+   createImageThumbnails: false,
+   maxFilesize: 2048, // This is in MB. Shouldn't ever have files bigger than this.
+   parallelUploads: 4, // Number of files allowed to upload at once. Keep this number low to keep memory usage low
+   uploadMultiple: true,
+   maxFiles: 200,
+   timeout: 3600000,
+   init : function() {
+       let myDropzone = this;
+       var submitButton = document.querySelector("#submit");
+       submitButton.addEventListener("click", function(e) {
+       e.preventDefault();
+       e.stopPropagation();
+       progressSpinner();
+       // Tell Dropzone to process all queued files.
+       myDropzone.processQueue();
+       
+    });
+    this.on("processing", function() {
+        this.options.autoProcessQueue = true;
+    });
+    this.on("queuecomplete", function (file) {
+        window.location = window.location.href;
+    });
+   }
+}
+</script>
+{% comment %} <script src="{% static 'js/datatables.min.js' %}"></script> {% endcomment %}
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/file-size.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+<script type="text/javascript">
+    //Sorting of page based on first column descending.
+    $(document).ready(function () {
+        var table = $('#blob-table').DataTable({
+            columnDefs: [
+                { type: 'file-size', targets: 2 }
+            ],
+            order: [[1, 'asc']],
+            language : {
+                url: getLanguage()
+            },
+            paging: false,
+            scrollCollapse: true,
+            scrollY: '500px',
+            
+    });
+});
+</script>
+
+<script type="text/javascript">
+    function checkPage(bx){                   
+        for (var tbls=document.getElementsByTagName("table"), i=tbls.length; i--; )
+           for (var bxs=tbls[i].getElementsByTagName("input"), j=bxs.length; j--; )
+              if (bxs[j].type=="checkbox")
+                 bxs[j].checked = bx.checked;
+     }
+</script>
+
+<script type="text/javascript">
+    $(".btn-danger").click(function(e) {
+        // Delete button SweetAlerts
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'delete';
+        
+        var selected = 0;
+        for (var tbls=document.getElementsByTagName("table"), i=tbls.length; i--; )
+           for (var bxs=tbls[i].getElementsByTagName("input"), j=bxs.length; j--; )
+              if (bxs[j].type=="checkbox") {
+                if (bxs[j].checked) {
+                    selected++;
+                }
+              }
+        if(selected) {
+            Swal.fire({
+                title: '{% trans "Are you sure?" %}',
+                text: '{% trans "You will not be able to revert this!" %}',
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: '{% trans "Yes, delete!"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value == true) {
+                    Swal.fire({
+                    title: '{% trans "Deleted!" %}',
+                    text: '{% trans "Your deletion request was submitted"%}',
+                    type: 'success',
+                    showConfirmButton: false
+                });
+                // Submit the form
+                form.submit();
+            } else {
+                Swal.fire({
+                    title: '{% trans "Cancelled!" %}',
+                    text: '{% trans "Deletion Cancelled!"%}',
+                    type: 'error',
+                    showConfirmButton: false
+                })
+            }
+        });} else {
+            Swal.fire({
+                text: '{% trans "Please select at least one file to be deleted!"%}',
+                type: 'error',
+                showConfirmButton: false
+            })
+        }
+    });
+    $(".btn-dark").click(function(e) {
+        // Archive button SweetAlerts
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'download';
+        var selected = 0;
+        for (var tbls=document.getElementsByTagName("table"), i=tbls.length; i--; )
+           for (var bxs=tbls[i].getElementsByTagName("input"), j=bxs.length; j--; )
+              if (bxs[j].type=="checkbox") {
+                if (bxs[j].checked) {
+                    selected++;
+                }
+              }
+        console.log(selected);
+        if(selected > 1) { 
+            Swal.fire({
+                title: '{% trans "Download" %}',
+                text: '{% trans "Create an archive containing the selected files?" %}',
+                showCancelButton: true,
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Create Archive"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value == true) {
+                    Swal.fire({
+                        title: '{% trans "Submitted" %}',
+                        text: '{% trans "Your download request was submitted"%}',
+                        type: 'success',
+                        showConfirmButton: false
+                    });
+                    form.submit();
+                } else {
+                    Swal.fire({
+                        title: '{% trans "Cancelled!" %}',
+                        text: '{% trans "Archive Creation Cancelled!"%}',
+                        type: 'error',
+                        showConfirmButton: false
+                    })
+                }
+            })
+        } else {
+        Swal.fire({
+            text: '{% trans "Please select at least two files for an archive to be created!"%}',
+            type: 'error',
+            showConfirmButton: false
+        })
+    }
+    });
+
+    $(".btn-warning").click(function(e) {
+        //Rename button SweetAlerts
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        var btn = this;
+        hidden.value = 'rename';
+        var pk = document.getElementById("blob_pk");
+        var name = document.getElementById("blob_name");
+        var rename = document.getElementById("blob_rename");
+        Swal.fire({
+        title: '{% trans "Rename" %}',
+        text: '{% trans "Renaming file: " %}' + btn.id,
+        width: '800px',
+        input: 'text',
+        inputPlaceholder: "New file name and path",
+        showCancelButton: true,
+        confirmButtonColor: '#FFC300',
+        confirmButtonText: '{% trans "Rename File"%}',
+        cancelButtonText:'{% trans "Cancel"%}',
+        reverseButtons: true
+        }).then(function(result) {
+            if (result.value) {
+                rename.value = result.value;
+                Swal.fire({
+                title: '{% trans "Confirm" %}',
+                text: '{% trans "Your file will be renamed from "%}' + btn.id + '{% trans " to "%}' + result.value,
+                width: '800px',
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Rename File"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                showCancelButton: true,
+                reverseButtons: true,
+                
+            }).then(function(result) {
+                if (result.value == true) {
+                    console.log(result.value);
+                    pk.value = btn.value;
+                    name.value = btn.id;
+                    
+                    form.submit();
+                } else {
+                    Swal.fire({
+                    title: '{% trans "Cancelled!" %}',
+                    text: '{% trans "File will not be renamed!"%}',
+                    type: 'error',
+                    showConfirmButton: false
+                })
+            };
+        })
+            } else {
+                Swal.fire({
+                title: '{% trans "Cancelled!" %}',
+                text: '{% trans "File will not be renamed!"%}',
+                type: 'error',
+                showConfirmButton: false
+            })
+        }
+    })
+});
+</script>
+
+<script type="text/javascript">
+    const el = document.getElementById('archive-button');
+        if (el) {
+            el.addEventListener('click', hideshow, false);
+        }
+
+    function hideshow() {
+        document.getElementById('archive-div').style.display = 'block'; 
+        this.style.display = 'none'
+    }   
+</script>
+
+{% endblock %}
