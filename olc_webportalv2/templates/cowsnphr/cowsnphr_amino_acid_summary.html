@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% load dictionary_keys %}
+
+{% block content %}
+
+<div style="text-align: left">
+    <a href="javascript:history.back()">{% trans "Back" %}</a>
+</div>
+<div style="text-align: right">
+    <a href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR Home" %}</a>
+</div>
+<br><br>
+
+{% comment %} Amino Acid Summary {% endcomment %}
+<h6>{% trans "Amino Acid Summary Table" %}</h6>
+<table id="aa-table" class="table table-hover" style="white-space: nowrap; font-family:'Courier New', Courier, monospace;">
+    <thead>
+        <tr>
+            {% for column in request.amino_acid_headers %}
+                {% if column == 'SNV Position' %}
+                    <th colspan=20 style="font-weight: bold;">
+                        {{ column }}
+                    </th>
+                {% else %}
+                    <th style="font-weight: bold;">
+                        {{ column }}
+                    </th>
+                {% endif %}
+            {% endfor %} {% comment %} for column in request.amino_acid_headers {% endcomment %}
+            <th colspan={{ request.amino_acid_header_padding|length }}>&nbsp;</th>
+        </tr>
+    </thead>
+    {% with reference_seq=request.amino_acid_summary_table.1 %}
+    <tbody>
+        {% for pk, column_list in request.amino_acid_summary_table.items|dictsort:"0.lower" %}
+            <tr>
+                {% for column in column_list %}
+                    {% if column_list.0 == 'Annotation' or column_list.0 == '' %}
+                        {% if column != 'Annotation' %}
+                            <td style="writing-mode: vertical-lr; text-orientation: mixed; ">
+                                {{ column }}
+                            </td>
+                        {% comment %} The cell with "Annotation" should be horizontal {% endcomment %}
+                        {% else %}
+                        <td>
+                            {{ column }}
+                        </td>
+                        {% endif %}
+                    {% else %}
+                        {% comment %} Do not apply formatting to the first or last rows {% endcomment %}
+                        {% if pk == 0 or pk == request.amino_acid_summary_table|length %}
+                        <td>
+                            {{ column }}
+                        </td>
+                        {% comment %} Apply formatting to bases {% endcomment %}
+                        {% else %}
+                            {% comment %} Ignore the first column {% endcomment %}
+                            {% if forloop.counter0 %}
+                            {% access_list_position reference_seq 0 as ref_name %}
+                                {% if column_list.0 == ref_name %}
+                                <td>
+                                    {{ column }}
+                                </td>
+                                {% else %}
+                                    {% comment %} Format matching cells normally {% endcomment %}
+                                    {% access_list_position reference_seq forloop.counter0 as ref_base %}
+                                    {% if column == ref_base %}
+                                        <td style="font-weight: bold;">
+                                            {{ column }}
+                                        </td>
+                                    {% elif column == '-' and ref_base == 'NC' %}
+                                        <td style="font-weight: bold;">
+                                            {{ column }}
+                                        </td>
+                                    {% else %}
+                                        {% if column == 'A' %}
+                                            <td style="background-color: #C8C8C8; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'R' %}
+                                            <td style="background-color: #145AFF; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'N' %}
+                                            <td style="background-color: #00DCDC; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'D' %}
+                                            <td style="background-color: #E60A0A; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'C' %}
+                                            <td style="background-color: #0000FF; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'E' %}
+                                            <td style="background-color: #E60A0A; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'Q' %}
+                                            <td style="background-color: #00DCDC; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'G' %}
+                                            <td style="background-color: #F7FE2E; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'H' %}
+                                            <td style="background-color: #8282D2; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'I' %}
+                                            <td style="background-color: #0F820F; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'L' %}
+                                            <td style="background-color: #0F820F; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'K' %}
+                                            <td style="background-color: #145AFF; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'M' %}
+                                            <td style="background-color: #E6E600; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'F' %}
+                                            <td style="background-color: #3232AA; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'P' %}
+                                            <td style="background-color: #DC9682; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'S' %}
+                                            <td style="background-color: #FA9600; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'T' %}
+                                            <td style="background-color: #FA9600; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'W' %}
+                                            <td style="background-color: #B45AB4; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'Y' %}
+                                            <td style="background-color: #3232AA; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'V' %}
+                                            <td style="background-color: #0F820F; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% else %}
+                                            <td style="background-color: #BEA06E; color: #C70039; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                            <td>
+                                {{ column }}
+                            </td>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        {% endfor%}
+    </tbody>
+    {% endwith %}
+</table>
+
+{% endblock %}
