@@ -9,8 +9,10 @@ import shutil
 import sys
 from time import sleep
 
+
 # Django imports
 from django.conf import settings
+from django.db import DatabaseError
 try:
     from django.utils.translation import gettext_lazy as _
 except ImportError:
@@ -23,7 +25,7 @@ except ImportError:
     import azure.batch.batch_service_client as batch
 
 import azure.batch.models as batchmodels
-
+from azure.common import AzureMissingResourceHttpError, AzureHttpError
 try:
     from azure.storage.blob import BlobServiceClient as BlockBlobService
 except ImportError:
@@ -70,30 +72,46 @@ def find_containers():
         account_key=settings.AZURE_ACCOUNT_KEY
     )
     containers = blob_client.list_containers()
-    # Initialise a set to store all the unique run names
-    run_set = set()
-    for container in containers:
-        if re.match('\d{6}', container.name) and '-output' not in container.name:
-            run_set.add(container.name)
-        elif re.match('cowsnphr', container.name) and '-output' not in container.name:
-            run_set.add(container.name)
-    return sorted(list(run_set))
+    # Compile the regular expressions
+    seq_run_re = re.compile('\d{6}')
+    cowsnphr_re = re.compile('cowsnphr')
+    # Use a list comprehension to find the matching container names
+    run_set = {
+        container.name for container in containers
+        if ((seq_run_re.match(container.name) or cowsnphr_re.match(container.name))
+            and '-output' not in container.name)
+    }
+    return sorted(run_set)
 
 
 @shared_task
 def refresh_container_names():
     """
-    Clear out all the container names from the model, and refresh
+    Update the container names in the model.
     """
     try:
-        # Autocompletion: clear out all the previous data
-        ContainerName.objects.all().delete()
-        # Find all the blobs that match the naming format
-        run_list = find_containers()
-        # Add the blobs to the model
-        for run in run_list:
-            ContainerName.objects.get_or_create(container_name=run)
-    except Exception as exc:
+        # Find all the containers
+        run_list = set(find_containers())
+        # Get the current container names in the database
+        current_names = set(
+            ContainerName.objects.values_list(
+                'container_name',
+                flat=True
+            )
+        )
+        # Find the new and deleted container names
+        new_names = run_list - current_names
+        deleted_names = current_names - run_list
+        # Create new container names
+        ContainerName.objects.bulk_create(
+            ContainerName(container_name=name) for name in new_names
+        )
+        # Delete removed container names
+        ContainerName.objects.filter(container_name__in=deleted_names).delete()
+    except (
+            AzureMissingResourceHttpError,
+            AzureHttpError,
+            DatabaseError) as exc:
         capture_exception(exc)
 
 

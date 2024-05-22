@@ -13,8 +13,9 @@ import zipfile
 
 # Django imports
 from django.conf import settings
-
+from django.db import DatabaseError
 # Azure imports
+from azure.common import AzureMissingResourceHttpError, AzureHttpError
 try:
     from azure.storage.blob import BlobServiceClient as BlockBlobService
 except ImportError:
@@ -47,15 +48,14 @@ def find_containers():
     """
     Find all containers
     """
-    container_set = set()
     blob_client = BlockBlobService(
         account_name=settings.AZURE_ACCOUNT_NAME,
         account_key=settings.AZURE_ACCOUNT_KEY
     )
     containers = blob_client.list_containers()
-    for container in containers:
-        container_set.add(str(container.name))
-    return sorted(list(container_set))
+    # Use a set comprehension to get the container names
+    container_set = {str(container.name) for container in containers}
+    return sorted(container_set)
 
 
 @shared_task
@@ -69,9 +69,15 @@ def refresh_container_names():
         # Find all the blobs that match the naming format
         container_list = find_containers()
         # Add the blobs to the model
-        for container in container_list:
-            ContainerName.objects.get_or_create(container_name=container)
-    except Exception as exc:
+        ContainerName.objects.bulk_create(
+            ContainerName(
+                container_name=container
+            ) for container in container_list
+        )
+    except (
+            AzureMissingResourceHttpError,
+            AzureHttpError,
+            DatabaseError) as exc:
         capture_exception(exc)
 
 
