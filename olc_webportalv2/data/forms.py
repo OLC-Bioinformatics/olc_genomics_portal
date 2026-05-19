@@ -23,7 +23,7 @@ class DataRequestForm(forms.Form):
         seqid_list = seqid_input.split()
         bad_seqids = list()
         for seqid in seqid_list:
-            if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
+            if not re.match('\d{4}-[A-Z0-9]{3,5}-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
             raise forms.ValidationError(

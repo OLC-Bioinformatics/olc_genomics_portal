@@ -111,7 +111,7 @@ class CustomRunForm(ModelForm):
         run_name = str()
         try:
             run_name = self.cleaned_data['run_name']
-            if not (re.match('\d{6}-[a-z]+', run_name) or re.match('\d{6}_M\d+', run_name)):
+            if not (re.match('\d{5,6}-[a-z]+', run_name) or re.match('\d{5,6}_M\d+', run_name)):
                 error_list.append(
                     _('Invalid run name. Format must be YYMMDD-lab'))
             run_name.upper().replace('-', '_')

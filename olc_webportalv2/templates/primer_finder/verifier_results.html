@@ -3,9 +3,13 @@
 {% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
+{% load display_filters %}
 {% block content %}
 
-<h4>Summary Report for {{ primer_verifier_request.project_name }} </h4>
+<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
+<br>
+
+<h4>Summary Report for {{ request.project_name }} </h4>
 
 <table class="table table-hover display nowrap" style="width:100%">
     <thead>
@@ -16,6 +20,7 @@
     <th>Percent</th>
     </thead>
     <tbody>
+
     <!--Populate the table with report information -->
     {% for sorted_primer in primers %}
     {% for primer_name, clean_primer in clean_primers.items %}
@@ -30,7 +35,6 @@
     {% for sorted_panel in panels %}
     {% for panel, detail_dict in panel_dict.items %}
     {% if panel == sorted_panel %}
-
     <tr>
         <td>
             {% if panel == 'inclusivity' %}
@@ -120,7 +124,7 @@
                                     {{ mismatch.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    0
+                                        0
                                     {% endif %}
                                 </td>
                                 <td>
@@ -134,7 +138,7 @@
                                     {{ detail.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    N/A
+                                        N/A
                                     {% endif %}
                                 </td>
                                 <td>
@@ -149,14 +153,15 @@
                 </div>
             </div>
         </td>
-        <td>{{detail_dict.positive}}</td>
-        <td>{{detail_dict.total}}</td>
-        <td>{{detail_dict.percent}}</td>
+        <td>{{ detail_dict.percent }}</td>
+        <td>{{ detail_dict.positive }}</td>
+        <td>{{ detail_dict.total }}</td>
     </tr>
 
     {% for sorted_genus in genera %}
     {% for genus, hit_dict in detail_dict.items %}
-    {% if genus == sorted_genus %}
+
+    {% if genus|lower == sorted_genus|lower %}
 
     <!-- style="display: none"-->
     <tr id="{{ clean_primer }}{{ panel }}{{ genus }}Row" style="display: none">
@@ -197,23 +202,42 @@
         <td>
             <!-- Make an appropriately coloured hyperlink if there are any mismatches in the forward or
             reverse primers -->
-            {% if hit_dict.forward_details or hit_dict.reverse_details %}
+            {# Consider either naming convention for details (legacy and new) #}
+            {% if hit_dict.forward_details or hit_dict.forward_mismatch_details or hit_dict.reverse_details or hit_dict.reverse_mismatch_details %}
             <!-- Button trigger modal -->
             {% if panel == 'inclusivity' %}
             <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
                style="color: green">
-                <em>{{genus}}</em>
+                {% with disp=genus|display_name %}
+                    {% if disp|upper == disp %}
+                        {{ disp }}
+                    {% else %}
+                        <em>{{ disp }}</em>
+                    {% endif %}
+                {% endwith %}
             </a>
             {% else %}
             <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
                style="color: red">
-                <em>{{genus}}</em>
+                {% with disp=genus|display_name %}
+                    {% if disp|upper == disp %}
+                        {{ disp }}
+                    {% else %}
+                         <em>{{ disp }}</em>
+                    {% endif %}
+                {% endwith %}
             </a>
             {% endif %} <!--- if panel == 'inclusivity' --->
             <!--- Otherwise, simply print the genus without formatting --->
             {% else %}
-            <em>{{genus}}</em>
-            {% endif %} <!--- if hit_dict.forward_details or hit_dict.reverse_details --->
+                {% with disp=genus|display_name %}
+                    {% if disp|upper == disp %}
+                        {{ disp }}
+                    {% else %}
+                        <em>{{ disp }}</em>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
 
             <!-- Modal -->
             <div class="modal fade" id="{{ clean_primer }}{{ panel }}{{ genus }}Modal" tabindex="-1" role="dialog"
@@ -221,7 +245,15 @@
                 <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">{{primer}} {{panel}} {{ genus }} details</h5>
+                            <h5 class="modal-title">{{primer}} {{panel}} 
+                                {% with disp=genus|display_name %}
+                                    {% if disp|upper == disp %}
+                                        {{ disp }}
+                                    {% else %}
+                                        <em>{{ disp }}</em>
+                                    {% endif %}
+                                {% endwith %}
+                            details</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -246,7 +278,7 @@
                                     {{ mismatch.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    0
+                                        0
                                     {% endif %}
                                 </td>
                                 <td>
@@ -260,7 +292,7 @@
                                     {{ detail.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    N/A
+                                        N/A
                                     {% endif %}
                                 </td>
                                 <td>
@@ -274,7 +306,7 @@
                                     {{ mismatch.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    0
+                                        0
                                     {% endif %}
                                 </td>
                                 <td>
@@ -288,7 +320,7 @@
                                     {{ details.0 }} <br>
                                     {% endfor %}
                                     {% else %}
-                                    N/A
+                                        N/A
                                     {% endif %}
                                 </td>
                                 <td>
@@ -303,9 +335,15 @@
                 </div>
             </div>
         </td>
-        <td>{{hit_dict.positive}}</td>
-        <td>{{hit_dict.total}}</td>
-        <td>{{hit_dict.percent}}</td>
+        {% if hit_dict.probe_prevalence %}
+            <td>{{ hit_dict.probe_prevalence.positive }}</td>
+            <td>{{ hit_dict.probe_prevalence.total }}</td>
+            <td>{{ hit_dict.probe_prevalence.percent }}</td>
+        {% else %}
+            <td>{{ hit_dict.positive }}</td>
+            <td>{{ hit_dict.total }}</td>
+            <td>{{ hit_dict.percent }}</td>
+        {% endif %}
     </tr>
     {% endif %} <!-- if genus == sorted_genus -->
     {% endfor %} <!-- for genus, hit_dict in detail_dict.items -->
@@ -322,4 +360,3 @@
 </table>
 
 {% endblock %}
-

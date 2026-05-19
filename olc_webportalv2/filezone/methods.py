@@ -1,3 +1,8 @@
+"""
+Methods for FileZone app
+"""
+
+from azure.storage.blob import BlockBlobService, ContentSettings
 import base64
 import binascii
 import datetime
@@ -15,28 +20,31 @@ except ImportError:
     from azure.storage.blob import BlockBlobService
 from azure.storage.blob import ContentSettings
 
-# For some reason settings get imported from base.py - in views they come from prod.py. Weird.
-from django.conf import settings  # To access azure credentials
+# To access azure credentials
+from django.conf import settings
 
 
-def humanbytes(B):
-    """Return the given bytes as a human friendly KB, MB, GB, or TB string."""
-    B = float(B)
-    KB = float(1024)
-    MB = float(KB ** 2) # 1,048,576
-    GB = float(KB ** 3) # 1,073,741,824
-    TB = float(KB ** 4) # 1,099,511,627,776
+def human_bytes(byte_count: float) -> str:
+    """
+    Convert a byte count into a human-readable format with appropriate
+    unit (B, KB, MB, GB, TB).
 
-    if B < KB:
-        return '{0} B'.format(B).replace('Byte', '')
-    elif KB <= B < MB:
-        return '{0:.2f} KB'.format(B / KB)
-    elif MB <= B < GB:
-        return '{0:.2f} MB'.format(B / MB)
-    elif GB <= B < TB:
-        return '{0:.2f} GB'.format(B / GB)
-    elif TB <= B:
-        return '{0:.2f} TB'.format(B / TB)
+    :param byte_count: The number of bytes as a float.
+    :return: A string representing the byte count in a human-friendly format.
+    """
+    # Suffixes for units
+    suffixes = ['B', 'KB', 'MB', 'GB', 'TB']
+    index = 0  # Index to track the current unit
+    
+    # Loop to convert byte_count to a higher unit if applicable
+    while byte_count >= 1024 and index < len(suffixes) - 1:
+        byte_count /= 1024.0  # Convert to the next higher unit
+        index += 1  # Move to the next unit
+    
+    # Return formatted string with two decimal places and unit suffix
+    return "{value:.2f} {suffix}".format(
+        value=byte_count, suffix=suffixes[index]
+    )
 
 
 def generate_sas(blob_name, container_name):
@@ -58,33 +66,44 @@ def generate_sas(blob_name, container_name):
 
 def generate_download_link(blob_client, container_name, blob_name, expiry=8):
     """
-    Make a download link for a file in Azure storage, good for up to expiry days
+    Generate a download link with Content-Disposition for the blob, good for
+    up to expiry days.
     :param blob_client: Instance of azure.storage.blob.BlockBlobService
-    :param container_name: Name of container you want to create.
-    :param output_zipfile: Zipfile you want to upload and create a link for.
-    :param expiry: Number of days link should be valid for.
-    :return: String of a link that allows people to download container.
+    :param container_name: Name of the container.
+    :param blob_name: Name of the blob to create a link for.
+    :param expiry: Number of days the link should be valid for.
+    :return: String of a link that allows people to download the blob.
     """
-    sas_token = blob_client.generate_container_shared_access_signature(
+    # Generate SAS token with 'read' permission and Content-Disposition for
+    # the blob
+    sas_token = blob_client.generate_blob_shared_access_signature(
         container_name=container_name,
+        blob_name=blob_name,
         permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry)
+        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry),
+        content_disposition='attachment; filename="{0}"'.format(
+            blob_name.split('/')[-1]
+        )
     )
+
+    # Construct the SAS URL with the SAS token
     sas_url = blob_client.make_blob_url(
         container_name=container_name,
         blob_name=blob_name,
         sas_token=sas_token
     )
+
     return sas_url
 
 
 def copy_blobs(
-    blob_metadata_list: list,
-    destination_container: str):
+        blob_metadata_list: list,
+        destination_container: str):
     """
     Copy blobs from one or more containers into a destination container
     :param list blob_metadata_list: List metadata for blobs to be copied
-    :param str destination container: Name of the container into which the blobs are to be copied
+    :param str destination container: Name of the container into which the
+    blobs are to be copied
     """
     blob_service = BlockBlobService(
         account_key=settings.AZURE_ACCOUNT_KEY,
@@ -99,7 +118,7 @@ def copy_blobs(
         )
 
 
-def calculate_checksum(item: 'request.FILES.get'):
+def calculate_checksum(item):
     """
     Calculate an Azure-style checksum for an uploaded file
     :param request.FILES.get item: Current uploaded file
@@ -113,15 +132,17 @@ def calculate_checksum(item: 'request.FILES.get'):
         md5.update(line)
     # Use ContentSettings to set the MD5 checksum for the file
     blob_headers = ContentSettings(
-        content_md5 = base64.b64encode(md5.digest()).decode()
+        content_md5=base64.b64encode(md5.digest()).decode()
     )
     # Reset the file position to the start
     item.seek(0)
     return blob_headers
 
+
 class FileLocate:
     """
-    Locate files in blob storage with an optional container regex and a file regex
+    Locate files in blob storage with an optional container regex and a
+    file regex
     """
 
     def main(self):
@@ -157,57 +178,76 @@ class FileLocate:
 
     @staticmethod
     def locate_container(
-        blob_client: BlockBlobService,
-        expressions: list,
-        negative_expressions: list,
-        debug: bool):
+            blob_client: BlockBlobService,
+            expressions: list,
+            negative_expressions: list,
+            debug: bool):
         """
         Locate containers matching the supplied regex
-        :param BlockBlobService blob_client: BlockBlobService client for blob manipulations
-        :param list expressions: List of the regexes to use to search for containers
-        :param list negative_expressions: List of regexes to use to filter returned containers
-        :return list containers/container_matches: List of BlockBlobService.list_containers()
-        relevant for this search
+        :param BlockBlobService blob_client: BlockBlobService client for blob
+            manipulations
+        :param list expressions: List of the regexes to use to search for
+            containers
+        :param list negative_expressions: List of regexes to use to filter
+            returned containers
+        :return list containers/container_matches: List of
+            BlockBlobService.list_containers() relevant for this search
         """
         # Get a list of all the containers
         containers = blob_client.list_containers()
-        # If no container filtering information was provided, return all the containers
+
+        # If no container filtering information was provided, return all the
+        # containers
         if not expressions:
             return containers
+
         # Prepare a list to store the containers that match the expression
         container_matches = []
+
         # Iterate over the list of regexes
         for expression in expressions:
+
             # Filter the containers with the current regex
             for container in containers:
-                # Reject if the match contains any of the exlusion terms
+                # Reject if the match contains any of the exclusion terms
                 if negative_expressions != ['']:
                     if any(
-                        negative_expression in container.name for \
+                        negative_expression in container.name for
                             negative_expression in negative_expressions):
                         if debug:
-                            print('Container {container_name} matched one of the exclusion terms'
-                                .format(container_name=container.name))
+                            print(
+                                'Container {container_name} matched one of '
+                                'the exclusion terms'.format(
+                                    container_name=container.name
+                                )
+                            )
                         continue
-                # If the expression contains non-alphanumeric characters either at the start or
+                # If the expression contains non-alphanumeric characters
+                # either at the start or
                 # anywhere, treat it as a regular expression
                 if re.match(r'.*\W', expression.replace('-', '_')):
-                    # Use re.sub to convert * to .* to be consistent with regex rules, as it seemed
-                    # unintuitive to force the user to use .* rather than just * for simple queries.
-                    # If .* was provided, don't add the '.' by using a negative lookbehind assertion
+                    # Use re.sub to convert * to .* to be consistent with
+                    # regex rules, as it seemed unintuitive to force the user
+                    # to use .* rather than just * for simple queries.
+                    # If .* was provided, don't add the '.' by using a
+                    # negative lookbehind assertion
                     regex_expression = re.sub(r'(?<!\.)\*', '.*', expression)
-                    # Use re.fullmatch to determine if the expression matches the container name
-                    if re.fullmatch(r'{regex_expression}$'.format(
-                        regex_expression=regex_expression
-                        ),
-                        container.name):
-                        # Update the match boolean and append the container to the list of matches
+                    # Use re.fullmatch to determine if the expression matches
+                    # the container name
+                    if re.fullmatch(
+                            r'{regex_expression}$'.format(
+                                regex_expression=regex_expression
+                            ),
+                            container.name):
+                        # Update the match boolean and append the container to
+                        # the list of matches
                         container_matches.append(container)
                 # The expression doesn't appear to be a regular expression
                 else:
                     # Ensure a perfect match for non regex queries
                     if expression == container.name:
-                        # Update the match boolean and append the container to the list of matches
+                        # Update the match boolean and append the container to
+                        # the list of matches
                         container_matches.append(container)
         if debug:
             print('Container(s) matching supplied pattern(s)')
@@ -217,17 +257,19 @@ class FileLocate:
 
     @staticmethod
     def locate_file(
-        blob_client: BlockBlobService,
-        containers: list,
-        expressions: list,
-        negative_expressions: list,
-        debug: bool):
+            blob_client: BlockBlobService,
+            containers: list,
+            expressions: list,
+            negative_expressions: list,
+            debug: bool):
         """
         Locate files in containers in blob storage with a supplied expression
-        :param BlockBlobService blob_client: BlockBlobService client for blob manipulations
+        :param BlockBlobService blob_client: BlockBlobService client for blob
+            manipulations
         :param list containers: List of BlockBlobService.list_containers()
         :param list expressions: List of regexes to use to search for files
-        :param list negative_expressions: List of regexes to use to filter returned files
+        :param list negative_expressions: List of regexes to use to filter
+            returned files
         :return dict files: Dictionary of expression: container_name: blob_name
         """
         # Initialise a dictionary to store the matches
@@ -236,86 +278,109 @@ class FileLocate:
         ajax['data'] = []
         # Initialise a counter, so each match has a unique primary key
         count = 0
-        
-        # List all the files in each of the containers that match the provided expression
+
+        # List all the files in each of the containers that match the provided
+        # expression
         for container in containers:
             blobs = blob_client.list_blobs(container_name=container.name)
             # Iterate through all the files in the container
             for blob_file in blobs:
                 # Store the file name and path in a variable
                 filename = blob_file.name
-                # Initialise a variable to track whether this file is a match to the expression
+                # Initialise a variable to track whether this file is a match
+                # to the expression
                 match = False
                 # Use pathlib to create a path object from the file name
                 path_obj = pathlib.Path(os.path.normpath(filename))
                 # Split the file name into its separate components
                 components = path_obj.parts
                 for expression in expressions:
-                    # Check whether the expression contains non-alphanumeric characters. If it does,
-                    # treat it as a regular expression. Ignore dashes as non-alphanumeric characters
+                    # Check whether the expression contains non-alphanumeric
+                    # characters. If it does, treat it as a regular expression.
+                    # Ignore dashes as non-alphanumeric characters
                     if re.match(r'.*\W', expression.replace('-', '_')):
-                        # If the expression is has nested files/folders, split the expression
+                        # If the expression is has nested files/folders, split
+                        # the expression
                         # into its components
-                        # e.g. reports/outputs/output.tsv contains three components
-                        expression_obj = pathlib.Path(os.path.normpath(expression))
+                        # e.g. reports/outputs/output.tsv contains three
+                        # components
+                        expression_obj = pathlib.Path(
+                            os.path.normpath(expression)
+                        )
                         expression_components = list(expression_obj.parts)
-                        # The number of matches required is the number of path components
-                        # e.g. reports/outputs/output.tsv requires three matches
+                        # The number of matches required is the number of path
+                        # components e.g. reports/outputs/output.tsv requires
+                        # three matches
                         matches_required = len(expression_components)
-                        # Initialise a dictionary to track matches to each of the components
+                        # Initialise a dictionary to track matches to each of
+                        # the components
                         component_matches = {}
-                        # Search through all the path components of the file name
+                        # Search through all the path components of the file
+                        # name
                         for i, component in enumerate(components):
                             # Check for nested files/folders
                             if len(expression_components) > 1:
-                                while len(expression_components) < len(components):
+                                while len(expression_components) < \
+                                        len(components):
                                     expression_components.insert(-1, '*')
-                                # Reset the number of matches required to the new length of the
+                                # Reset the number of matches required to the
+                                # new length of the
                                 # expression components
                                 matches_required = len(expression_components)
-                                # Use re.sub to convert * to .* to be consistent with regex rules
+                                # Use re.sub to convert * to .* to be
+                                # consistent with regex rules
                                 regex_expression = re.sub(
                                     r'(?<!\.)\*', '.*',
                                     expression_components[i]
                                 )
-                                # If the components match, increment the number of matches
+                                # If the components match, increment the
+                                # number of matches
                                 if re.fullmatch(
-                                    r'{regex_expression}$'.format(
-                                        regex_expression=regex_expression
-                                    ),
-                                    component):
-                                    # Set the match to the current component to true
+                                        r'{regex_expression}$'.format(
+                                            regex_expression=regex_expression
+                                        ),
+                                        component):
+                                    # Set the match to the current component
+                                    # to true
                                     component_matches[component] = True
                             else:
-                                # Use re.sub to convert * to .* to be consistent with regex rules
-                                regex_expression = re.sub(r'(?<!\.)\*', '.*', expression)
-                                # If the component matches, set the match boolean to True
+                                # Use re.sub to convert * to .* to be
+                                # consistent with regex rules
+                                regex_expression = re.sub(
+                                    r'(?<!\.)\*', '.*', expression
+                                )
+                                # If the component matches, set the match
+                                # boolean to True
                                 if re.fullmatch(
-                                    r'{regex_expression}$'.format(
-                                        regex_expression=regex_expression
-                                    ),
-                                    component):
+                                        r'{regex_expression}$'.format(
+                                            regex_expression=regex_expression
+                                        ),
+                                        component):
                                     match = True
-                        # Check to see if the number of matches observed in a multi-component
-                        # expression is the number matches required for a match before setting the
-                        # match boolean to True
+                        # Check to see if the number of matches observed in a
+                        # multi-component expression is the number matches
+                        # required for a match before setting the match
+                        # boolean to True
                         if len(component_matches) == matches_required:
                             match = True
                     # The expression does not look like a regular expression
                     else:
                         for component in components:
-                            # An exact match is required to be considered a match
+                            # An exact match is required to be considered a
+                            # match
                             if expression == component:
                                 match = True
                 # Update dictionaries with a successful match
                 if match:
-                    # Reject if the match contains any of the exlusion terms
+                    # Reject if the match contains any of the exclusion terms
                     if negative_expressions != ['']:
                         if any(
-                            negative_expression in filename for \
+                            negative_expression in filename for
                                 negative_expression in negative_expressions):
                             if debug:
-                                print('File {container_name} / {filename} matched one of the '
+                                print(
+                                    'File {container_name} / {filename} '
+                                    'matched one of the '
                                     'exclusion terms'.format(
                                         container_name=container.name,
                                         filename=filename
@@ -324,7 +389,9 @@ class FileLocate:
                     # Add the match to the dictionary
                     if container.name not in files:
                         files[container.name] = []
-                    blob_size = humanbytes(B=blob_file.properties.content_length)
+                    blob_size = human_bytes(
+                        byte_count=blob_file.properties.content_length
+                    )
                     sas_url = generate_sas(
                         blob_name=blob_file.name,
                         container_name=container.name
@@ -334,19 +401,22 @@ class FileLocate:
                     )
                     # Extract the MD5 information
                     try:
-                        # The MD5 checksum on files (smaller than 100MB?) is stored in the
-                        # .properties.content_settings.content_md5 attribute. It must be converted
-                        # to a standard hex digest to be compatible with normal md5sum calculations  
+                        # The MD5 checksum on files (smaller than 100MB?) is
+                        # stored in the
+                        # .properties.content_settings.content_md5 attribute.
+                        # It must be converted to a standard hex digest to be
+                        # compatible with normal md5sum calculations
                         blob_md5 = binascii.hexlify(
                             bytearray(
                                 base64.b64decode(
-                                    blob_file.properties.content_settings.content_md5
+                                    blob_file.properties.content_settings
+                                    .content_md5
                                 )
                             )
                         ).decode()
-                    # If the file is too large, stream it locally, calculate the Azure-style
-                    # MD5 checksum, and update the blob properties with it. A md5sum-style hex
-                    # digest is returned
+                    # If the file is too large, stream it locally, calculate
+                    # the Azure-style MD5 checksum, and update the blob
+                    # properties with it. A md5sum-style hex digest is returned
                     except TypeError:
                         blob_md5 = FileLocate.calculate_md5(
                             blob_client=blob_client,
@@ -389,47 +459,51 @@ class FileLocate:
 
     @staticmethod
     def calculate_md5(
-        blob_client: BlockBlobService,
-        blob_file: 'BlockBlobService.list_containers().list_blobs()',
-        container_name: str):
+            blob_client: BlockBlobService,
+            blob_file,
+            container_name: str) -> str:
         """
-        Manually calculate the MD5 checksum of a large blob
-        :param BlockBlobService blob_client: BlockBlobService client for blob manipulations
-        :param BlockBlobService.list_containers().list_blobs(): Blob from generator
-        :param str container_name: Name of container holding blob of interest
-        :return blob_md5: MD5 hex digest of blob
+        Manually calculate the MD5 checksum of a large blob in a
+            memory-efficient manner.
+        :param blob_client: BlockBlobService client for blob manipulations
+        :param blob_file: Blob from generator
+        :param container_name: Name of container holding blob of interest
+        :return: MD5 hex digest of blob
         """
-        with io.BytesIO() as stream:
-			# Download the blob to a stream
-            blob_client.get_blob_to_stream(container_name, blob_file.name, stream)
-            stream.seek(0)
-            # Read in the stream
-            contents = stream.readlines()
-            # Create an object to store the checksum information
-            md5 = hashlib.md5()
-            # Read in the stream, and update the md5 object
-            for line in contents:
-                md5.update(line)
-            # Create an Azure-style MD5 checksum by md5.digest(), converting it to base64, and
-            # decoding it
-            blob_md5 = base64.b64encode(md5.digest()).decode()
-            # Create a standard hex digest
-            hex_md5 = md5.hexdigest()
-            # Use ContentSettings to add the calculated checksum to the properties.
-            blob_headers = ContentSettings(
-                    content_md5=blob_md5
-            )
-            # Set the properties of the blob
-            blob_client.set_blob_properties(
-                container_name=container_name,
-                blob_name=blob_file.name,
-                content_settings=blob_headers
-            )
+        md5 = hashlib.md5()
+        chunk_size = 4096  # Define the chunk size
+
+        # Create a stream to download the blob content
+        stream = io.BytesIO()
+        blob_client.get_blob_to_stream(container_name, blob_file.name, stream)
+        stream.seek(0)  # Reset the stream position to the beginning
+
+        # Read the blob content in chunks and update the MD5 hash
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            md5.update(chunk)
+
+        # Convert MD5 digest to base64 to set as blob property (if needed).
+        blob_md5_base64 = base64.b64encode(md5.digest()).decode()
+        # Hexadecimal MD5 digest.
+        hex_md5 = md5.hexdigest()
+
+        # Set the blob properties with the new MD5 if necessary.
+        # Note: Only do this if you need to update the blob's properties.
+        blob_headers = ContentSettings(content_md5=blob_md5_base64)
+        blob_client.set_blob_properties(
+            container_name=container_name,
+            blob_name=blob_file.name,
+            content_settings=blob_headers
+        )
+
         return hex_md5
 
-
-    def __init__(self, container_regex, container_exclude_regex, file_regex, file_exclude_regex,
-                 debug=False) -> None:
+    def __init__(
+            self, container_regex, container_exclude_regex, file_regex,
+            file_exclude_regex, debug=False) -> None:
         self.container_regex = container_regex
         self.container_exclude_regex = container_exclude_regex
         self.file_regex = file_regex
@@ -438,15 +512,15 @@ class FileLocate:
 
 
 if __name__ == '__main__':
-    # parentdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # os.sys.path.insert(0, parentdir)
-    # os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.prod'
-    # import django
-    # django.setup()
     file_obj = FileLocate(
         container_regex=['000*', '*fake'],
         container_exclude_regex=[],
-        file_regex=['2017-SEQ-0393*', 'Best*/2018-CAL*.fasta', 'InterOp/Cont*', '2018-CAL*.gz'],
+        file_regex=[
+            '2017-SEQ-0393*',
+            'Best*/2018-CAL*.fasta',
+            'InterOp/Cont*',
+            '2018-CAL*.gz'
+        ],
         file_exclude_regex=[],
         debug=True
     )

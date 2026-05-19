@@ -15,10 +15,10 @@
                     </div>
                     <div class="card-body d-flex flex-column">
                         <p id="article1">
-                            {% trans "Determine binding of primer sets against genus-specific panels" %}
+                            {% trans "Determine binding of primer sets against flexible panels as well as assemblies" %}
                         </p>
                         <a class="btn btn-primary btn-lg btn-block mt-auto"
-                           href="{% url 'primer_finder:validator_home' %}">{% trans "PrimerValidator" %}</a>
+                           href="{% url 'primer_finder:primer_validator_home' %}">{% trans "PrimerValidator" %}</a>
                     </div>
                 </div>
                 <div class="card mb-4 box-shadow">
@@ -26,22 +26,11 @@
                         <h3>{% trans "PrimerVerifier" %}</h3>
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <p id="article2">{% trans "Determine binding of primer sets against flexible panels as well as assemblies" %}</p>
+                        <p id="article2">{% trans "Determine binding of primer sets against genus-specific panels" %}</p>
                         <a class="btn btn-primary btn-lg btn-block mt-auto"
-                           href="{% url 'primer_finder:verifier_home' %}">{% trans "PrimerFinder" %}</a>
+                           href="{% url 'primer_finder:primer_verifier_home' %}">{% trans "PrimerVerifier" %}</a>
                     </div>
                 </div>
-                <div class="card mb-4 box-shadow">
-                    <div class="card-header">
-                        <h3>{% trans "PrimerFinder" %}</h3>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <p id="article3">{% trans "Determine binding of primer sets against assemblies" %}</p>
-                        <a class="btn btn-primary btn-lg btn-block mt-auto"
-                           href="{% url 'primer_finder:verifier_home' %}">{% trans "PrimerFinder" %}</a>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>

@@ -5,14 +5,17 @@
 {% load i18n %}
 {% block content %}
 
+<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
 <br>
-<a href="{% url 'primer_finder:verifier_request' %}" class="btn btn-primary btn-block" role="button"
+
+<br>
+<a href="{% url 'primer_finder:primer_validator_request' %}" class="btn btn-primary btn-block" role="button"
    aria-pressed="true"><i class="fas fa-plus"></i>
-    <strong> {% trans "Create A PrimerVerifier Experiment" %}</strong>
+    <strong> {% trans "Create A PrimerValidator Experiment" %}</strong>
 </a>
 
 <br>
-<h3>PrimerVerifier</h3>
+<h3>PrimerValidator</h3>
 <br>
 
 <table id="primer_verifier-request-table" class="table table-hover">
@@ -35,7 +38,7 @@
 
         {% if primer_verifier_project.status == 'Complete' %}
         <td>
-            <a href="{% url 'primer_finder:verifier_processing' verifier_pk=primer_verifier_project.pk %}"
+            <a href="{% url 'primer_finder:primer_validator_processing' validator_pk=primer_verifier_project.pk %}"
                class="btn btn-success btn-block" role="button"> {% trans "Complete" %}
             <i class="fas fa-check-circle"></i>
             </a>
@@ -50,7 +53,7 @@
 
         {% elif primer_verifier_project.status == 'Error' %}
         <td>
-            <a href="{% url 'primer_finder:verifier_processing' verifier_pk=primer_verifier_project.pk %}"
+            <a href="{% url 'primer_finder:primer_validator_processing' validator_pk=primer_verifier_project.pk %}"
                class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %}
             </a>
         </td>

@@ -1,4 +1,5 @@
 from azure.common.credentials import ServicePrincipalCredentials
+from azure.common import AzureMissingResourceHttpError
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_auth as batch_auth
 import azure.batch.batch_service_client as batch
@@ -62,6 +63,19 @@ class BatchClass:
     @staticmethod
     def create_pool(azurebatch, settings, container_name, vm_size='Standard_D2s_v3', num_nodes=1,
                     vm_image='VM_IMAGE'):
+        
+        # start_task = batchmodels.StartTask(
+        #     command_line='/bin/bash -c "/home/cfiaadmin/miniconda/bin/python '
+        #     '/home/cfiaadmin/add_remove_firewall_ip.py --action add"',
+        #     wait_for_success=True,
+        #     user_identity=batchmodels.UserIdentity(
+        #         auto_user=batchmodels.AutoUserSpecification(
+        #             scope=batchmodels.AutoUserScope.pool,
+        #             elevation_level=batchmodels.ElevationLevel.admin
+        #         )
+        #     )
+        # )
+        
         node_agent_sku_id = 'batch.node.ubuntu 20.04'
         if vm_image == 'VM_IMAGE':
             vm_image = settings.VM_IMAGE
@@ -77,6 +91,15 @@ class BatchClass:
             resource='https://batch.core.windows.net/'
         )
         batch_client = batch.BatchServiceClient(credentials, base_url=azurebatch.batch_account_url)
+        network_config = batchmodels.NetworkConfiguration(
+            subnet_id=settings.BATCH_ACCOUNT_SUBNET,
+            public_ip_address_configuration=batchmodels.PublicIPAddressConfiguration(
+                # provision=batchmodels.PublicIPAddressProvisioningType.no_public_ip_addresses
+                provision='noPublicIPAddresses'
+            )
+        )
+        # if network_config is not None:
+        #     network_config.additional_properties = {"publicIPs": False}
         new_pool = batch.models.PoolAddParameter(
             id=container_name,
             virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -87,7 +110,12 @@ class BatchClass:
             ),
             vm_size=vm_size,
             target_dedicated_nodes=num_nodes,
-            target_low_priority_nodes=0
+            target_low_priority_nodes=0,
+            # start_task=start_task,
+            network_configuration=network_config,
+            # communication_configuration=batchmodels.CommunicationConfiguration(
+            #     pool_communication_mode='simplified'
+            # )
         )
         batch_client.pool.add(new_pool)
 
@@ -99,8 +127,10 @@ class BatchClass:
         """
         # Instantiate our blob service! Maybe better to only do this once?
         resource_files = list()
-        blob_service = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                        account_name=settings.AZURE_ACCOUNT_NAME)
+        blob_service = BlockBlobService(
+            account_key=settings.AZURE_ACCOUNT_KEY,
+            account_name=settings.AZURE_ACCOUNT_NAME
+        )
         # Create a container for each input request - should be jobname-input, all lower case.
         input_container_name = job_name + '-input' + input_id
         blob_service.create_container(container_name=input_container_name)
@@ -284,8 +314,31 @@ class BatchClass:
             logging.error(e)
             return False
         return True
-    
-    def create_task(self, batch_client, input_files, command_id, job_name,
+
+    @staticmethod
+    def create_remove_task(batch_client, job_name):
+        """
+        Creates a task to remove an IP from the firewall
+        """
+        task = batch.models.TaskAddParameter(
+            id='remove_ip_from_firewall',
+            command_line='/bin/bash -c "/home/cfiaadmin/miniconda/bin/python '
+            '/home/cfiaadmin/add_remove_firewall_ip.py --action remove"',
+            depends_on=batchmodels.TaskDependencies(
+                task_ids=[
+                    job_name,
+                    'add_ip_to_firewall'
+                ]
+            )
+        )
+        try:
+            batch_client.task.add(job_id=job_name, task=task)
+        except batchmodels.batch_error_py3.BatchErrorException as exc:
+            logging.error(exc)
+            return False
+        return True
+
+    def create_task(self, input_files, batch_client, command_id, job_name,
                     container_name, task_name):
         blob_service = BlockBlobService(account_key=self.storage_account_key,
                                         account_name=self.storage_account_name)
@@ -296,19 +349,26 @@ class BatchClass:
             container_name=output_container_name,
             permission=BlobPermissions.WRITE,
             expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=24))
-        sas_url = 'https://{}.blob.core.windows.net/{}?{}'.format(self.storage_account_name,
-                                                                  output_container_name,
-                                                                  sas_token)
-        output_files = self.prepare_output_resource_files(sas_url=sas_url,
-                                                          output_id=command_id,
-                                                          job_name=job_name)
+        sas_url = 'https://{}.blob.core.windows.net/{}?{}'.format(
+            self.storage_account_name,
+            output_container_name,
+            sas_token
+        )
+        output_files = self.prepare_output_resource_files(
+            sas_url=sas_url,
+            output_id=command_id,
+            job_name=job_name
+        )
         # Give a sixteen-hour timeout for the task
         # https://docs.microsoft.com/en-us/python/api/azure-batch/azure.batch.models.taskconstraints?view=azure-python
-        task_constraints = batch.models.TaskConstraints(max_wall_clock_time="PT16H")
+        task_constraints = batch.models.TaskConstraints(
+            max_wall_clock_time="PT16H"
+        )
         user = batchmodels.UserIdentity(
             auto_user=batchmodels.AutoUserSpecification(
-            elevation_level=batchmodels.ElevationLevel.admin,
-            scope=batchmodels.AutoUserScope.pool)
+                elevation_level=batchmodels.ElevationLevel.admin,
+                scope=batchmodels.AutoUserScope.pool
+            )
         )
         print()
         print(task_name + command_id)
@@ -319,18 +379,25 @@ class BatchClass:
         task = batch.models.TaskAddParameter(
             id=task_name + command_id,
             constraints=task_constraints,
-            command_line="/bin/bash -c \"{}\"".format(self.command[command_id]),
+            command_line="/bin/bash -c \"{}\"".format(
+                self.command[command_id]),
             resource_files=input_files,
             output_files=output_files,
             user_identity=user,
-            # Add this in so user doesn't have to type the entirety of the path to conda.
-            # Completely unclear on why I can't just modify the $PATH in order to make this work.
-            environment_settings=[batchmodels.EnvironmentSetting(name='CONDA', value='/usr/bin/miniconda/bin'),]
+            # Add this in so user doesn't have to type the entirety of the
+            # path to conda. Completely unclear on why I can't just modify
+            # the $PATH in order to make this work.
+            environment_settings=[batchmodels.EnvironmentSetting(
+                name='CONDA', value='/usr/bin/miniconda/bin'
+                ),],
+            # depends_on=batchmodels.TaskDependencies(
+            #     task_ids=['add_ip_to_firewall']
+            # )
         )
         try:
             batch_client.task.add(job_id=job_name, task=task)
-        except batchmodels.batch_error_py3.BatchErrorException as e:
-            logging.error(e)
+        except batchmodels.batch_error_py3.BatchErrorException as exc:
+            logging.error(exc)
             return False
         return True
 
@@ -541,7 +608,6 @@ class AzureBatch(object):
                 command=azurebatch.command,
                 job_name=job_name,
                 exit_code_file=exit_code_file)
-        task_create_successful = True
         logging.debug('azurebatch.command: %s', azurebatch.command)
         logging.debug('job name: %s', job_name)
         logging.debug('Batch client details: %s', vars(batch_client))
@@ -552,6 +618,8 @@ class AzureBatch(object):
             except TypeError:
                 logging.warning('Error! %s %s', key, value)
         logging.debug('task %s', vars(batch_client.task))
+        task_create_successful = True
+
         for command_id in azurebatch.command:
             logging.debug('Task command id: %s', command_id)
             files = resource_files[command_id]
@@ -570,29 +638,42 @@ class AzureBatch(object):
             #     command='source $CONDA/activate /envs/azure_storage && AzureDownload container -a carlingst01 -c primer-validator-escherichia && mv primer-validator-escherichia exlusivity',
             #     task_name=job_name
             # )
-            
-            task_create_status = azurebatch.create_task(
-                batch_client=batch_client,
+
+            # Add the task to the list of tasks
+            task_create = azurebatch.create_task(
                 input_files=resource_files[command_id],
+                batch_client=batch_client,
                 command_id=command_id,
                 job_name=job_name,
                 container_name=job_name,
-                task_name=job_name
+                task_name=job_name,
             )
-            logging.debug('Task create status: %s', task_create_status)
-            if not task_create_status:
+            if not task_create:
                 task_create_successful = False
+        # Remove the IP of the node from the firewall
+        # task_success = azurebatch.create_remove_task(
+        #     batch_client=batch_client,
+        #     job_name=job_name,
+        # )
+        # if not task_success:
+        #     task_create_successful = False
+        
         if task_create_successful is False:
             logging.error('ERROR: Tasks were not created successfully.')
             print('ERROR: Tasks were not created successfully.')
-            azurebatch.delete_job(batch_client=batch_client,
-                                  job_name=job_name)
-            azurebatch.delete_pool(batch_client=batch_client,
-                                   pool_name=job_name)
+            azurebatch.delete_job(
+                batch_client=batch_client,
+                job_name=job_name
+            )
+            azurebatch.delete_pool(
+                batch_client=batch_client,
+                pool_name=job_name
+            )
             azurebatch.write_exit_code_file(
                 command=azurebatch.command,
                 job_name=job_name,
-                exit_code_file=exit_code_file)
+                exit_code_file=exit_code_file
+            )
         # With tasks submitted, wait for all to reach a 'completed' state.
         if no_clean is False:
             azurebatch.wait_for_tasks_to_complete(batch_client=batch_client,
@@ -740,6 +821,8 @@ class AzureBatch(object):
                 azurebatch.batch_account_key = parameter
             elif option == 'BATCH_ACCOUNT_URL':
                 azurebatch.batch_account_url = parameter
+            elif option == 'BATCH_ACCOUNT_SUBNET':
+                azurebatch.batch_account_subnet = parameter
             elif option == 'STORAGE_ACCOUNT_NAME':
                 azurebatch.storage_account_name = parameter
             elif option == 'STORAGE_ACCOUNT_KEY':
@@ -865,25 +948,87 @@ class AzureBatch(object):
                 )
 
     @staticmethod
-    def download_container(blob_service, container_name, output_dir):
-        # https://blogs.msdn.microsoft.com/brijrajsingh/2017/05/27/downloading-a-azure-blob-storage-container-python/
+    def download_container(
+        *,  # Enforce keyword-only arguments
+        blob_service: BlockBlobService,
+        container_name: str,
+        output_dir: str
+    ):
+        """
+        Downloads all blobs from an Azure Blob Storage container to a
+        local directory, handling "folder" blobs correctly.
+
+        Args:
+            blob_service: An Azure Blob Service object
+            container_name: The name of the container to download
+            output_dir: The local directory into which the blobs will be
+                downloaded
+        """
+        print("Downloading container: {} to {}".format(
+            container_name, output_dir))
+
+        # List all blobs in the container
+        generator = blob_service.list_blobs(container_name)
+
+        # Collect blob names
+        blob_names = [blob.name for blob in generator]
+
+        # Identify "folders"
+        folders = []
+        for blob_name in blob_names:
+            if any(
+                other_blob_name.startswith(blob_name + "/")
+                for other_blob_name in blob_names
+            ):
+                folders.append(blob_name)
+
+        # Create directories
+        for folder in folders:
+            folder_path = os.path.join(output_dir, folder)
+            try:
+                os.makedirs(folder_path, exist_ok=True)
+                print("Created directory: {}".format(folder_path))
+            except OSError as e:
+                print(
+                    "Error creating directory {}: {}".format(
+                        folder_path, e
+                    )
+                )
+
+        # Download files
         generator = blob_service.list_blobs(container_name)
         for blob in generator:
-            # check if the path contains a folder structure, create the folder structure
-            if "/" in blob.name:
-                # extract the folder path and check if that folder exists locally, and if not create it
-                head, tail = os.path.split(blob.name)
-                if os.path.isdir(os.path.join(output_dir, head)):
-                    # download the files to this directory
-                    blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, head, tail))
-                else:
-                    # create the directory and download the file to it
-                    os.makedirs(os.path.join(output_dir, head))
-                    blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, head, tail))
-            else:
-                blob_service.get_blob_to_path(container_name, blob.name, os.path.join(output_dir, blob.name))
+            blob_path = os.path.join(output_dir, blob.name)
+            blob_dir = os.path.dirname(blob_path)
+
+            try:
+                # Create the directory if it doesn't exist
+                os.makedirs(blob_dir, exist_ok=True)
+                # Download the blob
+                blob_service.get_blob_to_path(
+                    container_name, blob.name, blob_path
+                )
+                print("Downloaded: {} to {}".format(blob.name, blob_path))
+            except AzureMissingResourceHttpError as exc:
+                print("Error downloading {}: {}".format(blob.name, exc))
+            except Exception as exc:
+                print(
+                    "Error downloading {blob_name}: {exc}".format(
+                        blob_name=blob.name, exc=exc
+                    )
+                )
 
     @staticmethod
     def random_string(string_length):
-        return ''.join(random.choice(string.ascii_letters) for m in range(string_length))
-    
+        """
+        Creates a random string of letters of a specified length.
+
+        Args:
+            string_length: The length of the string to generate
+
+        Returns:
+            A random string of the specified length
+        """
+        return ''.join(
+            random.choice(string.ascii_letters) for _ in range(string_length)
+        )

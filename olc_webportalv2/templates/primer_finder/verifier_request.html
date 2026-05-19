@@ -7,7 +7,10 @@
 {% block content %}
 
 
-<h2>{%trans "PrimerVerifier Request"%}</h2>
+<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
+<br>
+
+<h2>{%trans "PrimerValidatorRequest"%}</h2>
 <form action='' enctype="multipart/form-data" method="post">
     {% csrf_token %}
     {% if form.errors %}
@@ -17,6 +20,15 @@
     {% endif %}
     {{ form.project_name|as_crispy_field }}
     {{ form.primer_sequences|as_crispy_field }}
+
+    <!--Probe-->
+    <div class="container">
+        <div class="row">
+            <div style="margin-right: 2em">
+                {{ form.probe_sequence|as_crispy_field}}
+            </div>
+        </div>
+    </div>
 
     <!-- Inclusivity panel-->
     <label>
@@ -69,7 +81,7 @@
         </div>
     </div>
     {{ form.contig_breaks|as_crispy_field}}
-    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerVerifier" %}</button>
+    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerValidator" %}</button>
 </form>
 
 

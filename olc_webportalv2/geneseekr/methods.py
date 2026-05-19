@@ -14,11 +14,12 @@ from azure.storage.blob import BlockBlobService
 
 
 def zip_files(
-    seqids: list,
-    target_folder: str,
-    container_name: str):
+        seqids: list,
+        target_folder: str,
+        container_name: str):
     """
-    Create a local archive from a list of SEQIDs. Upload the archive to a target container
+    Create a local archive from a list of SEQIDs. Upload the archive to a
+    target container
     """
     # Set the destination folder for the downloaded files
     job_dir = os.path.join('olc_webportalv2', 'media',  target_folder, 'tmp')
@@ -41,7 +42,10 @@ def zip_files(
                 blob_client.get_blob_to_path(
                     container_name=container_name,
                     blob_name=blob_name,
-                    file_path=os.path.join(job_dir, os.path.basename(blob_name))
+                    file_path=os.path.join(
+                        job_dir,
+                        os.path.basename(blob_name)
+                    )
                 )
                 continue
     # Create an archive of the downloaded files

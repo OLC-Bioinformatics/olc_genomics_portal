@@ -88,7 +88,11 @@ def geneseekr_query(request):
                 geneseekr_request.query_sequence = input_sequence
             geneseekr_request.status = 'Processing'
             geneseekr_request.save()
-            run_geneseekr.apply_async(queue='cowbat', args=(geneseekr_request.pk, ), countdown=10)
+            run_geneseekr.apply_async(
+                queue='cowbat',
+                args=(geneseekr_request.pk, ),
+                time_limit=600
+            )
             if form_name.is_valid():
                 geneseekr_request.name = form_name.cleaned_data['name']
                 geneseekr_request.save()
@@ -118,7 +122,7 @@ def geneseekr_processing(request, geneseekr_request_pk):
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
-                     'geneseekr_request': geneseekr_request, 
+                     'geneseekr_request': geneseekr_request,
                      'form': form
                   })
 

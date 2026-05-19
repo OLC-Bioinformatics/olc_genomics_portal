@@ -1,10 +1,11 @@
 from django.contrib import admin
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, TreeAzureRequest, Tree, \
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, GeneSeekrAzureRequest, TopBlastHit, TreeAzureRequest, Tree, \
     AMRSummary, AMRAzureRequest, AMRDetail, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
 
 # Register your models here.
 admin.site.register(GeneSeekrRequest)
 admin.site.register(GeneSeekrDetail)
+admin.site.register(GeneSeekrAzureRequest)
 admin.site.register(TopBlastHit)
 admin.site.register(TreeAzureRequest)
 admin.site.register(Tree)

@@ -19,7 +19,7 @@ class GeneSeekrRequest(models.Model):
     # In format (ish) {'gene1': 70, 'gene2: 80}
     geneseekr_results = JSONField(default=dict, blank=True, null=True)
     gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=list)
-    other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
+    other_input_files = ArrayField(models.CharField(max_length=64), blank=True, default=list, null=True)
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
     error = models.CharField(max_length=10000, blank=True)

@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 # Standard libraries
+import json
 import logging
 import fnmatch
 import os
@@ -13,7 +14,7 @@ import re
 # Portal-specific things
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile, ResearchRun, SummaryMetadata
 from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm, RunRequestForm, CustomRunForm
-from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.cowbat.tasks import escape_ansi, run_cowbat_batch
 from olc_webportalv2.filezone.methods import calculate_checksum
 from olc_webportalv2.geneseekr.forms import EmailForm
 # Azure!
@@ -49,6 +50,94 @@ def find_percent_complete(sequencing_run):
     except batchmodels.BatchErrorException:  # Means task and job have not yet been created
         percent_completed = 1
     return percent_completed
+
+
+def find_percentage_complete(sequencing_run):
+    job_id = sequencing_run.job_id
+    credentials = batch_auth.SharedKeyCredentials(
+        settings.BATCH_ACCOUNT_NAME,
+        settings.BATCH_ACCOUNT_KEY
+    )
+    batch_client = batch.BatchServiceClient(
+        credentials,
+        base_url=settings.BATCH_ACCOUNT_URL
+    )
+    node_files = batch_client.file.list_from_task(
+        job_id=job_id,
+        task_id=sequencing_run.task_id,
+        recursive=True
+    )
+
+    # Initialise a dictionary to store the stderr file information
+    contents = {}
+    try:
+        for node_file in node_files:
+            # Stderr.txt file
+            if 'stderr' in node_file.name:
+                try:
+                    contents[node_file.name] = \
+                        batch_client.file.get_from_task(
+                            job_id=sequencing_run.job_id,
+                            task_id=sequencing_run.task_id,
+                            file_path=node_file.name
+                        )
+                except Exception:
+                    pass
+    except batchmodels.BatchErrorException:
+        # The run hasn't started assembling yet
+        return
+
+    # Define a variable to store the final line
+    final_line = str()
+
+    # Extract the final lne from the log
+    for _, content_object in contents.items():
+        for content_chunk in content_object:
+            try:
+                clean_line = escape_ansi(line=content_chunk.decode())
+                final_line = clean_line.split('\n')[-2]
+            except Exception:
+                pass
+    # Print the final line
+    print(final_line)
+    
+    # Define a pattern for the date, time, and message
+    pattern = r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.*)"
+
+    # Search for the pattern in the line
+    match = re.search(pattern, final_line)
+
+    # Initalise the message variable
+    message = ''
+
+    # If a match is found
+    if match:
+        # Extract the date, time, and message
+        _, __, message = match.groups()
+
+    if not message:
+        return
+    
+    # Print the message
+    print(message)
+
+    # Define the path to the JSON file
+    json_file_path = \
+        "olc_webportalv2/cowbat/cowbat_percent_complete.json"
+
+    # Open the JSON file and load the data
+    with open(json_file_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Iterate over the data
+    for entry in data:
+        # If the message matches
+        if entry['message'] == message:
+            # Print the message and percent complete
+            print(entry['message'], entry['percent_complete'])
+            # Update the model
+            sequencing_run.percent_complete = entry['percent_complete']
+            sequencing_run.save()
 
 
 def check_uploaded_seqids(sequencing_run):
@@ -92,7 +181,6 @@ def check_uploaded_seqids(sequencing_run):
 @login_required
 def cowbat_processing(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
-    container = sequencing_run.container
     summary_results = SummaryMetadata.objects.filter(sequencing_run_id=sequencing_run_pk)
     if sequencing_run.status == 'Unprocessed':
         SequencingRun.objects.filter(pk=sequencing_run.pk).update(status='Processing')
@@ -101,9 +189,7 @@ def cowbat_processing(request, sequencing_run_pk):
     # Find percent complete (approximately). Not sure that having calls to azure batch API in views is a good thing.
     # Will have to see if performance is terrible because of it.
     if sequencing_run.status == 'Processing':
-        progress = find_percent_complete(sequencing_run)
-    else:
-        progress = 1
+        find_percentage_complete(sequencing_run)
 
     form = EmailForm()
     if request.method == 'POST':
@@ -121,7 +207,7 @@ def cowbat_processing(request, sequencing_run_pk):
                   {
                       'sequencing_run': sequencing_run,
                       'form': form,
-                      'progress': str(progress),
+                      'progress': sequencing_run.percent_complete,
                       'summary_results': summary_results
                   })
 
@@ -335,7 +421,7 @@ def find_research_runs():
     # Initialise a set to store all the unique run names
     run_set = set()
     for container in containers:
-        if re.match('\d{6}-[a-z0-9]', container.name) and '-output' not in container.name:
+        if re.match('\d{5,6}-[a-z0-9]', container.name) and '-output' not in container.name:
             run_set.add(container.name)
     return sorted(list(run_set))
 

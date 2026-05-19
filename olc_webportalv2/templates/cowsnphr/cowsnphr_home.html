@@ -18,8 +18,13 @@
                         <h3>{% trans "Blob Analyses" %}</h3>
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <p id="article1">
-                            {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) have already been uploaded to an appropriately named blob container" %}
+                        <p id="article1" class="text-left">
+                            {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) have already been uploaded to an appropriately named blob container." %}
+                        </p>
+                        <p id="article2" class="text-left">
+                            {% blocktrans %}
+                                <strong>NOTE:</strong> FASTQ files must be in the 'fastq' subfolder, and the reference genome (and optional mask file) must be in the 'ref' folder.
+                            {% endblocktrans %}
                         </p>
                         <a class="btn btn-primary btn-lg btn-block mt-auto"
                            href="{% url 'cowsnphr:blob_cowsnphr' %}">{% trans "Analyses from Blob" %}</a>
@@ -30,7 +35,9 @@
                         <h3>{% trans "Upload Analyses" %}</h3>
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <p id="article2">{% trans "FASTQ files, and a reference genome (and, optionally, a mask file) will be uploaded as part of the project creation" %}</p>
+                        <p id="article2" class="text-left">
+                            {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) will be uploaded as part of the project creation" %}
+                        </p>
                         <a class="btn btn-primary btn-lg btn-block mt-auto"
                            href="{% url 'cowsnphr:upload_cowsnphr' %}">{% trans "Upload and Analyse FASTQ" %}</a>
                     </div>
@@ -40,7 +47,9 @@
                         <h3>{% trans "Analyses from SEQIDs" %}</h3>
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <p id="article3">{% trans "Supply SEQIDs for reference and query genomes" %}</p>
+                        <p id="article3" class="text-left">
+                            {% trans "Supply SEQIDs for reference and query genomes" %}
+                        </p>
                         <a class="btn btn-primary btn-lg btn-block mt-auto"
                            href="{% url 'cowsnphr:seqid_cowsnphr' %}">{% trans "Analyses using SEQIDs" %}</a>
                     </div>

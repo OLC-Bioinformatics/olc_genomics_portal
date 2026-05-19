@@ -21,6 +21,7 @@ import re
 import shutil
 import smtplib
 from time import sleep
+import zipfile
 
 
 # Third-party library imports
@@ -40,6 +41,7 @@ from Bio import SeqIO
 from celery import shared_task
 import ete3
 import pandas as pd
+import requests
 from sentry_sdk import capture_exception
 from strainchoosr import strainchoosr
 
@@ -48,7 +50,6 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
-from olc_webportalv2.cowbat.methods import AzureBatch
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
     AzureTask,
@@ -112,6 +113,10 @@ def run_cowbat_batch(
         str(sequencing_run)
     )
 
+    # Set the name of the container
+    sequencing_run.container = str(sequencing_run).lower().replace('_', '-')
+    sequencing_run.save()
+
     try:
         # Create a blob client
         blob_client = BlockBlobService(
@@ -148,76 +153,10 @@ def run_cowbat_batch(
                 container_name=container_name,
                 sequencing_run=sequencing_run
             )
+            return
 
-        # If this is a research assembly, add the container name
-        if container:
-            blob_container = os.path.join(container, container_name)
-        else:
-            blob_container = container_name
-
-        # Create a configuration file for Azure batch script
-        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        with open(batch_config_file, 'w', encoding='utf-8') as f:
-            f.write('BATCH_ACCOUNT_NAME:={}\n'.format(
-                settings.BATCH_ACCOUNT_NAME))
-            f.write('BATCH_ACCOUNT_KEY:={}\n'.format(
-                settings.BATCH_ACCOUNT_KEY))
-            f.write('BATCH_ACCOUNT_URL:={}\n'.format(
-                settings.BATCH_ACCOUNT_URL))
-            f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(
-                settings.AZURE_ACCOUNT_NAME))
-            f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(
-                settings.AZURE_ACCOUNT_KEY))
-            f.write('JOB_NAME:={}\n'.format(container_name))
-            f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
-            f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-            f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
-            f.write('VM_SIZE:={}\n'.format(vm_size))
-            f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-            f.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(blob_container, '*.fastq.gz'),
-                str(sequencing_run)))
-            f.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(blob_container, '*.xml'),
-                str(sequencing_run)))
-            f.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(blob_container, '*.csv'),
-                str(sequencing_run)))
-            f.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(blob_container, 'InterOp', '*.bin'),
-                os.path.join(str(sequencing_run), 'InterOp')))
-            f.write('OUTPUT:={}\n'.format(str(sequencing_run) + '/'))
-
-            # Determine the number of FASTQ files in a run
-            fastq = 0
-            for blob in blob_filenames:
-                if fnmatch.fnmatch(blob, '*.fastq.gz'):
-                    fastq += 1
-
-            # If there over 60 FASTQ files (30 paired-end), use the /datadrive
-            # folder to run the analyses instead of the native drive
-            f.write(
-                'COMMAND:=mkdir -p /datadrive/{run_name} && '
-                'cp -R $AZ_BATCH_TASK_WORKING_DIR/* /datadrive/ && '
-                'source $CONDA/activate /envs/cowbat && assembly_pipeline.py '
-                '-s /datadrive/{run_name} -r /databases/0.5.0.23'.format(
-                    run_name=str(sequencing_run)
-                )
-            )
-            if sequencing_run.basic_assembly:
-                f.write(' -b')
-            if sequencing_run.preprocess:
-                f.write(' -p')
-            f.write(
-                ' && rsync -a /datadrive/{run_name} '
-                '$AZ_BATCH_TASK_WORKING_DIR'
-                .format(run_name=str(sequencing_run))
-            )
-            f.write('\n')
-
-        # Submit the file to batch with our package
+        # Submit the batch API request
         submit_batch(
-            container_name=container_name,
             run_folder=run_folder,
             sequencing_run=sequencing_run
         )
@@ -235,7 +174,6 @@ def run_cowbat_batch(
 
 
 def submit_batch(
-        container_name: str,
         run_folder: str,
         sequencing_run: SequencingRun,
         vm_size: str = 'Standard_D32s_v3'
@@ -247,13 +185,10 @@ def submit_batch(
     This function creates an Azure Batch job with the specified settings and
     then creates a new AzureTask object to track the job. The Azure Batch job
     runs on a virtual machine of the specified size, and the input container
-    is kept after the job is done. The output files are not downloaded after
-    the job is done, and the job-related resources are not cleaned up after
-    the job is done. The exit code of the job is stored in a file in the run
-    folder.
+    is kept after the job is done. The exit code of the job is stored in a
+    file in the run folder.
 
     Parameters:
-    container_name (str): The name of the container for the job.
     run_folder (str): The path of the folder where the run files are located.
     sequencing_run (SequencingRun): The sequencing run object associated with
     the job.
@@ -263,20 +198,113 @@ def submit_batch(
     Returns:
     None
     """
-    # Create an instance of the AzureBatch class
-    azure_task = AzureBatch()
 
-    # Call the main method of the AzureBatch instance
-    azure_task.main(
-        configuration_file=os.path.join(run_folder, 'batch_config.txt'),
-        job_name=container_name,
-        output_dir=os.path.join('olc_webportalv2', 'media'),
-        settings=settings,
-        keep_input_container=True,
-        download_output_files=False,
-        no_clean=True,
+    # Create a variable to store the extremely long path information
+    path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container}'.format(
+        container=sequencing_run.container
+    )
+
+    # Define the system call
+    command = (
+        'source $CONDA/activate /envs/cowbat && '
+        'mkdir -p /datadrive/{run_name} && '
+        'cp -R {path} /datadrive/ && '
+        'assembly_pipeline.py '
+        '-s /datadrive/{run_name} '
+        '-r /databases/0.5.0.23'.format(
+            path=path,
+            run_name=sequencing_run.container
+        )
+    )
+
+    # Add basic assembly and preprocess arguments as required
+    if sequencing_run.basic_assembly:
+        command += ' -b'
+    if sequencing_run.preprocess:
+        command += ' -p'
+
+    # Update the command with the final steps to copy the files back from the
+    # datadrive to the container
+    command += (
+        ' ; cp -R /datadrive/{run_name} $AZ_BATCH_NODE_MOUNTS_DIR'.format(
+            run_name=sequencing_run.container
+        )
+    )
+
+    # Print the command
+    print(command)
+
+    # Create the API call
+    cowbat_api_submit(
+        command=command,
+        run_folder=run_folder,
+        sequencing_run=sequencing_run,
         vm_size=vm_size
     )
+
+
+def cowbat_api_submit(
+        command: str,
+        run_folder: str,
+        sequencing_run: SequencingRun,
+        vm_size: str,
+        ) -> None:
+    """
+    Submits a job to the Batch API.
+
+    This function sends a POST request to the Batch API with the specified
+    command, container name, and VM size.  It then updates the provided
+    SequencingRun object with the response data from the API and saves
+    the changes. Finally, it creates a new AzureTask object associated with
+    the SequencingRun.
+
+    Args:
+        command (str): The command to be run.
+        run_folder (str): The folder where the run files are located.
+        sequencing_run (SequencingRun): The SequencingRun object to be updated.
+        vm_size (str): The size of the VM where the command will be run.
+
+    Returns:
+        None
+    """
+    # Define the data
+    data = {
+        "container": sequencing_run.container,
+        "command_file": command,
+        "vm_size": vm_size,
+        "input_file_pattern": None,
+        "download_file_pattern": None,
+        "analysis_type": "COWBAT",
+        "unique_id": 'FoodPort'
+    }
+
+    print(data)
+
+    # Make the POST request with a timeout of 10 seconds
+    response = requests.post(
+        settings.BATCH_SERVICE_URL,
+        headers=settings.BATCH_URL_HEADERS,
+        data=json.dumps(data),
+        timeout=10
+    )
+
+    # Get the JSON data from the response
+    response_data = response.json()
+
+    # Print the data
+    print('Batch API response', response_data)
+
+    # Update the model with the response data
+    sequencing_run.pool_id = response_data['pool_id']
+    sequencing_run.job_id = response_data['job_id']
+    # This is only taking the first entry from the tasks, as there should
+    # only be one
+    sequencing_run.task_id = response_data['tasks'][0]
+    sequencing_run.batch_submit_status = response_data['status']
+    sequencing_run.batch_submit_errors = response_data['error']
+
+    # Save the changes
+    sequencing_run.save()
 
     # Create a new AzureTask object
     AzureTask.objects.create(
@@ -292,7 +320,7 @@ def nextseq_run(
         sequencing_run: SequencingRun,
         ):
     """
-    Split NextSeq runs into managable sizes, copy blobs to appropriate
+    Split NextSeq runs into manageable sizes, copy blobs to appropriate
     containers and run the assembly pipeline on each sub-sequencing run
     :param blob_client: BlockBlobService object
     :param blob_files: List of blob files
@@ -314,10 +342,8 @@ def nextseq_run(
             blob_client=blob_client,
             blob_files=blob_files,
             container_name=container_name,
-            run_name=sequencing_run.run_name
         )
-    # Create a configuration files for each sub-sequencing run, and submit the
-    # jobs to Azure Batch
+    # Submit the each sub-sequencing job to Azure Batch
     for i in sub_runs:
         run_name = sequencing_run.run_name
         container_name = run_name + '-{i}'.format(i=i)
@@ -325,6 +351,7 @@ def nextseq_run(
             run_name=run_name,
             container=container_name
         ))
+
         # Set the path to store the configuration file
         local_path = os.path.join(os.path.join(
             'olc_webportalv2',
@@ -334,9 +361,11 @@ def nextseq_run(
             )
         )
         print('Local run folder: {local_path}'.format(local_path=local_path))
+
         # Create a SequenceRun object for each sub-sequencing run
         sub_sequencing_run = SequencingRun.objects.get_or_create(
             run_name=container_name,
+            container=container_name,
             seqids=sub_runs[i],
             basic_assembly=sequencing_run.basic_assembly,
             preprocess=sequencing_run.preprocess,
@@ -357,41 +386,37 @@ def nextseq_run(
             )
         )
         try:
-            # Recreate the archive name
-            archive_name = 'sub_sample_sheets-{i}.zip'.format(i=i)
-            # Create the configuration file
-            print(
-                'Creating config file in {local_path}'
-                .format(local_path=local_path)
+            #  Recreate the archive name
+            # archive_name = 'sub_sample_sheets-{i}.zip'.format(i=i)
+
+            # Redefine the batch nodes path
+            path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'.format(
+                container_name=container_name
             )
-            create_nextseq_config_file(
-                container_name=container_name,
-                local_path=local_path,
-                archive_name=archive_name
+
+            # Define the system call
+            command = (
+                'source $CONDA/activate /envs/cowbat && '
+                'mkdir -p /datadrive/{run_name} && '
+                'cp -R {path} /datadrive/ && '
+                # 'unzip /datadrive/{run_name}/{zip_file} '
+                # '-d /datadrive/{run_name} && '
+                'assembly_pipeline.py '
+                '-s /datadrive/{run_name} '
+                '-r /databases/0.5.0.23 && '
+                'cp -R /datadrive/{run_name} $AZ_BATCH_NODE_MOUNTS_DIR'.format(
+                    path=path,
+                    run_name=container_name,
+                    # zip_file=archive_name
+                )
             )
-            # Create an AzureBatch object
-            azure_task = AzureBatch()
-            # Run the AzureBatch object
-            azure_task.main(
-                configuration_file=os.path.join(
-                    local_path,
-                    'batch_config.txt'
-                ),
-                job_name=container_name,
-                output_dir=os.path.join(
-                    'olc_webportalv2',
-                    'media'
-                ),
-                settings=settings,
-                keep_input_container=True,
-                download_output_files=False,
-                no_clean=True,
-                vm_size='Standard_D32s_v3'
-            )
-            # Create an AzureTask object
-            AzureTask.objects.create(
+
+            # Submit the API batch request
+            cowbat_api_submit(
+                command=command,
+                run_folder=os.path.join(local_path, 'exit_codes.txt'),
                 sequencing_run=sub_sequencing_run,
-                exit_code_file=os.path.join(local_path, 'exit_codes.txt')
+                vm_size='Standard_D48s_v3'
             )
         except Exception as exc:
             logger = logging.getLogger()
@@ -489,10 +514,10 @@ def sample_sheet(
             if not body:
                 # Append the line to the header
                 header.append(line)
-                # Iterate over each subline in the line
-                for subline in line:
+                # Iterate over each sub-line in the line
+                for sub_line in line:
                     # If the subline contains 'Sample_ID'
-                    if 'Sample_ID' in subline:
+                    if 'Sample_ID' in sub_line:
                         # Set the flag to indicate that we're in the body of
                         # the file
                         body = True
@@ -586,18 +611,19 @@ def create_sub_sample_sheet(
             container_name=container_name,
             i=i,
         )
-        # Create a generator of all the blobs in the container
-        blobs = blob_client.list_blobs(container_name=sub_container_name)
-        # Set the name of the archive
-        archive_name = sub_sample_sheet_path + '.zip'
+        # # Create a generator of all the blobs in the container
+        # blobs = blob_client.list_blobs(container_name=sub_container_name)
 
-        # Check to see if the archive already exists in the sub-container
-        if os.path.basename(archive_name) in [blob.name for blob in blobs]:
-            print(
-                'Archive already present in container. '
-                'Skipping archive creation'
-            )
-            continue
+        # # Set the name of the archive
+        # archive_name = sub_sample_sheet_path + '.zip'
+
+        # # Check to see if the archive already exists in the sub-container
+        # if os.path.basename(archive_name) in [blob.name for blob in blobs]:
+        #     print(
+        #         'Archive already present in container. '
+        #         'Skipping archive creation'
+        #     )
+        #     continue
         # Iterate over the samples in the sub-run and copy the FASTQ files to
         # the sub-container
         for sample in sorted(sub_run):
@@ -607,21 +633,59 @@ def create_sub_sample_sheet(
                 'Processing sample {sample_name}'
                 .format(sample_name=sample_name)
             )
-            # Copy the FASTQ files for the sample to the local path
+            # Copy the FASTQ files for the sample to the sub-container
             copy_blobs(
                 blob_client=blob_client,
                 container_name=container_name,
                 sample_name=sample_name,
                 file_names=file_names,
-                local_path=sub_sample_sheet_path
+                sub_container_name=sub_container_name,
             )
+
+        # Upload the sample sheet to the sub-container
+        print(
+            'Uploading sample sheet to sub-container {sub_container_name}'
+            .format(sub_container_name=sub_container_name)
+        )
+        blob_client.create_blob_from_path(
+            container_name=sub_container_name,
+            blob_name='SampleSheet.csv',
+            file_path=os.path.join(
+                sub_sample_sheet_path,
+                'SampleSheet.csv'
+            )
+        )
+
+        # # Wait briefly to ensure that all files are written to disk
+        # sleep(1)
+
         # Create an archive of the FASTQ files and upload it to the
         # sub-container
-        archive_sub_run(
-            blob_client=blob_client,
-            local_path=sub_sample_sheet_path,
-            sub_container_name=sub_container_name
-        )
+        # archive_sub_run(
+        #     blob_client=blob_client,
+        #     local_path=sub_sample_sheet_path,
+        #     sub_container_name=sub_container_name
+        # )
+
+
+# def verify_archive(
+#     sub_sample_sheet_path: str
+# ):
+#     """
+#     Verify that the archive was created successfully
+#     :param blob_client: BlockBlobService object
+#     :param container_name: Name of the blob container
+#     :param archive_name: Name of the archive file
+#     """
+#     # Verify the archive after creation
+#     archive = sub_sample_sheet_path + '.zip'
+#     try:
+#         with zipfile.ZipFile(archive, 'r') as zf:
+#             bad_file = zf.testzip()
+#             if bad_file:
+#                 logging.error("Corrupted file in archive: %s", bad_file)
+#     except zipfile.BadZipFile:
+#         logging.error("Archive %s is corrupted!", archive)
 
 
 def create_sub_container(
@@ -643,17 +707,17 @@ def create_sub_container(
 
 
 def copy_blobs(
-        blob_client: BlockBlobService,
-        container_name: str,
-        file_names: list,
-        local_path: str,
-        sample_name: str):
+    blob_client: BlockBlobService,
+    container_name: str,
+    file_names: list,
+    sample_name: str,
+    sub_container_name: str,
+):
     """
     Copy blobs from a container to a sub-container
     :param blob_client: BlockBlobService object
     :param container_name: Name of the blob container
     :param file_names: List of file names in the blob container
-    :param local_path: Path to the sub-sample sheets
     :param sample_name: Name of the sample
     :param sub_container_name: Name of the sub-container
     """
@@ -663,13 +727,23 @@ def copy_blobs(
         'FASTQ files for sample {sample_name}: {fastq_files}'
         .format(sample_name=sample_name, fastq_files=fastq_files)
     )
-    # Iterate over the FASTQ files and download them to the local path
+    # Iterate over the FASTQ files and copy them to the sub-container
     for fastq in fastq_files:
-        blob_client.get_blob_to_path(
+        # Generate a SAS token for the source blob
+        sas_token = blob_client.generate_blob_shared_access_signature(
             container_name=container_name,
             blob_name=fastq,
-            file_path=os.path.join(local_path, fastq)
+            permission=BlobPermissions.READ,
+            expiry=datetime.utcnow() + timedelta(hours=1),
         )
+        source_url = blob_client.make_blob_url(
+            container_name=container_name,
+            blob_name=fastq,
+            sas_token=sas_token
+        )
+
+        # Use copy_blob with the source_url
+        blob_client.copy_blob(sub_container_name, fastq, source_url)
 
 
 def archive_sub_run(
@@ -714,7 +788,6 @@ def no_sample_sheet(
         blob_client: BlockBlobService,
         blob_files: list,
         container_name: str,
-        run_name: str,
         max_samples: int = 40):
     """
     Count the number of samples in a blob container and distribute the
@@ -722,7 +795,6 @@ def no_sample_sheet(
     :param blob_client: BlockBlobService object
     :param blob_files: List of file names in the blob container
     :param container_name: Name of the blob container
-    :param run_name: Name of the sequencing run
     :param max_samples: Maximum number of samples per sub-run
     :return: Dictionary containing the samples for each sub-run
     """
@@ -766,27 +838,27 @@ def no_sample_sheet(
             container_name=container_name,
             i=i,
         )
-        # Create a local path for the sub-run
-        local_path = os.path.join(
-            'olc_webportalv2',
-            'media',
-            run_name,
-            'sub_sample_sheets-{i}'.format(i=i)
-        )
-        os.makedirs(local_path, exist_ok=True)
-        # Check to see if the .zip file already exists in the sub-container
-        blobs = blob_client.list_blobs(container_name=sub_container_name)
-        # Set the name of the archive
-        archive_name = local_path + '.zip'
-        print(os.path.basename(archive_name), [blob.name for blob in blobs])
-        # Check if the archive is already present in the container
-        if os.path.basename(archive_name) in [blob.name for blob in blobs]:
-            print(
-                'Archive already present in container. '
-                'Skipping archive creation'
-            )
-            continue
-        print([blob.name for blob in blobs], archive_name)
+        # # Create a local path for the sub-run
+        # local_path = os.path.join(
+        #     'olc_webportalv2',
+        #     'media',
+        #     run_name,
+        #     'sub_sample_sheets-{i}'.format(i=i)
+        # )
+        # os.makedirs(local_path, exist_ok=True)
+        # # Check to see if the .zip file already exists in the sub-container
+        # blobs = blob_client.list_blobs(container_name=sub_container_name)
+        # # Set the name of the archive
+        # archive_name = local_path + '.zip'
+        # print(os.path.basename(archive_name), [blob.name for blob in blobs])
+        # # Check if the archive is already present in the container
+        # if os.path.basename(archive_name) in [blob.name for blob in blobs]:
+        #     print(
+        #         'Archive already present in container. '
+        #         'Skipping archive creation'
+        #     )
+        #     continue
+        # print([blob.name for blob in blobs], archive_name)
         for sample_name in sorted(sub_run):
             # Copy the FASTQ files for the sample to the sub-container
             copy_blobs(
@@ -794,69 +866,17 @@ def no_sample_sheet(
                 container_name=container_name,
                 sample_name=sample_name,
                 file_names=blob_files,
-                local_path=local_path
+                sub_container_name=sub_container_name,
             )
         # Create an archive of the FASTQ files and upload it to the
         # sub-container
-        archive_sub_run(
-            blob_client=blob_client,
-            local_path=local_path,
-            sub_container_name=sub_container_name
-        )
+        # archive_sub_run(
+        #     blob_client=blob_client,
+        #     local_path=local_path,
+        #     sub_container_name=sub_container_name
+        # )
 
     return sub_runs
-
-
-def create_nextseq_config_file(
-        container_name: str,
-        local_path: str,
-        archive_name: str):
-    """
-    Create configuration files for each of the sub-sequencing runs
-    :param container_name: Name of the blob container
-    :param local_path: Path to the sub-sample sheets
-    """
-    # Create a configuration file to be used by my Azure batch script.
-    batch_config_file = os.path.join(local_path, 'batch_config.txt')
-    # Set the name of the run folder to use uppercase and 
-    command = \
-        'source $CONDA/activate /envs/cowbat && ' \
-        'mkdir -p /datadrive/{container_name} && ' \
-        'mv  $AZ_BATCH_TASK_WORKING_DIR/{container_name}/* ' \
-        '/datadrive/{container_name} && ' \
-        'cd /datadrive/{container_name} && ' \
-        'unzip /datadrive/{container_name}/{zip_file} && ' \
-        'assembly_pipeline.py -s /datadrive/{container_name} ' \
-        '-r /databases/0.5.0.23 && ' \
-        'rsync -a /datadrive/{container_name} ' \
-        '$AZ_BATCH_TASK_WORKING_DIR && ' \
-        'rm $AZ_BATCH_TASK_WORKING_DIR/{container_name}/{zip_file}'.format(
-                    container_name=container_name,
-                    zip_file=archive_name
-            )
-    with open(batch_config_file, 'w', encoding='utf-8') as f:
-        f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
-        f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
-        f.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
-        f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(
-            settings.AZURE_ACCOUNT_NAME)
-            )
-        f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
-        f.write('JOB_NAME:={}\n'.format(container_name))
-        f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
-        f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-        f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
-        f.write('VM_SIZE:={}\n'.format('Standard_D32s_v3'))
-        f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-        f.write('CLOUDIN:={} {}\n'.format(
-            os.path.join(
-                container_name,
-                archive_name
-            ), container_name
-        ))
-
-        f.write('OUTPUT:={}\n'.format(str(container_name) + '/'))
-        f.write('COMMAND:={}\n'.format(command))
 
 
 def send_email(subject, body, recipient):
@@ -880,15 +900,15 @@ def send_email(subject, body, recipient):
         occurs that is not a "wrong version number" error.
     """
     # Define the sender's email address
-    fromaddr = \
+    from_addr = \
         'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
     # Define the recipient's email address
-    toaddr = recipient
+    to_addr = recipient
 
     # Create a MIME multipart message
     msg = MIMEMultipart()
-    msg['From'] = fromaddr
-    msg['To'] = toaddr
+    msg['From'] = from_addr
+    msg['To'] = to_addr
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
@@ -907,7 +927,7 @@ def send_email(subject, body, recipient):
             # Convert the message to a string
             text = msg.as_string()
             # Send the email
-            server.sendmail(fromaddr, toaddr, text)
+            server.sendmail(from_addr, to_addr, text)
             # If the email is sent successfully, break out of the loop
             break
         except smtplib.SMTPDataError as e:
@@ -943,7 +963,10 @@ def load_report(report, seq_run):
     :return: None if the report does not exist
     """
     if not os.path.isfile(report):
-        return
+        seq_run.status = 'Error'
+        seq_run.errors.append('Summary report not found in blob storage.')
+        seq_run.save()
+        return None
     summary_dict = pd.read_csv(
         report,
         names=[
@@ -974,6 +997,8 @@ def load_report(report, seq_run):
         sequencing_run=seq_run,
         summary_results=summary_dict)
 
+    return True
+
 
 @shared_task
 def cowbat_cleanup(sequencing_run_pk: int):
@@ -1000,7 +1025,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
     if not os.path.isdir(reports_and_assemblies_folder):
         os.makedirs(reports_and_assemblies_folder)
     container_name = \
-        sequencing_run.run_name.lower().replace('_', '-') + '-output'
+        sequencing_run.run_name.lower().replace('_', '-')
     blob_client = BlockBlobService(
         account_name=settings.AZURE_ACCOUNT_NAME,
         account_key=settings.AZURE_ACCOUNT_KEY
@@ -1028,44 +1053,30 @@ def cowbat_cleanup(sequencing_run_pk: int):
     print('Downloading reports and assemblies')
     # List all the things in the container - if it's a file in reports folder
     # or an assembly, download it.
-    blobs = blob_client.list_blobs(container_name=container_name)
+    blobs = list(blob_client.list_blobs(container_name=container_name))
+    blob_filenames = [b.name for b in blobs]
     for blob in blobs:
-        if fnmatch.fnmatch(
-            blob.name,
-            os.path.join(
-                sequencing_run.run_name,
-                'BestAssemblies',
-                '*.fasta'
-            )
-        ):
+        if fnmatch.fnmatch(blob.name, os.path.join("BestAssemblies", "*.fasta")):
             blob_client.get_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
-                file_path=os.path.join(
-                    assemblies_folder,
-                    os.path.split(blob.name)[1]
-                )
+                file_path=os.path.join(assemblies_folder, os.path.split(blob.name)[1]),
+            )
+        elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.csv")):
+            blob_client.get_blob_to_path(
+                container_name=container_name,
+                blob_name=blob.name,
+                file_path=os.path.join(reports_folder, os.path.split(blob.name)[1]),
+            )
+        elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.tsv")):
+            blob_client.get_blob_to_path(
+                container_name=container_name,
+                blob_name=blob.name,
+                file_path=os.path.join(reports_folder, os.path.split(blob.name)[1]),
             )
         elif fnmatch.fnmatch(
             blob.name,
             os.path.join(
-                sequencing_run.run_name,
-                'reports',
-                '*.csv'
-            )
-        ):
-            blob_client.get_blob_to_path(
-                container_name=container_name,
-                blob_name=blob.name,
-                file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
-                )
-            )
-        elif fnmatch.fnmatch(
-            blob.name,
-            os.path.join(
-                sequencing_run.run_name,
                 'reports',
                 '*.fa'
             )
@@ -1081,7 +1092,6 @@ def cowbat_cleanup(sequencing_run_pk: int):
         elif fnmatch.fnmatch(
             blob.name,
             os.path.join(
-                sequencing_run.run_name,
                 'reports',
                 '*.xlsx'
             )
@@ -1098,7 +1108,6 @@ def cowbat_cleanup(sequencing_run_pk: int):
         elif fnmatch.fnmatch(
             blob.name,
             os.path.join(
-                sequencing_run.run_name,
                 'SampleSheet.csv'
             )
         ):
@@ -1110,9 +1119,18 @@ def cowbat_cleanup(sequencing_run_pk: int):
                     os.path.split(blob.name)[1]
                 )
             )
+
+    # update combinedMetadata.csv with read‑filenames
+    add_read_filenames_to_metadata(
+        sequencing_run=sequencing_run,
+        blob_client=blob_client,
+        container_name=container_name,
+        reports_folder=reports_folder,
+        blob_filenames=blob_filenames,
+    )
     print('Files downloaded: ' + str(os.listdir(reports_folder)))
     # Load the necessary reports into the SequencingRun model
-    load_report(
+    report_complete = load_report(
         report=os.path.join(
             reports_folder,
             'summaryMetadata.csv'
@@ -1120,11 +1138,11 @@ def cowbat_cleanup(sequencing_run_pk: int):
         seq_run=SequencingRun.objects.get(pk=sequencing_run_pk)
     )
     # With that done, create a zipfile.
-    blob_name = sequencing_run.run_name.lower().replace('_', '-') + '.zip'
+    blob_name = sequencing_run.container + '.zip'
     shutil.make_archive(
         os.path.join(
             run_folder,
-            sequencing_run.run_name.lower().replace('_', '-')
+            sequencing_run.container
         ),
         'zip',
         reports_and_assemblies_folder
@@ -1150,6 +1168,13 @@ def cowbat_cleanup(sequencing_run_pk: int):
             str(sequencing_run)
         )
     )
+
+    print('Loading of report complete: ' + str(report_complete))
+
+    # Break if the report could not be loaded
+    if not report_complete:
+        return
+
     # Run is now considered complete! Update to let user know and send email
     # to people that need to know.
     try:
@@ -1211,6 +1236,115 @@ def cowbat_cleanup(sequencing_run_pk: int):
             )
 
 
+def add_read_filenames_to_metadata(
+    sequencing_run: SequencingRun,
+    blob_client: BlockBlobService,
+    container_name: str,
+    reports_folder: str,
+    blob_filenames: list,
+) -> None:
+    """
+    Add two columns, ``R1_file`` and ``R2_file``, to
+    ``combinedMetadata.csv`` and upload the modified file to the run container.
+
+    ``blob_filenames`` should be a simple list of all blob names in the
+    container (typically the result of ``[b.name for b in blobs]``).
+
+    The columns are only created once; if they already exist we simply update
+    empty cells and leave existing data alone.  Any seqid for which the
+    forward/reverse lists are empty is recorded in
+    ``sequencing_run.errors``.
+    """
+    csv_name = "combinedMetadata.csv"
+    csv_path = os.path.join(reports_folder, csv_name)
+    if not os.path.isfile(csv_path):
+        # nothing to do if the report is not present
+        return
+    
+    print("All blob filenames: " + str(blob_filenames))
+
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as exc:  # pragma: no cover
+        sequencing_run.errors.append(
+            "could not read {csv_name}: {exc}".format(csv_name=csv_name, exc=exc)
+        )
+        sequencing_run.save()
+        return
+
+    # convert any existing columns to string/object and replace NaN with ''
+    for col in ('R1_file', 'R2_file'):
+        if col in df.columns:
+            df[col] = df[col].fillna('').astype(str)
+
+    # add columns if necessary
+    added = False
+    if "R1_file" not in df.columns:
+        df["R1_file"] = ""
+        added = True
+    if "R2_file" not in df.columns:
+        df["R2_file"] = ""
+        added = True
+
+    if not added:
+        print("Columns already present, just updating empty cells")
+    
+    # populate
+    for idx, row in df.iterrows():
+        seqid = str(row.get("SeqID", "")).strip()
+        print("Processing seqid: " + seqid)
+        forwards = fnmatch.filter(blob_filenames, seqid + "*_R1*.fastq.gz")
+        # remove trimmed, repaired, corrected, or otherwise modified reads from consideration
+        forwards = [f for f in forwards if not any(x in f for x in ["trimmed", "repaired", "corrected"])]
+        reverses = fnmatch.filter(blob_filenames, seqid + "*_R2*.fastq.gz")
+        # remove trimmed, repaired, corrected, or otherwise modified reads from consideration
+        reverses = [f for f in reverses if not any(x in f for x in ["trimmed", "repaired", "corrected"])]
+        
+        print(seqid, forwards, reverses)
+
+        # only write into blank cells (after the fillna() above a blank cell is
+        # exactly the empty string)
+        if df.at[idx, 'R1_file'] == '':
+            print("Updating R1_file for seqid {seqid}: {forwards}".format(seqid=seqid, forwards=forwards))
+            if len(forwards) == 1:
+                df.at[idx, 'R1_file'] = forwards[0]
+            elif len(forwards) > 1:
+                df.at[idx, 'R1_file'] = ';'.join(forwards)
+        if df.at[idx, 'R2_file'] == '':
+            print("Updating R2_file for seqid {seqid}: {reverses}".format(seqid=seqid, reverses=reverses))
+            if len(reverses) == 1:
+                df.at[idx, 'R2_file'] = reverses[0]
+            elif len(reverses) > 1:
+                df.at[idx, 'R2_file'] = ';'.join(reverses)
+
+        if len(forwards) != 1 or len(reverses) != 1:
+            sequencing_run.errors.append(
+                "read‑pair problem for {seqid}: forwards={forwards}, "
+                "reverses={reverses}".format(
+                    seqid=seqid, forwards=forwards, reverses=reverses
+                )
+            )
+
+    print("Final dataframe to write back:\n" + str(df))
+    # write back and upload
+    try:
+        df.to_csv(csv_path, index=False)
+        blob_client.create_blob_from_path(
+            container_name=container_name,
+            blob_name=os.path.join("reports", csv_name),
+            file_path=csv_path,
+        )
+        print("Updated {csv_name} with read filenames and uploaded to blob storage".format(csv_name=csv_name))
+
+    except Exception as exc:  # pragma: no cover
+        sequencing_run.errors.append(
+            "error writing/uploading {csv_name}: {exc}".format(
+                csv_name=csv_name, exc=exc
+            )
+        )
+    sequencing_run.save()
+
+
 def escape_ansi(line):
     """
     Remove ANSI escape characters from a string
@@ -1226,6 +1360,7 @@ def escape_ansi(line):
 def check_cowbat_progress(
     batch_client,
     batch_job_name,
+    batch_task_name,
     sequencing_run
 ):
     """
@@ -1237,7 +1372,7 @@ def check_cowbat_progress(
     print('Checking node files')
     node_files = batch_client.file.list_from_task(
         job_id=batch_job_name,
-        task_id=batch_job_name,
+        task_id=batch_task_name,
         recursive=True
     )
     print('Node files: ' + str([node_file.name for node_file in node_files]))
@@ -1246,7 +1381,7 @@ def check_cowbat_progress(
     sequencing_run.save()
     node_files = batch_client.file.list_from_task(
         job_id=batch_job_name,
-        task_id=batch_job_name,
+        task_id=batch_task_name,
         recursive=True
     )
     contents = {}
@@ -1266,13 +1401,13 @@ def check_cowbat_progress(
                     contents[node_file.name] = \
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
-                            task_id=batch_job_name,
+                            task_id=batch_task_name,
                             file_path=node_file.name
                         )
                     text_files[node_file.name] = \
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
-                            task_id=batch_job_name,
+                            task_id=batch_task_name,
                             file_path=node_file.name
                         )
                 except Exception as exc:
@@ -1285,7 +1420,7 @@ def check_cowbat_progress(
                     text_files[node_file.name] = \
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
-                            task_id=batch_job_name,
+                            task_id=batch_task_name,
                             file_path=node_file.name
                         )
                 except Exception as exc:
@@ -1300,7 +1435,7 @@ def check_cowbat_progress(
                     text_files[node_file.name] = \
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
-                            task_id=batch_job_name,
+                            task_id=batch_task_name,
                             file_path=node_file.name
                         )
                 except Exception as exc:
@@ -1375,7 +1510,7 @@ def check_cowbat_tasks():
         sequencing_run = SequencingRun.objects.get(
             pk=azure_task.sequencing_run.pk
         )
-        batch_job_name = sequencing_run.run_name.lower().replace('_', '-')
+        batch_job_name = sequencing_run.job_id
         print(sequencing_run, batch_job_name)
 
         # Check if all tasks associated with this job have completed
@@ -1399,7 +1534,7 @@ def check_cowbat_tasks():
                     azure_task_id=azure_task.id
                 )
 
-            print('Tasks are complete for' + str(azure_task.id))
+            print('Tasks are complete for ' + str(azure_task.id))
             handle_task_completion(
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
@@ -1430,9 +1565,11 @@ def handle_resize_error(sequencing_run, batch_job_name, azure_task_id):
         digits = extract_ending_digits(
             sequencing_run_name=str(sequencing_run)
         )
+
         # Remove the trailing dash followed by one or more digits from the
         # batch job name using re
         clean_batch_job_name = re.sub(r'-\d+$', '', batch_job_name)
+
         # Set the name of the local folder using the digits
         local_folder = os.path.join(
             'olc_webportalv2',
@@ -1448,13 +1585,14 @@ def handle_resize_error(sequencing_run, batch_job_name, azure_task_id):
             str(sequencing_run)
         )
     print('Resubmitting batch job ' + batch_job_name)
+
     # Resubmit the batch request
     submit_batch(
-        container_name=sequencing_run.run_name.lower().replace('_', '-'),
         run_folder=local_folder,
         sequencing_run=sequencing_run
     )
     print('Will now delete original task ' + str(azure_task_id))
+
     # Delete task, so we don't have to keep checking up on it.
     AzureTask.objects.filter(id=azure_task_id).delete()
 
@@ -1496,7 +1634,7 @@ def handle_task_completion(
         sequencing_run.errors.append(exc)
         sequencing_run.save()
     try:
-        batch_client.pool.delete(pool_id=batch_job_name)
+        batch_client.pool.delete(pool_id=sequencing_run.pool_id)
     except BatchErrorException as exc:
         sequencing_run.errors.append('Terminating pool error:')
         sequencing_run.errors.append(exc)
@@ -1568,7 +1706,12 @@ def handle_incomplete_tasks(
                 sleep(60)
                 sequencing_run.status = 'Resize Error'
                 sequencing_run.save()
-    check_cowbat_progress(batch_client, batch_job_name, sequencing_run)
+    check_cowbat_progress(
+        batch_client,
+        batch_job_name,
+        sequencing_run.task_id,
+        sequencing_run
+    )
 
 
 def extract_ending_digits(sequencing_run_name):
@@ -1811,7 +1954,7 @@ def check_amr_summary_tasks():
                 # Download the output container to zip it
                 download_container(
                     blob_service=blob_client,
-                    container_name=batch_job_name + '-output',
+                    container_name=batch_job_name,
                     output_dir='olc_webportalv2/media'
                 )
 
@@ -1953,7 +2096,7 @@ def check_vir_typer_tasks():
                     account_key=settings.AZURE_ACCOUNT_KEY,
                     account_name=settings.AZURE_ACCOUNT_NAME)
 
-                vir_typer_result_container = batch_job_name + '-output'
+                vir_typer_result_container = batch_job_name
 
                 # Download the output container to zip it
                 download_container(
@@ -2118,7 +2261,7 @@ def handle_successful_tasks(
     # Download the container
     download_container(
         blob_service=blob_client,
-        container_name=batch_job_name + '-output',
+        container_name=batch_job_name,
         output_dir=os.path.join('olc_webportalv2', 'media')
     )
 
@@ -2352,6 +2495,7 @@ def check_geneseekr_tasks():
 
                 # If any task's exit code is not 0, set the flag to False
                 if cloudtask.execution_info.exit_code != 0:
+                    print('Error!', cloudtask.execution_info.exit_code)
                     exit_codes_good = False
 
             # Delete the batch job and pool to save resources
@@ -2362,7 +2506,7 @@ def check_geneseekr_tasks():
             if exit_codes_good:
 
                 # Define the output container and run folder
-                output_container = batch_job_name + '-output'
+                output_container = batch_job_name
                 run_folder = os.path.join(
                     'olc_webportalv2',
                     'media',
@@ -2489,6 +2633,7 @@ def check_geneseekr_tasks():
                 # Finally, do some cleanup
                 shutil.rmtree(run_folder)
             else:
+                print('Error in exit codes')
                 geneseekr_request.status = 'Error'
                 geneseekr_request.save()
 
@@ -2707,6 +2852,7 @@ def convert_sample_sheet(
         'index',
         'I5_Index_ID',
         'index2',
+        'Sample_Project',
         'Sample_Plate',
         'Sample_Well'
     ]

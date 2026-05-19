@@ -193,7 +193,7 @@ class FileLocateForm(ModelForm):
         ]
 
         labels = {
-            'container_regex': _('Full or Partial Container Name(s). One per line'),
+            'container_regex': _('Full or Partial Container Name(s). One per line. NOTE: If supplying a partial name, you must include * somewhere in each term'),
             'container_exclude_regex': _('Term(s) to Exclude from Container Name(s). One per line'),
             'file_regex': _('Full or Partial File Name(s). One per line'),
             'file_exclude_regex': _('Term(s) to Exclude from File Name(s). One per line'),

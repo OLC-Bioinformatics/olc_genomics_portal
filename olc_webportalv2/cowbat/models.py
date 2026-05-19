@@ -1,3 +1,5 @@
+
+from decimal import Decimal
 from django.db import models
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.files.storage import FileSystemStorage
@@ -27,6 +29,14 @@ def get_interop_name(instance, filename):
 
 
 class SequencingRun(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_index=True,
+        related_name='sequencing_runs',
+    )
     run_name = models.CharField(max_length=64, unique=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     progress = models.CharField(max_length=128, default='Unprocessed')
@@ -42,6 +52,24 @@ class SequencingRun(models.Model):
     download_link = models.CharField(max_length=256, blank=True, default='')
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=list)
     container = models.CharField(max_length=64, blank=True, default='')
+    pool_id = models.CharField(max_length=64, blank=True, default='')
+    job_id = models.CharField(max_length=64, blank=True, default='')
+    task_id = models.CharField(max_length=64, blank=True, default='')
+    batch_submit_status = models.CharField(
+        max_length=64,
+        blank=True,
+        default=''
+    )
+    batch_submit_errors = models.CharField(
+        max_length=64,
+        blank=True,
+        default=''
+    )
+    percent_complete = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.01')
+    )
     # Arguments
     basic_assembly = models.BooleanField(default=False)
     preprocess = models.BooleanField(default=False)
@@ -62,7 +90,11 @@ class InterOpFile(models.Model):
 
 
 class AzureTask(models.Model):
-    sequencing_run = models.ForeignKey(SequencingRun, on_delete=models.CASCADE, related_name='azuretask')
+    sequencing_run = models.ForeignKey(
+        SequencingRun,
+        on_delete=models.CASCADE,
+        related_name='azuretask'
+    )
     exit_code_file = models.CharField(max_length=256)
 
 

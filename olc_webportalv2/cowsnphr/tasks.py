@@ -6,7 +6,6 @@ import os
 import pandas as pd
 import re
 import shutil
-import sys
 from time import sleep
 
 
@@ -43,16 +42,13 @@ from celery import shared_task
 from sentry_sdk import capture_exception
 
 # Portal-specific imports
+from olc_webportalv2.common.methods import generic_api_submit
 from olc_webportalv2.cowsnphr.models import (
     COWSNPhRAzureTask,
     COWSNPhRRequest,
     ContainerName
 )
 
-try:
-    from azure_batch.azure_cli import AzureBatch
-except ImportError:
-    from olc_webportalv2.cowbat.methods import AzureBatch
 from olc_webportalv2.primer_finder.methods import send_email
 from olc_webportalv2.filezone.methods import (
     FileLocate
@@ -64,7 +60,8 @@ logger.setLevel(logging.INFO)
 
 def find_containers():
     """
-    Find all containers with names that match either a sequencing run, or have "cowsnphr".
+    Find all containers with names that match either a sequencing run, or have
+    "cowsnphr".
     Ignore any output containers
     """
     blob_client = BlockBlobService(
@@ -78,7 +75,9 @@ def find_containers():
     # Use a list comprehension to find the matching container names
     run_set = {
         container.name for container in containers
-        if ((seq_run_re.match(container.name) or cowsnphr_re.match(container.name))
+        if (
+            (seq_run_re.match(container.name)
+             or cowsnphr_re.match(container.name))
             and '-output' not in container.name)
     }
     return sorted(run_set)
@@ -117,8 +116,9 @@ def refresh_container_names():
 
 def container_sanity(container_name):
     """
-    Ensure that the supplied container has a 'fastq' folder with FASTQ files, a 'ref' folder with a
-    FASTA-formatted reference genome, and, optionally, a mask file
+    Ensure that the supplied container has a 'fastq' folder with FASTQ files,
+    a 'ref' folder with a FASTA-formatted reference genome, and, optionally, a
+    mask file
     """
     # Create a client for listing blobs in the container
     blob_client = BlockBlobService(
@@ -127,8 +127,8 @@ def container_sanity(container_name):
     )
     # List all the blobs in the container
     blobs = blob_client.list_blobs(container_name=container_name)
-    # Create variables to store whether the query files, the reference genome, and the optional
-    # mask file are present
+    # Create variables to store whether the query files, the reference genome,
+    # and the optional mask file are present
     fastq = False
     ref = False
     mask = str()
@@ -161,7 +161,10 @@ def container_sanity(container_name):
                 '*.bed'
             )
         ):
-            mask = blob.name
+            mask = os.path.join(
+                'ref',
+                os.path.basename(blob.name)
+            )
     return fastq, ref, mask
 
 
@@ -169,8 +172,8 @@ def upload_files_for_cowsnphr(
     file: str,
         container_name: str):
     """
-    Upload files for COWSNPhR analyses. Place .fastq.gz files in the "fastq" folder, and all other
-    files in the "ref" folder
+    Upload files for COWSNPhR analyses. Place .fastq.gz files in the "fastq"
+    folder, and all other files in the "ref" folder
     """
     # Create a blob client
     blob_client = BlockBlobService(
@@ -179,7 +182,8 @@ def upload_files_for_cowsnphr(
     )
     # Create the container (if required)
     blob_client.create_container(container_name)
-    # Determine if the file extension is .gz and set the destination folder appropriately
+    # Determine if the file extension is .gz and set the destination folder
+    # appropriately
     if os.path.splitext(file.name)[-1] == '.gz':
         folder = 'fastq'
     else:
@@ -203,147 +207,71 @@ def create_system_call(
     :param str container name: Name of container in which files are stored
     :param str mask: String of path of mask file
     """
-    # Commented out for now. Reimplement when new AzureBatch is online
-    # Use $AZ_BATCH_TASK_WORKING_DIR instead of $AZ_BATCH_NODE_MOUNTS_DIR when using the (soon to
-    # be deprecated) AzureBatch class. Also copy the files to /datadrive, perform the analyses
+    # Copy the files to /datadrive, perform the analyses
     # there, and move everything back once the pipeline is complete
-    # 'mkdir /datadrive/{container_name} && ' \
-    # '-w /var/tmp ' \
+
+    # Create a variable to store the extremely long path information
+    path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container}'.format(
+        container=container_name
+    )
+
     # Define the path variables
-    fastq_path = os.path.join(container_name, 'fastq')
-    ref_path = os.path.join(container_name, 'ref')
-    cmd = 'source $CONDA/activate /envs/cowsnphr && cowsnphr -s {fastq_path} ' \
-          '-r {ref_path} -g'.format(
-              fastq_path=fastq_path,
-              ref_path=ref_path
-          )
+    fastq_path = os.path.join(
+        '/datadrive',
+        container_name,
+        'fastq'
+    )
+    ref_path = os.path.join(
+        '/datadrive',
+        container_name,
+        'ref'
+    )
+
+    # Create the system call. Activate the conda environment, create the
+    # datadrive folder, copy the files to it, and run the analyses. Use the -g
+    # flag to enable --gpus and the -w flag to specify the working directory.
+    # Then copy everything back to the container
+    cmd = (
+        'source $CONDA/activate /envs/cowsnphr && '
+        'mkdir -p /datadrive/{container_name} && '
+        'cp -R {path} /datadrive/ && '
+        'cowsnphr -s {fastq_path} '
+        '-r {ref_path} -g -w /datadrive'.format(
+            container_name=container_name,
+            fastq_path=fastq_path,
+            path=path,
+            ref_path=ref_path
+        )
+    )
+
+    # Update the command if the mask file was provided
     if mask:
-        cmd += ' -m {mask}'.format(mask=mask)
+        cmd += ' -m /datadrive/{container}/{mask}'.format(
+            container=container_name,
+            mask=mask
+        )
+
+    # Update the command with the final steps to copy the files back from the
+    # datadrive to the container
+    cmd += (
+        ' && cp -R /datadrive/{container} '
+        '$AZ_BATCH_NODE_MOUNTS_DIR'.format(
+            container=container_name
+        )
+    )
     return cmd
 
-def create_batch_config(
-    cowsnphr: COWSNPhRRequest,
-    local_folder: str,
-    cmd: str,
-    mask: str,
-    uploaded=False,
-    vm_size='Standard_NV18ads_A10_v5'):
-    """
-    Create the batch config file that is used by (the soon to be deprecated) AzureBatch
-    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest database model for the current analyses
-    :param str local_folder: Name and path of folder in local storage storing the batch_config_file 
-    and into which error files are
-    :param str cmd: Command line argument to use
-    :param str mask: Path of optional mask file
-    :param str vm_size: Size of virtual machine to create for batch analyses
-    """
-    # Create a configuration file to be used by the Azure batch script.
-    batch_config_file = os.path.join(local_folder, 'batch_config.txt')
-    with open(batch_config_file, 'w', encoding='utf-8') as batch_file:
-        batch_file.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
-        batch_file.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
-        batch_file.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
-        batch_file.write('STORAGE_ACCOUNT_NAME:={}\n'.format(settings.AZURE_ACCOUNT_NAME))
-        batch_file.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
-        batch_file.write('JOB_NAME:={}\n'.format(cowsnphr.container_name))
-        batch_file.write('VM_IMAGE:={}\n'.format(settings.COWSNPHR_IMAGE))
-        batch_file.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-        batch_file.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
-        batch_file.write('VM_SIZE:={}\n'.format(vm_size))
-        batch_file.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-        if uploaded:
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(cowsnphr.container_name, 'fastq', '*.fastq.gz'),
-                os.path.join(cowsnphr.container_name, 'fastq'))
-            )
-
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(cowsnphr.container_name, 'ref', '*.fasta'),
-                os.path.join(cowsnphr.container_name, 'ref'))
-            )
-            if mask:
-                batch_file.write('CLOUDIN:={} {}\n'.format(
-                    os.path.join(cowsnphr.container_name, mask),
-                    os.path.join(cowsnphr.container_name, 'ref')
-                    )
-                )
-        else:
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(cowsnphr.container_name, 'fastq', '*.fastq.gz'),
-                cowsnphr.container_name)
-            )
-
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(cowsnphr.container_name, 'ref', '*.fasta'),
-                cowsnphr.container_name)
-            )
-            if mask:
-                batch_file.write('CLOUDIN:={} {}\n'.format(
-                    os.path.join(cowsnphr.container_name, 'ref', '*.bed'),
-                    cowsnphr.container_name)
-                )
-        # Define which folder(s)/file(s) to copy to the output container
-        batch_file.write('OUTPUT:={}/\n'.format(cowsnphr.container_name))
-        # Add the system call
-        batch_file.write('COMMAND:={cmd}'.format(cmd=cmd))
-        batch_file.write('\n')
-    return batch_config_file
-
-
-def submit_batch(
-    cowsnphr: COWSNPhRRequest,
-    local_folder: str,
-    batch_config_file: str,
-    vm_size: str='Standard_NV18ads_A10_v5'):
-    """
-    Use (the soon to be deprecated) AzureBatch class to submit the batch config file to 
-    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest model for the current analyses
-    :param str local_folder: Name and path of folder in local storage storing the batch_config_file 
-    and into which error files are
-    to be written
-    :param str batch_config_file: Name and path of file containing necessary information for
-    submitting batch jobs
-    :param str vm_size: Size of virtual machine to use for batch analyses.
-    Default is Standard_NV18ads_A10_v5
-    """
-    try:
-        # Submit the file to batch with our package.
-        azure_task = AzureBatch()
-        azure_task.main(
-            configuration_file=batch_config_file,
-            job_name=cowsnphr.container_name,
-            output_dir=os.path.join('olc_webportalv2', 'media'),
-            settings=settings,
-            keep_input_container=True,
-            download_output_files=False,
-            no_clean=True,
-            vm_size=vm_size,
-            vm_image='COWSNPHR_IMAGE'
-        )
-        # Create an COWSNPhRAzureTask entry, so the progress of the analyses can be followed by
-        COWSNPhRAzureTask.objects.create(
-            cowsnphr=cowsnphr,
-            exit_code_file=os.path.join(local_folder, 'exit_codes.txt'))
-    except Exception as exc:
-        file_handler = logging.FileHandler(os.path.join(local_folder, 'error'))
-        file_handler.setLevel(logging.INFO)
-        logger.addHandler(file_handler)
-        logger.exception(exc)
-        capture_exception(exc)
-        cowsnphr.status = 'Error'
-        cowsnphr.error_list.append(exc)
-        cowsnphr.save()
 
 @shared_task
 def run_cowsnphr_batch(
-    primary_key: int):
+        primary_key: int):
     """
     Run the necessary functions to submit the COWSNPhR request to batch
     :param int primary_key: Primary key of the COWSNPhRRequest being processed
     """
     cowsnphr = COWSNPhRRequest.objects.get(pk=primary_key)
-    # If a list of SEQIDs has been provided, locate and copy the necessary files to the analysis-
-    # specific blob container
+    # If a list of SEQIDs has been provided, locate and copy the necessary
+    # files to the analysis-specific blob container
     if cowsnphr.seqids:
         ref = find_ref(cowsnphr=cowsnphr)
         queries = find_query(cowsnphr=cowsnphr)
@@ -368,12 +296,18 @@ def run_cowsnphr_batch(
     if not fastq or not ref:
         if not fastq:
             cowsnphr.error_list.append(
-                'FASTQ files could not be located in the "fastq" folder of the supplied container:'
-                '{container_name}'.format(container_name=cowsnphr.container_name))
+                'FASTQ files could not be located in the "fastq" folder of '
+                'the supplied container: {container_name}'.format(
+                    container_name=cowsnphr.container_name
+                )
+            )
         if not ref:
             cowsnphr.error_list.append(
-                'A FASTQ-formatted genome could not be located in the "ref" folder of the supplied '
-                'container: {container_name}'.format(container_name=cowsnphr.container_name))
+                'A FASTQ-formatted genome could not be located in the "ref" '
+                'folder of the supplied container: {container_name}'.format(
+                    container_name=cowsnphr.container_name
+                )
+            )
         cowsnphr.status = 'Error'
         cowsnphr.save()
         return
@@ -382,52 +316,45 @@ def run_cowsnphr_batch(
         mask=mask,
         container_name=cowsnphr.container_name
     )
+
     # Create a folder into which any error code files are to be written
     local_folder = os.path.join('olc_webportalv2', 'media', str(cowsnphr))
     os.makedirs(local_folder, exist_ok=True)
-    # Check to see which version of AzureBatch is to be used
-    if 'azure_batch' in sys.modules:
-        AzureBatch(
-            command_file=cmd,
+
+    try:
+        # Submit the command to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            container_name=cowsnphr.container_name,
             vm_size='Standard_NV18ads_A10_v5',
-            settings=settings,
-            container=cowsnphr.container_name,
-            path=None,
-            upload_folder=None,
-            input_file_pattern=None,
-            bulk_input_file_pattern=None,
-            download_file_pattern=None,
-            unique_id=cowsnphr.pk,
-            worker=True,
-            no_tidy=True
-        )
-        # Create an COWSNPhRAzureTask entry, so the progress of the analyses can be followed
+            analysis_type='COWSNPhR',
+            unique_id='FoodPort'
+            )
+
+        # Create the AzureTask database entry
         COWSNPhRAzureTask.objects.create(
             cowsnphr=cowsnphr,
-            exit_code_file=os.path.join(local_folder, 'exit_codes.txt'))
-    else:
-        # Create the batch_config.txt file
-        batch_config_file = create_batch_config(
-            cowsnphr=cowsnphr,
-            local_folder=local_folder,
-            cmd=cmd,
-            mask=mask
+            exit_code_file=os.path.join(local_folder, 'exit_codes.txt')
         )
-        # Create a batch request
-        submit_batch(
-            cowsnphr=cowsnphr,
-            local_folder=local_folder,
-            batch_config_file=batch_config_file,
-            vm_size='Standard_NV18ads_A10_v5'
-        )
+    except Exception as exc:
+        file_handler = logging.FileHandler(os.path.join(local_folder, 'error'))
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+        logger.exception(exc)
+        capture_exception(exc)
+        cowsnphr.status = 'Error'
+        cowsnphr.error_list.append(exc)
+        cowsnphr.save()
 
 
 def find_ref(cowsnphr: COWSNPhRRequest):
     """
     Use the FileLocate class from FileZone to locate the reference genome
-    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest of the the current analysis
+    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest of the the current
+    analysis
     """
-    # Attempt to locate the reference file in the "processed-data" container first
+    # Attempt to locate the reference file in the "processed-data" container
+    # first
     file_obj = FileLocate(
         container_regex=['processed-data'],
         container_exclude_regex=[],
@@ -448,10 +375,12 @@ def find_ref(cowsnphr: COWSNPhRRequest):
         debug=True
     )
     file_matches, __ = file_obj.main()
-    # Update the database entry with an error that the reference file SEQID could not be located
+    # Update the database entry with an error that the reference file SEQID
+    # could not be located
     if not file_matches:
         cowsnphr.seqid_errors.append(
-            _('Could not locate a FASTA file for the supplied reference genome {ref}'
+            _('Could not locate a FASTA file for the supplied reference '
+              'genome {ref}'
               .format(ref=cowsnphr.ref))
         )
         cowsnphr.status = 'Error'
@@ -462,7 +391,8 @@ def find_ref(cowsnphr: COWSNPhRRequest):
         for ref_dict in ref_list:
             if "BestAssemblies" in ref_dict['blob_name']:
                 return [ref_dict]
-    # If there are no references in a "BestAssemblies" folder, select the first item
+    # If there are no references in a "BestAssemblies" folder, select the
+    # first item
     container = next(iter(file_matches))
     ref = file_matches[container]
     return ref
@@ -471,15 +401,17 @@ def find_ref(cowsnphr: COWSNPhRRequest):
 def find_query(cowsnphr: COWSNPhRRequest):
     """
     Use the FileLocate class from FileZone to locate the query genomes
-    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest of the the current analysis
+    :param COWSNPhRRequest cowsnphr: COWSNPhRRequest of the the current
+        analysis
     """
     # Attempt to locate the query files
-    query_list = ['{seqid}*.fastq.gz'.format(seqid=seqid) for seqid in cowsnphr.seqids]
+    query_list = [
+        '{seqid}*.fastq.gz'.format(seqid=seqid) for seqid in cowsnphr.seqids]
     file_obj = FileLocate(
         container_regex=['*'],
         container_exclude_regex=[
-            'output', 'ampliseq', 'amrsummary', 'cowbat', 'geneseekr', 'primer', 'mash',
-            'neighbor', 'tree', 'vir-typer', 'fake'
+            'output', 'ampliseq', 'amrsummary', 'cowbat', 'geneseekr',
+            'primer', 'mash', 'neighbor', 'tree', 'vir-typer', 'fake'
             ],
         file_regex=query_list,
         file_exclude_regex=['trimmed', 'baited'],
@@ -489,7 +421,8 @@ def find_query(cowsnphr: COWSNPhRRequest):
     # If no files were returned, update the database with the error
     if not file_matches:
         cowsnphr.seqid_errors.append(
-            _('Could not locate .fastq.gz files for the supplied query genomes {seqids}'
+            _('Could not locate .fastq.gz files for the supplied query '
+              'genomes {seqids}'
               .format(seqids=','.join(cowsnphr.seqids)))
         )
         cowsnphr.status = 'Error'
@@ -497,7 +430,8 @@ def find_query(cowsnphr: COWSNPhRRequest):
         return None
     # Create a lsit to store all the .fastq.gz file matches
     seqids = []
-    # Initialise a dictionary to track the presence/absence of forward and reverse reads
+    # Initialise a dictionary to track the presence/absence of forward and
+    # reverse reads
     presence_dict = {}
     # Add the forward and reverse reads presence for each SEQID
     for seqid in cowsnphr.seqids:
@@ -518,7 +452,8 @@ def find_query(cowsnphr: COWSNPhRRequest):
                     # Add the dictionary to the lsit
                     if file_dict not in seqids:
                         seqids.append(file_dict)
-    # Initialise a variable to track whether all the necessary query files were located
+    # Initialise a variable to track whether all the necessary query files
+    # were located
     errors = False
     for seqid, presence in presence_dict.items():
         # Check if either the forward or reverse reads are missing
@@ -537,13 +472,15 @@ def find_query(cowsnphr: COWSNPhRRequest):
 
 
 def copy_blobs(
-    blob_metadata_list: list,
-    destination_container: str,
-    destination_path: str):
+        blob_metadata_list: list,
+        destination_container: str,
+        destination_path: str):
     """
-    Copy blobs from one or more containers into nested folders in a destination container 
+    Copy blobs from one or more containers into nested folders in a
+    destination container 
     :param list blob_metadata_list: List metadata for blobs to be copied
-    :param str destination container: Name of the container into which the blobs are to be copied
+    :param str destination container: Name of the container into which the
+        blobs are to be copied
     """
     blob_service = BlockBlobService(
         account_key=settings.AZURE_ACCOUNT_KEY,
@@ -551,8 +488,8 @@ def copy_blobs(
     )
     blob_service.create_container(container_name=destination_container)
     for blob_metadata_dict in blob_metadata_list:
-        # Set the new name of the blob as the destination folder and the file name (without path
-        # information )
+        # Set the new name of the blob as the destination folder and the file
+        # name (without path information )
         blob_name = os.path.join(
             destination_path,
             os.path.basename(blob_metadata_dict["blob_name"])
@@ -562,6 +499,7 @@ def copy_blobs(
             blob_name,
             blob_metadata_dict["blob_download_link"]
         )
+
 
 def create_batch_client():
     """
@@ -581,55 +519,131 @@ def create_batch_client():
 
 
 def check_for_task_completion(
-    task: COWSNPhRAzureTask,
-    batch_client: batch.BatchServiceClient):
+        task: COWSNPhRAzureTask,
+        batch_client: batch.BatchServiceClient):
     """
     Check to see if the task is complete
     :param COWSNPhRAzureTask task: Current Azure task
     :param batch.BatchServiceClient batch_client: Azure batch client
-    :return COWSNPhRRequest cowsnphr_request: Database entry of the current COWSNPhR analysis
+    :return COWSNPhRRequest cowsnphr_request: Database entry of the current
+    COWSNPhR analysis
     """
-    # Retrieve the COWSNPhRRequest object corresponding to the cowsnphr_request primary key
+    # Retrieve the COWSNPhRRequest object corresponding to the
+    # cowsnphr_request primary key
     cowsnphr_request = COWSNPhRRequest.objects.get(pk=task.cowsnphr.pk)
     # Set the container name appropriately
     batch_job_name = cowsnphr_request.container_name
     # Check if tasks related with this COWSNPhR job have finished.
     tasks_completed = True
     try:
+        # Iterate over the tasks associated with the name of the batch job
         for cloudtask in batch_client.task.list(batch_job_name):
+            print('cloudtasks', cloudtask.id, cloudtask.state)
             if cloudtask.state != batchmodels.TaskState.completed:
-                tasks_completed = False
 
-        # Check if the pool failed to resize
-        if not tasks_completed:
-            # Locate all the batch pools
-            pools = batch_client.pool.list()
-            # Iterate over the pools
-            for pool in pools:
-                # Ensure that the current batch job is being evaluated
-                if pool.id == batch_job_name:
-                    # Proceed if there were batch resize errors. These usually happen due to the
-                    # quota getting reached
-                    if pool.resize_errors:
-                        # Delete the pool, job, and task
-                        delete_pool_job(
-                            batch_client=batch_client,
-                            batch_job_name=batch_job_name
+                tasks_completed = False
+        print('tasks complete', tasks_completed)
+        # Return if the tasks are complete
+        if tasks_completed:
+            return tasks_completed, cowsnphr_request
+
+        # Locate all the batch pools
+        pools = batch_client.pool.list()
+
+        # Iterate over the pools
+        for pool in pools:
+            print('pool id', pool.id, 'batch job name', batch_job_name)
+            # Ensure that the current batch job is being evaluated
+            if pool.id != batch_job_name:
+                continue
+
+            # List all the nodes in the pool
+            nodes = batch_client.compute_node.list(pool.id)
+            for node in nodes:
+                print('node', node.id, node.state)
+                # Reboot the node if it becomes unusable
+                if node.state == batchmodels.ComputeNodeState.unusable:
+                    print(
+                        "Rebooting node {node_id} due to "
+                        "unusable state.".format(node_id=node.id)
+                    )
+                    batch_client.compute_node.reboot(
+                        pool_id=pool.id,
+                        node_id=node.id,
+                        node_reboot_option=batchmodels.ComputeNodeRebootOption
+                        .requeue
+                    )
+                    print("Node {node_id} is being rebooted.".format(
+                        node_id=node.id
                         )
-                        # Give the pool a chance to be deleted
-                        sleep(30)
-                        # Retry!
-                        # Create a configuration file to be used by the Azure batch script.
-                        local_folder = os.path.join('olc_webportalv2', 'media', batch_job_name)
-                        batch_config_file = os.path.join(local_folder, 'batch_config.txt')
-                        # Resubmit the batch request
-                        submit_batch(
-                            cowsnphr=cowsnphr_request,
-                            local_folder=local_folder,
-                            batch_config_file=batch_config_file,
-                            vm_size='Standard_NV18ads_A10_v5'
-                        )
-    # If something errors first time through, jobs can't get deleted. In that case, give up.
+                    )
+                    return False, cowsnphr_request
+
+            # Proceed if there were batch resize errors. These usually
+            # happen due to the quota getting reached
+            if not pool.resize_errors:
+                return tasks_completed, cowsnphr_request
+
+            # Delete the pool, job, and task
+            delete_pool_job(
+                batch_client=batch_client,
+                batch_job_name=batch_job_name
+            )
+            # Give the pool a chance to be deleted
+            sleep(30)
+
+            # Retry!
+            # Set the local folder path
+            local_folder = os.path.join(
+                'olc_webportalv2',
+                'media',
+                batch_job_name
+            )
+            try:
+                # Ensure that the necessary files are present
+                _, __, mask = container_sanity(
+                    container_name=cowsnphr_request.container_name
+                )
+
+                # Create the system call
+                cmd = create_system_call(
+                    mask=mask,
+                    container_name=cowsnphr_request.container_name
+                )
+
+                # Resubmit the batch request
+                generic_api_submit(
+                    command=cmd,
+                    container_name=cowsnphr_request.container_name,
+                    vm_size='Standard_NV18ads_A10_v5',
+                    analysis_type='COWSNPhR',
+                    unique_id='FoodPort'
+                )
+
+                # Delete the task
+                task.delete()
+
+                # Recreate the task
+                COWSNPhRAzureTask.objects.create(
+                    cowsnphr=cowsnphr_request,
+                    exit_code_file=os.path.join(
+                        local_folder,
+                        'exit_codes.txt'
+                    )
+                )
+            except Exception as exc:
+                file_handler = logging.FileHandler(
+                    os.path.join(local_folder, 'error')
+                )
+                file_handler.setLevel(logging.INFO)
+                logger.addHandler(file_handler)
+                logger.exception(exc)
+                capture_exception(exc)
+                cowsnphr_request.status = 'Error'
+                cowsnphr_request.error_list.append(exc)
+                cowsnphr_request.save()
+    # If something errors first time through, jobs can't get deleted. In that
+    # case, give up.
     except Exception as exc:
         cowsnphr_request.status = 'Error'
         cowsnphr_request.error_list.append(exc)
@@ -641,8 +655,8 @@ def check_for_task_completion(
 
 
 def delete_pool_job(
-    batch_client: batch.BatchServiceClient,
-    batch_job_name: str):
+        batch_client: batch.BatchServiceClient,
+        batch_job_name: str):
     """
     Delete the pool and job for an analyses
     :param batch.BatchServiceClient batch_client: Azure batch client
@@ -651,13 +665,13 @@ def delete_pool_job(
     # Initialise the exit code status to True
     exit_codes_good = True
     # Iterate through the tasks associated with the name of the batch job
-    for cloudtask in batch_client.task.list(batch_job_name):
+    for cloud_task in batch_client.task.list(batch_job_name):
         # The only 'good' exit code is 0
-        if cloudtask.execution_info.exit_code != 0:
+        if cloud_task.execution_info.exit_code != 0:
             # A non-zero code sets the boolean to False
             exit_codes_good = False
-    # Get rid of job and pool, so we don't waste big $$$ and do cleanup/get files
-    # downloaded in tasks.
+    # Get rid of job and pool, so we don't waste big $$$ and do cleanup/get
+    # files downloaded in tasks.
     batch_client.job.delete(job_id=batch_job_name)
     batch_client.pool.delete(pool_id=batch_job_name)
     return exit_codes_good
@@ -665,9 +679,10 @@ def delete_pool_job(
 
 def task_succeeded(cowsnphr: COWSNPhRRequest):
     """
-    Set the status to 'Complete', create a link to the necessary files, and send out an email
-    (if requested)
-    :param COWSNPhRRequest cowsnphr: Database entry of the current COWSNPhR analysis
+    Set the status to 'Complete', create a link to the necessary files, and
+    send out an email (if requested)
+    :param COWSNPhRRequest cowsnphr: Database entry of the current COWSNPhR
+    analysis
     """
     cowsnphr.status = 'Complete'
     cowsnphr.save()
@@ -676,7 +691,8 @@ def task_succeeded(cowsnphr: COWSNPhRRequest):
         send_email(
             subject='COWSNPhR Analysis "{name}" Complete'
                     .format(name=str(cowsnphr.project_name)),
-            body='Dear {user},\n\n'
+            body=(
+                'Dear {user},\n\n'
                 'Your COWSNPhR analysis, "{name}", is complete.\n\n'
                 'Reports are available for download: {archive_link}\n\n'
                 'Best regards,\n'
@@ -685,14 +701,15 @@ def task_succeeded(cowsnphr: COWSNPhRRequest):
                     user=cowsnphr.user,
                     name=str(cowsnphr.project_name),
                     archive_link=cowsnphr.archive_download_link
-                ),
+                )),
             recipient=email
         )
 
 
 def task_failed(cowsnphr):
     """
-    Send an email (if anyone signed up to receive one), set the status to 'Error'
+    Send an email (if anyone signed up to receive one), set the status to
+    'Error'
     """
     # Send emails
     errors = '\n'.join(cowsnphr.error_list) if cowsnphr.error_list else 'None'
@@ -719,34 +736,41 @@ def task_failed(cowsnphr):
 @shared_task
 def check_cowsnphr_tasks():
     """
-    Check the status of tasks. If task fails, perform clean-up. If task succeeds, perform
-    necessary steps and clean-up
+    Check the status of tasks. If task fails, perform clean-up. If task
+    succeeds, perform necessary steps and clean-up
     """
     # Create a batch client
     batch_client = create_batch_client()
-    # Retrieve all COWSNPhRAzureTask objects (they should be deleted after they finish,
-    # so anything retrieved should be active)
+
+    # Retrieve all COWSNPhRAzureTask objects (they should be deleted after
+    # they finish, so anything retrieved should be active)
     cowsnphr_tasks = COWSNPhRAzureTask.objects.filter()
+
     # Iterate over all the tasks to see if they are complete
     for task in cowsnphr_tasks:
         task_completed, cowsnphr = check_for_task_completion(
             task=task,
             batch_client=batch_client
         )
+
         # Allow the task to complete
         if not task_completed:
             continue
+
         # Clean up the job and pool if the task is complete
         exit_codes_good = delete_pool_job(
             batch_client=batch_client,
             batch_job_name=cowsnphr.container_name
         )
-        # Perform appropriate actions depending on whether or not the task was successful
+
+        # Perform appropriate actions depending on whether or not the task was
+        # successful
         if exit_codes_good:
             post_processing(cowsnphr=cowsnphr)
             task_succeeded(cowsnphr=cowsnphr)
         else:
             task_failed(cowsnphr=cowsnphr)
+
         # Delete the COWSNPhRAzureTask
         COWSNPhRAzureTask.objects.filter(id=task.id).delete()
 
@@ -754,29 +778,36 @@ def check_cowsnphr_tasks():
 def post_processing(cowsnphr):
     """
     Run the required file manipulations (creation of zip files, SAS URLs, etc.)
-    :param COWSNPhRRequest cowsnphr: Database entry of the current COWSNPhR analysis
+    :param COWSNPhRRequest cowsnphr: Database entry of the current COWSNPhR
+    analysis
     """
     # Download the report folders to the local system
-    blob_client, local_folder, output_container = download_folders(cowsnphr=cowsnphr)
+    blob_client, local_folder, output_container = download_folders(
+        cowsnphr=cowsnphr
+    )
     # Load the reports into the COWSNPhR ReportOutputs model
     populate_models(
         cowsnphr=cowsnphr,
         local_folder=local_folder
     )
+
     # Create an archive of the reports
     archive_file = compress_outputs(
         cowsnphr=cowsnphr,
         local_folder=local_folder
     )
+
     # Upload the archive to blob storage
     sas_url = generate_archive_download_link(
         blob_client=blob_client,
         container_name=output_container,
         output_zipfile=archive_file
     )
+
     # Update the model with the link
     cowsnphr.archive_download_link = sas_url
     cowsnphr.save()
+
     # Remove the folder storing the outputs
     shutil.rmtree(local_folder)
 
@@ -790,10 +821,14 @@ def download_folders(cowsnphr):
         account_name=settings.AZURE_ACCOUNT_NAME,
         account_key=settings.AZURE_ACCOUNT_KEY
     )
-    # Output container name is the container name + -output
-    output_container = cowsnphr.container_name + '-output'
+    # Output container name is the container name
+    output_container = cowsnphr.container_name
     # Set the name of the local folder
-    local_folder = os.path.join('olc_webportalv2', 'media', cowsnphr.project_name)
+    local_folder = os.path.join(
+        'olc_webportalv2',
+        'media',
+        cowsnphr.project_name
+    )
     os.makedirs(local_folder, exist_ok=True)
     # List all the blobs in the container
     blobs = blob_client.list_blobs(container_name=output_container)
@@ -805,13 +840,13 @@ def download_folders(cowsnphr):
         'tree_files',
         'vcf_files'
     ]
+
     # Iterate over all the desired folder names
     for folder in desired_folders:
         for blob in blobs:
             if fnmatch.fnmatch(
                 blob.name,
                 os.path.join(
-                    cowsnphr.container_name,
                     'fastq',
                     folder,
                     '*'
@@ -835,7 +870,7 @@ def populate_models(cowsnphr, local_folder):
     # Alignment
     alignment_file = os.path.join(
         local_folder,
-        'alignments', 
+        'alignments',
         'alignment.fasta'
     )
     alignment = str()
@@ -859,7 +894,9 @@ def populate_models(cowsnphr, local_folder):
         'summary_tables',
         'assembly_report.tsv'
     )
-    assembly_report, assembly_headers, _ = read_spreadsheet(report=assembly_file)
+    assembly_report, assembly_headers, _ = read_spreadsheet(
+        report=assembly_file
+    )
     # Contig Summary
     contig_file = os.path.join(
         local_folder,
@@ -929,9 +966,9 @@ def populate_models(cowsnphr, local_folder):
 
 
 def read_spreadsheet(
-    report: str,
-    excel: bool=False,
-    index_col=True):
+        report: str,
+        excel: bool = False,
+        index_col=True):
     """
     Use pandas to read in report data from a spreadsheet
     :param str report: Name and path of file to parse
@@ -971,9 +1008,13 @@ def read_spreadsheet(
                 pass
     # Extract the headers from the dataframe
     if excel:
-        report_headers = [column for column in report_dataframe.columns if 'Unnamed' not in column]
+        report_headers = [
+            column for column in report_dataframe.columns if 'Unnamed'
+            not in column
+        ]
         header_padding = []
-        for integer in range((len(list(report_dataframe.columns)) - len(report_headers))):
+        for integer in range(
+            (len(list(report_dataframe.columns)) - len(report_headers))):
             header_padding.append(integer)
     else:
         header_padding = None
@@ -1006,7 +1047,11 @@ def compress_outputs(cowsnphr, local_folder):
     """
     Create a zip archive of the desired output folders
     """
-    cowsnphr_archive_folder = os.path.join('olc_webportalv2', 'media', 'cowsnphr_archives')
+    cowsnphr_archive_folder = os.path.join(
+        'olc_webportalv2',
+        'media',
+        'cowsnphr_archives'
+    )
     archive_file = os.path.join(
         cowsnphr_archive_folder, '{container_name}_{container_pk}'.format(
             container_name=cowsnphr.project_name,
@@ -1021,17 +1066,23 @@ def compress_outputs(cowsnphr, local_folder):
         os.path.join(
             archive_file,
         ), 'zip',
-            local_folder
+        local_folder
     )
     return archive_file + '.zip'
 
 
-def generate_archive_download_link(blob_client, container_name, output_zipfile, expiry=8):
+def generate_archive_download_link(
+        blob_client,
+        container_name,
+        output_zipfile,
+        expiry=8):
     """
-    Make a download link for a file that will be put into Azure blob storage, good for up to expiry days
+    Make a download link for a file that will be put into Azure blob storage,
+    good for up to expiry days
     :param blob_client: Instance of azure.storage.blob.BlockBlobService
     :param container_name: Name of container you want to create.
-    :param output_zipfile: Zipfile that you want to upload and for which you want to create a link.
+    :param output_zipfile: Zipfile that you want to upload and for which you
+        want to create a link.
     :param expiry: Number of days for which the link should be valid.
     :return: String of a link that allows people to download container.
     """

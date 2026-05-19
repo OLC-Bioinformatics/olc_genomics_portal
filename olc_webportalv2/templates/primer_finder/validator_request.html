@@ -6,9 +6,10 @@
 {% load i18n widget_tweaks %}
 {% block content %}
 
-{{error}}
+<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
+<br>
 
-<h2>{%trans "PrimerValidator Request"%}</h2>
+<h2>{%trans "PrimerVerifier Request"%}</h2>
 <form action='' enctype="multipart/form-data" method="post">
     {% csrf_token %}
     {% if form.errors %}

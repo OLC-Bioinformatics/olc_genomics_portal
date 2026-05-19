@@ -84,6 +84,7 @@ class GeneSeekrForm(forms.Form):
         widget=forms.RadioSelect,
         choices=benchmark_databases,
         label='',
+        required=False,
 
     )
     
