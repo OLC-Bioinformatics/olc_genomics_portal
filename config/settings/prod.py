@@ -26,6 +26,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 ROOT_DIR = environ.Path(__file__) - 3
 APPS_DIR = ROOT_DIR.path('olc_webportalv2')
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # Load operating system environment variables and then prepare to use them
 env = environ.Env()
@@ -69,7 +70,7 @@ THIRD_PARTY_APPS = [
     'allauth',  # registration
     'allauth.account',  # registration
     'allauth.socialaccount',  # registration
-    # 'microsoft_authentication',  # MS AD authentication
+    'microsoft_authentication',  # MS AD authentication
 ]
 
 # Apps specific for this project go here.
@@ -88,6 +89,7 @@ LOCAL_APPS = [
     'olc_webportalv2.ampliseq.apps.AmpliseqConfig',
     'olc_webportalv2.cowsnphr.apps.CowsnphrConfig',
     'olc_webportalv2.filezone.apps.FileZoneConfig',
+    'olc_webportalv2.metadata_upload.apps.MetadataUploadConfig',
     # Need this to get django-multiselectfield to work
     'multiselectfield',
 
@@ -164,6 +166,7 @@ DEFAULT_FROM_EMAIL = \
     'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
 EMAIL_HOST = 'email-smtp.ca-central-1.amazonaws.com'
 EMAIL_PORT = 587
+EMAIL_RELAY_SECRET = env('EMAIL_RELAY_SECRET')
 
 # Uncomment these when you want to have emails sent - can't be done when on
 # your local machine due to firewall? (I think)
@@ -183,16 +186,21 @@ MANAGERS = ADMINS
 # DATABASE CONFIGURATION
 # ------------------------------------------------------------------------------
 # See:
+
 DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': os.environ['DB_NAME'],
-            'USER': os.environ['DB_USER'],
-            'PASSWORD': os.environ['DB_PASS'],
-            'HOST': os.environ['DB_SERVICE'],
-            'PORT': os.environ['DB_PORT']
-        }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASS'],
+        'HOST': os.environ['DB_SERVICE'],
+        'PORT': os.environ['DB_PORT'],
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
+    }
 }
+
 DATABASES['default']['ATOMIC_REQUESTS'] = True
 
 
@@ -321,13 +329,12 @@ PASSWORD_HASHERS = [
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME':
-            'django.contrib.auth.password_validation.\
-                UserAttributeSimilarityValidator',
+            'django.contrib.auth.password_validation.'
+            'UserAttributeSimilarityValidator',
     },
     {
         'NAME':
-            'django.contrib.auth.password_validation.\
-                MinimumLengthValidator',
+            'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
         'NAME':
@@ -427,46 +434,57 @@ ADMIN_URL = r'^admin/'
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
 ALLOWED_HOSTS = [
-    '0.0.0.0',
-    'olc.lnpr.info',
-    '40.85.255.27',
-    'olc.cloud.inspection.gc.ca',
-    '10.148.57.4',
-    'localhost',
-    '127.0.0.1'
+    "0.0.0.0",
+    "olc.lnpr.info",
+    "40.85.255.27",
+    "olc.cloud.inspection.gc.ca",
+    "10.148.57.4",
+    "10.148.57.38",
+    "localhost",
+    "127.0.0.1",
+    "foodport.cloud-nuage.inspection.gc.ca",
+    "foodport-dev.cloud-nuage.inspection.gc.ca",
 ]
 MAX_ATTEMPTS = 1
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'django_debug.log',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+    "handlers": {
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(str(ROOT_DIR), "django_debug.log"),
+            "maxBytes": 10 * 1024 * 1024,  # 10 MB
+            "backupCount": 5,
+            "formatter": "verbose",
         },
-        'cowbat': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
         },
-        'olc_webportalv2.cowbat.apps.CowbatConfig': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+        "cowbat": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
         },
-        'olc_webportalv2.cowbat': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
+        "olc_webportalv2.cowbat.apps.CowbatConfig": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "olc_webportalv2.cowbat": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
         },
     },
 }
@@ -477,6 +495,7 @@ AZURE_ACCOUNT_KEY = env('AZURE_ACCOUNT_KEY')
 BATCH_ACCOUNT_NAME = env('BATCH_ACCOUNT_NAME')
 BATCH_ACCOUNT_URL = env('BATCH_ACCOUNT_URL')
 BATCH_ACCOUNT_KEY = env('BATCH_ACCOUNT_KEY')
+BATCH_ACCOUNT_SUBNET = env('BATCH_ACCOUNT_SUBNET')
 VM_IMAGE = env('VM_IMAGE')
 VM_CLIENT_ID = env('VM_CLIENT_ID')
 VM_SECRET = env('VM_SECRET')
@@ -485,6 +504,15 @@ AMPLISEQ_IMAGE = env('AMPLISEQ_IMAGE')
 COWSNPHR_IMAGE = env('COWSNPHR_IMAGE')
 AD_APP_ID = env("AD_APP_ID")
 AD_APP_SECRET = env("AD_APP_SECRET")
+SITE_URL = env("SITE_URL", default="https://foodport-dev.cloud-nuage.inspection.gc.ca")
+
+# Define the URL for the batch service API
+BATCH_SERVICE_URL = "http://batch:5000/submit_batch_request"
+
+# Define the headers for the batch API call
+BATCH_URL_HEADERS = {
+    "Content-Type": "application/json"
+}
 try:
     ENVIRONMENT = env('ENVIRONMENT')
 except django.core.exceptions.ImproperlyConfigured:
@@ -492,17 +520,21 @@ except django.core.exceptions.ImproperlyConfigured:
 
 sentry_sdk.init(dsn=env('SENTRY_DSN'), integrations=[DjangoIntegration()])
 
+# Tell Django to trust the X-Forwarded-Proto header that comes from the proxy
+# (nginx) and to use it to determine whether the request is secure
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # Microsoft AD login
 MICROSOFT = {
     "app_id": AD_APP_ID,
     "app_secret": AD_APP_SECRET,
-    "redirect": "http://localhost:8080/microsoft_authentication/callback",
+    "redirect": SITE_URL + "/microsoft_authentication/callback",
     "scopes": ["user.read"],
-    "authority": "https://login.microsoftonline.com/common",
+    "authority": "https://login.microsoftonline.com/" + VM_TENANT,
     "valid_email_domains": ["inspection.gc.ca", "gmail.com"],
-    "logout_uri": "http://localhost:8080/admin/logout"
+    "logout_uri": SITE_URL + "/",
 }
-# LOGIN_URL = "/microsoft_authentication/login"
+LOGIN_URL = "/microsoft_authentication/login"
 # LOGIN_REDIRECT_URL = "/admin"  # optional and can be changed to any other url
 
 LOGIN_REDIRECT_URL = "/"  # optional and can be changed to any other url
@@ -511,4 +543,9 @@ LOGIN_REDIRECT_URL = "/"  # optional and can be changed to any other url
 # True: creates new Django User after valid microsoft authentication.
 # False: it will only allow those users which are already created in Django
 # User model and will validate the email using Microsoft.
-MICROSOFT_CREATE_NEW_DJANGO_USER = False  # Optional, default value is True
+MICROSOFT_CREATE_NEW_DJANGO_USER = True  # Optional, default value is True
+
+# Set this to False to prevent users from registering via the standard
+# django-allauth registration page. You may want to do this if you only
+# want users to be able to register via Microsoft AD authentication
+ACCOUNT_ALLOW_REGISTRATION = False

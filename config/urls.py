@@ -47,10 +47,10 @@ urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
     url(settings.ADMIN_URL, admin.site.urls),
     # MS AD authentication
-    # path(
-    #     'microsoft_authentication/',
-    #     include('microsoft_authentication.urls')
-    # ),
+    path(
+        'microsoft_authentication/',
+        include('microsoft_authentication.urls')
+    ),
 
     # Your stuff: custom urls includes go here
     path('i18n/', include('django.conf.urls.i18n')),
@@ -145,6 +145,13 @@ urlpatterns += i18n_patterns(
         include(
             ('olc_webportalv2.vir_typer.urls', 'vir_typer'),
             namespace='vir_typer'
+        )
+    ),
+    url(
+        r'^metadata_upload/',
+        include(
+            ('olc_webportalv2.metadata_upload.urls', 'metadata_upload'),
+            namespace='metadata_upload'
         )
     ),
 ) + static(
