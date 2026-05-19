@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Upload Successful</h1>
+<p>Your files have been uploaded and processed successfully.</p>
+<a href="{% url 'metadata_upload:upload_files' %}">Upload More Files</a>
+{% endblock %}
