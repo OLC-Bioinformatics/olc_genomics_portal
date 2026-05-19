@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+.idea/
 
 # C extensions
 # *.so
@@ -51,8 +53,10 @@ __pycache__/
 # *.mo
 # *.pot
 #
-# # Django stuff:
-# *.log
+# Django stuff:
+*.log
+*.db
+*.log.*
 # local_settings.py
 # db.sqlite3
 #
@@ -82,13 +86,13 @@ __pycache__/
 # *.sage.py
 #
 # # Environments
-# .env
-# .venv
-# env/
-# venv/
-# ENV/
-# env.bak/
-# venv.bak/
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak
+venv.bak/
 env
 #
 # # Spyder project settings
@@ -105,9 +109,33 @@ env
 # .mypy_cache/
 
 # Others
-.idea
 celerybeat-schedule.db
 *.fasta
 olc_webportalv2/media/
 celerybeat.pid
-nginx/
+archive/
+SeqMetadata*
+SeqTracking*
+
+# NGINX
+nginx/certs/
+nginx/nginx/
+nginx/*.bak
+nginx/*.crt
+nginx/*.key
+nginx/*.pem
+nginx/sites-enabled/django
+nginx/sites-enabled/django-https
+_.cloud-nuage.inspection.gc.ca.pfx
+*.crt
+*.key
+*.pem
+
+# ignore generated ajax output files
+olc_webportalv2/static/ajax/
+
+# Redmine attachments and issue export files
+redmine/attachments/
+redmine/issue_export/
+missing_attachments*
+*.crt

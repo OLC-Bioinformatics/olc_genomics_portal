@@ -1,0 +1,148 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  DJANGO_SERVER_NAME: 'foodport-dev.cloud-nuage.inspection.gc.ca'
+  REDMINE_SERVER_NAME: 'redmine-dev.cloud-nuage.inspection.gc.ca'
+
+pool:
+  name: self-hosted
+
+steps:
+- task: DownloadSecureFile@1
+  name: tlsCert
+  inputs:
+    secureFile: 'cloud-nuage.crt'
+
+- task: DownloadSecureFile@1
+  name: tlsKey
+  inputs:
+    secureFile: 'cloud-nuage.key'
+
+- task: DownloadSecureFile@1
+  name: tlsChain
+  inputs:
+    secureFile: 'cloud-nuage-chain.pem'
+
+- task: DownloadSecureFile@1
+  name: rootCA
+  inputs:
+    secureFile: 'GoC-GdC-Root-A.crt'
+
+- script: |
+    cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
+    cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
+  displayName: Copy root CA into Docker build contexts
+
+- script: |
+    sudo mkdir -p /etc/foodport/tls
+    sudo cp "$(tlsCert.secureFilePath)" /etc/foodport/tls/cloud-nuage.crt
+    sudo cp "$(tlsKey.secureFilePath)" /etc/foodport/tls/cloud-nuage.key
+    sudo cp "$(tlsChain.secureFilePath)" /etc/foodport/tls/cloud-nuage-chain.pem
+    sudo cp "$(rootCA.secureFilePath)" /etc/foodport/tls/GoC-GdC-Root-A.crt
+    sudo chmod 644 /etc/foodport/tls/cloud-nuage.crt
+    sudo chmod 600 /etc/foodport/tls/cloud-nuage.key
+    sudo chmod 644 /etc/foodport/tls/cloud-nuage-chain.pem
+    sudo chmod 644 /etc/foodport/tls/GoC-GdC-Root-A.crt
+  displayName: 'Install TLS certificates'
+
+- task: AzureKeyVault@2
+  inputs:
+    azureSubscription: 'CFDC-FoodPort-service-connection'
+    KeyVaultName: 'FoodPort-key-vault'
+    SecretsFilter: 'vm-image,vm-secret,vm-tenant,redmine-db-password,mysql-root-password,mysql-password'
+
+- script: |
+    python3 <<'PY'
+    import os
+    import os.path
+    path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
+    keys = [
+      'SECRET_KEY',
+      'AZURE_ACCOUNT_NAME',
+      'AZURE_ACCOUNT_KEY',
+      'BATCH_ACCOUNT_NAME',
+      'BATCH_ACCOUNT_URL',
+      'BATCH_ACCOUNT_KEY',
+      'BATCH_ACCOUNT_SUBNET',
+      'VM_IMAGE',
+      'COWBAT_NODE_AGENT_SKU',
+      'AMPLISEQ_IMAGE',
+      'AMPLISEQ_NODE_AGENT_SKU',
+      'COWSNPHR_IMAGE',
+      'COWSNPHR_NODE_AGENT_SKU',
+      'VM_CLIENT_ID',
+      'VM_SECRET',
+      'VM_TENANT',
+      'AD_APP_ID',
+      'AD_APP_SECRET_ID',
+      'AD_APP_SECRET',
+      'ENTRA_ID_CLIENT_ID',
+      'ENTRA_ID_CLIENT_SECRET',
+      'ENTRA_ID_TENANT_ID',
+      'REDMINE_DEFAULT_FROM',
+      'EMAIL_HOST_USER',
+      'EMAIL_HOST_PASSWORD',
+      'EMAIL_RELAY_SECRET',
+      'DJANGO_SERVER_NAME',
+      'REDMINE_SERVER_NAME',
+      'DB_NAME',
+      'DB_USER',
+      'DB_PASS',
+      'DB_SERVICE',
+      'DB_PORT',
+      'DJANGO_EMAIL_BACKEND',
+      'SENTRY_DSN',
+      'ENVIRONMENT',
+      'CONNECTION_STRING',
+      'FLOWER_USER',
+      'FLOWER_PASSWORD',
+      'SITE_URL',
+      'BUILD_SOURCESDIRECTORY',
+      'REDMINE_DB_PASSWORD',
+      'MYSQL_ROOT_PASSWORD',
+      'MYSQL_PASSWORD',
+    ]
+    with open(path, 'w', encoding='utf-8') as f:
+        for key in keys:
+            if key in os.environ:
+                f.write(f"{key}={os.environ[key]}\n")
+    PY
+    chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
+  displayName: 'Write env file from Key Vault variables'
+
+- script: |
+    python3 <<'PY'
+    import os
+    from pathlib import Path
+
+    root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+    vars = {
+      'DJANGO_SERVER_NAME': os.environ.get('DJANGO_SERVER_NAME'),
+      'REDMINE_SERVER_NAME': os.environ.get('REDMINE_SERVER_NAME'),
+    }
+    for name, value in vars.items():
+        if not value:
+            raise SystemExit(f"Required environment variable {name} is missing")
+
+    for template_name, output_name in [
+        ('nginx/sites-enabled/django.template', 'nginx/sites-enabled/django'),
+        ('nginx/sites-enabled/django-https.template', 'nginx/sites-enabled/django-https'),
+    ]:
+        src = root / template_name
+        dst = root / output_name
+        text = src.read_text(encoding='utf-8')
+        for key, value in vars.items():
+            text = text.replace(f'${{{key}}}', value)
+        dst.write_text(text, encoding='utf-8')
+    PY
+  displayName: 'Generate nginx site configs from templates'
+
+- script: |
+    cd "$(Build.SourcesDirectory)"
+    sudo rm -f celerybeat-schedule.db celerybeat.pid
+    docker compose down
+    docker compose up -d
+  displayName: 'Restart containers'

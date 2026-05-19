@@ -1,5 +1,3 @@
-version: '2'
-
 services:
   web: &web
     restart: always
@@ -7,14 +5,15 @@ services:
     expose:
       - "8000"
     links:
-      - postgres:postgres
+      # - postgres:postgres
       - redis:redis
+      - batch:batch
     env_file: env
     volumes:
       - ./:/data/web
       - ../AzureBatch:/data/AzureBatch
       - ./sequences:/sequences
-      # - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
     environment:
       - POSTGRES_USER=myproject_web
       - USE_DOCKER=yes
@@ -23,58 +22,120 @@ services:
       - DOCKER_HOST=unix:///var/run/docker.sock
     ports:
       - "8000"
-    command: /bin/bash -c "gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
+    command: /bin/bash -c "gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
+
+  batch:
+    restart: always
+    build:
+      context: ./batch
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    env_file: env
+    volumes:
+      - ./batch:/app
+    command: ["/app/start.sh"]
+
+  redmine:
+    restart: always
+    image: redmine:latest
+    build:
+      context: ./redmine/
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    depends_on:
+      - mariadb
+    env_file:
+      - env
+    # ENTRA_ID_CLIENT_ID, ENTRA_ID_CLIENT_SECRET and ENTRA_ID_TENANT_ID are loaded from env
+    environment:
+      - REDMINE_DB_MYSQL=mariadb
+      - REDMINE_DB_DATABASE=redmine
+      - REDMINE_DB_USERNAME=redmine
+      - REDMINE_DB_PASSWORD
+      - REDMINE_NO_DB_MIGRATE=1
+    volumes:
+      - ./redmine/files:/usr/src/redmine/files
+      - ./redmine/log:/usr/src/redmine/log
+      - ./redmine/config/configuration.yml:/usr/src/redmine/config/configuration.yml:rw
+    ports:
+      - "3000:3000"
+    command: ["bundle", "exec", "bash", "/usr/src/redmine/boot-redmine.sh"]
+
+  mariadb:
+    restart: always
+    image: mariadb:10.11
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE=redmine
+      - MYSQL_USER=redmine
+      - MYSQL_PASSWORD
+    volumes:
+      - redmine-db:/var/lib/mysql
 
   nginx:
     restart: always
     build: ./nginx/
     ports:
       - "80:80"
+      - "443:443"
     volumes_from:
       - web
+    volumes:
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - /etc/foodport/tls:/etc/nginx/certs:ro
     links:
       - web:web
+      - redmine:redmine
 
-  postgres:
-    restart: always
-    image: postgres:9.6
-    volumes:
-      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-      - ./backups/postgresql:/backup
-      - ./postgres-data:/var/lib/postgresql/data
-    env_file:
-      - env
-    expose:
-      - "5432"
+  # postgres:
+  #   restart: always
+  #   image: postgres:9.6
+  #   volumes:
+  #     - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+  #     - ./backups/postgresql:/backup
+  #     - ./postgres-data:/var/lib/postgresql/data
+  #   env_file:
+  #     - env
+  #   expose:
+  #     - "5432"
 
   redis:
+    restart: always
     image: redis:3.0
 
   celeryworker:
-    # https://github.com/docker/compose/issues/3220
+    restart: always
     <<: *web
     depends_on:
       - redis
-      - postgres
+      # - postgres
     command: ./worker_launcher.sh
 
-
   celerybeat:
-    # https://github.com/docker/compose/issues/3220
+    restart: always
     <<: *web
     depends_on:
       - redis
-      - postgres
+      # - postgres
     ports: []
     command: celery -A olc_webportalv2.taskapp beat -l info
 
   flower:
-     <<: *web
-     depends_on:
-       - celeryworker
-       - celerybeat
-     command: ["flower", "--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD","--broker=redis://redis:6379/0", "--port=8888"]
-     ports:
+    restart: always
+    <<: *web
+    depends_on:
+      - celeryworker
+      - celerybeat
+    command: [
+      "flower",
+      "--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD",
+      "--broker=redis://redis:6379/0",
+      "--port=8888"
+    ]
+    ports:
       - "8888:8888"
 
-
+volumes:
+  redmine-db:
