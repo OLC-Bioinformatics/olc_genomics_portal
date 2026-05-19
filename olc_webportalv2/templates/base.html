@@ -1,4 +1,5 @@
 {% load static i18n %}
+{% load custom_filters %}
 <!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
 {%if request.user.is_authenticated%}
@@ -57,7 +58,9 @@
                     class="fas fa-book"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %} <i
                     class="fas fa-file-pdf"></i></a>
-                <a class="dropdown-item" href="{% url 'filezone:filezone' %}">{% trans "FileZone " %} <i
+                <a class="dropdown-item" href="{% url 'metadata_upload:upload_files' %}">{% trans "Updata Metadatabase " %} <i
+                  class="fas fa-folder"></i></a>
+                    <a class="dropdown-item" href="{% url 'filezone:filezone' %}">{% trans "FileZone " %} <i
                   class="fas fa-folder"></i></a>
               </div>
             </div>
@@ -130,22 +133,22 @@
 
           <li class="nav-item active">
             {# URL provided by django-allauth/account/urls.py #}
-            <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %} <i
+            <a class="nav-link" href="{% url 'microsoft_authentication:microsoft_authentication_logout' %}">{% trans "Sign Out" %} <i
                 class="fas fa-sign-out-alt"></i></a>
           </li>
 
           {% else %}
           <li class="nav-item">
             {# URL provided by django-allauth/account/urls.py #}
-            <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Login" %} <i
+            <a id="log-in-link" class="nav-link" href="{% url 'microsoft_authentication:microsoft_authentication_login' %}">{% trans "Login" %} <i
                 class="fas fa-sign-in-alt"></i> </a>
           </li>
 
-          <li class="nav-item">
+          <!-- <li class="nav-item">
             {# URL provided by django-allauth/account/urls.py #}
             <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">{% trans "Sign Up" %} <i
                 class="fas fa-user-plus"></i></a>
-          </li>
+          </li> -->
 
           {% endif %}
         </ul>
@@ -161,7 +164,7 @@
     {% if messages %}
     {% for message in messages %}
     <div class="container">
-      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
+      <div class="alert {% if message.tags %}alert-{{ message.tags|handle_multivaluedict }}{% endif %}">{{ message }}</div>
     </div>
     {% endfor %}
     {% endif %}

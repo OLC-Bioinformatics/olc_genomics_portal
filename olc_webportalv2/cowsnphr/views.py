@@ -180,7 +180,7 @@ def upload_cowsnphr_files(request, cowsnphr_pk):
     # Extract the COWSNPhR model using the supplied pk
     cowsnphr = get_object_or_404(COWSNPhRRequest, pk=cowsnphr_pk)
     if request.method == 'POST':
-        for _, file in request.FILES.items():
+        for __, file in request.FILES.items():
             upload_files_for_cowsnphr(
                 file=file,
                 container_name=cowsnphr.container_name

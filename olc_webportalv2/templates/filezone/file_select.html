@@ -6,7 +6,29 @@
 {% load crispy_forms_tags %}
 {% block content %}
 
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warning Section Example</title>
+  <style>
+      .warning {
+          background-color: red; /* Choose a color that signifies warning */
+          color: white; /* Text color */
+          padding: 10px; /* Some padding around the text */
+          margin: 10px 0; /* Margin for spacing */
+          border: 3px solid red; /* A left border to highlight the warning */
+          font-size: 48px; /* Adjust the size as needed */
+          font-weight: bold;
+      }
+  </style>
+</head>
+
 <p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+
+<div class="warning">
+  <h1>{% trans "WARNING: If supplying a partial name, you must include * somewhere in the name. <br><br>2024-SEQ-0871*.fastq.gz will work. <br>2024-SEQ-0871 will not <br><br>240625* good <br>240625 bad"%}</h1>
+</div>
+
 <br>
   <form action='' method="post">
     {% if file_select_form.errors.container_regex %}
@@ -14,7 +36,7 @@
         {{ file_select_form.errors.container_regex|escape }}
       </div>
     {% endif %}
-    <p data-tooltip='tooltip' title='{% trans "Full or Partial Container Name(s)"%}'> {{ file_select_form.container_regex|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Full or Partial Container Name(s). NOTE: If supplying a partial name, you must include * somewhere in each term"%}'> {{ file_select_form.container_regex|as_crispy_field }}</p>
     <p data-tooltip='tooltip' title='{% trans "Terms to exclude from Container Name(s)"%}'> {{ file_select_form.container_exclude_regex|as_crispy_field }}</p>
     
     <br>
@@ -23,7 +45,7 @@
         {{ file_select_form.errors.file_regex|escape }}
       </div>
     {% endif %}
-    <p data-tooltip='tooltip' title='{% trans "Full or Partial File Name(s)"%}'> {{ file_select_form.file_regex|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "Full or Partial File Name(s) NOTE: If supplying a partial name, you must include * somewhere in each term"%}'> {{ file_select_form.file_regex|as_crispy_field }}</p>
     <p data-tooltip='tooltip' title='{% trans "Terms to exclude from File Name(s)"%}'> {{ file_select_form.file_exclude_regex|as_crispy_field }}</p>
 
   {% csrf_token %}
