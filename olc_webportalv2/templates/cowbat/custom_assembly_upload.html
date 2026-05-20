@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'cowbat:research_assembly' %}">{%trans "Research Assembly Home"%}</a></p>
+<br>
+
+    <h2>{% trans "Upload sequence files"%}</h2>
+    <br>
+    <div id="upload-div" class="center" style="width: 600px;"></div>
+    <form action={% url 'cowbat:upload_sequence_data' sequencing_run_pk=sequencing_run.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+
+        <div class="dz-message needsclick">
+            {% trans "Drop files to upload or click here"%}<br>
+            <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+    {% csrf_token %}
+    </form>
+    <br>
+    <br>
+    <button id="submit" class="btn btn-lg btn-success">{% trans "Upload Sequence Files and Begin Assembly"%}</button>
+
+    <br>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+    <script src="{% static 'js/dropzone.js' %}"></script>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script type="text/javascript">
+    function progressSpinner() {
+        var spinnerdiv = document.getElementById('upload-div');
+        let ele = document.getElementById('spindiv');
+        if (ele === null){
+            let div = document.createElement('div');
+            div.setAttribute('class', 'loader');
+            div.id = 'spindiv';
+            let text = document.createElement('H4');
+            let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+            text.appendChild(message);
+            spinnerdiv.appendChild(text);
+            spinnerdiv.appendChild(div);
+        }
+    }
+    Dropzone.options.myDropzone = {
+        // Prevents Dropzone from uploading dropped files immediately
+        autoProcessQueue: false,
+        addRemoveLinks: true,
+        createImageThumbnails: false,
+        // acceptedFiles: '.gz,.csv',
+        maxFilesize: 2048, // This is in MB. Shouldn't ever have files bigger than this.
+        parallelUploads: 4, // Number of files allowed to upload at once. Keep this number low to keep memory usage low
+        uploadMultiple: true,
+        maxFiles: 1000,
+        timeout: 3600000,
+        init : function() {
+            let submitButton = document.querySelector("#submit");
+            let myDropzone = this;
+            let errorOccurred = false; 
+            this.on("error", function(file, message) {
+                // If the error message is about an unacceptable file type
+                if (message === "You can't upload files of this type.") {
+                    message = "Invalid file type. Please upload .gz or .csv files.";
+                    errorOccurred = true;  // Set the flag to true
+                }
+                myDropzone.options.autoProcessQueue = false;
+                alert(message);
+                this.removeFile(file);
+            });
+             // Without this only the number specified by parallelUploads gets uploaded, and the 'Upload' button
+            // has to keep getting pressed. This makes it so upload button only has to be pressed once.
+            this.on("complete", function () {
+                if (errorOccurred) {  // Check the flag
+                    return;  // If an error occurred, do nothing
+                }
+                myDropzone.options.autoProcessQueue = true;
+                if (myDropzone.getQueuedFiles().length === 0) {
+                    window.location.replace("{% url 'cowbat:cowbat_processing' sequencing_run_pk=sequencing_run.pk %}");
+                }
+            });
+            // Ignore duplicate files
+            // from: https://stackoverflow.com/a/32890783
+            this.on("addedfile", function(file) {
+                if (this.files.length) {
+                    let _i, _len;
+                    for (_i = 0, _len = this.files.length; _i < _len - 1; _i++) { // -1 to exclude current file
+                        if(this.files[_i].name === file.name && this.files[_i].size === file.size && this.files[_i]
+                              .lastModifiedDate.toString() === file.lastModifiedDate.toString()) {
+                            this.removeFile(file);
+                        }
+                    }
+                }
+            });
+            submitButton.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                progressSpinner();
+                $('html, body').animate({ scrollTop: 0 }, 'fast');
+                $('#submit').prop('disabled', true);
+
+                // Tell Dropzone to process all queued files.
+                myDropzone.processQueue();
+            });
+        }
+    };
+    </script>
+{% endblock %}

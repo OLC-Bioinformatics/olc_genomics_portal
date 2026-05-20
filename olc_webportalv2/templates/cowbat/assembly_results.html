@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{#Head container#}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load dict_filter %}
+
+{% block content %}
+
+<!-- Link to the Assembly Home page, aligned to the right -->
+<p style="text-align: right"> <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a></p>
+<br>
+
+<!-- Display the title of the summary report -->
+<h4>Summary Report for {{ sequencing_run.run_name }} </h4>
+
+<!-- Start of the table -->
+<table id="assembly-table" class="table table-hover display nowrap" style="width:100%">
+    <!-- Table header -->
+    <thead>
+    <!-- Loop through the headers list and create a table header cell for each header -->
+    {% for header in headers %}
+    <th>{{header}}</th>
+    {% endfor %}
+    </thead>
+    <!-- Table body -->
+    <tbody>
+    <!-- Loop through the summary_results dictionary. The dictionary key is stored in pk and the value in summary -->
+    {% for pk, summary in summary_results.items %}
+        <!-- If the key is not 0, create a table row for the dictionary value -->
+        {% if pk != 0 %}
+        <tr style="text-align:center">
+            <!-- Loop through the headers list again and create a table data cell for each header -->
+            {% for header in headers %}
+            <!-- Use the get_item filter to get the value from the summary dictionary with the key header -->
+            <td>{{summary|get_item:header }}</td>
+            {% endfor %}
+        </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- Include jQuery library -->
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+
+<!-- Include DataTables JavaScript library -->
+<script src="{% static 'js/datatables.min.js' %}"></script>
+
+<!-- Include DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
+
+<script type="text/javascript">
+    // Execute the function when the document is ready
+    $(document).ready(function () {
+        // Initialize DataTables on the table with id 'assembly-table'
+        let table = $('#assembly-table').DataTable({
+            // Set the language of the table
+            language : {
+                url: getLanguage()
+            },
+            // Enable horizontal scrolling
+            scrollX: true,
+            // Disable pagination
+            paging: false,
+        });
+
+        // Draw the table, sorting based on the first column
+        table.column('0:visible').draw();
+    });
+</script>
+
+{% endblock %}

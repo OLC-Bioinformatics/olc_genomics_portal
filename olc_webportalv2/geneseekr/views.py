@@ -7,6 +7,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import ugettext_lazy as _
 # Standard libraries
 import datetime
+
+# Third-party imports
+from dal import autocomplete
+
 # Portal-specific things
 from olc_webportalv2.geneseekr.forms import GeneSeekrForm, TreeForm, AMRForm, ProkkaForm, NameForm, EmailForm, \
     NearNeighborForm
@@ -14,6 +18,7 @@ from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, 
     AMRDetail, ProkkaRequest, NearestNeighbors, NearNeighborDetail
 from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_mash, run_amr_summary, run_prokka, \
     run_nearest_neighbors
+from olc_webportalv2.metadata.models import Genus
 from olc_webportalv2.metadata.views import id_sync
 from azure.storage.blob import BlockBlobService
 import os
@@ -65,9 +70,13 @@ def geneseekr_query(request):
         form = GeneSeekrForm(request.POST, request.FILES)
         form_name = NameForm(request.POST)
         if form.is_valid():
-            seqids, query_sequence = form.cleaned_data
-            geneseekr_request = GeneSeekrRequest.objects.create(user=request.user,
-                                                                seqids=seqids)
+            seqids, query_sequence, benchmark = form.cleaned_data
+            
+            geneseekr_request = GeneSeekrRequest.objects.create(
+                user=request.user,
+                seqids=seqids,
+                benchmark=benchmark
+            )
             # Use query sequence if entered. Otherwise, read in the FASTA file provided.
             if query_sequence != '':
                 geneseekr_request.query_sequence = query_sequence
@@ -79,7 +88,11 @@ def geneseekr_query(request):
                 geneseekr_request.query_sequence = input_sequence
             geneseekr_request.status = 'Processing'
             geneseekr_request.save()
-            run_geneseekr.apply_async(queue='geneseekr', args=(geneseekr_request.pk, ), countdown=10)
+            run_geneseekr.apply_async(
+                queue='cowbat',
+                args=(geneseekr_request.pk, ),
+                time_limit=600
+            )
             if form_name.is_valid():
                 geneseekr_request.name = form_name.cleaned_data['name']
                 geneseekr_request.save()
@@ -97,7 +110,7 @@ def geneseekr_query(request):
 def geneseekr_processing(request, geneseekr_request_pk):
     geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
     form = EmailForm()
-    if request.method == 'POST':    
+    if request.method == 'POST':   
         form = EmailForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
@@ -109,7 +122,7 @@ def geneseekr_processing(request, geneseekr_request_pk):
     return render(request,
                   'geneseekr/geneseekr_processing.html',
                   {
-                     'geneseekr_request': geneseekr_request, 
+                     'geneseekr_request': geneseekr_request,
                      'form': form
                   })
 
@@ -160,7 +173,7 @@ def tree_request(request):
         if form.is_valid():
             seqids, name, number_diversitree_strains, other_files = form.cleaned_data
             tree_request = Tree.objects.create(user=request.user,
-                                                       seqids=seqids)
+                                               seqids=seqids)
             tree_request.status = 'Processing'
             if name is None:
                 tree_request.name = tree_request.pk
@@ -264,10 +277,10 @@ def amr_request(request):
                                                            seqids=seqids)
             amr_request_object.status = 'Processing'
             if name is None:
-                amr_request.name = amr_request.pk
+                amr_request_object.name = amr_request_object.pk
             else:
-                amr_request.name = name
-            container_name = 'mash-{}'.format(amr_request.pk)
+                amr_request_object.name = name
+            container_name = 'amrsummary-{}'.format(amr_request_object.pk)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
@@ -292,7 +305,7 @@ def amr_request(request):
 @login_required
 def amr_detail(request, amr_detail_pk):
     amr_detail_object = get_object_or_404(AMRDetail, pk=amr_detail_pk)
-    amr_request_object = AMRSummary.objects.get(amrdetail=amr_detail)
+    amr_request_object = AMRSummary.objects.get(amrdetail=amr_detail_object)
     return render(request,
                   'geneseekr/amr_detail.html',
                   {
@@ -539,3 +552,24 @@ def neighbor_name(request, neighbor_request_pk):
                       'neighbor_request': neighbor_request_object,
                       'form': form
                   })
+
+# Has to be its own view; can't be mixed with others
+class GenusAutoCompleter(autocomplete.Select2ListView):
+    """
+    Make an autocompleter for all the genera in our database
+    """
+    def __init__(self, **kwargs):
+        self.category = 'run'
+        super().__init__(**kwargs)
+
+    def get_list(self):
+        """
+        Modify get_list to use FileZone-specific components
+        """
+        # Create a query set of all the genera in the model
+        query_set = Genus.objects.all()
+        # Filter the query based on the text provided by the user in the autocomplete field
+        if self.q:
+            query_set.filter(genus__icontains=self.q)
+        # Return the sorted list of all the filtered genera
+        return sorted(list(set(str(result.genus).rstrip() for result in query_set)))

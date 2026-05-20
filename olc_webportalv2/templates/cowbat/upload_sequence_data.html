@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -105,7 +105,7 @@
         maxFilesize: 2048, // This is in MB. Shouldn't ever have files bigger than this.
         parallelUploads: 1, // Number of files allowed to upload at once. Keep this number low to keep memory usage low
         uploadMultiple: true,
-        maxFiles: 200,
+        maxFiles: 500,
         timeout: 3600000,
         init : function() {
             let submitButton = document.querySelector("#submit");

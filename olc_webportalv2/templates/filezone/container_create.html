@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+<br>
+
+ <form action='' method="post">
+  {% if container_form.errors %}
+     <div class="alert alert-danger" role="alert" align="center">
+     {{ container_form.non_field_errors|escape }}
+     {{ container_form.errors|escape }}
+    </div>
+  {% endif %}
+  <h4>{% trans 'Create a new container'%}</h4>
+    <p data-tooltip='tooltip' title='{% trans "Container Name"%}'> {{ container_form.container_name }}</p>
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-lg">{% trans 'View container' %}</button>
+ </form>
+
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+{% endblock %}

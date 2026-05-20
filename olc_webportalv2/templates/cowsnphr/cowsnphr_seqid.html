@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<p style="text-align: right"> <a href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR Home" %}</a></p>
+<br>
+  <form action='' method="post">
+    {% if cowsnphr_form.errors %}
+      <div class="alert alert-danger" role="alert" align="center">
+        {% for title, error in cowsnphr_form.errors.items %}
+          {{ error }}
+        {% endfor %}
+      </div>
+    {% endif %}
+    <p data-tooltip='tooltip' title='{% trans "Project Name"%}'> {{ cowsnphr_form.project_name|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "SEQID of Reference Sequence in FASTA format"%}'> {{ cowsnphr_form.ref|as_crispy_field }}</p>
+    <p data-tooltip='tooltip' title='{% trans "SEQIDS of Query Sequences in FASTQ format"%}'> {{ cowsnphr_form.seqids|as_crispy_field }}</p>
+    <br>
+
+  {% csrf_token %}
+  <br>
+  <button type="submit" class="btn btn-primary btn-lg">{% trans 'Run COWSNPhR' %}</button>
+
+  </form>
+
+  <br>
+{% endblock %}

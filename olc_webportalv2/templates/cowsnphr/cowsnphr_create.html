@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+{% comment %} Display any errors {% endcomment %}
+{% if cowsnphr_form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+    {% for category, error in cowsnphr_form.errors.items %}
+        {{ error }}
+    {% endfor %}
+</div>
+{% endif %}
+
+
+
+<p style="text-align: right"> <a href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR Home" %}</a></p>
+<br>
+<h2>{% trans "Provide arguments for COWSNPhR SNV analyses" %}</h2>
+<br>
+<form action='' method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ cowsnphr_form.project_name|as_crispy_field }}
+    <br>
+    {% if not upload%}
+        {{ container_form.container_name|as_crispy_field }}
+        <br>
+    {% endif %}
+    
+    {% comment %} Submit button. Start the analyses if the files are already in blob storage. {% endcomment %}
+    {% comment %} Otherwise, proceed to the file upload page {% endcomment %}
+    {% if upload %}
+    <button type="submit" class="btn btn-success btn-lg">{% trans 'Upload Sequence Files' %}</button>
+    {% else %}
+    <button type="submit" class="btn btn-primary btn-lg">{% trans 'Start COWSNPhR Analyses' %}</button>
+    {% endif %}
+</form>
+{% comment %} Required for autocomplete {% endcomment %}
+{{cowsnphr_form.media}}
+<br>
+{% comment %} Only allow the user to refresh the containers if the files are already in blob storage {% endcomment %}
+{% if not upload %}
+<a href='{% url 'cowsnphr:refresh' %}'><button class="btn btn-secondary btn"> Refresh Containers</button></a>
+{% endif %}
+
+{% endblock %}

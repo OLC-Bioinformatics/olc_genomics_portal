@@ -1,0 +1,9 @@
+production:
+  adapter: mysql2
+  database: redmine
+  socket: /run/mysqld/mysqld.sock
+  username: redmine
+  password: ${REDMINE_DB_PASSWORD}
+  encoding: utf8mb4
+  pool: 5
+  reconnect: false

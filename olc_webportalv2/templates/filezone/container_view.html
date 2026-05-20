@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% load filezone_tags %}
+{% block content %}
+
+<style>
+    tr.folder, tr.file {
+        display: none;
+    }
+    tr.folder.visible, tr.file.visible {
+        display: table-row;
+    }
+    #loadingPlaceholder {
+        text-align: center; /* Centers the spinner horizontally */
+    }
+    
+    .spinner {
+        display: inline-block; /* Allows the spinner to be affected by text-align */
+        border: 4px solid rgba(0,0,0,.1);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border-left-color: #007bff;
+        animation: spin 1s linear infinite;
+        margin-top: 20px; /* Optional: Adds some space above the spinner */
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    #search-warning {
+        background-color: #fff3cd; /* Light yellow background */
+        color: #856404; /* Dark yellow text color */
+        border-radius: 5px; /* Rounded corners */
+        padding: 10px; /* Padding inside the warning box */
+        margin-bottom: 10px; /* Space below the warning box */
+        font-size: 14px; /* Text size */
+        text-align: right; /* Align text to the right */
+        border: 1px solid #ffeeba; /* Light yellow border */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Slight shadow for depth */
+        display: inline-block; /* Adjust width to content */
+    }
+    
+    /* Container to center the warning box */
+    .center-container {
+        text-align: right; /* Center the content */
+    }
+</style>
+
+<p style="text-align: right"> <a href="{% url 'filezone:filezone' %}">{% trans "FileZone Home" %}</a></p>
+<br>
+
+<div id='archive-div'>
+    {% if sas_url %}
+        <a href="{{ sas_url }}" class="btn btn-info btn-block"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
+        <br><br>
+    {% endif %}
+</div>
+
+
+<h3 style="color: #333; font-family: 'Arial', sans-serif; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+    Container {{ container.container_name }}
+</h3>
+
+<div id="upload-div" class="center" style="width: 300px;"></div>
+    <br>
+    <form action={% url 'filezone:container_view' filezone_pk=container.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+        <div class="dz-message needsclick">
+            {% trans "Drop files to upload or click here"%}<br>
+            <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+    {% csrf_token %}
+
+    </form>
+    <br>
+<button id="submit" class="btn btn-lg btn-success">{% trans "Upload Files"%}</button>
+
+<br><br><br>
+
+<!-- File System View -->
+<form id="blob-form" action='' method="post" enctype="multipart/form-data">
+    <input type="hidden" id="form-action" name="form-action" value="empty">
+    <input type="hidden" id="blob_pk" name="blob_pk" value="empty">
+    <input type="hidden" id="blob_name" name="blob_name" value="empty"> 
+    <input type="hidden" id="blob_rename" name="blob_rename" value="empty"> 
+    {% csrf_token %}
+    <button type="submit" class="btn btn-dark" name="download">{% trans "Download Archive"%}</button>
+    {% if request.user.is_superuser == True %}
+    <button type="submit" class="btn btn-danger" name="delete">{% trans "Delete"%}</button>
+    {% endif %}
+    <!-- Loading Placeholder with Spinner -->
+    <div id="loadingPlaceholder" style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+        <p style="font-size: 18px; color: #343a40; margin-bottom: 20px; font-weight: bold;">Loading data, please wait...</p>
+        <div class="spinner" style="border: 4px solid rgba(0,0,0,.1); width: 50px; height: 50px; border-radius: 50%; border-left-color: #343a40; animation: spin 1s linear infinite;"></div>
+    </div>
+    <div id="file-system-view" style="display: none;"> <!-- Initially hide the table container -->
+        <br>
+        <!-- Search Warning -->
+        <div class="center-container">
+            <div id="search-warning">
+                Your search keystrokes are registered but may not be shown until the search function completes.
+            </div>
+        </div>
+        
+        <table id="file-system" class="display">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" name="pageCheck" value="yes" onclick="checkPage(this)">{% trans " Select All/None" %}</th>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Size" %}</th>
+                    <th>{% trans "Date" %}</th>
+                    <th>{% trans "MD5" %}</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% render_blob_hierarchy blobs %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+<link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+<script src="{% static 'js/dropzone.js' %}"></script>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script type="text/javascript">
+    function progressSpinner() {
+      var spinnerdiv = document.getElementById('upload-div');
+      let ele = document.getElementById('spindiv');
+      if (ele === null){
+          let div = document.createElement('div');
+          div.setAttribute('class', 'loader');
+          div.id = 'spindiv';
+          let text = document.createElement('H4');
+          let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+          text.appendChild(message);
+          spinnerdiv.appendChild(text);
+          spinnerdiv.appendChild(div);
+      }
+  }
+  Dropzone.options.myDropzone = {
+   // Prevents Dropzone from uploading dropped files immediately
+   autoProcessQueue: false,
+   addRemoveLinks: true,
+   createImageThumbnails: false,
+   maxFilesize: 2048, // This is in MB. Shouldn't ever have files bigger than this.
+   parallelUploads: 4, // Number of files allowed to upload at once. Keep this number low to keep memory usage low
+   uploadMultiple: true,
+   maxFiles: 500,
+   timeout: 3600000,
+   init : function() {
+       let myDropzone = this;
+       var submitButton = document.querySelector("#submit");
+       submitButton.addEventListener("click", function(e) {
+       e.preventDefault();
+       e.stopPropagation();
+       progressSpinner();
+       // Tell Dropzone to process all queued files.
+       myDropzone.processQueue();
+       
+    });
+    this.on("processing", function() {
+        this.options.autoProcessQueue = true;
+    });
+    this.on("queuecomplete", function (file) {
+        window.location = window.location.href;
+    });
+   }
+}
+</script>
+{% comment %} <script src="{% static 'js/datatables.min.js' %}"></script> {% endcomment %}
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/file-size.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+<script type="text/javascript">
+    //Sorting of page based on first column descending.
+    $(document).ready(function () {
+        var table = $('#blob-table').DataTable({
+            columnDefs: [
+                { type: 'file-size', targets: 2 }
+            ],
+            order: [[1, 'asc']],
+            language : {
+                url: getLanguage()
+            },
+            paging: false,
+            scrollCollapse: true,
+            scrollY: '500px',
+            
+    });
+});
+</script>
+
+<script type="text/javascript">
+    function checkPage(bx){                   
+        for (var tbls=document.getElementsByTagName("table"), i=tbls.length; i--; )
+            for (var bxs=tbls[i].getElementsByTagName("input"), j=bxs.length; j--; )
+                if (bxs[j].type=="checkbox")
+                    bxs[j].checked = bx.checked;
+    }
+
+    function checkChildren(folderCheckbox, level) {
+        var folderRow = folderCheckbox.closest("tr");
+        var folderPath = folderRow.dataset.path;
+        var rows = folderCheckbox.closest("table").getElementsByTagName("tr");
+    
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            // Check if the row is a direct child by comparing paths
+            if (isDirectChild(folderPath, row.dataset.path, row.dataset.level, level)) {
+                var checkbox = row.getElementsByTagName("input")[0];
+                if (checkbox) {
+                    checkbox.checked = folderCheckbox.checked;
+                }
+            }
+        }
+    }
+    
+    function isDirectChild(parentPath, childPath, childLevel, parentLevel) {
+        // Direct child should have exactly one level difference
+        if (parseInt(childLevel, 10) === parseInt(parentLevel, 10) + 1) {
+            // Construct the expected direct child path prefix based on parent path
+            var expectedPrefix = parentPath ? parentPath + "/" : "";
+            // Check if the child's path starts with the expected prefix and contains no additional slashes
+            // indicating it's a direct child and not a deeper descendant
+            return childPath.startsWith(expectedPrefix) && !childPath.slice(expectedPrefix.length).includes("/");
+        }
+        return false;
+    }
+</script>
+
+<script type="text/javascript">
+    $(".btn-danger").click(function(e) {
+        // Delete button SweetAlerts
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'delete';
+        
+        var selected = 0;
+        for (var tbls=document.getElementsByTagName("table"), i=tbls.length; i--; )
+           for (var bxs=tbls[i].getElementsByTagName("input"), j=bxs.length; j--; )
+              if (bxs[j].type=="checkbox") {
+                if (bxs[j].checked) {
+                    selected++;
+                }
+              }
+        if(selected) {
+            Swal.fire({
+                title: '{% trans "Are you sure?" %}',
+                text: '{% trans "You will not be able to revert this!" %}',
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: '{% trans "Yes, delete!"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value == true) {
+                    Swal.fire({
+                    title: '{% trans "Deleted!" %}',
+                    text: '{% trans "Your deletion request was submitted"%}',
+                    type: 'success',
+                    showConfirmButton: false
+                });
+                // Submit the form
+                form.submit();
+            } else {
+                Swal.fire({
+                    title: '{% trans "Cancelled!" %}',
+                    text: '{% trans "Deletion Cancelled!"%}',
+                    type: 'error',
+                    showConfirmButton: false
+                })
+            }
+        });} else {
+            Swal.fire({
+                text: '{% trans "Please select at least one file to be deleted!"%}',
+                type: 'error',
+                showConfirmButton: false
+            })
+        }
+    });
+
+    $(".btn-dark").click(function(e) {
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        hidden.value = 'download'; // Set the form action to 'download'
+        var selected = 0;
+        var selectedBlobs = []; // Array to hold the pks of selected blobs
+    
+        // Iterate over tables and checkboxes to find selected blobs
+        for (var tbls = document.getElementsByTagName("table"), i = tbls.length; i--;) {
+            for (var bxs = tbls[i].getElementsByTagName("input"), j = bxs.length; j--;) {
+                if (bxs[j].type == "checkbox" && bxs[j].checked) {
+                    selected++;
+                    console.log(bxs[j].value);
+                    selectedBlobs.push(bxs[j].value); // Add the pk of the selected blob
+                }
+            }
+        }
+        
+        // If more than one blob is selected, proceed with archive creation
+        if (selected > 1) {
+            // Create and append hidden inputs for each selected blob
+            selectedBlobs.forEach(function(pk) {
+                var input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "selected_options";
+                input.value = pk;
+                form.appendChild(input);
+            });
+    
+            Swal.fire({
+                title: '{% trans "Download" %}',
+                text: '{% trans "Create an archive containing the selected files?" %}',
+                showCancelButton: true,
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Create Archive"%}',
+                cancelButtonText: '{% trans "Cancel"%}',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.value == true) {
+                    Swal.fire({
+                        title: '{% trans "Submitted" %}',
+                        text: '{% trans "Your download request was submitted"%}',
+                        type: 'success',
+                        showConfirmButton: false
+                    });
+                    form.submit(); // Submit the form with the selected blobs
+                } else {
+                    Swal.fire({
+                        title: '{% trans "Cancelled!" %}',
+                        text: '{% trans "Archive Creation Cancelled!"%}',
+                        type: 'error',
+                        showConfirmButton: false
+                    });
+                }
+            });
+        } else {
+            Swal.fire({
+                text: '{% trans "Please select at least two files for an archive to be created!"%}',
+                type: 'error',
+                showConfirmButton: false
+            });
+        }
+    });
+
+    $(".btn-warning").click(function(e) {
+        //Rename button SweetAlerts
+        e.preventDefault();
+        var form = document.getElementById("blob-form");
+        var hidden = document.getElementById("form-action");
+        var btn = this;
+        hidden.value = 'rename';
+        var pk = document.getElementById("blob_pk");
+        var name = document.getElementById("blob_name");
+        var rename = document.getElementById("blob_rename");
+        // Decode the file name for display
+        var decodedFileName = btn.getAttribute("data-filename");
+        Swal.fire({
+        title: '{% trans "Rename" %}',
+        text: '{% trans "Renaming file: " %}' + decodedFileName,
+        width: '800px',
+        input: 'text',
+        inputPlaceholder: "New file name and path",
+        showCancelButton: true,
+        confirmButtonColor: '#FFC300',
+        confirmButtonText: '{% trans "Rename File"%}',
+        cancelButtonText:'{% trans "Cancel"%}',
+        reverseButtons: true
+        }).then(function(result) {
+            if (result.value) {
+                rename.value = result.value;
+                Swal.fire({
+                title: '{% trans "Confirm" %}',
+                text: '{% trans "Your file will be renamed from "%}' + decodedFileName + '{% trans " to "%}' + result.value,
+                width: '800px',
+                confirmButtonColor: '#2BBE26',
+                confirmButtonText: '{% trans "Rename File"%}',
+                cancelButtonText:'{% trans "Cancel"%}',
+                showCancelButton: true,
+                reverseButtons: true,
+                
+            }).then(function(result) {
+                if (result.value == true) {
+                    console.log(result.value);
+                    pk.value = btn.value;
+                    name.value = decodedFileName;
+                    
+                    form.submit();
+                } else {
+                    Swal.fire({
+                    title: '{% trans "Cancelled!" %}',
+                    text: '{% trans "File will not be renamed!"%}',
+                    type: 'error',
+                    showConfirmButton: false
+                })
+            };
+        })
+            } else {
+                Swal.fire({
+                title: '{% trans "Cancelled!" %}',
+                text: '{% trans "File will not be renamed!"%}',
+                type: 'error',
+                showConfirmButton: false
+            })
+        }
+    })
+});
+</script>
+
+<script type="text/javascript">
+    const el = document.getElementById('archive-button');
+        if (el) {
+            el.addEventListener('click', hideshow, false);
+        }
+
+    function hideshow() {
+        document.getElementById('archive-div').style.display = 'block'; 
+        this.style.display = 'none'
+    }   
+</script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hide the loading placeholder
+        document.getElementById('loadingPlaceholder').style.display = 'none';
+        document.getElementById('file-system-view').style.display = 'block';
+    
+        // Select all folders and files
+        const allFoldersAndFiles = document.querySelectorAll('tr.folder, tr.file');
+    
+        // Initially, remove the 'visible' class from all folders and files
+        allFoldersAndFiles.forEach(element => {
+            element.classList.remove('visible');
+        });
+    
+        // Then, add the 'visible' class only to top-level folders and files
+        const topLevelFoldersAndFiles = document.querySelectorAll('tr.folder[data-level="0"], tr.file[data-level="0"]');
+        topLevelFoldersAndFiles.forEach(element => {
+            element.classList.add('visible');
+        });
+    
+        // Attach click event listener to folders
+        const folders = document.querySelectorAll('tr.folder');
+        folders.forEach(folder => {
+            folder.addEventListener('click', function() {
+                // Toggle visibility of this folder's direct children
+                let nextRow = folder.nextElementSibling;
+                const currentLevel = parseInt(folder.getAttribute('data-level'), 10);
+                while (nextRow && parseInt(nextRow.getAttribute('data-level'), 10) > currentLevel) {
+                    if (parseInt(nextRow.getAttribute('data-level'), 10) === currentLevel + 1) {
+                        if (!nextRow.classList.contains('visible')) {
+                            nextRow.classList.add('visible'); // Show the item
+                        } else {
+                            nextRow.classList.remove('visible'); // Hide the item
+                            // If hiding a folder, also hide its children recursively
+                            if (nextRow.classList.contains('folder')) {
+                                hideChildrenRecursively(nextRow);
+                            }
+                        }
+                    }
+                    nextRow = nextRow.nextElementSibling;
+                }
+            });
+        });
+    
+        function hideChildrenRecursively(folder) {
+            let childRow = folder.nextElementSibling;
+            const folderLevel = parseInt(folder.getAttribute('data-level'), 10);
+            while (childRow && parseInt(childRow.getAttribute('data-level'), 10) > folderLevel) {
+                childRow.classList.remove('visible'); // Hide the child
+                if (childRow.classList.contains('folder')) {
+                    hideChildrenRecursively(childRow); // Recursively hide deeper nested children
+                }
+                childRow = childRow.nextElementSibling;
+            }
+        }
+    
+        // Initialize DataTables with custom draw callback
+        var table = $('#file-system').DataTable({
+            columnDefs: [
+                { type: 'file-size', targets: 1 }
+            ],
+            language: {
+                url: getLanguage(),
+            },
+            paging: false,
+            scrollCollapse: true,
+            scrollY: '700px',
+            deferRender: true,
+            ordering: false,
+            drawCallback: function(settings) {
+                // Check if a search has been performed
+                var searchPerformed = this.api().search().length > 0;
+
+                // Only proceed to adjust visibility if a search has been performed
+                if (searchPerformed) {
+                    // Use the 'visible' class to control visibility based on search results
+                    $('tr').removeClass('visible');
+
+                    this.api().rows({search:'applied'}).every(function(rowIdx, tableLoop, rowLoop) {
+                        var row = $(this.node());
+                        // Make the row visible if it's a file or a folder that matches the search
+                        if (row.hasClass('file') || row.hasClass('folder')) {
+                            row.addClass('visible');
+
+                            // Find and show the parent folder of this row
+                            var parentId = row.data('parent-id');
+                            while (parentId) {
+                                var parentRow = $('tr[data-id="' + parentId + '"]');
+                                parentRow.addClass('visible');
+                                // Update parentId to move up the folder hierarchy
+                                parentId = parentRow.data('parent-id');
+                            }
+                        }
+                    });
+                }
+                // If no search has been performed, do not alter the initial visibility state
+                // This ensures that on initial load, only top-level items are visible
+            }
+        });
+    });
+</script>
+    {% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load widget_tweaks %}
+{% load i18n %}
+{% block content %}
+
+<div class="h-100 justify-content-center">
+    <div class="container">
+        <div class="card-deck mb-3 text-center">
+            <div class="row mx-auto">
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Blob Assembly" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article1">
+                            {% trans "FASTQ files have already been uploaded to an appropriately named blob container" %}
+                        </p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowbat:blob_assembly' %}">{% trans "Assembly from Blob" %}</a>
+                    </div>
+                </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Upload Assembly" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article2">{% trans "FASTQ files will be uploaded as part of the project creation" %}</p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowbat:upload_assembly' %}">{% trans "Upload and Assemble FASTQ" %}</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+
+

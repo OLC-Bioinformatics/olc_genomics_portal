@@ -1,10 +1,13 @@
+import os
+import json
+import time
+from unittest.mock import patch
+
 from rest_framework.test import APITestCase
 from django.conf import settings
 from olc_webportalv2.users.models import User
 from olc_webportalv2.cowbat.models import SequencingRun
 from azure.storage.blob import BlockBlobService
-import time
-import json
 
 
 class TestAPI(APITestCase):
@@ -135,6 +138,87 @@ class TestAPI(APITestCase):
         response_dict = json.loads(response.content.decode('utf-8'))
         self.assertFalse(response_dict['exists'])
         self.assertEqual(response_dict['size'], 0)
+
+    def test_email_relay_requires_secret_header(self):
+        payload = {
+            'subject': 'Test',
+            'body': 'Hello',
+            'recipient': 'test@example.com'
+        }
+        response = self.client.post(
+            '/en-ca/api/email_relay/',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_email_relay_missing_fields(self):
+        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
+        payload = {
+            'subject': 'Test',
+            'body': 'Hello'
+        }
+        response = self.client.post(
+            '/en-ca/api/email_relay/',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_X_EMAIL_RELAY_SECRET='secret'
+        )
+        response_dict = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response_dict['status'], 'failure')
+        self.assertIn('recipient', response_dict['fields'])
+        del os.environ['EMAIL_RELAY_SECRET']
+
+    @patch('olc_webportalv2.api.views.send_email')
+    def test_email_relay_success(self, mock_send_email):
+        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
+        payload = {
+            'subject': 'Test',
+            'body': 'Hello',
+            'recipient': 'test@example.com'
+        }
+        response = self.client.post(
+            '/en-ca/api/email_relay/',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_X_EMAIL_RELAY_SECRET='secret'
+        )
+        response_dict = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_dict['status'], 'success')
+        mock_send_email.assert_called_once_with(
+            subject='Test',
+            body='Hello',
+            recipient='test@example.com'
+        )
+        del os.environ['EMAIL_RELAY_SECRET']
+
+    @patch('olc_webportalv2.api.views.send_email')
+    def test_email_relay_accepts_sender_name(self, mock_send_email):
+        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
+        payload = {
+            'subject': 'Test sender name',
+            'body': 'Hello with display name',
+            'recipient': 'test@example.com',
+            'sender_name': 'CFIA Local Redmine'
+        }
+        response = self.client.post(
+            '/en-ca/api/email_relay/',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_X_EMAIL_RELAY_SECRET='secret'
+        )
+        response_dict = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_dict['status'], 'success')
+        mock_send_email.assert_called_once_with(
+            subject='Test sender name',
+            body='Hello with display name',
+            recipient='test@example.com',
+            sender_name='CFIA Local Redmine'
+        )
+        del os.environ['EMAIL_RELAY_SECRET']
 
     def test_start_cowbat_login_required(self):
         response = self.client.get('/en-ca/api/run_cowbat/111111_FAKE')

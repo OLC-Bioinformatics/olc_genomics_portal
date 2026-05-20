@@ -4,7 +4,7 @@ from django.forms.formsets import BaseFormSet
 from django.forms import ModelForm
 from django import forms
 
-from .models import VirTyperProject, VirTyperRequest
+from olc_webportalv2.vir_typer.models import VirTyperProject, VirTyperRequest
 
 
 class BaseVirTyperSampleFormSet(BaseFormSet):
@@ -70,7 +70,7 @@ class BaseModelForm(ModelForm):
                     field.widget = forms.TextInput(
                         attrs={
                             'class': 'datepicker',
-                            'autocomplete' : 'off',
+                            'autocomplete': 'off',
                         }
                     )
 

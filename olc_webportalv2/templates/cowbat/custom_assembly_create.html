@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+{% if custom_form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+    {% for category, error in custom_form.errors.items %}
+        {{ error }}
+    {% endfor %}
+</div>
+{% endif %}
+
+<p style="text-align: right"> <a href="{% url 'cowbat:research_assembly' %}">{%trans "Research Assembly Home"%}</a></p>
+<br>
+
+<h2>{% trans "Set run name and arguments"%}</h2>
+<br>
+<form action='' method="post">
+    {% csrf_token %}
+    {{ custom_form.run_name|as_crispy_field}}
+    <br>
+    {{ custom_form.basic_assembly|as_crispy_field}}
+    {{ custom_form.preprocess|as_crispy_field}}
+    {{ custom_form.nextseq|as_crispy_field}}
+    <br>
+    <button id="submit" class="btn btn-lg btn-success">{% trans "Upload Sequence Files"%}</button>
+ </form>
+<link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+<link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+<script src="{% static 'js/dropzone.js' %}"></script>
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+{% endblock %}

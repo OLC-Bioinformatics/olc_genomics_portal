@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% load dictionary_keys %}
+
+{% block content %}
+<div style="text-align: left">
+    <a href="javascript:history.back()">{% trans "Back" %}</a>
+</div>
+<div style="text-align: right">
+    <a href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR Home" %}</a>
+</div>
+<br><br>
+{% comment %} Nucleotide Summary {% endcomment %}
+<h6>{% trans "Nucleotide Summary Table" %}</h6>
+<table id="nt-table" class="table table-hover" style="white-space: nowrap; font-family:'Courier New', Courier, monospace; ">
+    <thead>
+        <tr>
+            {% for column in request.nucleotide_headers %}
+                {% if column == 'SNV Position' %}
+                    <th colspan=20 style="font-weight: bold;">
+                        {{ column }}
+                    </th>
+                {% else %}
+                    <th style="font-weight: bold;">
+                        {{ column }}
+                    </th>
+                {% endif %}
+            {% endfor %} {% comment %} for column in request.nucleotide_headers {% endcomment %}
+            <th colspan={{ request.nucleotide_header_padding|length }}>&nbsp;</th>
+        </tr>
+    </thead>
+    {% with reference_seq=request.nucleotide_summary_table.1 %}
+    <tbody>
+        {% for pk, column_list in request.nucleotide_summary_table.items|dictsort:"0.lower" %}
+            <tr>
+                {% for column in column_list %}
+                    {% if column_list.0 == 'Annotation' or column_list.0 == '' %}
+                        {% if column != 'Annotation' %}
+                            <td style="writing-mode: vertical-lr; text-orientation: mixed; ">
+                                {{ column }}
+                            </td>
+                        {% comment %} The cell with "Annotation" should be horizontal {% endcomment %}
+                        {% else %}
+                        <td>
+                            {{ column }}
+                        </td>
+                        {% endif %}
+                    {% else %}
+                        {% comment %} Do not apply formatting to the first or last rows {% endcomment %}
+                        {% if pk == 0 or pk == request.nucleotide_summary_table|length %}
+                        <td>
+                            {{ column }}
+                        </td>
+                        {% comment %} Apply formatting to bases {% endcomment %}
+                        {% else %}
+                            {% comment %} Ignore the first column {% endcomment %}
+                            {% if forloop.counter0 %}
+                            {% access_list_position reference_seq 0 as ref_name %}
+                                {% if column_list.0 == ref_name %}
+                                <td>
+                                    {{ column }}
+                                </td>
+                                {% else %}
+                                    {% comment %} Format matching cells normally {% endcomment %}
+                                    {% access_list_position reference_seq forloop.counter0 as ref_base %}
+                                    {% if column == ref_base %}
+                                    <td style="font-weight: bold;">
+                                        {{ column }}
+                                    </td>
+                                    {% else %}
+                                        {% if column == 'A' %}
+                                            <td style="background-color: #58FA82; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'C' %}
+                                            <td style="background-color: #0000FF; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'G' %}
+                                            <td style="background-color: #F7FE2E; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'T' %}
+                                            <td style="background-color: #FF0000; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% elif column == 'N' %}
+                                            <td style="background-color: #E2CFDD; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% else %}
+                                            <td style="background-color: #E2CFDD; color: #C70039; font-weight: bold;">
+                                                {{ column }}
+                                            </td>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                            <td>
+                                {{ column }}
+                            </td>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        {% endfor%}
+    </tbody>
+    {% endwith %}
+</table>
+
+{% endblock %}

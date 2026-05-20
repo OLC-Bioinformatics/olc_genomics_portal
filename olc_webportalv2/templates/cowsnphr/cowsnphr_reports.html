@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+{% load dictionary_keys %}
+
+{% block content %}
+
+<div style="text-align: right">
+    <a href="{% url 'cowsnphr:cowsnphr' %}">{%trans "COWSNPhR Home"%}</a>
+    <br><br>
+</div>
+
+<h6>COWSNPHR Metrics</h6>
+<table id="metrics-table" class="table table-hover">
+    <thead>
+        <tr>
+            {% for column in request.contig_headers %}
+                {% if column != 'Contig' %}
+                    <th>
+                        {{ column }}
+                    </th>
+                {% endif %}
+            {% endfor %} {% comment %} for column in request.contig_headers {% endcomment %}    
+        </tr>
+    </thead>
+    <tbody>
+        {% for pk, sample_dict in request.contig_summary.items %}
+        <tr>
+            {% access_dictionary_key sample_dict "Contig" as summary_output %}
+            {% if summary_output  == "summary" %}
+                {% for column in request.contig_headers %}
+                {% access_dictionary_key sample_dict column as value %}
+                    {% if value != 'summary' %}
+                        <td>
+                            {{ value }}
+                        </td>
+                    {% endif %}
+                {% endfor %} {% comment %} for column in request.contig_headers {% endcomment %}
+            {% endif %}  
+        </tr>
+        {% endfor %} {% comment %} for sample in request.contig_summary.items {% endcomment %} 
+    </tbody>
+</table>
+
+<button class="btn btn-dark" id='contig-summary-button'>{% trans "Contig Summary" %}</button>
+
+<br><br>
+
+<a href="{% url 'cowsnphr:cowsnphr_nucleotide_summary' cowsnphr_pk=request.pk %}" 
+    class="btn btn-dark" role="button"> {% trans "Nucleotide Summary Table" %}
+</a>
+<a href="{% url 'cowsnphr:cowsnphr_amino_acid_summary' cowsnphr_pk=request.pk %}" 
+    class="btn btn-dark" role="button"> {% trans "Amino Acid Summary Table" %}
+</a>
+
+<br><br>
+{% comment %} Phylogenetic Tree {% endcomment %}
+{% comment %} TidyTree {% endcomment %}
+<a href="{% url 'cowsnphr:cowsnphr_tree' cowsnphr_pk=request.pk %}" 
+    class="btn btn-dark" role="button"> {% trans "Phylogenetic Tree" %}
+</a>
+<button class="btn btn-dark" id='matrix-button'>{% trans "SNV Matrix" %}</button>
+<button class="btn btn-dark" id='snv-alignment-button'>{% trans "SNV Alignment" %}</button>
+<button class="btn btn-dark" id='assembly-report-button'>{% trans "Assembly Report" %}</button>
+
+
+{% comment %} Contig Summary {% endcomment %}
+<div id="contig-summary-div"  style="display:none;">
+    <br><br>
+    <h6>{% trans "Contig Summary" %}</h6>
+    <table id="data-table" class="table table-hover">
+        <thead>
+            <tr>
+                {% for column in request.contig_headers %}
+                    <th>
+                        {{ column }}
+                    </th>
+                {% endfor %} {% comment %} for column in request.contig_headers {% endcomment %}    
+            </tr>
+        </thead>
+        <tbody>
+            {% for pk, sample_dict in request.contig_summary.items %}
+            <tr>
+                {% for column in request.contig_headers %}
+                    <td>
+                        {% access_dictionary_key sample_dict column %}
+                    </td>
+                {% endfor %} {% comment %} for column in request.contig_headers {% endcomment %}    
+            </tr>
+            {% endfor %} {% comment %} for sample in request.contig_summary.items {% endcomment %} 
+        </tbody>
+    </table>
+</div>
+
+{% comment %} SNV Matrix {% endcomment %}
+<div id="matrix-div" style="display:none;">
+    <br><br>
+    <h6>{% trans "SNV Matrix" %}</h6>
+    <table id="snv-table" class="table table-hover">
+        <thead>
+            <tr>
+                {% for column in request.snv_matrix_headers %}
+                    <th>
+                        {{ column }}
+                    </th>
+                {% endfor %} {% comment %} for column in request.snv_matrix_headers {% endcomment %}    
+            </tr>
+        </thead>
+        <tbody>
+            {% for pk, sample_dict in request.snv_matrix.items %}
+            <tr>
+                {% for column in request.snv_matrix_headers %}
+                    <td>
+                        {% access_dictionary_key sample_dict column %}
+                    </td>
+                {% endfor %} {% comment %} for column in request.snv_matrix_headers {% endcomment %}    
+            </tr>
+            {% endfor %} {% comment %} for sample in request.snv_matrix.items {% endcomment %} 
+        </tbody>
+    </table>  
+</div>
+
+{% comment %} SNV Alignment. Use the | safe tag to display HTML {% endcomment %}
+<div id="snv-alignment-div" style="display:none;">
+    <br><br>
+    <h6>{% trans "SNV Alignment" %}</h6>
+    <code style="color: #000000" >{{ request.alignment | safe }}</code>
+</div>
+
+{% comment %} Assembly Report {% endcomment %}
+<div id="assembly-report-div" style="display:none;">
+    <br><br>
+    <h6>{% trans "Assembly Report" %}</h6>
+    <table id="assembly-table" class="table table-hover">
+        <thead>
+            <tr>
+                {% for column in request.assembly_headers %}
+                    <th>
+                        {{ column }}
+                    </th>
+                {% endfor %} {% comment %} for column in request.assembly_headers {% endcomment %}    
+            </tr>
+        </thead>
+        <tbody>
+            {% for pk, sample_dict in request.assembly_report.items %}
+            <tr>
+                {% for column in request.assembly_headers %}
+                    <td>
+                        {% access_dictionary_key sample_dict column %}
+                    </td>
+                {% endfor %} {% comment %} for column in request.assembly_headers {% endcomment %}    
+            </tr>
+            {% endfor %} {% comment %} for sample in request.assembly_report.items {% endcomment %} 
+        </tbody>
+    </table>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/file-size.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        let table = $('#data-table').DataTable({
+            language : {
+                url: getLanguage()
+            },
+            paging: false,
+            scrollCollapse: true,
+            scrollY: '500px',
+            scrollX: '500px',
+        });
+        //Default order of table on page load
+        table
+            .order([0,"desc"])
+            .draw();
+    });
+
+    $(document).ready(function () {
+        let table = $('#snv-table').DataTable({
+            language : {
+                url: getLanguage()
+            },
+            paging: false,
+        });
+    });
+
+    {% comment %} Buttons to show and hide reports {% endcomment %}
+    $(document).ready(function() {
+        $("#nt-summary-button").click(function(){
+            $("#nt-summary-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+        }); 
+    });
+    
+    $(document).ready(function() {
+        $("#aa-summary-button").click(function(){
+            $("#aa-summary-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+        }); 
+    });
+
+    $(document).ready(function() {
+        $("#matrix-button").click(function(){
+            $("#matrix-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+        }); 
+    });
+
+    $(document).ready(function() {
+        $("#snv-alignment-button").click(function(){
+            $("#snv-alignment-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+        }); 
+    });
+
+    $(document).ready(function() {
+        $("#contig-summary-button").click(function(){
+            $("#contig-summary-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+        }); 
+    });
+
+    $(document).ready(function() {
+        $("#assembly-report-button").click(function(){
+            $("#assembly-report-div").toggle();
+            $(this).toggleClass("btn-dark");
+            $(this).toggleClass("btn-outline-dark");
+            var table = $('#assembly-table');
+            table.DataTable().destroy()
+            table.DataTable({
+                language : {
+                    url: getLanguage()
+                },
+                paging: false,
+                scrollCollapse: true,
+                scrollY: '600px',
+                scrollX: '600px',
+            });
+            
+            
+        }); 
+    });
+</script>
+{% endblock %}

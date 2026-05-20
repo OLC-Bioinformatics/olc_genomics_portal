@@ -1,18 +1,21 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
-<h2>{%trans "COWBAT Status for"%} {{ sequencing_run.run_name }}</h2>
-<br>
 {% if form.errors %}
 <div class="alert alert-danger" role="alert" align="center">
 {{ form.non_field_errors|escape }}
 </div>
 {% endif %}
 
+<p style="text-align: right"> <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a></p>
+<br>
+
+<h2>{%trans "COWBAT Status for"%} {{ sequencing_run.run_name }}</h2>
+<br>
 {% if sequencing_run.status == 'Unprocessed' %}
     <button class="btn btn-primary btn-block" disabled>{%trans "Unprocessed"%}</button>
 
@@ -116,6 +119,14 @@
      <div class="alert alert-primary" role="alert" align="center">
         <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i> <b>{%trans "Shareable link:"%} </b> {{ sequencing_run.download_link }}</p>
     </div>
+  <br>
+
+{% if summary_results %}
+  <div align="center">
+    <a href="{% url 'cowbat:assembly_results' sequencing_run_pk=sequencing_run.pk %}" class="btn btn-success"
+       role="button">{%trans "View Summary Metadata for "%} {{ sequencing_run.run_name }} </a>
+  </div>
+{% endif %}
 {% endif %}
 
   <script type="text/javascript">

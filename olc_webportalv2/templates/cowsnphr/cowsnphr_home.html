@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load bootstrap %}
+{% load widget_tweaks %}
+{% load i18n %}
+{% block content %}
+
+<h2>COWSNPhR Home</h2>
+
+<br>
+
+<div class="h-100 justify-content-center">
+    <div class="container">
+        <div class="card-deck mb-3 text-center">
+            <div class="row mx-auto">
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Blob Analyses" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article1" class="text-left">
+                            {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) have already been uploaded to an appropriately named blob container." %}
+                        </p>
+                        <p id="article2" class="text-left">
+                            {% blocktrans %}
+                                <strong>NOTE:</strong> FASTQ files must be in the 'fastq' subfolder, and the reference genome (and optional mask file) must be in the 'ref' folder.
+                            {% endblocktrans %}
+                        </p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowsnphr:blob_cowsnphr' %}">{% trans "Analyses from Blob" %}</a>
+                    </div>
+                </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Upload Analyses" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article2" class="text-left">
+                            {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) will be uploaded as part of the project creation" %}
+                        </p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowsnphr:upload_cowsnphr' %}">{% trans "Upload and Analyse FASTQ" %}</a>
+                    </div>
+                </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Analyses from SEQIDs" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p id="article3" class="text-left">
+                            {% trans "Supply SEQIDs for reference and query genomes" %}
+                        </p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowsnphr:seqid_cowsnphr' %}">{% trans "Analyses using SEQIDs" %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<table id="request-table" class="table table-hover">
+    <thead>
+    <tr style="text-align:center">
+        <th>{% trans "Project Name" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Reports" %}</th>
+        <th>{% trans "Request Date" %}</th>
+        <th data-orderable="false"></th>
+    </tr>
+    </thead>
+    <tbody>
+
+    {% for project in projects %}
+    <tr id="row{{project.pk}}" style="text-align:center">
+        <td>
+            <p style="text-align:center">{{ project }}</p>
+        </td>
+
+        {% if project.status == 'Complete' %}
+        <td>
+            <a href="{% url 'cowsnphr:cowsnphr_processing' cowsnphr_pk=project.pk %}"
+               class="btn btn-success btn-block" role="button"> {% trans "Complete" %}
+            <i class="fas fa-check-circle"></i>
+            </a>
+        </td>
+
+        {% elif project.status == 'Processing' %}
+        <td>
+            <a href="{% url 'cowsnphr:cowsnphr_processing' cowsnphr_pk=project.pk %}" 
+                class="btn progress-bar-striped progress-bar-animated bg-info btn-block"
+                    style="color:white;" role="button"> {% trans "Processing" %}
+            </a>
+        </td>
+
+        {% elif project.status == 'Error' %}
+        <td>
+            <a href="{% url 'cowsnphr:cowsnphr_processing' cowsnphr_pk=project.pk %}"
+               class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %}
+            </a>
+        </td>
+
+        {% elif project.status == 'Unprocessed' %}
+        <td>
+            <button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button>
+        </td>
+        {% endif %}
+
+        {% if project.status == 'Complete' %}
+        <td>
+            <a href="{{ project.archive_download_link }}"
+               class="btn btn-dark btn-block"  role="button">{% trans "Archive of Reports" %}
+                <i class="fas fa-download"></i>
+            </a>
+        </td>
+        {% else %}
+        <td>
+            <button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button>
+        </td>
+        {% endif %}
+
+        <td>
+            {{ project.created_at|date:"Y/m/d" }}
+        </td>
+
+        {% if project.status != 'Processing' and 'Unprocessed' %}
+        <form id="form{{project.pk}}" method="post">
+            <td align="center">
+                <button
+                        class="btn btn-danger btn-block" type="submit" id="btn{{project.pk}}"
+                        name="delBtn" value={{project.pk}}>{%  trans "Delete " %}
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+            <input type='hidden' id="delete{{project.pk}}" name="delete"
+                   value={{project.pk}}>
+        </form>
+
+        {% else %}
+        <td></td>
+        {% endif %}
+
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/datatables.min.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        let table = $('#request-table').DataTable({
+            language : {
+                url: getLanguage()
+            }
+        });
+        //Default order of table on page load
+        table
+            .order([3,"desc"], [0,"desc"])
+            .draw();
+    });
+
+    setInterval(function () {
+        {% for project in projects %}
+            {% if project.status == 'Processing' %}
+            window.location = window.location.href;
+        {% endif %}
+            {% endfor %}
+        },
+        15000); // This should refresh the page every 60 seconds as long as run status is processing
+
+$(".btn-danger").click(function(e) {
+    // Delete button SweetAlerts
+    e.preventDefault();
+    let btn = this.value;
+    let form = document.getElementById("form" + this.value);
+    Swal.fire({
+        title: '{% trans "Are you sure?" %}',
+        text: '{% trans "You will not be able to revert this!" %}',
+        type: 'warning',
+        showCancelButton: true,
+        cancelButtonText: '{% trans "Cancel" %}',
+        confirmButtonColor: '#d33',
+        confirmButtonText: '{% trans "Yes, delete it!" %}',
+        reverseButtons: true
+    }).then(function(result) {
+        if (result.value === true) {
+            Swal.fire({
+                title: '{% trans "Deleted!" %}',
+                text: '{% trans "Your project has been deleted." %}',
+                type: 'success',
+                showConfirmButton: false
+            }).then(function(cont) {
+                if (cont.value == null) {
+                    if (bowser.name === "Internet Explorer") { //allows for page submission IE
+                        $.ajax({
+                            type:"POST",
+                            data: {"delete":btn}}).done(function(data) {
+                                location.reload();
+                            });
+                    }else {
+                        form.submit();
+                    }
+                }
+            })
+        } else {
+            Swal.fire({
+                title: '{% trans "Cancelled!" %}',
+                text: '{% trans "Your project is safe." %}',
+                type: 'error',
+                showConfirmButton: false
+            })
+        }
+    })
+});
+</script>
+
+
+{% endblock %}
+
+
+
+

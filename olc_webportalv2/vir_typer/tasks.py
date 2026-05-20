@@ -1,17 +1,19 @@
+# from olc_webportalv2.cowbat.methods import AzureBatch
 from sentry_sdk import capture_exception
 from django.conf import settings
 from celery import shared_task
-import subprocess
 import os
+
+from olc_webportalv2.common.methods import generic_api_submit
 
 from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest
 
 
 def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file,
-                     vm_size='Standard_D8s_v3'):
+                     vm_size='Standard_D2s_v3'):
     """
     Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
-    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names
+    KubeJobSub package. Also, this assumes that you have settings imported, so you have access to storage/batch names
     and keys
     :param sequences: List of sequences that are going to be analyzed.
     :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
@@ -37,7 +39,7 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
         f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
         f.write('VM_SIZE:={}\n'.format(vm_size))
         f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-        # Desire format:
+        # Desired format:
         # CLOUDIN:=container_name/file1 container_name/file_2 sequences
         f.write('CLOUDIN:=')
         for seq in sequences:
@@ -74,9 +76,49 @@ def run_vir_typer(vir_typer_request_pk):
                          output_data_folder=container_name,
                          command=command,
                          config_file=batch_config_file)
+
+        # Create the system call
+        cmd = (
+            'source $CONDA/activate /envs/virustyper && '
+            'virustyper -r $AZ_BATCH_NODE_MOUNTS_DIR/{container_name} '
+            '-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/'.format(
+                container_name=container_name
+            )
+        )
+
+        # Submit the command to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            container_name=container_name,
+            vm_size='Standard_D2s_v3',
+            unique_id='FoodPort'
+        )
+        # # Create and submit the batch job
+        # generic_api_submit.apply_async(
+        #     kwargs={
+        #         'command': cmd,
+        #         'container_name': container_name,
+        #         'vm_size': 'Standard_D8s_v3',
+        #         'analysis_type': 'COWBAT',
+        #         'input_file_pattern': input_file_pattern,
+        #         'unique_id': 'FoodPort'
+        #     },
+        #     queue='cowbat',
+        #     countdown=10
+        # )
         # With that done, we can submit the file to batch with our package and create a tracking object.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # azure_task = AzureBatch()
+        # azure_task.main(
+        #     configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+        #     job_name=container_name,
+        #     output_dir='olc_webportalv2/media',
+        #     settings=settings,
+        #     keep_input_container=True,
+        #     download_output_files=False,
+        #     no_clean=True,
+        # )
         VirTyperAzureRequest.objects.create(project_name=vir_typer_project,
                                             exit_code_file='NA')
         vir_typer_project.status = 'Processing'

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% block content %}
+    <h2>{% trans "Upload Sequence Files and Run AmpliSeq Analyses"%}</h2>
+    <br>
+    <div id="upload-div" class="center" style="width: 600px;"></div>
+    <br>
+    <form action={% url 'ampliseq:upload_ampliseq_files' ampliseq_pk=ampliseq.pk %} class="dropzone" id="myDropzone" enctype="multipart/form-data" method="post" name="file-form">
+        <div class="dz-message needsclick">
+            {% trans "Drop files to upload or click here"%}<br>
+            <i class="fas fa-cloud-upload-alt fa-4x"></i>
+        </div>
+    {% csrf_token %}
+    </form>
+    <br>
+
+    <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
+    <script src="{% static 'js/dropzone.js' %}"></script>
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script type="text/javascript">
+    Dropzone.options.myDropzone = {
+        // Prevents Dropzone from uploading dropped files immediately
+        autoProcessQueue: true,
+        addRemoveLinks: true,
+        createImageThumbnails: false,
+        acceptedFiles: '.gz',
+        maxFilesize: 2048, // This is in MB. Shouldn't ever have files bigger than this.
+        parallelUploads: 4, // Number of files allowed to upload at once. Keep this number low to keep memory usage low
+        uploadMultiple: true,
+        maxFiles: 500,
+        timeout: 3600000,
+        init : function() {
+            let myDropzone = this;
+            // Redirect to the processing page when the upload is complete
+            this.on("complete", function () {
+                if (myDropzone.getQueuedFiles().length === 0) {
+                    window.location.replace("{% url 'ampliseq:ampliseq_processing' ampliseq_pk=ampliseq.pk %}");
+                }
+            });
+        }
+    }
+    </script>
+{% endblock %}

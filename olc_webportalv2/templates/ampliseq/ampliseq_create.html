@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load i18n widget_tweaks %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+{% comment %} Display any errors {% endcomment %}
+{% if ampliseq_form.errors %}
+<div class="alert alert-danger" role="alert" align="center">
+    {% for category, error in ampliseq_form.errors.items %}
+        {{ error }}
+    {% endfor %}
+</div>
+{% endif %}
+
+
+
+<p style="text-align: right"> <a href="{% url 'ampliseq:ampliseq' %}">{% trans "AmpliSeq Home" %}</a></p>
+<br>
+<h2>{% trans "Provide arguments for AmpliSeq 16S rRNA analyses" %}</h2>
+<br>
+<form action='' method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ ampliseq_form.project_name|as_crispy_field }}
+    <br>
+    {% if not upload%}
+        {{ container_form.container_name|as_crispy_field }}
+        <br>
+    {% endif %}
+    
+    {{ ampliseq_form.metadata|as_crispy_field }}
+    <br>
+    {{ ampliseq_form.forward_primer|as_crispy_field }}
+    {{ ampliseq_form.reverse_primer|as_crispy_field }}
+    <br>
+    <h4>{% trans "Read trimming and filtering options" %}</h4>
+    {{ ampliseq_form.max_ee|as_crispy_field }}
+    {% comment %} Read length options {% endcomment %}
+    {{ ampliseq_form.min_len|as_crispy_field }}
+    {{ ampliseq_form.max_len|as_crispy_field }}
+    {{ ampliseq_form.trunc_len_f|as_crispy_field }}
+    {{ ampliseq_form.trunc_len_r|as_crispy_field }}
+    {% comment %} Radio buttons for mutually exclusive taxonomy options {% endcomment %}
+    <br>
+    
+    <h4>{% trans "Taxonomy options" %}</h4>
+    {{ampliseq_form.taxonomy|as_crispy_field}}
+    <br>
+    {% comment %} Taxonomy choices are hidden by default {% endcomment %}
+    <div id="dadaDIV" style="display:none;">
+        {{ ampliseq_form.dada_ref_taxonomy|as_crispy_field }}
+    </div>
+    <div id="qiimeDIV" style="display:none;">
+        {{ ampliseq_form.qiime_ref_taxonomy|as_crispy_field }}
+    </div>
+    <div id="qiimeCustomDIV" style="display:none;">
+        {{ ampliseq_form.classifier|as_crispy_field }}
+    </div>
+    {{ ampliseq_form.exclude_taxa|as_crispy_field }}
+    <br>
+    {% comment %} Submit button. Start the analyses if the files are already in blob storage. {% endcomment %}
+    {% comment %} Otherwise, proceed to the file upload page {% endcomment %}
+    {% if upload %}
+    <button type="submit" class="btn btn-success btn-lg">{% trans 'Upload Sequence Files' %}</button>
+    {% else %}
+    <button type="submit" class="btn btn-primary btn-lg">{% trans 'Start AmpliSeq Analyses' %}</button>
+    {% endif %}
+</form>
+{% comment %} Required for autocomplete {% endcomment %}
+{{ampliseq_form.media}}
+<br>
+{% comment %} Only allow the user to refresh the containers if the files are already in blob storage {% endcomment %}
+{% if not upload %}
+<a href='{% url 'ampliseq:refresh' %}'><button class="btn btn-secondary btn"> Refresh Containers</button></a>
+{% endif %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
+
+<script type="text/javascript">
+    function taxonomy_display() {
+        {% comment %} Find the "taxonomy" radio button element{% endcomment %}
+        let taxonomy = document.getElementsByName('taxonomy');
+        {% comment %} Find the dada and qiime divs {% endcomment %}
+        dada_div = document.getElementById("dadaDIV");
+        qiime_div = document.getElementById("qiimeDIV");
+        qiime_custom_div = document.getElementById("qiimeCustomDIV");
+        {% comment %} DADA is checked (default) {% endcomment %}
+        if (taxonomy[0].checked) {
+            {% comment %} Display the dada div and hide the qiime and qiime custom divs {% endcomment %}
+            dada_div.style.display = "block";
+            qiime_div.style.display = "none";
+            qiime_custom_div.style.display = "none";
+        {% comment %} QIIME is checked {% endcomment %}
+        } else if (taxonomy[1].checked) {
+            {% comment %} Display the qiime div and hide the dada and qiime custom divs {% endcomment %}
+            qiime_div.style.display = "block";
+            dada_div.style.display = "none";
+            qiime_custom_div.style.display = "none";
+        {% comment %} QIIME custom is checked {% endcomment %}
+        } else if (taxonomy[2].checked) {
+            {% comment %} Display the qiime custom div and hide the qiime and dada divs {% endcomment %}
+            qiime_custom_div.style.display = "block";
+            qiime_div.style.display = "none";
+            dada_div.style.display = "none";
+        } 
+    }
+    {% comment %} Run the function on page loads {% endcomment %}
+    window.onload = taxonomy_display;
+  </script>
+
+{% endblock %}

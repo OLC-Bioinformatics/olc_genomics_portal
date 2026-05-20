@@ -1,5 +1,9 @@
+
+from decimal import Decimal
 from django.db import models
 from django.contrib.postgres.fields import ArrayField, JSONField
+from django.core.files.storage import FileSystemStorage
+from django.conf import settings  # To access azure credentials
 import os
 
 from django.forms.widgets import EmailInput
@@ -7,6 +11,13 @@ from django.forms.widgets import EmailInput
 # Create your models here.
 # TODO: InterOp file doesn't (I don't think) get used at all any more.
 # Actually delete it once verified that deleting it doesn't break everything.
+
+
+class OverwriteStorage(FileSystemStorage):
+    def get_available_name(self, name, max_length=None):
+        if self.exists(name):
+            os.remove(os.path.join(settings.MEDIA_ROOT, name))
+        return name
 
 
 def get_run_name(instance, filename):
@@ -18,6 +29,14 @@ def get_interop_name(instance, filename):
 
 
 class SequencingRun(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_index=True,
+        related_name='sequencing_runs',
+    )
     run_name = models.CharField(max_length=64, unique=True)
     status = models.CharField(max_length=64, default='Unprocessed')
     progress = models.CharField(max_length=128, default='Unprocessed')
@@ -32,6 +51,29 @@ class SequencingRun(models.Model):
     realtime_strains = JSONField(default=dict, blank=True, null=True)
     download_link = models.CharField(max_length=256, blank=True, default='')
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=list)
+    container = models.CharField(max_length=64, blank=True, default='')
+    pool_id = models.CharField(max_length=64, blank=True, default='')
+    job_id = models.CharField(max_length=64, blank=True, default='')
+    task_id = models.CharField(max_length=64, blank=True, default='')
+    batch_submit_status = models.CharField(
+        max_length=64,
+        blank=True,
+        default=''
+    )
+    batch_submit_errors = models.CharField(
+        max_length=64,
+        blank=True,
+        default=''
+    )
+    percent_complete = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.01')
+    )
+    # Arguments
+    basic_assembly = models.BooleanField(default=False)
+    preprocess = models.BooleanField(default=False)
+    nextseq = models.BooleanField(default=False, null=True)
 
     def __str__(self):
         return self.run_name
@@ -39,7 +81,7 @@ class SequencingRun(models.Model):
 
 class DataFile(models.Model):
     sequencing_run = models.ForeignKey(SequencingRun, on_delete=models.CASCADE, related_name='datafile')
-    data_file = models.FileField(upload_to=get_run_name)
+    data_file = models.FileField(upload_to=get_run_name, storage=OverwriteStorage())
 
 
 class InterOpFile(models.Model):
@@ -48,5 +90,18 @@ class InterOpFile(models.Model):
 
 
 class AzureTask(models.Model):
-    sequencing_run = models.ForeignKey(SequencingRun, on_delete=models.CASCADE, related_name='azuretask')
+    sequencing_run = models.ForeignKey(
+        SequencingRun,
+        on_delete=models.CASCADE,
+        related_name='azuretask'
+    )
     exit_code_file = models.CharField(max_length=256)
+
+
+class ResearchRun(models.Model):
+    run_name = models.CharField(max_length=64, unique=True)
+
+
+class SummaryMetadata(models.Model):
+    sequencing_run = models.ForeignKey(SequencingRun, on_delete=models.CASCADE, related_name='summarymetadata')
+    summary_results = JSONField(default=dict, blank=True, null=True)

@@ -1,8 +1,15 @@
 from django import forms
-from Bio import SeqIO
 from io import StringIO
 import re
-from olc_webportalv2.metadata.models import SequenceData
+
+# Third party imports
+from Bio import SeqIO
+from dal import autocomplete
+
+from olc_webportalv2.metadata.models import (
+    Genus,
+    SequenceData
+)
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest
 
 from django.forms.widgets import EmailInput
@@ -44,11 +51,56 @@ class NearNeighborForm(forms.Form):
 
 
 class GeneSeekrForm(forms.Form):
-    seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
-    query_sequence = forms.CharField(max_length=10000, widget=forms.Textarea(attrs={'placeholder': _('>Gene \n ACGTACGT')}), label='', required=False)
-    query_file = forms.FileField(label='', required=False)
-    genus = forms.CharField(max_length=48, label='', required=False)  # TODO: Genus should be an autocomplete field
+    # Options for benchmark database selection
+    benchmark_databases = (
+        ('Listeria', _('Listeria')),
+        ('VTEC', _('VTEC')),
+    )
+    seqids = forms.CharField(
+        max_length=100000,
+        widget=forms.Textarea(
+            attrs={
+                'placeholder': _('YYYY-LAB-####')
+            }
+        ),
+        label='',
+        required=False
+    )
+    query_sequence = forms.CharField(
+        max_length=10000,
+        widget=forms.Textarea(
+            attrs={
+                'placeholder': _('>Gene \n ACGTACGT')
+            }
+        ),
+        label='',
+        required=False
+    )
+    query_file = forms.FileField(
+        label='',
+        required=False
+    )
+    benchmark_db = forms.ChoiceField(
+        widget=forms.RadioSelect,
+        choices=benchmark_databases,
+        label='',
+        required=False,
+
+    )
+    
     everything_but = forms.BooleanField(required=False)
+    genus = forms.ModelChoiceField(
+        queryset=Genus.objects.all(),
+        widget=autocomplete.ModelSelect2(
+            url='geneseekr:genus_autocompleter',
+            attrs={
+                    'data-placeholder': 'Autocomplete ...',
+                    'style': 'max-width: 18em'
+                }
+            ),
+        required=False
+    )
+    
 
     def clean(self):
         super().clean()
@@ -56,6 +108,7 @@ class GeneSeekrForm(forms.Form):
         query_sequence = self.cleaned_data.get('query_sequence')
         query_file = self.cleaned_data.get('query_file')
         genus = self.cleaned_data.get('genus')
+        benchmark = self.cleaned_data.get('benchmark_db')
         exclude = self.cleaned_data.get('everything_but')
 
         # Check that SEQIDs specified are in valid SEQID format.
@@ -65,10 +118,11 @@ class GeneSeekrForm(forms.Form):
             if not re.match('\d{4}-[A-Z]+-\d{4}', seqid):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
-            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not formatted correctly. '
-                                        'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
-                                        'SEQID per line. '
-                                        'Invalid SEQIDs: %s') % bad_seqids)
+            raise forms.ValidationError(
+                _('One or more of the SEQIDs you entered was not formatted correctly. '
+                  'Correct format is YYYY-LAB-####. Also, ensure that you have entered one '
+                  'SEQID per line. '
+                  'Invalid SEQIDs: %s') % bad_seqids)
         # Also check that SEQIDs are present in our database of SEQIDs
         sequence_data_objects = SequenceData.objects.filter()
         seqids_in_database = list()
@@ -82,8 +136,8 @@ class GeneSeekrForm(forms.Form):
             raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database. '
                                         'SEQIDs not found: %s') % bad_seqids)
 
-        # If user didn't input SeqIDs into the SeqID text box, do filtering based on Genus.
-        if len(seqid_list) == 0:
+        # Filter based on genus if provided
+        if genus is not None:
             sequence_data_objects = SequenceData.objects.filter()
             for sequence_data in sequence_data_objects:
                 if exclude is True:
@@ -93,16 +147,19 @@ class GeneSeekrForm(forms.Form):
                     if sequence_data.genus.upper() == genus.upper() or genus == '':
                         seqid_list.append(sequence_data.seqid)
 
+        
         # Now check that we actually have some SeqIDs, or things will break.
-        if len(seqid_list) == 0:
+        if len(seqid_list) == 0 and not benchmark:
             if exclude is False:
                 raise forms.ValidationError(_('Your query did not correspond to any sequences in our database: query was for '
                                             'sequences from genus %s')% genus)
             else:
                 raise forms.ValidationError(_('Your query did not correspond to any sequences in our database: query was for '
                                             'sequences NOT from genus %s') % genus)
-
-
+        benchmark_lengths = {
+            'Listeria': 3226,
+            'VTEC': 11085
+        }
         # Ensure that query sequence or query file was submitted
         if query_sequence == '' and query_file is None:
             raise forms.ValidationError(_('No input found! You must submit a FASTA sequence by pasting it into the text '
@@ -146,7 +203,7 @@ class GeneSeekrForm(forms.Form):
             if num_nucleotides > 10000:
                 raise forms.ValidationError(_('FASTA sequence length maximum is 10000 bases. Your input sequence '
                                             'had %s bases.') % num_nucleotides)
-        return seqid_list, query_sequence
+        return seqid_list, query_sequence, benchmark
 
 
 class TreeForm(forms.Form):
@@ -311,16 +368,18 @@ class ProkkaForm(forms.Form):
 
 
 class NameForm(forms.Form):
-    name = forms.CharField(label=_('Name'), required=False ,widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+    name = forms.CharField(label=_('Name'), required=False,
+                           widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
+
 
 class EmailForm(forms.Form):
-    email = forms.CharField(max_length=50,label= "Email ", required=False)
+    email = forms.CharField(max_length=50, label="Email ", required=False)
 
     def clean(self):
         super().clean()
         email = self.cleaned_data.get('email')
-        EMAIL_REGEX = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
-        if len(email) <1:
+        email_regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+        if len(email) < 1:
             raise forms.ValidationError(_('Cannot be blank'))
-        if email and not re.match(EMAIL_REGEX, email):
+        if email and not re.match(email_regex, email):
             raise forms.ValidationError(_('Must be in proper email format'))

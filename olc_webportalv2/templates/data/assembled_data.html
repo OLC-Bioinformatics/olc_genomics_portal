@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
+
+<p style="text-align: right"> <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
+
   <h2>{% trans "Assembled Data Request"%}</h2>
   <p>{% trans "Enter the SEQIDs you want to retrieve FASTA files for below, one per line."%}</p>
   <br>

@@ -1,0 +1,20 @@
+---
+production:
+  rest_api_enabled: true
+  login_required: true
+  allow_password_change: true
+  email_delivery:
+    delivery_method: :smtp
+    smtp_settings:
+      address: email-smtp.ca-central-1.amazonaws.com
+      port: 587
+      domain: inspection.gc.ca
+      authentication: :login
+      # user_name and password are populated from EMAIL_HOST_USER / EMAIL_HOST_PASSWORD at startup
+      enable_starttls_auto: true
+  default_from: CFIA Redmine <cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca>
+  self_registration: false
+  default_language: en
+  default_timezone: UTC
+  enabled_login_sources: []
+  time_zone: UTC

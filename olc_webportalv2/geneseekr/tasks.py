@@ -1,33 +1,42 @@
-import os
-import glob
+#!/usr/bin/env python
+
+# Standard imports
+from glob import glob
 import shutil
-import datetime
-import subprocess
-from Bio import SeqIO
-import multiprocessing
-from io import StringIO
+import os
+
+# Third-party imports
+from email.mime.multipart import MIMEMultipart
+from sentry_sdk import capture_exception
+from email.mime.text import MIMEText
+from celery import shared_task
+import smtplib
+
+# Django imports
 from django.conf import settings
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, TopBlastHit, Tree, \
-    TreeAzureRequest, AMRSummary, AMRAzureRequest, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
+
+# Azure imports
+from azure.storage.blob import BlockBlobService
+
+# Local imports
+from olc_webportalv2.common.methods import generic_api_submit
+from olc_webportalv2.geneseekr.methods import zip_files
+from olc_webportalv2.geneseekr.models import GeneSeekrAzureRequest, \
+    GeneSeekrRequest, \
+    Tree, \
+    TreeAzureRequest, \
+    AMRSummary, \
+    AMRAzureRequest, \
+    ProkkaRequest, \
+    ProkkaAzureRequest, \
+    NearestNeighbors, \
+    NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
-from sentry_sdk import capture_exception
-
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-
-import csv
-from django.shortcuts import get_object_or_404
-
-from celery import shared_task
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import smtplib
 
 
 def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file,
-                     vm_size='Standard_D8s_v3', other_input_files=list()):
+                     vm_size='Standard_D8s_v3', other_input_files=None, target=None, benchmark=None):
     """
     Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
     KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names and keys
@@ -38,24 +47,24 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
     :param output_data_folder: Name of folder on VM that output files will be written to.
     :param command: Command that's going to be run on the SeqIDs
     :param config_file: Where you want to save the config file to.
-    :param vm_size: Size of VM you want to spin up. See https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general
+    :param vm_size: Size of VM you want to spin up.
+    See https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general
     for a list of options.
     :param other_input_files: List of other files to put into input folder. Each entry in list should be a string
     in format container_name/file_name
     :return:
     """
     # Azure Batch does not like it one bit when too many input files get specified, so in the event that we have too
-    # many (more than 50 or so), need to download them, zip them, and then upload the zip folder.
+    # many (more than 50 or so), we need to download them, zip them, and then upload the zip folder.
+    if other_input_files is None:
+        other_input_files = list()
+    output_container_name = '{job_name}-input'.format(job_name=job_name)
     if len(seqids) > 50:
-        # Create a zip file (but put where?) of all sequences.
-        job_dir = 'olc_webportalv2/media/{}'.format(job_name)
-        blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                       account_name=settings.AZURE_ACCOUNT_NAME)
-        for seqid in seqids:
-            blob_client.get_blob_to_path(container_name='processed-data',
-                                         blob_name='{}.fasta'.format(seqid),
-                                         file_path=os.path.join(job_dir, '{}.fasta'.format(seqid)))
-        shutil.make_archive(job_dir, 'zip', job_dir)
+        blob_file = zip_files(
+            seqids=seqids,
+            target_folder=job_name,
+            container_name='processed-data'
+        )
     with open(config_file, 'w') as f:
         f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
         f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
@@ -69,10 +78,18 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
         f.write('VM_SIZE:={}\n'.format(vm_size))
         f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
         if len(seqids) > 50:
-            f.write('INPUT:={}\n'.format(job_dir + '.zip'))
+            f.write('CLOUDIN:={archive}\n'.format(
+                archive=os.path.join(
+                    'temporary-storage',
+                    blob_file
+                )
+            ))
             # If we have to add lots of files, prepend that to our command.
-            prepend = 'unzip {zipfile} && mkdir {input_dir} && mv *.fasta {input_dir} && '.format(zipfile=job_name + '.zip',
-                                                                                                  input_dir=input_data_folder)
+            prepend = 'unzip {zipfile} && mkdir -p {input_dir} && mv *.fasta {input_dir} && ' \
+                'rm {zipfile} && '.format(
+                zipfile=job_name + '.zip',
+                input_dir=input_data_folder
+            )
             command = prepend + command
         else:
             if len(seqids) > 0:
@@ -80,11 +97,33 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
                 for seqid in seqids:
                     f.write('processed-data/{}.fasta '.format(seqid))
                 f.write('{}\n'.format(input_data_folder))
-            if len(other_input_files) > 0:
-                f.write('CLOUDIN:=')
-                for other_file in other_input_files:
-                    f.write('{} '.format(other_file))
-                f.write('{}\n'.format(input_data_folder))
+        if benchmark:
+            benchmark_lookup = {
+                'Listeria': 'listeria_benchmark.zip',
+                'VTEC': 'vtec_benchmark.zip'
+            }
+            blob_file = benchmark_lookup[benchmark]
+            f.write('CLOUDIN:={archive}\n'.format(
+                archive=os.path.join(
+                    'benchmarks',
+                    blob_file
+                )
+            ))
+            # Prepend the unzipping of the benchmark dataset archive, creation of the sequences
+            # folder, and moving the FASTA files to the sequence folder to the command
+            # prepend = 'unzip {zipfile} && mkdir -p {input_dir} && mv *.fasta {input_dir} && ' \
+            #     'rm {zipfile} && '.format(
+            #     zipfile=blob_file,
+            #     input_dir=input_data_folder
+            # )
+            # command = prepend + command
+        if len(other_input_files) > 0:
+            f.write('CLOUDIN:=')
+            for other_file in other_input_files:
+                f.write('{} '.format(other_file))
+            f.write('{}\n'.format(input_data_folder))
+        if target:
+            f.write('CLOUDIN:={target_container}/query.fasta targets\n'.format(target_container=output_container_name))
         # Adding / to the end of output folder makes AzureBatch download recursively.
         if not output_data_folder.endswith('/'):
             output_data_folder += '/'
@@ -100,34 +139,99 @@ def run_prokka(prokka_request_pk):
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
-        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        command = 'source $CONDA/activate /envs/prokka && mkdir {}'.format(container_name)
-        # Prokka doesn't seem to have any sort of way to run on multiple genomes, so we have to run it separately
-        # on each genome.
-        # TODO: Make sure this still works with a really long command caused by lots of SEQIDs
-        for seqid in prokka_request.seqids:
-            command += ' && prokka --outdir {container_name}/{seqid} --prefix {seqid} --cpus 8 sequences/{seqid}.fasta'.format(container_name=container_name,
-                                                                                                                               seqid=seqid)
-        for other_file in prokka_request.other_input_files:
-            command += ' && prokka --outdir {} --prefix {} --cpus 8 sequences/{}'.format(other_file,
-                                                                                         os.path.split(other_file)[1].replace('.fasta', ''),
-                                                                                         os.path.split(other_file)[1])
-        make_config_file(seqids=prokka_request.seqids,
-                         job_name=container_name,
-                         input_data_folder='sequences',
-                         output_data_folder=container_name,
-                         command=command,
-                         config_file=batch_config_file,
-                         other_input_files=prokka_request.other_input_files)
+        # batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        # command = 'source $CONDA/activate /envs/prokka && mkdir {}'.format(container_name)
+        # # Prokka doesn't seem to have any sort of way to run on multiple genomes, so we have to run it separately
+        # # on each genome.
+        # # TODO: Make sure this still works with a really long command caused by lots of SEQIDs
+        # for seqid in prokka_request.seqids:
+        #     command += ' && prokka --outdir {container_name}/{seqid} --prefix {seqid} ' \
+        #                '--cpus 8 sequences/{seqid}.fasta'\
+        #         .format(
+        #             container_name=container_name,
+        #             seqid=seqid
+        #         )
+        # for other_file in prokka_request.other_input_files:
+        #     command += ' && prokka --outdir {} --prefix {} --cpus 8 sequences/{}'\
+        #         .format(
+        #             other_file,
+        #             os.path.split(other_file)[1].replace('.fasta', ''),
+        #             os.path.split(other_file)[1]
+        #         )
+        # make_config_file(
+        #     seqids=prokka_request.seqids,
+        #     job_name=container_name,
+        #     input_data_folder='sequences',
+        #     output_data_folder=container_name,
+        #     command=command,
+        #     config_file=batch_config_file,
+        #     other_input_files=prokka_request.other_input_files
+        # )
         # With that done, we can submit the file to batch with our package and create a tracking object.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        ProkkaAzureRequest.objects.create(prokka_request=prokka_request,
-                                          exit_code_file='NA')
-        # Delete any downloaded fasta files that were used in zip creation if necessary.
-        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
-        for fasta_file in fasta_files_to_delete:
-            os.remove(fasta_file)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # azure_task = AzureBatch()
+        # azure_task.main(
+        #     configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+        #     job_name=container_name,
+        #     output_dir='olc_webportalv2/media',
+        #     settings=settings,
+        #     keep_input_container=True,
+        #     download_output_files=False,
+        #     vm_size='Standard_D8s_v3',
+        #     no_clean=True,
+        # )
+
+        # Create the command for the batch request
+        cmd = 'source $CONDA/activate /envs/prokka && '
+
+        for seqid in prokka_request.seqids:
+            cmd += ' && prokka ' \
+                '--outdir $AZ_BATCH_NODE_MOUNTS_DIR/{container}/{seqid} ' \
+                '--prefix {seqid} ' \
+                '--cpus 8 sequences/{seqid}.fasta'\
+                .format(
+                    container=container_name,
+                    seqid=seqid
+                )
+        for other_file in prokka_request.other_input_files:
+            cmd += ' && prokka ' \
+                '--outdir $AZ_BATCH_NODE_MOUNTS_DIR/{fasta} ' \
+                '--prefix {prefix} ' \
+                '--cpus 8 sequences/{file}'\
+                .format(
+                    fasta=other_file,
+                    prefix=os.path.split(other_file)[1].replace('.fasta', ''),
+                    file=os.path.split(other_file)[1]
+                )
+
+        # Initialise a list to store the SEQID patterns
+        input_file_pattern = []
+
+        # Get all the SEQIDs into the input_file_pattern
+        for seqid in prokka_request.seqids:
+            input_file_pattern.append(
+                'processed-data/{}.fasta '.format(seqid)
+            )
+
+        # Submit the request to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            container_name=container_name,
+            input_file_pattern=input_file_pattern,
+            vm_size='Standard_D8s_v3',
+            unique_id='FoodPort'
+        )
+
+        ProkkaAzureRequest.objects.create(
+            prokka_request=prokka_request,
+            exit_code_file='NA'
+        )
+        # # Delete any downloaded fasta files that were used in zip creation if
+        # # necessary.
+        # fasta_files_to_delete = glob(os.path.join(run_folder, '*.fasta'))
+        # for fasta_file in fasta_files_to_delete:
+        #     os.remove(fasta_file)
     except Exception as e:
         capture_exception(e)
         prokka_request.status = 'Error'
@@ -144,7 +248,7 @@ def run_sistr(sistr_request_pk):
             os.makedirs(run_folder)
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
         # TODO: This doesn't actually work right now - there's a .logfile attribute that doesn't get instantiated
-         # in the command line call, so crash. Need to update OLCTools
+        # in the command line call, so crash. Need to update OLCTools
         command = 'source $CONDA/activate /envs/cowbat && python -m spadespipeline.sistr -s sequences {container_name}' \
                   ' && mv sequences {container_name}'.format(container_name=container_name)
         make_config_file(seqids=sistr_request.seqids,
@@ -155,12 +259,23 @@ def run_sistr(sistr_request_pk):
                          config_file=batch_config_file)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        azure_task = AzureBatch()
+        azure_task.main(
+            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            job_name=container_name,
+            output_dir='olc_webportalv2/media',
+            settings=settings,
+            keep_input_container=True,
+            download_output_files=False,
+            vm_size='Standard_D8s_v3',
+            no_clean=True,
+        )
         # TODO: Have a SISTR request object get created and tracked.
         # Also TODO: add the SISTR request to monitor_tasks in olc_webportalv2/cowbat/tasks
         # Delete any downloaded fasta files that were used in zip creation if necessary.
-        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
+        fasta_files_to_delete = glob(os.path.join(run_folder, '*.fasta'))
         for fasta_file in fasta_files_to_delete:
             os.remove(fasta_file)
 
@@ -177,47 +292,110 @@ def run_amr_summary(amr_summary_pk):
         run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
-        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        # batch_config_file = os.path.join(run_folder, 'batch_config.txt')
         # Delete any downloaded fasta files that were used in zip creation if necessary.
-        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
-        for fasta_file in fasta_files_to_delete:
-            os.remove(fasta_file)
+        # fasta_files_to_delete = glob(os.path.join(run_folder, '*.fasta'))
+        # for fasta_file in fasta_files_to_delete:
+        #     os.remove(fasta_file)
         # click (which geneseekr uses) needs these env vars set or it freaks out.
-        command = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
-                  'source $CONDA/activate /envs/cowbat && GeneSeekr blastn -s sequences -t {resfinder_db} ' \
-                  '-r sequences/reports -R && python -m spadespipeline.mobrecon -s sequences -r {mob_db}' \
-                  ' && mv sequences {container_name}'.format(resfinder_db='/databases/0.3.4/resfinder',
-                                                             mob_db='/databases/0.3.4',
-                                                             container_name=container_name)
-        make_config_file(seqids=amr_summary_request.seqids,
-                         job_name=container_name,
-                         input_data_folder='sequences',
-                         output_data_folder=container_name,
-                         command=command,
-                         config_file=batch_config_file,
-                         other_input_files=amr_summary_request.other_input_files)
+        # command = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
+        #           'source $CONDA/activate /envs/cowbat && ' \
+        #           'GeneSeekr blastn -u -s sequences -t {resfinder_db} -r sequences/reports -A && ' \
+        #           'python -m genemethods.assemblypipeline.mobrecon -s sequences -r {mob_db} && ' \
+        #           'mv sequences {container_name}'.format(resfinder_db='/datadrive/0.5.0.23/resfinder',
+        #                                                  mob_db='/datadrive/0.5.0.23',
+        #                                                  container_name=container_name)
+        # command = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
+        #           'source $CONDA/activate /envs/cowbat && ' \
+        #           'GeneSeekr blastn ' \
+        #           '-s $AZ_BATCH_TASK_WORKING_DIR/{container_name}/sequences ' \
+        #           '-t {resfinder_db} ' \
+        #           '-r $AZ_BATCH_TASK_WORKING_DIR/{container_name}/sequences/reports -A && ' \
+        #           'python -m spadespipeline.mobrecon ' \
+        #           '-s $AZ_BATCH_TASK_WORKING_DIR/{container_name}/sequences -r {mob_db} && ' \
+        #           'mv $AZ_BATCH_TASK_WORKING_DIR/{container_name}/sequences {container_name}' \
+        #     .format(resfinder_db='/datadrive/0.5.0.23/resfinder',
+        #             mob_db='/datadrive/0.5.0.23',
+        #             container_name=container_name)
+        # make_config_file(seqids=amr_summary_request.seqids,
+        #                  job_name=container_name,
+        #                  input_data_folder='sequences',
+        #                  output_data_folder=container_name,
+        #                  command=command,
+        #                  config_file=batch_config_file,
+        #                  other_input_files=amr_summary_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # azure_task = AzureBatch()
+        # azure_task.main(
+        #     configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+        #     job_name=container_name,
+        #     output_dir='olc_webportalv2/media',
+        #     settings=settings,
+        #     keep_input_container=True,
+        #     download_output_files=False,
+        #     vm_size='Standard_D8s_v3',
+        #     no_clean=True,
+        # )
+        # Create the command for the batch request
+        cmd = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
+              'source $CONDA/activate /envs/cowbat && ' \
+              'GeneSeekr blastn -u ' \
+              '-s $AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences ' \
+              '-t {resfinder_db} ' \
+              '-r $AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences/reports ' \
+              '-A && ' \
+              'python -m genemethods.assemblypipeline.mobrecon ' \
+              '-s $AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences ' \
+              '-r {mob_db} && ' \
+              'mv $AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences ' \
+              '$AZ_BATCH_NODE_MOUNTS_DIR/{container}/'.format(
+                  resfinder_db='/datadrive/0.5.0.23/resfinder',
+                  mob_db='/datadrive/0.5.0.23',
+                  container=container_name
+               )
+
+        # Initialise a list to store the SEQID patterns
+        input_file_pattern = []
+
+        # Get all the SEQIDs into the input_file_pattern
+        for seqid in amr_summary_request.seqids:
+            input_file_pattern.append(
+                'processed-data/{}.fasta '.format(seqid)
+            )
+
+        # Submit the command to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            input_file_pattern=input_file_pattern,
+            container_name=container_name,
+            vm_size='Standard_D8s_v3',
+            unique_id='FoodPort'
+        )
         AMRAzureRequest.objects.create(amr_request=amr_summary_request,
                                        exit_code_file='NA')
-        # Delete any downloaded fasta files that were used in zip creation if necessary.
-        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
-        for fasta_file in fasta_files_to_delete:
-            os.remove(fasta_file)
+        # # Delete any downloaded fasta files that were used in zip creation if
+        # # necessary.
+        # fasta_files_to_delete = glob(os.path.join(run_folder, '*.fasta'))
+        # for fasta_file in fasta_files_to_delete:
+        #     os.remove(fasta_file)
     except Exception as e:
         capture_exception(e)
         amr_summary_request.status = 'Error'
         amr_summary_request.save()
 
 
-
 @shared_task
 def run_mash(tree_request_pk):
     tree_request = Tree.objects.get(pk=tree_request_pk)
     try:
-        container_name = 'mash-{}'.format(tree_request_pk)
-        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        container_name = 'tree-{}'.format(tree_request_pk)
+        run_folder = os.path.join(
+            'olc_webportalv2',
+            'media',
+            '{container}'.format(container=container_name)
+        )
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         # Set number of cpus to use/VM size based on how many sequences are input.
@@ -233,28 +411,73 @@ def run_mash(tree_request_pk):
         else:
             vm_size = 'Standard_D32s_v3'
             cpus = 32
-        # Create our config file for submission to azure batch service.
-        batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        make_config_file(seqids=tree_request.seqids,
-                             job_name=container_name,
-                             input_data_folder='sequences',
-                             output_data_folder=container_name,
-                             command='source $CONDA/activate /envs/mashtree && mkdir {outdir} && mashtree --numcpus '
-                                     '{cpus} sequences/*.fasta > {outdir}/mash.tree'.format(outdir=container_name, cpus=cpus),
-                             config_file=batch_config_file,
-                             vm_size=vm_size,
-                             other_input_files=tree_request.other_input_files)
+        # # Create our config file for submission to azure batch service.
+        # batch_config_file = os.path.join(run_folder, 'batch_config.txt')
+        # make_config_file(seqids=tree_request.seqids,
+        #                  job_name=container_name,
+        #                  input_data_folder='sequences',
+        #                  output_data_folder=container_name,
+        #                  command='source $CONDA/activate /envs/mashtree && mkdir {outdir} && mashtree --numcpus '
+        #                          '{cpus} sequences/*.fasta > {outdir}/mash.tree'.format(outdir=container_name,
+        #                                                                                 cpus=cpus),
+        #                  config_file=batch_config_file,
+        #                  vm_size=vm_size,
+        #                  other_input_files=tree_request.other_input_files)
         # With that done, we can submit the file to batch with our package.
         # Use Popen to run in background so that task is considered complete.
-        subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
-                        '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
-        TreeAzureRequest.objects.create(tree_request=tree_request,
-                                          exit_code_file=os.path.join(run_folder, 'exit_codes.txt'))
-        # Delete any downloaded fasta files that were used in zip creation if necessary.
-        fasta_files_to_delete = glob.glob(os.path.join(run_folder, '*.fasta'))
-        for fasta_file in fasta_files_to_delete:
-            os.remove(fasta_file)
- 
+        # subprocess.call('AzureBatch -k -d --no_clean -c {run_folder}/batch_config.txt '
+        #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
+        # azure_task = AzureBatch()
+        # azure_task.main(
+        #     configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+        #     job_name=container_name,
+        #     output_dir='olc_webportalv2/media',
+        #     settings=settings,
+        #     keep_input_container=True,
+        #     download_output_files=False,
+        #     vm_size='Standard_D8s_v3',
+        #     no_clean=True,
+        # )
+
+        # Create the command for the batch request
+        cmd = 'source $CONDA/activate /envs/mashtree && ' \
+              'mkdir $AZ_BATCH_NODE_MOUNTS_DIR/{container}/{outdir} && ' \
+              'mashtree --numcpus {cpus} ' \
+              '$AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences/*.fasta > ' \
+              '$AZ_BATCH_NODE_MOUNTS_DIR/{container}/{outdir}/mash.tree' \
+              .format(
+                  container=container_name,
+                  outdir=container_name,
+                  cpus=cpus
+              )
+
+        # Initialise a list to store the SEQID patterns
+        input_file_pattern = []
+
+        # Get all the SEQIDs into the input_file_pattern
+        for seqid in tree_request.seqids:
+            input_file_pattern.append(
+                ['processed-data/{sid}.fasta'.format(sid=seqid), 'sequences']
+            )
+
+        # Submit the command to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            container_name=container_name,
+            input_file_pattern=input_file_pattern,
+            vm_size=vm_size,
+            unique_id='FoodPort'
+        )
+
+        TreeAzureRequest.objects.create(
+            tree_request=tree_request,
+            exit_code_file=os.path.join(run_folder, 'exit_codes.txt')
+        )
+        # # Delete any downloaded fasta files that were used in zip creation if necessary.
+        # fasta_files_to_delete = glob(os.path.join(run_folder, '*.fasta'))
+        # for fasta_file in fasta_files_to_delete:
+        #     os.remove(fasta_file)
+
     except Exception as e:
         capture_exception(e)
         tree_request.status = 'Error'
@@ -262,302 +485,264 @@ def run_mash(tree_request_pk):
 
 
 def send_email(subject, body, recipient):
-    fromaddr = os.environ.get('EMAIL_HOST_USER')
-    toaddr = recipient
+    """
+    Sends an email with the given subject, body, and recipient.
+
+    If an "Access denied" SMTP data error or a "wrong version number" SMTP
+    server disconnected error occurs, the function will wait for 5 seconds and
+    then retry the operation. This retry process will happen up to 50 times.
+    If any other error occurs, it will be raised immediately.
+
+    Args:
+        subject (str): The subject of the email.
+        body (str): The body of the email.
+        recipient (str): The recipient's email address.
+
+    Raises:
+        smtplib.SMTPDataError: If an SMTP data error occurs that is not an
+        "Access denied" error.
+        smtplib.SMTPServerDisconnected: If an SMTP server disconnected error
+        occurs that is not a "wrong version number" error.
+    """
+    # Define the sender's email address
+    from_addr = \
+        'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
+    # Define the recipient's email address
+    to_addr = recipient
+
+    # Create a MIME multipart message
     msg = MIMEMultipart()
-    msg['From'] = fromaddr
-    msg['To'] = toaddr
+    msg['From'] = from_addr
+    msg['To'] = to_addr
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login(user=os.environ.get('EMAIL_HOST_USER'), password=os.environ.get('EMAIL_HOST_PASSWORD'))
-    text = msg.as_string()
-    server.sendmail(fromaddr, toaddr, text)
+    # Attempt to send the email up to 50 times
+    for _ in range(50):
+        try:
+            # Connect to the SMTP server
+            server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
+            # Start TLS encryption
+            server.starttls()
+            # Login to the SMTP server
+            server.login(
+                user=os.environ.get('EMAIL_HOST_USER'),
+                password=os.environ.get('EMAIL_HOST_PASSWORD')
+            )
+            # Convert the message to a string
+            text = msg.as_string()
+            # Send the email
+            server.sendmail(from_addr, to_addr, text)
+            # If the email is sent successfully, break out of the loop
+            break
+        except smtplib.SMTPDataError as e:
+            # If an SMTP data error occurs...
+            if e.smtp_code == 554 and b"Access denied" in e.smtp_error:
+                # If the error is an "Access denied" error, print a message
+                # and wait for 5 seconds before retrying
+                print("Access denied error occurred, retrying...")
+                sleep(5)
+            else:
+                # If it's a different error, re-raise it
+                raise
+        except smtplib.SMTPServerDisconnected as e:
+            # If the SMTP server gets disconnected...
+            if "wrong version number" in str(e):
+                # If the error is a "wrong version number" error, print a
+                # message, wait for 5 seconds, and reconnect to the server
+                print("Wrong version number error occurred, retrying...")
+                sleep(5)
+            else:
+                # If it's a different error, re-raise it
+                raise
+        finally:
+            # Close the connection to the SMTP server
+            server.quit()
 
 
-# TODO: Make geneseekr run on a cloud VM - then we can move the portal VM to a much smaller machine and save money, woo!
 @shared_task
 def run_geneseekr(geneseekr_request_pk):
+    """
+    This function is a shared task that runs GeneSeekr
+
+    It retrieves a GeneSeekrRequest object from the database using the
+    provided primary key, prepares the necessary files and environment for
+    running GeneSeekr, and submits the command to the AzureBatch service.
+    If the task encounters an error, it captures the exception and
+    updates the GeneSeekrRequest object's status and error fields.
+
+    Parameters:
+    geneseekr_request_pk (int): The primary key of the GeneSeekrRequest
+        object to process.
+
+    Returns:
+    None
+    """
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
     try:
-        # Step 1: Make a directory for our things.
-        geneseekr_dir = 'olc_webportalv2/media/geneseekr-{}'.format(geneseekr_request_pk)
-        if not os.path.isdir(geneseekr_dir):
-            os.makedirs(geneseekr_dir)
-        # If we're going to run things NOT via batch, all of our files to BLAST against should be stored locally.
-        # Need to create links to all those files in our geneseekr_dir.
-        sequence_dir = '/sequences'
-        # geneseekr_sequence_dir = os.path.join(geneseekr_dir, 'sequences')
-        # if not os.path.isdir(geneseekr_sequence_dir):
-        #     os.makedirs(geneseekr_sequence_dir)
-        # for seqid in geneseekr_request.seqids:
-        #     if not os.path.exists(os.path.join(geneseekr_sequence_dir, '{}.fasta'.format(seqid))):
-        #         os.symlink(src=os.path.join(sequence_dir, '{}.fasta'.format(seqid)), dst=os.path.join(geneseekr_sequence_dir, '{}.fasta'.format(seqid)))
-        # With our symlinks created, also create our query file.
-        geneseekr_query_dir = os.path.join(geneseekr_dir, 'targets')
-        if not os.path.isdir(geneseekr_query_dir):
-            os.makedirs(geneseekr_query_dir)
+        container_name = 'geneseekr-{pk}'.format(pk=geneseekr_request_pk)
+        run_folder = os.path.join(
+            'olc_webportalv2',
+            'media',
+            '{container}'.format(container=container_name)
+        )
 
-        with open(os.path.join(geneseekr_query_dir, 'query.tfa'), 'w') as f:
+        if not os.path.isdir(run_folder):
+            os.makedirs(run_folder)
+
+        # Create a name to write the user-supplied sequences to file
+        file_name = 'query.fasta'
+        target_file = os.path.join(run_folder, file_name)
+
+        # Write the sequences to file
+        with open(target_file, 'w', encoding='utf-8') as f:
             f.write(geneseekr_request.query_sequence)
 
-        if multiprocessing.cpu_count() > 1:
-            threads_to_use = multiprocessing.cpu_count() - 1
+        # Create the blob client
+        blob_client = BlockBlobService(
+            account_name=settings.AZURE_ACCOUNT_NAME,
+            account_key=settings.AZURE_ACCOUNT_KEY
+        )
+
+        # Create the container
+        blob_client.create_container(container_name)
+
+        # Upload user-provided file to the container in the targets subfolder
+        blob_client.create_blob_from_bytes(
+            container_name=container_name,
+            blob_name=os.path.join('targets', file_name),
+            blob=open(target_file, 'rb').read()
+        )
+
+        # Set the size of the batch VM to use based on the number of sequences
+        # to process
+        if len(geneseekr_request.seqids) < 10:
+            vm_size = 'Standard_D4s_v3'
+        elif len(geneseekr_request.seqids) < 30:
+            vm_size = 'Standard_D8s_v3'
+        elif len(geneseekr_request.seqids) < 150:
+            vm_size = 'Standard_D16s_v3'
         else:
-            threads_to_use = 1
-        # New way to do things: BLAST the entire database of stuff.
-        cmd = 'blastn -query {query_file} -db {mega_fasta} -out {blast_report} ' \
-                '-outfmt "6 qseqid sseqid pident length qlen qstart qend sstart send evalue" ' \
-                '-num_alignments 50000 ' \
-                '-num_threads {threads}'.format(query_file=os.path.join(geneseekr_query_dir, 'query.tfa'),
-                                                mega_fasta=os.path.join(sequence_dir, 'mega_fasta.fasta'),
-                                                blast_report=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                                                threads=threads_to_use)
+            vm_size = 'Standard_D32s_v3'
+        if geneseekr_request.benchmark:
+            vm_size = 'Standard_D32s_v3'
 
-        subprocess.call(cmd, shell=True)
+        # Initialise a list to store the input files
+        input_file_pattern = []
 
-        print('Reading geneseekr results')
-        get_blast_results(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                            geneseekr_task=geneseekr_request)
-        get_blast_detail(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                            geneseekr_task=geneseekr_request)
-        get_blast_top_hits(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                            geneseekr_task=geneseekr_request)
+        # click (which geneseekr uses) needs these environment variables set
+        cmd = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
+              'source $CONDA/activate /envs/cowbat && '
 
+        # Create a variable to store the extremely long path information
+        path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container}'.format(
+            container=container_name
+        )
 
-        # Get the blast report set up for download. Need to add a header first:
-        rewrite_blast_report(blast_result_file=os.path.join(geneseekr_dir, 'blast_report.tsv'),
-                             geneseekr_task=geneseekr_request)
+        # Benchmark datasets are stored in the benchmarks container. These
+        # analyses do not have supplied SEQIDs or other_input_files
+        if geneseekr_request.benchmark:
 
-       # Get sequence report
-        geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
-        geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
-        #opens document, consolidates info from geneseekr_request and geneseekr_details dictionaries into csv
-        with open(os.path.join(geneseekr_dir, 'seq_results.csv'), 'w') as seq:
-            writer = csv.writer(seq)
-            header = ['SeqID']
-            for key, value in geneseekr_request.geneseekr_results.items():
-                header.append(key)
-            writer.writerow(header)
-            csv_line = []
-            for geneseekr_detail in geneseekr_details:
-                csv_line.append(geneseekr_detail.seqid)
-                for key,value in geneseekr_detail.geneseekr_results.items():
-                    csv_line.append(value)
-                writer.writerow(csv_line)
-                csv_line = []
+            # Initialise a dictionary to look up the benchmark dataset archives
+            benchmark_lookup = {
+                'Listeria': 'listeria.zip',
+                'VTEC': 'vtec.zip'
+            }
 
-        print('Uploading result files')
-        blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                       account_name=settings.AZURE_ACCOUNT_NAME)
-        geneseekr_result_container = 'geneseekr-{}'.format(geneseekr_request.pk)
-        blob_client.create_container(geneseekr_result_container)
-        blob_name = os.path.split('olc_webportalv2/media/geneseekr-{}/blast_report.tsv'.format(geneseekr_request.pk))[1]
-        blob_name_seq = os.path.split('olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))[1]
-        blob_client.create_blob_from_path(container_name=geneseekr_result_container,
-                                            blob_name=blob_name,
-                                            file_path='olc_webportalv2/media/geneseekr-{}/blast_report.tsv'.format(geneseekr_request.pk))
-        blob_client.create_blob_from_path(container_name=geneseekr_result_container,
-                                            blob_name=blob_name_seq,
-                                            file_path='olc_webportalv2/media/geneseekr-{}/seq_results.csv'.format(geneseekr_request.pk))
-        # Generate an SAS url with read access that users will be able to use to download their sequences.
-        print('Creating Download Link')
-        sas_token = blob_client.generate_container_shared_access_signature(container_name=geneseekr_result_container,
-                                                                           permission=BlobPermissions.READ,
-                                                                           expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8))
-        sas_url = blob_client.make_blob_url(container_name=geneseekr_result_container,
-                                            blob_name=blob_name,
-                                            sas_token=sas_token)
-        sas_url_sequence = blob_client.make_blob_url(container_name=geneseekr_result_container,
-                                            blob_name=blob_name_seq,
-                                            sas_token=sas_token)
+            # Use the geneseekr_request.benchmark to look up the archive name
+            zip_file = benchmark_lookup[geneseekr_request.benchmark]
 
-        geneseekr_request.download_link = sas_url
-        geneseekr_request.download_link_sequence = sas_url_sequence
-        shutil.rmtree('olc_webportalv2/media/geneseekr-{}/'.format(geneseekr_request.pk))
-        geneseekr_request.status = 'Complete'
-        geneseekr_request.save()
-        
-        # email_list = geneseekr_request.emails_array
-        # for email in email_list:
-        #     send_email(subject='Geneseekr Query {} has finished.'.format(str(geneseekr_request)),
-        #                body='This email is to inform you that the Geneseekr Query {} has completed and is available at the following link {}'.format(str(geneseekr_request),sas_url),
-        #                recipient=email)    
+            # Set the input file information
+            input_file_pattern.append(
+                'benchmarks/{benchmark}'.format(
+                    benchmark=zip_file
+                )
+            )
+
+            # Update the command with archive decompression, deletion, and
+            # GeneSeekr arguments
+            cmd += (
+                    'mkdir -p /datadrive/{container}/sequences && '
+                    'unzip {path}/{zip_file} '
+                    '-d /datadrive/{container}/sequences && '
+                    'rm {path}/{zip_file} && '
+                    'cp -R {path} /datadrive/ && '
+                    'GeneSeekr blastn -u '
+                    '-s /datadrive/{container}/sequences '
+                    '-t /datadrive/{container}/targets '
+                    '-r /datadrive/{container}/reports && '
+                    'rsync -a /datadrive/{container} $AZ_BATCH_NODE_MOUNTS_DIR'
+                    .format(
+                        container=container_name,
+                        path=path,
+                        zip_file=zip_file
+                    )
+            )
+
+        # All other GeneSeekr requests use the same basic command
+        else:
+
+            # If there are lots of SEQIDs, they need to be zipped, and uploaded
+            # to the container
+            if len(geneseekr_request.seqids) > 50:
+                blob_file = zip_files(
+                    seqids=geneseekr_request.seqids,
+                    target_folder=container_name,
+                    container_name='processed-data'
+                )
+
+                # Add the zip file to the input files
+                input_file_pattern.append(
+                    'temporary-storage/{blob_file}'.format(
+                        blob_file=blob_file
+                    )
+                )
+                # Update the command with archive decompression, file moving,
+                # and archive deletion
+                cmd += (
+                    'mkdir -p {path}/sequences && '
+                    'unzip {path}/{blob_file} -d {path}/sequences &&  '
+                    'rm {path}/{blob_file} && '
+                    .format(
+                        blob_file=blob_file,
+                        path=path,
+                    )
+                )
+            else:
+                # Get all the SEQIDs into the input_file_pattern
+                for seqid in geneseekr_request.seqids:
+                    input_file_pattern.append(
+                        'processed-data/{}.fasta sequences'.format(seqid)
+                    )
+
+            # Add the GeneSeekr portion of the command
+            cmd += (
+                'GeneSeekr blastn -u '
+                '-s {path}/sequences '
+                '-t {path}/targets '
+                '-r {path}/reports'.format(
+                    path=path
+                )
+            )
+
+        # Submit the command to the AzureBatch service
+        generic_api_submit(
+            command=cmd,
+            container_name=container_name,
+            input_file_pattern=input_file_pattern,
+            vm_size=vm_size,
+            unique_id='FoodPort'
+        )
+        GeneSeekrAzureRequest.objects.create(
+            geneseekr_request=geneseekr_request,
+            exit_code_file='NA'
+        )
     except Exception as e:
         capture_exception(e)
         geneseekr_request.status = 'Error'
+        geneseekr_request.error = e
         geneseekr_request.save()
 
-
-class BlastResult:
-    def __init__(self, blast_tabdelimited_line):
-        # With my custom output format, headers are:
-        # Index 0: query sequence name
-        # Index 1: subject sequence name
-        # Index 2: percent identity
-        # Index 3: alignment length
-        # Index 4: query sequence length
-        # Index 5: query start position
-        # Index 6: query end position
-        # Index 7: subject start position
-        # Index 8: subject end position
-        # Index 9: evalue
-        x = blast_tabdelimited_line.rstrip().split()
-        self.query_name = x[0]
-        self.subject_name = x[1]
-        self.seqid = self.subject_name.split('_')[0]  # The fasta that's getting searched will always have SEQID_ as first part of contig name
-        self.percent_identity = float(x[2])
-        self.alignment_length = int(x[3])
-        self.query_sequence_length = int(x[4])
-        self.query_start_position = int(x[5])
-        self.query_end_position = int(x[6])
-        self.subject_start_position = int(x[7])
-        self.subject_end_position = int(x[8])
-        self.evalue = float(x[9])
-        # Also need to have amount of query sequence covered as a percentage.
-        self.query_coverage = 100.0 * self.alignment_length/self.query_sequence_length
-
-
-def get_blast_results(blast_result_file, geneseekr_task):
-    # This looks at all sequences we have and finds out how many of our SeqIDs have our query sequence(s).
-    # First, parse the query sequence associated with the geneseekr task to find out what our query IDs are.
-    query_names = list()
-    for query in SeqIO.parse(StringIO(geneseekr_task.query_sequence), 'fasta'):
-        query_names.append(query.id)
-
-    # Now get a dictionary initialized where we keep track of which SeqIDs have a hit for each query gene listed.
-    # When parsing the BLAST output file, if a gene is found, change the value to True
-    gene_hits = dict()
-    for query_name in query_names:
-        gene_hits[query_name] = dict()
-        for seqid in geneseekr_task.seqids:
-            gene_hits[query_name][seqid] = False
-
-    # Say anything with 90 percent identity over 90 percent of query length is a hit. # TODO: Make this user defined?
-    with open(blast_result_file) as f:
-        for result_line in f:
-            blast_result = BlastResult(result_line)
-            if blast_result.query_coverage > 90 and blast_result.percent_identity > 90 and blast_result.seqid in geneseekr_task.seqids:
-                gene_hits[blast_result.query_name][blast_result.seqid] = True
-
-    # Now for each gene, total the number of True.
-    for query in gene_hits:
-        num_hits = 0
-        for seqid in gene_hits[query]:
-            if gene_hits[query][seqid] is True:
-                num_hits += 1
-        percent_found = 100 * num_hits/len(geneseekr_task.seqids)
-        geneseekr_task.geneseekr_results[query] = percent_found
-    geneseekr_task.save()
-
-
-def get_blast_detail(blast_result_file, geneseekr_task):
-    # This method finds the percent ID for each gene for each SeqID
-    # First, parse the query sequence associated with the geneseekr task to find out what our query IDs are.
-    query_names = list()
-    for query in SeqIO.parse(StringIO(geneseekr_task.query_sequence), 'fasta'):
-        query_names.append(query.id)
-
-    # Now get a dictionary initialized where we keep track of which SeqIDs have a hit for each query gene listed.
-    # When parsing the BLAST output file, if a gene is found, change the value to True
-    gene_hits = dict()
-    for query_name in query_names:
-        gene_hits[query_name] = dict()
-        for seqid in geneseekr_task.seqids:
-            gene_hits[query_name][seqid] = 0.0
-
-    # Iterate through the blast file to find out the best hit
-    with open(blast_result_file) as f:
-        for result_line in f:
-            blast_result = BlastResult(result_line)
-            # Everything gets initialized to zero - only take top hit for each SeqID, which should be first hit in file.
-            if blast_result.seqid in gene_hits[blast_result.query_name]:
-                if gene_hits[blast_result.query_name][blast_result.seqid] == 0:
-                    gene_hits[blast_result.query_name][blast_result.seqid] = blast_result.percent_identity
-
-    for seqid in geneseekr_task.seqids:
-        geneseekr_detail = GeneSeekrDetail.objects.create(geneseekr_request=geneseekr_task,
-                                                          seqid=seqid)
-        results = dict()
-        for query in gene_hits:
-            results[query] = gene_hits[query][seqid]
-        geneseekr_detail.geneseekr_results = results
-        geneseekr_detail.save()
-
-
-def rewrite_blast_report(blast_result_file, geneseekr_task):
-    # The Raw blast report that is given to users kind of sucks - this function will re-write it so that:
-    # Only results that are actually part of the request get shown, and SEQIDs that were part of the request
-    # but didn't have any hits get that noted.
-
-    # First, create a copy of the blast_result_file in case anything gets real messed up.
-    blast_backup_file = blast_result_file + '.bak'
-    shutil.copy(blast_result_file, blast_backup_file)
-
-    # Need to keep track of what SEQIDs have what genes. To do this, populate a dictionary where keys are SEQIDs and
-    # values are a list of the target genes. Whenever we find a hit, remove the target gene from the list. Once done
-    # iterating through the blast result file, write the things that are still there as missing.
-    genes_not_present = dict()
-    for seqid in geneseekr_task.seqids:
-        genes_not_present[seqid] = list()
-        for query_gene in geneseekr_task.gene_targets:
-            genes_not_present[seqid].append(query_gene)
-
-    # Now iterate through the backup file, writing to the new file as we go.
-    with open(blast_backup_file) as infile:
-        with open(blast_result_file, 'w') as outfile:
-            outfile.write('QuerySequence\tSubjectSequence\tPercentIdentity\tAlignmentLength\tQuerySequenceLength'
-                          '\tQueryStartPosition\tQueryEndPosition\tSubjectStartPosition\tSubjectEndPosition\tEValue\n')
-            for result_line in infile:
-                blast_result = BlastResult(result_line)
-                if blast_result.seqid in geneseekr_task.seqids:
-                    outfile.write(result_line)
-                    try:  # Remove the gene found from the genes_not_present since we found it.
-                        genes_not_present[blast_result.seqid].remove(blast_result.query_name)
-                    except ValueError:
-                        # Possible to get multiple hits for one gene, and then we're trying to remove something
-                        # that's already gone, raising a ValueError. In that case, just don't do anything.
-                        pass
-            for seqid in genes_not_present:
-                for query_gene in genes_not_present[seqid]:
-                    outfile.write('{}\t{}\t0\t0\t0\t0\t0\t0\t0\tNA\n'.format(query_gene, seqid))
-
-
-def get_blast_top_hits(blast_result_file, geneseekr_task, num_hits=50):
-    # Looks at the top 50 hits for a GeneSeekr request and provides a blast-esque interface for them
-    query_hit_count = dict()
-    gene_targets = list()
-    for query in SeqIO.parse(StringIO(geneseekr_task.query_sequence), 'fasta'):
-        query_hit_count[query.id] = 0
-        gene_targets.append(query.id)
-
-    geneseekr_task.gene_targets = gene_targets
-    geneseekr_task.save()
-    with open(blast_result_file) as f:
-        for result_line in f:
-            blast_result = BlastResult(result_line)
-            if blast_result.seqid in geneseekr_task.seqids:
-                top_blast_hit = TopBlastHit(contig_name=blast_result.subject_name,
-                                            query_coverage=blast_result.query_coverage,
-                                            percent_identity=blast_result.percent_identity,
-                                            start_position=blast_result.subject_start_position,
-                                            end_position=blast_result.subject_end_position,
-                                            e_value=blast_result.evalue,
-                                            geneseekr_request=geneseekr_task,
-                                            gene_name=blast_result.query_name,
-                                            query_start_position=blast_result.query_start_position,
-                                            query_end_position=blast_result.query_end_position,
-                                            query_sequence_length=blast_result.query_sequence_length)
-                top_blast_hit.save()
-                query_hit_count[blast_result.query_name] += 1
-            all_have_50_hits = True
-            for query_id in query_hit_count:
-                if query_hit_count[query_id] < num_hits:
-                    all_have_50_hits = False
-            if all_have_50_hits:
-                break
 
 #################### NEAREST NEIGHBORS TASK ##############################
 @shared_task
@@ -587,9 +772,11 @@ def run_nearest_neighbors(nearest_neighbor_pk):
                                          file_path=fasta_file)
 
         mash_output_file = os.path.join(work_dir, 'mash_dist_results.tsv')
-        cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,  # TODO: Actually install mash in dockerfile
-                                                             sketch='/data/web/sketchomatic.msh',  # TODO: Change me!
-                                                             output=mash_output_file)
+        cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,
+                                                                                         # TODO: Actually install mash in dockerfile
+                                                                                         sketch='/data/web/sketchomatic.msh',
+                                                                                         # TODO: Change me!
+                                                                                         output=mash_output_file)
         os.system(cmd)  # Subprocess doesn't work here. Should be OK to switch once mash is actually installed.
         shutil.make_archive(work_dir, 'zip', work_dir)
         sas_url = generate_download_link(blob_client=blob_client,
@@ -619,4 +806,3 @@ def run_nearest_neighbors(nearest_neighbor_pk):
         capture_exception(e)
         nearest_neighbor_request.status = 'Error'
         nearest_neighbor_request.save()
-
