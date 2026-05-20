@@ -1,3 +1,12 @@
+resources:
+  pipelines:
+  - pipeline: infra
+    source: 'OLC-Bioinformatics.olc_genomics_portal'
+    trigger:
+      branches:
+        include:
+          - main
+
 parameters:
 - name: deployEnvironment
   type: string
@@ -37,13 +46,21 @@ variables:
 stages:
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: and(eq(parameters.bootstrapRemoteVm, true), ne(variables.TARGET_HOST, ''))
+  condition: eq(parameters.bootstrapRemoteVm, true)
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
     pool:
       vmImage: 'ubuntu-latest'
     steps:
+    - download: infra
+      artifact: portal-trigger
+
+    - script: |
+        TARGET_HOST=$(cat "$(Pipeline.Workspace)/infra/portal-trigger/vm_ip.txt")
+        echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
+      displayName: 'Load TARGET_HOST from infra artifact'
+
     - task: DownloadSecureFile@1
       name: sshKey
       inputs:
