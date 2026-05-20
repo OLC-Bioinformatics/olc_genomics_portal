@@ -46,7 +46,7 @@ variables:
 stages:
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: eq(parameters.bootstrapRemoteVm, true)
+  condition: eq(${{ parameters.bootstrapRemoteVm }}, true)
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
