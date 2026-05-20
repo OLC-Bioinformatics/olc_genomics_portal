@@ -137,5 +137,9 @@ olc_webportalv2/static/ajax/
 # Redmine attachments and issue export files
 redmine/attachments/
 redmine/issue_export/
+redmine/files/
+redmine/backups/
 missing_attachments*
 *.crt
+redmine/config/secrets.yml
+redmine/config/database.yml
