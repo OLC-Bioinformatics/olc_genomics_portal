@@ -5,6 +5,9 @@ parameters:
   values:
     - dev
     - prod
+- name: bootstrapRemoteVm
+  type: boolean
+  default: false
 
 trigger:
   branches:
@@ -24,196 +27,240 @@ variables:
     value: 'redmine-dev.cloud-nuage.inspection.gc.ca'
   ${{ if eq(parameters.deployEnvironment, 'dev') }}:
     value: '_'
+- name: TARGET_HOST
+  value: ''
+- name: TARGET_SSH_USER
+  value: 'cfiaadmin'
+- name: TARGET_SSH_PORT
+  value: '22'
 
-pool:
-  name: self-hosted
+stages:
+- stage: BootstrapRemoteVm
+  displayName: 'Bootstrap remote VM'
+  condition: and(eq(parameters.bootstrapRemoteVm, true), ne(variables.TARGET_HOST, ''))
+  jobs:
+  - job: Bootstrap
+    displayName: 'Bootstrap remote VM'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadSecureFile@1
+      name: sshKey
+      inputs:
+        secureFile: 'portal_ssh_key'
 
-steps:
-- task: DownloadSecureFile@1
-  name: tlsCert
-  inputs:
-    secureFile: 'cloud-nuage.crt'
+    - script: |
+        chmod 600 "$(sshKey.secureFilePath)"
+        ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release git
 
-- task: DownloadSecureFile@1
-  name: tlsKey
-  inputs:
-    secureFile: 'cloud-nuage.key'
+          if ! command -v docker >/dev/null 2>&1; then
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            echo "deb [arch=$$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $$(lsb_release -cs) stable" |
+              sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            sudo usermod -aG docker "${TARGET_SSH_USER}"
+          fi
 
-- task: DownloadSecureFile@1
-  name: tlsChain
-  inputs:
-    secureFile: 'cloud-nuage-chain.pem'
+          if ! command -v docker compose >/dev/null 2>&1; then
+            sudo apt-get install -y docker-compose-plugin
+          fi
+        EOF
+      displayName: 'Bootstrap remote VM with Docker, Docker Compose, and git'
 
-- task: DownloadSecureFile@1
-  name: rootCA
-  inputs:
-    secureFile: 'GoC-GdC-Root-A.crt'
+- stage: DeployPortal
+  displayName: 'Deploy portal'
+  dependsOn: []
+  condition: succeeded()
+  jobs:
+  - job: Deploy
+    displayName: 'Deploy portal on self-hosted agent'
+    pool:
+      name: self-hosted
+    steps:
+    - task: DownloadSecureFile@1
+      name: tlsCert
+      inputs:
+        secureFile: 'cloud-nuage.crt'
 
-- script: |
-    cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
-    cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
-  displayName: Copy root CA into Docker build contexts
+    - task: DownloadSecureFile@1
+      name: tlsKey
+      inputs:
+        secureFile: 'cloud-nuage.key'
 
-- script: |
-    sudo mkdir -p /etc/foodport/tls
-    sudo cp "$(tlsCert.secureFilePath)" /etc/foodport/tls/cloud-nuage.crt
-    sudo cp "$(tlsKey.secureFilePath)" /etc/foodport/tls/cloud-nuage.key
-    sudo cp "$(tlsChain.secureFilePath)" /etc/foodport/tls/cloud-nuage-chain.pem
-    sudo cp "$(rootCA.secureFilePath)" /etc/foodport/tls/GoC-GdC-Root-A.crt
-    sudo chmod 644 /etc/foodport/tls/cloud-nuage.crt
-    sudo chmod 600 /etc/foodport/tls/cloud-nuage.key
-    sudo chmod 644 /etc/foodport/tls/cloud-nuage-chain.pem
-    sudo chmod 644 /etc/foodport/tls/GoC-GdC-Root-A.crt
-  displayName: 'Install TLS certificates'
+    - task: DownloadSecureFile@1
+      name: tlsChain
+      inputs:
+        secureFile: 'cloud-nuage-chain.pem'
 
-- task: AzureKeyVault@2
-  inputs:
-    azureSubscription: 'CFDC-FoodPort-service-connection'
-    KeyVaultName: 'FoodPort-key-vault'
-    SecretsFilter: 'secret-key-base,redmine-database-password,azure-account-name,azure-account-key,batch-account-name,batch-account-url,batch-account-key,batch-account-subnet,vm-image,cowbat-node-agent-sku,ampliseq-image,ampliseq-node-agent-sku,cowsnphr-image,cowsnphr-node-agent-sku,vm-client-id,vm-secret,vm-tenant,ad-app-id,ad-app-secret-id,ad-app-secret,entra-id-client-id,entra-id-client-secret,entra-id-tenant-id,redmine-default-from,email-host-user,email-host-password,email-relay-secret,db-name,db-user,db-pass,db-service,db-port,django-email-backend,sentry-dsn,environment,connection-string,flower-user,flower-password,site-url,django-server-name,redmine-server-name,api-key,dev-api-key'
+    - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
 
-- script: |
-    python3 <<'PY'
-    import os
-    import os.path
-    path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
-    keys = [
-      'SECRET_KEY',
-      'SECRET_KEY_BASE',
-      'AZURE_ACCOUNT_NAME',
-      'AZURE_ACCOUNT_KEY',
-      'BATCH_ACCOUNT_NAME',
-      'BATCH_ACCOUNT_URL',
-      'BATCH_ACCOUNT_KEY',
-      'BATCH_ACCOUNT_SUBNET',
-      'VM_IMAGE',
-      'COWBAT_NODE_AGENT_SKU',
-      'AMPLISEQ_IMAGE',
-      'AMPLISEQ_NODE_AGENT_SKU',
-      'COWSNPHR_IMAGE',
-      'COWSNPHR_NODE_AGENT_SKU',
-      'VM_CLIENT_ID',
-      'VM_SECRET',
-      'VM_TENANT',
-      'AD_APP_ID',
-      'AD_APP_SECRET_ID',
-      'AD_APP_SECRET',
-      'ENTRA_ID_CLIENT_ID',
-      'ENTRA_ID_CLIENT_SECRET',
-      'ENTRA_ID_TENANT_ID',
-      'REDMINE_DEFAULT_FROM',
-      'EMAIL_HOST_USER',
-      'EMAIL_HOST_PASSWORD',
-      'EMAIL_RELAY_SECRET',
-      'API_KEY',
-      'DEV_API_KEY',
-      'DJANGO_SERVER_NAME',
-      'REDMINE_SERVER_NAME',
-      'DB_NAME',
-      'DB_USER',
-      'DB_PASS',
-      'DB_SERVICE',
-      'DB_PORT',
-      'DJANGO_EMAIL_BACKEND',
-      'SENTRY_DSN',
-      'ENVIRONMENT',
-      'CONNECTION_STRING',
-      'FLOWER_USER',
-      'FLOWER_PASSWORD',
-      'SITE_URL',
-      'BUILD_SOURCESDIRECTORY',
-      'REDMINE_DB_PASSWORD',
-      'MYSQL_ROOT_PASSWORD',
-      'MYSQL_PASSWORD',
-    ]
-    with open(path, 'w', encoding='utf-8') as f:
-        for key in keys:
-            if key in os.environ:
-                f.write(f"{key}={os.environ[key]}\n")
-                continue
+    - script: |
+        cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
+        cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
+      displayName: Copy root CA into Docker build contexts
 
-            # Support Key Vault variables imported from the env file as lower-case
-            # dash-separated names, e.g. azure-account-name -> AZURE_ACCOUNT_NAME.
-            dashed_key = key.lower().replace('_', '-')
-            if dashed_key in os.environ:
-                f.write(f"{key}={os.environ[dashed_key]}\n")
-    PY
-    chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
-  displayName: 'Write env file from Key Vault variables'
+    - script: |
+        sudo mkdir -p /etc/foodport/tls
+        sudo cp "$(tlsCert.secureFilePath)" /etc/foodport/tls/cloud-nuage.crt
+        sudo cp "$(tlsKey.secureFilePath)" /etc/foodport/tls/cloud-nuage.key
+        sudo cp "$(tlsChain.secureFilePath)" /etc/foodport/tls/cloud-nuage-chain.pem
+        sudo cp "$(rootCA.secureFilePath)" /etc/foodport/tls/GoC-GdC-Root-A.crt
+        sudo chmod 644 /etc/foodport/tls/cloud-nuage.crt
+        sudo chmod 600 /etc/foodport/tls/cloud-nuage.key
+        sudo chmod 644 /etc/foodport/tls/cloud-nuage-chain.pem
+        sudo chmod 644 /etc/foodport/tls/GoC-GdC-Root-A.crt
+      displayName: 'Install TLS certificates'
 
-- script: |
-    python3 <<'PY'
-    import os
-    from pathlib import Path
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'CFDC-FoodPort-service-connection'
+        KeyVaultName: 'FoodPort-key-vault'
+        SecretsFilter: 'secret-key-base,redmine-database-password,azure-account-name,azure-account-key,batch-account-name,batch-account-url,batch-account-key,batch-account-subnet,vm-image,cowbat-node-agent-sku,ampliseq-image,ampliseq-node-agent-sku,cowsnphr-image,cowsnphr-node-agent-sku,vm-client-id,vm-secret,vm-tenant,ad-app-id,ad-app-secret-id,ad-app-secret,entra-id-client-id,entra-id-client-secret,entra-id-tenant-id,redmine-default-from,email-host-user,email-host-password,email-relay-secret,db-name,db-user,db-pass,db-service,db-port,django-email-backend,sentry-dsn,environment,connection-string,flower-user,flower-password,site-url,django-server-name,redmine-server-name,api-key,dev-api-key'
 
-    root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+    - script: |
+        python3 <<'PY'
+        import os
+        import os.path
+        path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
+        keys = [
+          'SECRET_KEY',
+          'SECRET_KEY_BASE',
+          'AZURE_ACCOUNT_NAME',
+          'AZURE_ACCOUNT_KEY',
+          'BATCH_ACCOUNT_NAME',
+          'BATCH_ACCOUNT_URL',
+          'BATCH_ACCOUNT_KEY',
+          'BATCH_ACCOUNT_SUBNET',
+          'VM_IMAGE',
+          'COWBAT_NODE_AGENT_SKU',
+          'AMPLISEQ_IMAGE',
+          'AMPLISEQ_NODE_AGENT_SKU',
+          'COWSNPHR_IMAGE',
+          'COWSNPHR_NODE_AGENT_SKU',
+          'VM_CLIENT_ID',
+          'VM_SECRET',
+          'VM_TENANT',
+          'AD_APP_ID',
+          'AD_APP_SECRET_ID',
+          'AD_APP_SECRET',
+          'ENTRA_ID_CLIENT_ID',
+          'ENTRA_ID_CLIENT_SECRET',
+          'ENTRA_ID_TENANT_ID',
+          'REDMINE_DEFAULT_FROM',
+          'EMAIL_HOST_USER',
+          'EMAIL_HOST_PASSWORD',
+          'EMAIL_RELAY_SECRET',
+          'API_KEY',
+          'DEV_API_KEY',
+          'DJANGO_SERVER_NAME',
+          'REDMINE_SERVER_NAME',
+          'DB_NAME',
+          'DB_USER',
+          'DB_PASS',
+          'DB_SERVICE',
+          'DB_PORT',
+          'DJANGO_EMAIL_BACKEND',
+          'SENTRY_DSN',
+          'ENVIRONMENT',
+          'CONNECTION_STRING',
+          'FLOWER_USER',
+          'FLOWER_PASSWORD',
+          'SITE_URL',
+          'BUILD_SOURCESDIRECTORY',
+          'REDMINE_DB_PASSWORD',
+          'MYSQL_ROOT_PASSWORD',
+          'MYSQL_PASSWORD',
+        ]
+        with open(path, 'w', encoding='utf-8') as f:
+            for key in keys:
+                if key in os.environ:
+                    f.write(f"{key}={os.environ[key]}\n")
+                    continue
 
-    # Render Redmine secrets file from template
-    secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
-    secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
+                dashed_key = key.lower().replace('_', '-')
+                if dashed_key in os.environ:
+                    f.write(f"{key}={os.environ[dashed_key]}\n")
+        PY
+        chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
+      displayName: 'Write env file from Key Vault variables'
 
-    text = secrets_src.read_text(encoding='utf-8')
-    secret_key = os.environ.get('SECRET_KEY_BASE') or os.environ.get('secret-key-base')
-    if not secret_key:
-        raise SystemExit('Required environment variable SECRET_KEY_BASE / secret-key-base is missing')
+    - script: |
+        python3 <<'PY'
+        import os
+        from pathlib import Path
 
-    text = text.replace('${SECRET_KEY_BASE}', secret_key)
-    secrets_dst.write_text(text, encoding='utf-8')
+        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
 
-    # Render Redmine database config from template
-    db_src = root / 'redmine' / 'config' / 'database.yml.template'
-    db_dst = root / 'redmine' / 'config' / 'database.yml'
+        secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
+        secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
 
-    db_text = db_src.read_text(encoding='utf-8')
-    db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('redmine-database-password')
-    if not db_password:
-        raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / redmine-database-password is missing')
+        text = secrets_src.read_text(encoding='utf-8')
+        secret_key = os.environ.get('SECRET_KEY_BASE') or os.environ.get('secret-key-base')
+        if not secret_key:
+            raise SystemExit('Required environment variable SECRET_KEY_BASE / secret-key-base is missing')
 
-    db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
-    db_dst.write_text(db_text, encoding='utf-8')
-    PY
-  displayName: 'Render redmine config files from templates'
+        text = text.replace('${SECRET_KEY_BASE}', secret_key)
+        secrets_dst.write_text(text, encoding='utf-8')
 
-- script: |
-    python3 <<'PY'
-    import os
-    from pathlib import Path
+        db_src = root / 'redmine' / 'config' / 'database.yml.template'
+        db_dst = root / 'redmine' / 'config' / 'database.yml'
 
-    root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
-    deploy_env = os.environ.get('DEPLOY_ENVIRONMENT', 'dev').lower()
-    if deploy_env not in ('dev', 'prod'):
-        raise SystemExit(f'Unsupported DEPLOY_ENVIRONMENT: {deploy_env}')
+        db_text = db_src.read_text(encoding='utf-8')
+        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('redmine-database-password')
+        if not db_password:
+            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / redmine-database-password is missing')
 
-    django_server_name = os.environ.get('DJANGO_SERVER_NAME')
-    if not django_server_name:
-        raise SystemExit('Required environment variable DJANGO_SERVER_NAME is missing')
+        db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
+        db_dst.write_text(db_text, encoding='utf-8')
+        PY
+      displayName: 'Render redmine config files from templates'
 
-    # Render HTTP nginx site config
-    src = root / 'nginx' / 'sites-enabled' / 'django.template'
-    dst = root / 'nginx' / 'sites-enabled' / 'django'
-    text = src.read_text(encoding='utf-8')
-    text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-    dst.write_text(text, encoding='utf-8')
+    - script: |
+        python3 <<'PY'
+        import os
+        from pathlib import Path
 
-    https_dst = root / 'nginx' / 'sites-enabled' / 'django-https'
-    if deploy_env == 'prod':
-        redmine_server_name = os.environ.get('REDMINE_SERVER_NAME')
-        if not redmine_server_name:
-            raise SystemExit('Required environment variable REDMINE_SERVER_NAME is missing')
-        src = root / 'nginx' / 'sites-enabled' / 'django-https.template'
+        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+        deploy_env = os.environ.get('DEPLOY_ENVIRONMENT', 'dev').lower()
+        if deploy_env not in ('dev', 'prod'):
+            raise SystemExit(f'Unsupported DEPLOY_ENVIRONMENT: {deploy_env}')
+
+        django_server_name = os.environ.get('DJANGO_SERVER_NAME')
+        if not django_server_name:
+            raise SystemExit('Required environment variable DJANGO_SERVER_NAME is missing')
+
+        src = root / 'nginx' / 'sites-enabled' / 'django.template'
+        dst = root / 'nginx' / 'sites-enabled' / 'django'
         text = src.read_text(encoding='utf-8')
         text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-        text = text.replace('${REDMINE_SERVER_NAME}', redmine_server_name)
-        https_dst.write_text(text, encoding='utf-8')
-    else:
-        if https_dst.exists():
-            https_dst.unlink()
-    PY
-  displayName: 'Generate nginx site configs from templates'
+        dst.write_text(text, encoding='utf-8')
 
-- script: |
-    cd "$(Build.SourcesDirectory)"
-    sudo rm -f celerybeat-schedule.db celerybeat.pid
-    docker compose down
-    docker compose up -d
-  displayName: 'Restart containers'
+        https_dst = root / 'nginx' / 'sites-enabled' / 'django-https'
+        if deploy_env == 'prod':
+            redmine_server_name = os.environ.get('REDMINE_SERVER_NAME')
+            if not redmine_server_name:
+                raise SystemExit('Required environment variable REDMINE_SERVER_NAME is missing')
+            src = root / 'nginx' / 'sites-enabled' / 'django-https.template'
+            text = src.read_text(encoding='utf-8')
+            text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
+            text = text.replace('${REDMINE_SERVER_NAME}', redmine_server_name)
+            https_dst.write_text(text, encoding='utf-8')
+        else:
+            if https_dst.exists():
+                https_dst.unlink()
+        PY
+      displayName: 'Generate nginx site configs from templates'
+
+    - script: |
+        cd "$(Build.SourcesDirectory)"
+        sudo rm -f celerybeat-schedule.db celerybeat.pid
+        docker compose down
+        docker compose up -d
+      displayName: 'Restart containers'
