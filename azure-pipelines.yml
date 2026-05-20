@@ -94,9 +94,9 @@ stages:
   condition: succeeded()
   jobs:
   - job: Deploy
-    displayName: 'Deploy portal on self-hosted agent'
+    displayName: 'Deploy portal on hosted Ubuntu agent'
     pool:
-      name: self-hosted
+      vmImage: ubuntu-latest
     steps:
     - task: DownloadSecureFile@1
       name: tlsCert
