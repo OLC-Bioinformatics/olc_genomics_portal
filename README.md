@@ -123,3 +123,38 @@ Often, Travis decides that the tests have failed even though they haven't actual
 build exits with a non-zero code). As far as I can tell this is completely random, so you actually have to 
 go into the Travis web UI to see if tests are passing or not.
 
+## Azure DevOps pipeline usage
+
+This repository uses three pipeline scenarios:
+
+- `foodport-tf` — full infrastructure pipeline
+- `foodport-tf (964)` — dev VM-only pipeline
+- `olc_genomics_portal` — app deployment pipeline
+
+The app pipeline in `olc_genomics_portal/azure-pipelines.yml` supports these options:
+
+- `infrastructure=dev-vm` + `bootstrapRemoteVm=true`
+  - consumes `dev-vm-trigger` from `foodport-tf (964)`
+  - bootstraps the dev VM and deploys the portal app
+- `infrastructure=full-infra` + `bootstrapRemoteVm=true`
+  - consumes `portal-trigger` from `foodport-tf`
+  - bootstraps the portal VM created by the full infra pipeline and deploys the app
+- `infrastructure=none` + `bootstrapRemoteVm=false`
+  - app deployment only; does not download a VM IP or bootstrap a remote host
+
+Example manual run commands:
+
+```bash
+az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=dev-vm bootstrapRemoteVm=true
+```
+
+```bash
+az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=full-infra bootstrapRemoteVm=true
+```
+
+```bash
+az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=none bootstrapRemoteVm=false
+```
+
+The dev-vm pipeline YAML is in `foodport-tf/dev-vm/azure-pipelines-dev-vm.yml` and the full infra pipeline YAML is in `foodport-tf/full-infra/azure-pipelines.infra.yml`.
+

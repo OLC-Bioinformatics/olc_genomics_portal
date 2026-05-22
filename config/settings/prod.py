@@ -433,18 +433,16 @@ ADMIN_URL = r'^admin/'
 
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
-ALLOWED_HOSTS = [
-    "0.0.0.0",
-    "olc.lnpr.info",
-    "40.85.255.27",
-    "olc.cloud.inspection.gc.ca",
-    "10.148.57.4",
-    "10.148.57.38",
-    "localhost",
-    "127.0.0.1",
-    "foodport.cloud-nuage.inspection.gc.ca",
-    "foodport-dev.cloud-nuage.inspection.gc.ca",
-]
+ALLOWED_HOSTS = env.list(
+    'DJANGO_ALLOWED_HOSTS',
+    default=[
+        '0.0.0.0',
+        'localhost',
+        '127.0.0.1',
+        'foodport.cloud-nuage.inspection.gc.ca',
+        'foodport-dev.cloud-nuage.inspection.gc.ca',
+    ],
+)
 MAX_ATTEMPTS = 1
 
 LOGGING = {
