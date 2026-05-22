@@ -1,11 +1,17 @@
+# Azure DevOps pipeline resource mappings:
+# - fullInfra: source pipeline name for full infrastructure provisioning
+# - devVm: source pipeline name for dev VM provisioning
+#
+# Update the source values below if the actual DevOps pipeline display
+# names differ from the examples used here.
 resources:
   pipelines:
-  - pipeline: infra
-    source: 'OLC-Bioinformatics.olc_genomics_portal'
-    trigger:
-      branches:
-        include:
-          - main
+  - pipeline: fullInfra
+    source: 'foodport-tf'
+    trigger: none
+  - pipeline: devVm
+    source: 'foodport-tf (964)'
+    trigger: none
 
 parameters:
 - name: deployEnvironment
@@ -14,14 +20,18 @@ parameters:
   values:
     - dev
     - prod
+- name: infrastructure
+  type: string
+  default: dev-vm
+  values:
+    - dev-vm
+    - full-infra
+    - none
 - name: bootstrapRemoteVm
   type: boolean
-  default: false
+  default: true
 
-trigger:
-  branches:
-    include:
-      - main
+trigger: none
 
 variables:
 - name: DEPLOY_ENVIRONMENT
@@ -46,20 +56,30 @@ variables:
 stages:
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: eq(${{ parameters.bootstrapRemoteVm }}, true)
+  condition: and(eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - download: infra
-      artifact: portal-trigger
+    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
+      - download: devVm
+        artifact: dev-vm-trigger
+    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
+      - download: fullInfra
+        artifact: portal-trigger
 
-    - script: |
-        TARGET_HOST=$(cat "$(Pipeline.Workspace)/infra/portal-trigger/vm_ip.txt")
-        echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
-      displayName: 'Load TARGET_HOST from infra artifact'
+    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
+      - script: |
+          TARGET_HOST=$(cat "$(Pipeline.Workspace)/devVm/dev-vm-trigger/vm_ip.txt")
+          echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
+        displayName: 'Load TARGET_HOST from dev-vm artifact'
+    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
+      - script: |
+          TARGET_HOST=$(cat "$(Pipeline.Workspace)/fullInfra/portal-trigger/vm_ip.txt")
+          echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
+        displayName: 'Load TARGET_HOST from full-infra artifact'
 
     - task: DownloadSecureFile@1
       name: sshKey
@@ -71,7 +91,7 @@ stages:
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
           set -e
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl gnupg lsb-release git
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
 
           if ! command -v docker >/dev/null 2>&1; then
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -85,12 +105,27 @@ stages:
           if ! command -v docker compose >/dev/null 2>&1; then
             sudo apt-get install -y docker-compose-plugin
           fi
+
+          if ! command -v az >/dev/null 2>&1; then
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          fi
+
+          if ! command -v conda >/dev/null 2>&1; then
+            curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
+            bash /tmp/miniconda.sh -b -p "/home/${TARGET_SSH_USER}/miniconda"
+            rm /tmp/miniconda.sh
+            echo 'export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"' >> "/home/${TARGET_SSH_USER}/.bashrc"
+            export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
+          fi
         EOF
-      displayName: 'Bootstrap remote VM with Docker, Docker Compose, and git'
+      displayName: 'Bootstrap remote VM with Docker, Docker Compose, Git, Python, Conda, and Azure CLI'
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
-  dependsOn: []
+  dependsOn: BootstrapRemoteVm
   condition: succeeded()
   jobs:
   - job: Deploy
@@ -207,6 +242,36 @@ stages:
         PY
         chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
       displayName: 'Write env file from Key Vault variables'
+
+    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
+      - download: devVm
+        artifact: dev-vm-trigger
+    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
+      - download: fullInfra
+        artifact: portal-trigger
+
+    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
+      - script: |
+          set -e
+          VM_IP=$(cat "$(Pipeline.Workspace)/devVm/dev-vm-trigger/vm_ip.txt")
+          ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
+          if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
+            sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
+          else
+            echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
+          fi
+        displayName: 'Set portal VM IP in env file from dev-vm artifact'
+    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
+      - script: |
+          set -e
+          VM_IP=$(cat "$(Pipeline.Workspace)/fullInfra/portal-trigger/vm_ip.txt")
+          ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
+          if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
+            sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
+          else
+            echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
+          fi
+        displayName: 'Set portal VM IP in env file from full-infra artifact'
 
     - script: |
         python3 <<'PY'
