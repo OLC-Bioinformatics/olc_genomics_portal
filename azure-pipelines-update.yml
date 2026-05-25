@@ -1,0 +1,42 @@
+# App deployment pipeline for olc_genomics_portal
+# This pipeline updates the portal VM and always runs docker compose up -d --build.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+- name: TARGET_HOST
+  value: '10.148.57.4'
+- name: TARGET_SSH_USER
+  value: 'cfiaadmin'
+- name: TARGET_SSH_PORT
+  value: '22'
+- name: REPO_DIR
+  value: '/home/cfiaadmin/olc_genomics_portal'
+
+steps:
+- checkout: self
+
+- task: DownloadSecureFile@1
+  name: sshKey
+  inputs:
+    secureFile: 'portal_ssh_key'
+
+- script: |
+    chmod 600 "$(sshKey.secureFilePath)"
+    ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
+      set -e
+      cd "$(REPO_DIR)"
+      git fetch origin
+      git reset --hard origin/main
+      docker compose down
+      docker compose up -d --build
+    EOF
+  displayName: Deploy portal to app VM
