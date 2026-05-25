@@ -261,6 +261,8 @@ It is intended for app updates on an existing portal VM and always runs:
 - `docker compose down`
 - `docker compose up -d --build`
 
+This pipeline uses a private SSH key secure file named `prod_ssh_key` to access the portal VM.
+
 ### Azure CLI setup
 
 If you have not configured Azure DevOps CLI defaults yet:
