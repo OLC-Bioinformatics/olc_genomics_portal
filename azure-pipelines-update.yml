@@ -27,7 +27,7 @@ steps:
 - task: DownloadSecureFile@1
   name: sshKey
   inputs:
-    secureFile: 'portal_ssh_key'
+    secureFile: 'prod_ssh_key'
 
 - script: |
     chmod 600 "$(sshKey.secureFilePath)"
