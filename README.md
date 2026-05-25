@@ -213,26 +213,70 @@ git stash pop
 
 Then commit and push from the new branch.
 
+#### Removing a local branch after GitHub deletion
+
+If the branch has already been deleted on GitHub, cleanup locally with:
+
+```bash
+git fetch --prune origin
+git branch -d my-feature-branch
+```
+
+If Git warns the branch is not fully merged and you still want to delete it:
+
+```bash
+git branch -D my-feature-branch
+```
+
 ## Azure DevOps pipeline usage
 
-This repository uses three pipeline scenarios:
+This repository is used by two Azure DevOps YAML pipelines:
 
 - `foodport-tf` — full infrastructure pipeline
 - `foodport-tf (964)` — dev VM-only pipeline
-- `olc_genomics_portal` — app deployment pipeline
+- `OLC-Bioinformatics.olc_genomics_portal` — app deployment pipeline (`azure-pipelines.yml`)
+- `OLC-Bioinformatics.olc_genomics_portal (968)` — direct app update pipeline (`azure-pipelines.update.yml`)
 
-The app pipeline in `olc_genomics_portal/azure-pipelines.yml` supports these options:
+### Pipeline purposes
+
+`olc_genomics_portal/azure-pipelines.yml` supports the deployment scenarios:
 
 - `infrastructure=dev-vm` + `bootstrapRemoteVm=true`
-  - consumes `dev-vm-trigger` from `foodport-tf (964)`
-  - bootstraps the dev VM and deploys the portal app
+  - downloads `dev-vm-trigger` from `foodport-tf (964)`
+  - loads the portal VM IP
+  - bootstraps the remote VM and deploys the portal app
 - `infrastructure=full-infra` + `bootstrapRemoteVm=true`
-  - consumes `portal-trigger` from `foodport-tf`
-  - bootstraps the portal VM created by the full infra pipeline and deploys the app
+  - downloads `portal-trigger` from `foodport-tf`
+  - loads the portal VM IP from full infra
+  - bootstraps the remote VM and deploys the portal app
 - `infrastructure=none` + `bootstrapRemoteVm=false`
-  - app deployment only; does not download a VM IP or bootstrap a remote host
+  - local app deployment only
+  - does not download a VM IP or bootstrap a remote host
 
-Example manual run commands:
+`olc_genomics_portal/azure-pipelines.update.yml` is a separate direct update pipeline.
+It is intended for app updates on an existing portal VM and always runs:
+
+- `git fetch origin`
+- `git reset --hard origin/main`
+- `docker compose down`
+- `docker compose up -d --build`
+
+### Azure CLI setup
+
+If you have not configured Azure DevOps CLI defaults yet:
+
+```bash
+az extension add --name azure-devops
+az devops configure --defaults organization=https://dev.azure.com/CFIA-DevOps-ACIA project=Virtool
+```
+
+If you need to disable connection verification while installing the extension:
+
+```bash
+AZURE_CLI_DISABLE_CONNECTION_VERIFICATION=1 az extension add --name azure-devops
+```
+
+### Run the app deployment pipeline
 
 ```bash
 az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=dev-vm bootstrapRemoteVm=true
@@ -246,5 +290,20 @@ az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main -
 az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=none bootstrapRemoteVm=false
 ```
 
-The dev-vm pipeline YAML is in `foodport-tf/dev-vm/azure-pipelines-dev-vm.yml` and the full infra pipeline YAML is in `foodport-tf/full-infra/azure-pipelines.infra.yml`.
+### Run the direct app update pipeline
+
+If you register `azure-pipelines.update.yml` as a separate pipeline called `OLC-Bioinformatics.olc_genomics_portal (968)`, run:
+
+```bash
+az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal (968)" --branch main
+```
+
+This is the pipeline to use when you want to push a code update to the portal VM and rebuild the compose stack.
+
+### Pipeline file locations
+
+- Dev VM pipeline: `foodport-tf/dev-vm/azure-pipelines-dev-vm.yml`
+- Full infra pipeline: `foodport-tf/full-infra/azure-pipelines.infra.yml`
+- App deploy pipeline: `olc_genomics_portal/azure-pipelines.yml`
+- App update pipeline: `olc_genomics_portal/azure-pipelines.update.yml`
 
