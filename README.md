@@ -123,3 +123,93 @@ Often, Travis decides that the tests have failed even though they haven't actual
 build exits with a non-zero code). As far as I can tell this is completely random, so you actually have to 
 go into the Travis web UI to see if tests are passing or not.
 
+## Azure DevOps deploy pipeline
+
+A separate deployment pipeline is available at `olc_genomics_portal/azure-pipelines.update.yml`.
+This pipeline is designed to run on pushes to `main`, SSH to the portal VM at `10.148.57.4`, pull the latest
+repo state, and restart the compose stack with `docker compose up -d --build`.
+
+## Branch-based update workflow
+
+Because `main` is protected, use a branch-based workflow for repository changes:
+
+1. Create a new branch from `main`:
+
+```bash
+git checkout -b my-feature-branch
+```
+
+2. Make your changes and commit them:
+
+```bash
+git add .
+git commit -m "Describe the change"
+```
+
+3. Push the branch upstream:
+
+```bash
+git push -u origin my-feature-branch
+```
+
+4. Open a pull request from `my-feature-branch` into `main`.
+
+5. Review, merge, and delete the branch when the PR is accepted.
+
+6. Update your local `main`:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+This workflow ensures you can continue making changes without pushing directly to protected `main`.
+
+### If you forgot to create the branch first
+
+If you started working on `main` by mistake, you can still move your work to a branch.
+
+#### Case A: you have uncommitted changes
+
+```bash
+git checkout -b my-feature-branch
+git add .
+git commit -m "Describe the change"
+git push -u origin my-feature-branch
+```
+
+Then open the PR from `my-feature-branch` into `main`.
+
+This creates a branch from your current `main` state and preserves your uncommitted edits.
+
+#### Case B: you already committed on `main`
+
+If your commits are only on your local `main`, create the branch from the current state and push it:
+
+```bash
+git checkout -b my-feature-branch
+git push -u origin my-feature-branch
+```
+
+Then open the PR from `my-feature-branch` into `main`.
+
+Once your work is safely on the branch and pushed, switch back to `main` and reset it to match remote:
+
+```bash
+git checkout main
+git fetch origin
+git reset --hard origin/main
+```
+
+Use `git reset --hard` only after you have pushed or otherwise saved your work, because it discards local commits and changes.
+
+If you need to preserve any local work before cleaning `main`, use `git stash` first:
+
+```bash
+git stash push -m "work in progress"
+git checkout -b my-feature-branch
+git stash pop
+```
+
+Then commit and push from the new branch.
+
