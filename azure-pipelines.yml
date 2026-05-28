@@ -13,6 +13,8 @@ resources:
     source: 'foodport-tf (964)'
     trigger: none
 
+# The BootstrapRemoteVm stage SSHs into the target VM.
+# For private endpoint / private network access, use a self-hosted agent pool.
 parameters:
 - name: deployEnvironment
   type: string
@@ -30,6 +32,15 @@ parameters:
 - name: bootstrapRemoteVm
   type: boolean
   default: true
+- name: useHostedAgent
+  type: boolean
+  default: false
+- name: hostedVmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: selfHostedPool
+  type: string
+  default: 'foodport-self-hosted'
 
 trigger: none
 
@@ -54,14 +65,122 @@ variables:
   value: '22'
 
 stages:
+- stage: EnsureSelfHostedAgent
+  displayName: 'Ensure self-hosted agent'
+  condition: and(ne(parameters.useHostedAgent, true), eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
+  jobs:
+  - job: EnsureAgent
+    displayName: 'Ensure self-hosted agent is available'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: none
+    - script: |
+        set -euo pipefail
+
+        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ]; then
+          echo "##vso[task.logissue type=error]SYSTEM_ACCESSTOKEN is unavailable. Enable Allow scripts to access the OAuth token in the pipeline settings."
+          exit 1
+        fi
+
+        python3 - <<'PY'
+        import base64
+        import json
+        import os
+        import sys
+        import time
+        import urllib.parse
+        import urllib.request
+
+        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
+        project = os.environ['SYSTEM_TEAMPROJECT']
+        pool_name = os.environ['SELF_HOSTED_POOL']
+        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
+        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '900'))
+        interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
+        token = os.environ['SYSTEM_ACCESSTOKEN']
+
+        auth = base64.b64encode(f':{token}'.encode()).decode()
+        headers = {
+            'Authorization': f'Basic {auth}',
+            'Content-Type': 'application/json'
+        }
+
+        def http_request(path, method='GET', body=None):
+            url = f'{org_uri}/{project}{path}'
+            data = None
+            if body is not None:
+                data = json.dumps(body).encode('utf-8')
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            with urllib.request.urlopen(req) as resp:
+                return json.load(resp)
+
+        def get_pool_id():
+            q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
+            response = http_request(f'/_apis/distributedtask/pools?{q}')
+            pools = response.get('value', [])
+            if not pools:
+                print(f'No pool found with name: {pool_name}', file=sys.stderr)
+                sys.exit(1)
+            return pools[0]['id']
+
+        def get_online_agents(pool_id):
+            q = urllib.parse.urlencode({'api-version': '7.0'})
+            response = http_request(f'/_apis/distributedtask/pools/{pool_id}/agents?{q}')
+            agents = response.get('value', [])
+            return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
+
+        def active_bootstrap_run_exists():
+            q = urllib.parse.urlencode({'statusFilter': 'inProgress', 'api-version': '7.1-preview.1'})
+            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
+            return bool(response.get('value', []))
+
+        pool_id = get_pool_id()
+        online = get_online_agents(pool_id)
+        if online:
+            print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
+            sys.exit(0)
+
+        if active_bootstrap_run_exists():
+            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
+        else:
+            print('No online self-hosted agent found; queueing bootstrap pipeline.')
+            body = {'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}}}
+            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
+            print('Queued bootstrap pipeline run id:', response.get('id'))
+
+        deadline = time.time() + wait_seconds
+        while time.time() < deadline:
+            online = get_online_agents(pool_id)
+            if online:
+                print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
+                sys.exit(0)
+            print(f'No agent online yet; sleeping {interval}s...')
+            time.sleep(interval)
+
+        print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
+        sys.exit(1)
+        PY
+      displayName: 'Check self-hosted pool and queue bootstrap if needed'
+      env:
+        SELF_HOSTED_POOL: $(selfHostedPool)
+        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '971'
+        SELF_HOSTED_AGENT_WAIT_SECONDS: '900'
+        SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
+  dependsOn: EnsureSelfHostedAgent
   condition: and(eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
     pool:
-      vmImage: 'ubuntu-latest'
+      ${{ if eq(parameters.useHostedAgent, true) }}:
+        vmImage: ${{ parameters.hostedVmImage }}
+      ${{ if ne(parameters.useHostedAgent, true) }}:
+        name: ${{ parameters.selfHostedPool }}
     steps:
     - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
       - download: devVm
@@ -129,9 +248,12 @@ stages:
   condition: succeeded()
   jobs:
   - job: Deploy
-    displayName: 'Deploy portal on hosted Ubuntu agent'
+    displayName: 'Deploy portal'
     pool:
-      vmImage: ubuntu-latest
+      ${{ if eq(parameters.useHostedAgent, true) }}:
+        vmImage: ${{ parameters.hostedVmImage }}
+      ${{ if ne(parameters.useHostedAgent, true) }}:
+        name: ${{ parameters.selfHostedPool }}
     steps:
     - task: DownloadSecureFile@1
       name: tlsCert

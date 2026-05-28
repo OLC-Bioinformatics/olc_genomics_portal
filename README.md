@@ -263,6 +263,48 @@ It is intended for app updates on an existing portal VM and always runs:
 
 This pipeline uses a private SSH key secure file named `prod_ssh_key` to access the portal VM.
 
+### Self-hosted agent support
+
+The portal deployment pipelines can run on a self-hosted Azure DevOps agent instead of a hosted Microsoft agent.
+This applies to both the direct update pipeline (`azure-pipelines.update.yml`) and the main portal pipeline (`azure-pipelines.yml`).
+Use the pipeline parameters:
+
+```bash
+--parameters useHostedAgent=false selfHostedPool="<your-pool-name>"
+```
+
+This is useful when the portal VM is on a private network and a hosted Azure DevOps agent cannot SSH to it.
+
+#### What is involved in the self-hosted agent setup
+
+1. Create a cheap Azure VM in the same VNet or peered network as the portal VM.
+2. Install the Azure Pipelines agent software on that VM.
+3. Register the VM with an Azure DevOps agent pool, e.g. `my-self-hosted-pool`.
+4. Give the VM outbound internet access so it can reach Azure DevOps, but no inbound SSH is required from the public internet if it is only used internally.
+5. Configure the VM to auto-shutdown when idle and start only when needed.
+
+You can create and manage the Azure VM with `az cli`, and use the VM auto-shutdown feature or a schedule to minimize cost.
+
+### Example self-hosted agent run
+
+```bash
+az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal (968)" --branch main \
+  --parameters useHostedAgent=false selfHostedPool="my-self-hosted-pool"
+```
+
+Then the pipeline will use the self-hosted agent pool instead of `ubuntu-latest`.
+
+### Azure VM cost control
+
+- Use a small instance size (for example, B1s/B2s)
+- Enable auto-shutdown in Azure Portal or with `az vm auto-shutdown`
+- Start the VM only when you need to run deployments
+- Stop/deallocate it when idle to avoid compute charges
+
+### Important
+
+This pipeline still requires `prod_ssh_key` to be uploaded as a secure file, but a self-hosted agent is the right way to reach a private portal VM.
+
 ### Azure CLI setup
 
 If you have not configured Azure DevOps CLI defaults yet:

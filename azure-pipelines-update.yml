@@ -8,8 +8,24 @@ trigger:
 
 pr: none
 
+# This pipeline connects directly to a private portal VM over SSH.
+# It defaults to the self-hosted pool so the agent can reach the private endpoint.
+parameters:
+- name: useHostedAgent
+  type: boolean
+  default: false
+- name: hostedVmImage
+  type: string
+  default: 'ubuntu-latest'
+- name: selfHostedPool
+  type: string
+  default: 'foodport-self-hosted'
+
 pool:
-  vmImage: ubuntu-latest
+  ${{ if eq(parameters.useHostedAgent, true) }}:
+    vmImage: ${{ parameters.hostedVmImage }}
+  ${{ if ne(parameters.useHostedAgent, true) }}:
+    name: ${{ parameters.selfHostedPool }}
 
 variables:
 - name: TARGET_HOST
