@@ -91,6 +91,7 @@ stages:
         import os
         import sys
         import time
+        import urllib.error
         import urllib.parse
         import urllib.request
 
@@ -114,15 +115,29 @@ stages:
             if body is not None:
                 data = json.dumps(body).encode('utf-8')
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            with urllib.request.urlopen(req) as resp:
-                return json.load(resp)
+            try:
+                with urllib.request.urlopen(req) as resp:
+                    return json.load(resp)
+            except urllib.error.HTTPError as e:
+                body = e.read().decode('utf-8', errors='ignore')
+                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
+                if body:
+                    print('Response body:', file=sys.stderr)
+                    print(body, file=sys.stderr)
+                if e.code in (401, 403):
+                    print('Unauthorized: pipeline lacks permission to access Azure DevOps resources or the OAuth token is insufficient.', file=sys.stderr)
+                    sys.exit(1)
+                if e.code == 404:
+                    print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
+                    sys.exit(1)
+                raise
 
         def get_pool_id():
             q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
             response = http_request(f'/_apis/distributedtask/pools?{q}')
             pools = response.get('value', [])
             if not pools:
-                print(f'No pool found with name: {pool_name}', file=sys.stderr)
+                print(f'No self-hosted pool found with name: {pool_name}. Check pool existence and authorization.', file=sys.stderr)
                 sys.exit(1)
             return pools[0]['id']
 
