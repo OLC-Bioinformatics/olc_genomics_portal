@@ -112,7 +112,11 @@ stages:
         }
 
         def http_request(path, method='GET', body=None):
-            url = f'{org_uri}/{project}{path}'
+            if path.startswith('/_apis/distributedtask'):
+                url = f'{org_uri}{path}'
+            else:
+                url = f'{org_uri}/{project}{path}'
+            print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
             data = None
             if body is not None:
                 data = json.dumps(body).encode('utf-8')
