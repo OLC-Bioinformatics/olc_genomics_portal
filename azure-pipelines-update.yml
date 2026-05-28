@@ -30,6 +30,8 @@ variables:
   value: '22'
 - name: REPO_DIR
   value: '/home/cfiaadmin/olc_genomics_portal'
+- name: SELF_HOSTED_POOL
+  value: ${{ parameters.selfHostedPool }}
 
 stages:
 - stage: EnsureSelfHostedAgent
@@ -162,7 +164,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: $(SELF_HOSTED_POOL)
     steps:
     - checkout: self
 

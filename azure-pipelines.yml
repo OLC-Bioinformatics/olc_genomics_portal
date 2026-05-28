@@ -65,6 +65,8 @@ variables:
   value: 'cfiaadmin'
 - name: TARGET_SSH_PORT
   value: '22'
+- name: SELF_HOSTED_POOL
+  value: ${{ parameters.selfHostedPool }}
 
 stages:
 - stage: EnsureSelfHostedAgent
@@ -197,7 +199,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: $(SELF_HOSTED_POOL)
     steps:
     - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
       - download: devVm
@@ -270,7 +272,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: $(SELF_HOSTED_POOL)
     steps:
     - task: DownloadSecureFile@1
       name: tlsCert
