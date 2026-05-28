@@ -152,7 +152,7 @@ stages:
       displayName: 'Check self-hosted pool and queue bootstrap if needed'
       env:
         SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '971'
+        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '973'
         SELF_HOSTED_AGENT_WAIT_SECONDS: '900'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
