@@ -103,6 +103,21 @@ stages:
                     sys.exit(1)
                 raise
 
+        print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
+        print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
+        print(f'SELF_HOSTED_POOL={pool_name}', file=sys.stderr)
+        print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
+        print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
+        print(f'POLL_INTERVAL={interval}', file=sys.stderr)
+        print('SYSTEM_ACCESSTOKEN present' if token else 'SYSTEM_ACCESSTOKEN missing', file=sys.stderr)
+        try:
+            debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
+            debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
+            print(f'Visible pool count: {len(debug_pool_names)}', file=sys.stderr)
+            print('Visible pool names: ' + ', '.join(debug_pool_names), file=sys.stderr)
+        except Exception as e:
+            print(f'Failed to list pools for debug: {e}', file=sys.stderr)
+
         def get_pool_id():
             q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
             response = http_request(f'/_apis/distributedtask/pools?{q}')
