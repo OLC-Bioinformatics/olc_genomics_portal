@@ -36,15 +36,17 @@ trigger: none
 variables:
 - name: DEPLOY_ENVIRONMENT
   value: ${{ parameters.deployEnvironment }}
-- name: DJANGO_SERVER_NAME
-  ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+- ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+  - name: DJANGO_SERVER_NAME
     value: 'foodport-dev.cloud-nuage.inspection.gc.ca'
-  ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+- ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+  - name: DJANGO_SERVER_NAME
     value: '_'
-- name: REDMINE_SERVER_NAME
-  ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+- ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+  - name: REDMINE_SERVER_NAME
     value: 'redmine-dev.cloud-nuage.inspection.gc.ca'
-  ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+- ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+  - name: REDMINE_SERVER_NAME
     value: '_'
 - name: TARGET_HOST
   value: ''
