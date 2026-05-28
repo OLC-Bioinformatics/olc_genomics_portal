@@ -21,12 +21,6 @@ parameters:
   type: string
   default: 'foodport-self-hosted'
 
-pool:
-  ${{ if eq(parameters.useHostedAgent, true) }}:
-    vmImage: ${{ parameters.hostedVmImage }}
-  ${{ if ne(parameters.useHostedAgent, true) }}:
-    name: ${{ parameters.selfHostedPool }}
-
 variables:
 - name: TARGET_HOST
   value: '10.148.57.4'
@@ -37,22 +31,30 @@ variables:
 - name: REPO_DIR
   value: '/home/cfiaadmin/olc_genomics_portal'
 
-steps:
-- checkout: self
+jobs:
+- job: Deploy
+  displayName: Deploy portal
+  pool:
+    ${{ if eq(parameters.useHostedAgent, true) }}:
+      vmImage: ${{ parameters.hostedVmImage }}
+    ${{ if ne(parameters.useHostedAgent, true) }}:
+      name: ${{ parameters.selfHostedPool }}
+  steps:
+  - checkout: self
 
-- task: DownloadSecureFile@1
-  name: sshKey
-  inputs:
-    secureFile: 'prod_ssh_key'
+  - task: DownloadSecureFile@1
+    name: sshKey
+    inputs:
+      secureFile: 'prod_ssh_key'
 
-- script: |
-    chmod 600 "$(sshKey.secureFilePath)"
-    ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
-      set -e
-      cd "$(REPO_DIR)"
-      git fetch origin
-      git reset --hard origin/main
-      docker compose down
-      docker compose up -d --build
-    EOF
-  displayName: Deploy portal to app VM
+  - script: |
+      chmod 600 "$(sshKey.secureFilePath)"
+      ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
+        set -e
+        cd "$(REPO_DIR)"
+        git fetch origin
+        git reset --hard origin/main
+        docker compose down
+        docker compose up -d --build
+      EOF
+    displayName: Deploy portal to app VM
