@@ -29,7 +29,7 @@ variables:
 - name: TARGET_SSH_PORT
   value: '22'
 - name: REPO_DIR
-  value: '/home/cfiaadmin/olc_genomics_portal'
+  value: '/home/cfiaadmin/FoodPort/olc_genomics_portal'
 - name: SELF_HOSTED_POOL
   value: ${{ parameters.selfHostedPool }}
 
