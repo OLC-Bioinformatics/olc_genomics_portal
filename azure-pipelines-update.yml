@@ -84,14 +84,29 @@ stages:
             print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
             data = None
             if body is not None:
+                print('Request body:', json.dumps(body), file=sys.stderr)
                 data = json.dumps(body).encode('utf-8')
+            safe_headers = {
+                k: ('<REDACTED>' if k.lower() == 'authorization' else v)
+                for k, v in headers.items()
+            }
+            print('Request headers:', json.dumps(safe_headers), file=sys.stderr)
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             try:
                 with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
+                    resp_text = resp.read().decode('utf-8', errors='ignore')
+                    status = resp.getcode()
+                    print(f'HTTP {status} for {url}', file=sys.stderr)
+                    print('Response headers:', dict(resp.getheaders()), file=sys.stderr)
+                    try:
+                        return json.loads(resp_text)
+                    except json.JSONDecodeError:
+                        print('Non-JSON response body:', resp_text, file=sys.stderr)
+                        return {'_raw_response': resp_text, 'status': status, 'headers': dict(resp.getheaders())}
             except urllib.error.HTTPError as e:
                 body = e.read().decode('utf-8', errors='ignore')
                 print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
+                print('Response headers:', dict(e.headers) if e.headers else {}, file=sys.stderr)
                 if body:
                     print('Response body:', file=sys.stderr)
                     print(body, file=sys.stderr)
@@ -102,6 +117,9 @@ stages:
                     print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
                     sys.exit(1)
                 raise
+            except urllib.error.URLError as e:
+                print(f'URL error for {url}: {e.reason}', file=sys.stderr)
+                sys.exit(1)
 
         print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
         print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
@@ -136,15 +154,22 @@ stages:
         def active_bootstrap_run_exists():
             q = urllib.parse.urlencode({'statusFilter': 'inProgress', 'api-version': '7.1-preview.1'})
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
+            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
+            print(f'Bootstrap run count: {len(response.get("value", []))}', file=sys.stderr)
             return bool(response.get('value', []))
 
         pool_id = get_pool_id()
+        print(f'Using pool id: {pool_id}', file=sys.stderr)
         online = get_online_agents(pool_id)
         if online:
             print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
+            for agent in online:
+                print(f'Online agent: {agent.get("name")} status={agent.get("status")} enabled={agent.get("enabled")}', file=sys.stderr)
             sys.exit(0)
 
-        if active_bootstrap_run_exists():
+        active_exists = active_bootstrap_run_exists()
+        print(f'Active bootstrap run exists: {active_exists}', file=sys.stderr)
+        if active_exists:
             print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
