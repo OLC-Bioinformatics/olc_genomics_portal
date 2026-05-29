@@ -148,8 +148,13 @@ stages:
             print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
-            body = {'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}}}
+            body = {
+                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
+                'templateParameters': {'destroy': 'true'}
+            }
+            print('Queue request body:', json.dumps(body), file=sys.stderr)
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
+            print('Queued bootstrap pipeline run response:', json.dumps(response), file=sys.stderr)
             print('Queued bootstrap pipeline run id:', response.get('id'))
 
         deadline = time.time() + wait_seconds
@@ -167,7 +172,7 @@ stages:
       displayName: 'Check self-hosted pool and queue bootstrap if needed'
       env:
         SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '973'
+        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
         SELF_HOSTED_AGENT_WAIT_SECONDS: '900'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -204,3 +209,75 @@ stages:
           docker compose up -d --build
         EOF
       displayName: Deploy portal to app VM
+- stage: CleanupSelfHostedAgent
+  displayName: 'Cleanup self-hosted agent infrastructure'
+  dependsOn: DeployPortal
+  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
+  jobs:
+  - job: DestroyAgent
+    displayName: 'Destroy self-hosted agent infrastructure'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: none
+    - script: |
+        set -euo pipefail
+
+        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
+          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
+          exit 1
+        fi
+
+        python3 - <<'PY'
+        import base64
+        import json
+        import os
+        import sys
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+
+        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
+        project = os.environ['SYSTEM_TEAMPROJECT']
+        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
+        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
+
+        auth = base64.b64encode(f':{token}'.encode()).decode()
+        headers = {
+            'Authorization': f'Basic {auth}',
+            'Content-Type': 'application/json'
+        }
+
+        def http_request(path, method='GET', body=None):
+            if path.startswith('/_apis/distributedtask'):
+                url = f'{org_uri}{path}'
+            else:
+                url = f'{org_uri}/{project}{path}'
+            data = None
+            if body is not None:
+                data = json.dumps(body).encode('utf-8')
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            try:
+                with urllib.request.urlopen(req) as resp:
+                    return json.load(resp)
+            except urllib.error.HTTPError as e:
+                body = e.read().decode('utf-8', errors='ignore')
+                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
+                if body:
+                    print('Response body:', file=sys.stderr)
+                    print(body, file=sys.stderr)
+                raise
+
+        body = {
+            'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
+            'templateParameters': {'destroy': 'true'},
+            'variables': {'destroy': {'value': 'true'}}
+        }
+        response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
+        print('Queued cleanup pipeline run id:', response.get('id'))
+        PY
+      displayName: 'Queue self-hosted destroy pipeline run'
+      env:
+        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
