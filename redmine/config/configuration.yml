@@ -10,7 +10,6 @@ production:
       port: 587
       domain: inspection.gc.ca
       authentication: :login
-      # user_name and password are populated from EMAIL_HOST_USER / EMAIL_HOST_PASSWORD at startup
       enable_starttls_auto: true
   default_from: CFIA Redmine <cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca>
   self_registration: false
