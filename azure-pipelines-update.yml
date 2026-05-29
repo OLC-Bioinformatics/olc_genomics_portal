@@ -154,9 +154,31 @@ stages:
         def active_bootstrap_run_exists():
             q = urllib.parse.urlencode({'statusFilter': 'inProgress', 'api-version': '7.1-preview.1'})
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
+            runs = response.get('value', [])
             print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Bootstrap run count: {len(response.get("value", []))}', file=sys.stderr)
-            return bool(response.get('value', []))
+            print(f'Bootstrap run count: {len(runs)}', file=sys.stderr)
+            for run in runs:
+                run_id = run.get('id')
+                run_state = run.get('state')
+                run_result = run.get('result')
+                run_url = run.get('_links', {}).get('web', {}).get('href')
+                print(f'Active run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
+            return bool(runs)
+
+        def debug_recent_bootstrap_runs():
+            q = urllib.parse.urlencode({'api-version': '7.1-preview.1', '$top': '20'})
+            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
+            runs = response.get('value', [])
+            print(f'Recent bootstrap run history for pipeline {pipeline_id}: count={len(runs)}', file=sys.stderr)
+            for run in runs:
+                run_id = run.get('id')
+                run_state = run.get('state')
+                run_result = run.get('result')
+                run_url = run.get('_links', {}).get('web', {}).get('href')
+                run_created = run.get('createdDate')
+                run_updated = run.get('lastUpdatedDate')
+                print(f'Run history: id={run_id} state={run_state} result={run_result} url={run_url} created={run_created} updated={run_updated}', file=sys.stderr)
+            return runs
 
         pool_id = get_pool_id()
         print(f'Using pool id: {pool_id}', file=sys.stderr)
@@ -170,7 +192,8 @@ stages:
         active_exists = active_bootstrap_run_exists()
         print(f'Active bootstrap run exists: {active_exists}', file=sys.stderr)
         if active_exists:
-            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
+            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.', file=sys.stderr)
+            debug_recent_bootstrap_runs()
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
             body = {
