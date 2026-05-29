@@ -82,8 +82,8 @@ stages:
     - script: |
         set -euo pipefail
 
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ]; then
-          echo "##vso[task.logissue type=error]SYSTEM_ACCESSTOKEN is unavailable. Enable Allow scripts to access the OAuth token in the pipeline settings."
+        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
+          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
           exit 1
         fi
 
@@ -103,7 +103,7 @@ stages:
         pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
         wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '900'))
         interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
-        token = os.environ['SYSTEM_ACCESSTOKEN']
+        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
 
         auth = base64.b64encode(f':{token}'.encode()).decode()
         headers = {
@@ -144,7 +144,7 @@ stages:
         print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
         print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
         print(f'POLL_INTERVAL={interval}', file=sys.stderr)
-        print('SYSTEM_ACCESSTOKEN present' if token else 'SYSTEM_ACCESSTOKEN missing', file=sys.stderr)
+        print('Using SELF_HOSTED_AGENT_PAT' if os.environ.get('SELF_HOSTED_AGENT_PAT') else 'Using SYSTEM_ACCESSTOKEN', file=sys.stderr)
         try:
             debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
             debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
@@ -206,6 +206,7 @@ stages:
         SELF_HOSTED_AGENT_WAIT_SECONDS: '900'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
