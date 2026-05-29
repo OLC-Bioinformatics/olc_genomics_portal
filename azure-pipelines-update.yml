@@ -199,8 +199,7 @@ stages:
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
             body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'templateParameters': {'destroy': 'true'}
+                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}}
             }
             print('Queue request body:', json.dumps(body), file=sys.stderr)
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
