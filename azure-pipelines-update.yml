@@ -199,8 +199,7 @@ stages:
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
             body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'templateParameters': {'destroy': 'true'}
+                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}}
             }
             print('Queue request body:', json.dumps(body), file=sys.stderr)
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
@@ -223,7 +222,7 @@ stages:
       env:
         SELF_HOSTED_POOL: $(selfHostedPool)
         SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '900'
+        SELF_HOSTED_AGENT_WAIT_SECONDS: '300'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
