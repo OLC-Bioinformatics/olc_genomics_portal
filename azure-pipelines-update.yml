@@ -152,18 +152,20 @@ stages:
             return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
 
         def active_bootstrap_run_exists():
-            q = urllib.parse.urlencode({'statusFilter': 'inProgress', 'api-version': '7.1-preview.1'})
+            q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
             runs = response.get('value', [])
             print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Bootstrap run count: {len(runs)}', file=sys.stderr)
-            for run in runs:
+            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
+            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
+            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
+            for run in in_progress_runs:
                 run_id = run.get('id')
                 run_state = run.get('state')
                 run_result = run.get('result')
                 run_url = run.get('_links', {}).get('web', {}).get('href')
-                print(f'Active run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
-            return bool(runs)
+                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
+            return bool(in_progress_runs)
 
         def debug_recent_bootstrap_runs():
             q = urllib.parse.urlencode({'api-version': '7.1-preview.1', '$top': '20'})
