@@ -1,0 +1,17 @@
+attachments/
+files/
+log/
+backups/
+tmp/
+issue_export/
+*.db
+*.sqlite*
+missing_attachments_report.*
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.cache
+.DS_Store
+.git
+.gitignore
