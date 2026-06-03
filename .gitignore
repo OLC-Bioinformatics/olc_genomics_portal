@@ -143,3 +143,4 @@ missing_attachments*
 *.crt
 redmine/config/secrets.yml
 redmine/config/database.yml
+redmine/config/initializers/secret_token.rb

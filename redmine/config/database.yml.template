@@ -1,7 +1,7 @@
 production:
   adapter: mysql2
+  host: mariadb
   database: redmine
-  socket: /run/mysqld/mysqld.sock
   username: redmine
   password: ${REDMINE_DB_PASSWORD}
   encoding: utf8mb4
