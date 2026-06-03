@@ -325,8 +325,7 @@ stages:
 
         body = {
             'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-            'templateParameters': {'destroy': 'true'},
-            'variables': {'destroy': {'value': 'true'}}
+            'templateParameters': {'destroy': True}
         }
         response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
         print('Queued cleanup pipeline run id:', response.get('id'))
