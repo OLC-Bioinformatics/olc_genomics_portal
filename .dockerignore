@@ -1,4 +1,41 @@
+# exclude large repo-local data directories
 sequences/*
 sketchomatic*
 postgres-data/*
-olc_webportal/media/*
+olc_webportal/media/
+olc_webportalv2/media/
+
+# redmine generated/runtime data
+redmine/attachments/
+redmine/files/
+redmine/log/
+redmine/backups/
+redmine/tmp/
+redmine/issue_export/
+redmine/*.db
+redmine/*.sqlite*
+redmine/missing_attachments_report.*
+redmine/__pycache__/
+redmine/*.pyc
+redmine/*.log
+redmine/*.tmp
+redmine/*.cache
+
+# repo metadata and VCS
+.git
+.gitignore
+
+# Python and build artifacts
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.cache
+.DS_Store
+
+# compose/pipeline/config not needed in image build
+docker-compose*.yml
+azure-pipelines*.yml
+dev.yml
+prod.yml
+production.yml
