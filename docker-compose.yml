@@ -5,7 +5,6 @@ services:
     expose:
       - "8000"
     links:
-      # - postgres:postgres
       - redis:redis
       - batch:batch
     env_file: env
@@ -38,9 +37,8 @@ services:
 
   redmine:
     restart: always
-    image: redmine:latest
     build:
-      context: ./redmine/
+      context: ./redmine
       dockerfile: Dockerfile
     expose:
       - "3000"
@@ -53,12 +51,19 @@ services:
       - REDMINE_DB_MYSQL=mariadb
       - REDMINE_DB_DATABASE=redmine
       - REDMINE_DB_USERNAME=redmine
-      - REDMINE_DB_PASSWORD
+      - REDMINE_DB_PASSWORD=${MYSQL_PASSWORD}
       - REDMINE_NO_DB_MIGRATE=1
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
     volumes:
       - ./redmine/files:/usr/src/redmine/files
       - ./redmine/log:/usr/src/redmine/log
       - ./redmine/config/configuration.yml:/usr/src/redmine/config/configuration.yml:rw
+      - ./redmine/config/database.yml:/usr/src/redmine/config/database.yml:rw
+      - ./redmine/config/secrets.yml:/usr/src/redmine/config/secrets.yml:rw
+      - ./redmine/config/initializers/smtp_retry.rb:/usr/src/redmine/config/initializers/smtp_retry.rb:rw
+      - ./redmine/issue_export:/usr/src/redmine/issue_export:rw
+      - ./redmine/attachments:/usr/src/redmine/attachments:rw
     ports:
       - "3000:3000"
     command: ["bundle", "exec", "bash", "/usr/src/redmine/boot-redmine.sh"]
@@ -67,10 +72,11 @@ services:
     restart: always
     image: mariadb:10.11
     environment:
-      - MYSQL_ROOT_PASSWORD
+      - MYSQL_ROOT_PASSWORD=${MARIA_DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=redmine
       - MYSQL_USER=redmine
-      - MYSQL_PASSWORD
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MARIA_DB_ROOT_PASSWORD}
     volumes:
       - redmine-db:/var/lib/mysql
 
@@ -83,23 +89,11 @@ services:
     volumes_from:
       - web
     volumes:
-      - ./nginx/certs:/etc/nginx/certs:ro
+      # - ./nginx/certs:/etc/nginx/certs:ro
       - /etc/foodport/tls:/etc/nginx/certs:ro
     links:
       - web:web
       - redmine:redmine
-
-  # postgres:
-  #   restart: always
-  #   image: postgres:9.6
-  #   volumes:
-  #     - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-  #     - ./backups/postgresql:/backup
-  #     - ./postgres-data:/var/lib/postgresql/data
-  #   env_file:
-  #     - env
-  #   expose:
-  #     - "5432"
 
   redis:
     restart: always
@@ -110,7 +104,6 @@ services:
     <<: *web
     depends_on:
       - redis
-      # - postgres
     command: ./worker_launcher.sh
 
   celerybeat:
@@ -118,7 +111,6 @@ services:
     <<: *web
     depends_on:
       - redis
-      # - postgres
     ports: []
     command: celery -A olc_webportalv2.taskapp beat -l info
 
