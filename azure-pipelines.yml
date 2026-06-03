@@ -7,10 +7,10 @@
 resources:
   pipelines:
   - pipeline: fullInfra
-    source: '977'
+    source: 'FoodPort-full-infra-tf'
     trigger: none
   - pipeline: devVm
-    source: '976'
+    source: 'FoodPort-dev-VM-tf'
     trigger: none
 
 # The BootstrapRemoteVm stage SSHs into the target VM.
