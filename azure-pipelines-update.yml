@@ -241,9 +241,8 @@ stages:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
         name: $(SELF_HOSTED_POOL)
-    ${{ if ne(parameters.useHostedAgent, true) }}:
-      demands:
-      - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
+        demands:
+        - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
     steps:
     - checkout: self
 
