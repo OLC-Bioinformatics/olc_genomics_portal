@@ -32,6 +32,8 @@ variables:
   value: '/home/cfiaadmin/FoodPort/olc_genomics_portal'
 - name: SELF_HOSTED_POOL
   value: ${{ parameters.selfHostedPool }}
+- name: SELF_HOSTED_AGENT_NAME
+  value: 'CFDC-FoodPort-self-hosted-agent-vm'
 
 stages:
 - stage: EnsureSelfHostedAgent
@@ -239,6 +241,9 @@ stages:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
         name: $(SELF_HOSTED_POOL)
+    ${{ if ne(parameters.useHostedAgent, true) }}:
+      demands:
+      - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
     steps:
     - checkout: self
 
@@ -247,11 +252,40 @@ stages:
       inputs:
         secureFile: 'prod_ssh_key'
 
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'CFDC-FoodPort-service-connection'
+        KeyVaultName: 'FoodPort-key-vault'
+        SecretsFilter: 'email-host-user,email-host-password'
+
     - script: |
         chmod 600 "$(sshKey.secureFilePath)"
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
           set -e
-          cd "$(REPO_DIR)"
+          cd "/home/cfiaadmin/FoodPort/olc_genomics_portal"
+          export EMAIL_HOST_USER='${EMAIL_HOST_USER:-}'
+          export EMAIL_HOST_PASSWORD='${EMAIL_HOST_PASSWORD:-}'
+
+          if [ -n "${EMAIL_HOST_USER:-}" ] || [ -n "${EMAIL_HOST_PASSWORD:-}" ]; then
+            python3 <<'PY'
+              import os
+              from pathlib import Path
+              path = Path('/home/cfiaadmin/FoodPort/olc_genomics_portal') / '.env'
+              current = {}
+              if path.exists():
+                  for line in path.read_text(encoding='utf-8').splitlines():
+                      if '=' in line:
+                          key, val = line.split('=', 1)
+                          current[key] = val
+              if os.environ.get('EMAIL_HOST_USER'):
+                  current['EMAIL_HOST_USER'] = os.environ['EMAIL_HOST_USER']
+              if os.environ.get('EMAIL_HOST_PASSWORD'):
+                  current['EMAIL_HOST_PASSWORD'] = os.environ['EMAIL_HOST_PASSWORD']
+              if current:
+                  path.write_text('\n'.join(f'{k}={v}' for k, v in current.items()) + '\n', encoding='utf-8')
+            PY
+          fi
+
           git fetch origin
           git reset --hard origin/main
           docker compose down
