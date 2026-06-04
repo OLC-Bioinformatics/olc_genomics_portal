@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -xeuo pipefail
 
 cd /usr/src/redmine
 export RAILS_ENV=production
