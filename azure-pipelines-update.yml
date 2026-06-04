@@ -201,7 +201,8 @@ stages:
         else:
             print('No online self-hosted agent found; queueing bootstrap pipeline.')
             body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}}
+                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
+                'variables': {'System.Debug': {'value': 'true'}}
             }
             print('Queue request body:', json.dumps(body), file=sys.stderr)
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
@@ -325,7 +326,8 @@ stages:
 
         body = {
             'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-            'templateParameters': {'destroy': True}
+            'templateParameters': {'destroy': True},
+            'variables': {'System.Debug': {'value': 'true'}}
         }
         response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
         print('Queued cleanup pipeline run id:', response.get('id'))
