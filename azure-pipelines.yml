@@ -106,7 +106,7 @@ stages:
         project = os.environ['SYSTEM_TEAMPROJECT']
         pool_name = os.environ['SELF_HOSTED_POOL']
         pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '300'))
+        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
         interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
         token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
 
@@ -176,7 +176,18 @@ stages:
         def active_bootstrap_run_exists():
             q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
             response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            return bool(response.get('value', []))
+            runs = response.get('value', [])
+            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
+            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
+            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
+            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
+            for run in in_progress_runs:
+                run_id = run.get('id')
+                run_state = run.get('state')
+                run_result = run.get('result')
+                run_url = run.get('_links', {}).get('web', {}).get('href')
+                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
+            return bool(in_progress_runs)
 
         pool_id = get_pool_id()
         online = get_online_agents(pool_id)
@@ -208,7 +219,7 @@ stages:
       env:
         SELF_HOSTED_POOL: $(selfHostedPool)
         SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '300'
+        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
