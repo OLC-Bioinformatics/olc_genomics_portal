@@ -76,7 +76,7 @@ variables:
 stages:
 - stage: EnsureSelfHostedAgent
   displayName: 'Ensure self-hosted agent'
-  condition: ne(${{ parameters.useHostedAgent }}, true)
+  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
   jobs:
   - job: EnsureAgent
     displayName: 'Ensure self-hosted agent is available'
@@ -230,7 +230,7 @@ stages:
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
   dependsOn: EnsureSelfHostedAgent
-  condition: and(eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
+  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
