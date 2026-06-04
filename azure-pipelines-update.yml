@@ -68,7 +68,7 @@ stages:
         project = os.environ['SYSTEM_TEAMPROJECT']
         pool_name = os.environ['SELF_HOSTED_POOL']
         pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '900'))
+        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
         interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
         token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
 
@@ -224,7 +224,7 @@ stages:
       env:
         SELF_HOSTED_POOL: $(selfHostedPool)
         SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '300'
+        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
         SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
