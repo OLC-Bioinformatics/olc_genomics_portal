@@ -38,7 +38,7 @@ variables:
 stages:
 - stage: EnsureSelfHostedAgent
   displayName: 'Ensure self-hosted agent'
-  condition: ne(${{ parameters.useHostedAgent }}, true)
+  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
   jobs:
   - job: EnsureAgent
     displayName: 'Ensure self-hosted agent is available'
