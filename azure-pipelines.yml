@@ -230,7 +230,7 @@ stages:
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
   dependsOn: EnsureSelfHostedAgent
-  condition: and(eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
+  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
