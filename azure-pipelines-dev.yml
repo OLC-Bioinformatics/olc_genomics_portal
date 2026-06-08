@@ -20,9 +20,6 @@ parameters:
 - name: selfHostedPool
   type: string
   default: 'foodport-self-hosted'
-- name: sshPublicKey
-  type: string
-  default: ''
 - name: bootstrapRemoteVm
   type: boolean
   default: true
@@ -52,6 +49,8 @@ variables:
   value: ${{ parameters.selfHostedPool }}
 - name: SELF_HOSTED_AGENT_NAME
   value: 'CFDC-FoodPort-self-hosted-agent-vm'
+- name: sshPublicKey
+  value: ''
 
 stages:
 - stage: EnsureSelfHostedAgent

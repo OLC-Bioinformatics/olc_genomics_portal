@@ -234,8 +234,8 @@ This repository is currently moving from a legacy dispatcher pipeline to two ded
 
 The active pipelines are:
 
-- `foodport-tf` — full infrastructure-only Terraform pipeline
-- `foodport-tf (964)` — dev VM-only Terraform pipeline
+- `FoodPort-dev-VM` — dev VM-only Terraform pipeline (ID 978)
+- `FoodPort-full-infra` — full infrastructure-only Terraform pipeline (ID 979)
 - `OLC-Bioinformatics.olc_genomics_portal-dev` — dedicated Dev VM provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-dev.yml`)
 - `OLC-Bioinformatics.olc_genomics_portal-full-infra` — dedicated full infra provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-full-infra.yml`)
 - `OLC-Bioinformatics.olc_genomics_portal (968)` — direct app update pipeline (`olc_genomics_portal/azure-pipelines.update.yml`)
@@ -270,6 +270,8 @@ Use the pipeline parameters:
 ```bash
 --parameters useHostedAgent=false selfHostedPool="<your-pool-name>"
 ```
+
+The new dedicated pipelines also expect `sshPublicKey` to be provided as a pipeline variable.
 
 This is useful when the portal VM is on a private network and a hosted Azure DevOps agent cannot SSH to it.
 
