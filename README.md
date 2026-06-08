@@ -230,43 +230,41 @@ git branch -D my-feature-branch
 
 ## Azure DevOps pipeline usage
 
-This repository is used by two Azure DevOps YAML pipelines:
+This repository is currently moving from a legacy dispatcher pipeline to two dedicated end-to-end deploy pipelines.
 
-- `foodport-tf` — full infrastructure pipeline
-- `foodport-tf (964)` — dev VM-only pipeline
-- `OLC-Bioinformatics.olc_genomics_portal` — app deployment pipeline (`azure-pipelines.yml`)
-- `OLC-Bioinformatics.olc_genomics_portal (968)` — direct app update pipeline (`azure-pipelines.update.yml`)
+The active pipelines are:
+
+- `foodport-tf` — full infrastructure-only Terraform pipeline
+- `foodport-tf (964)` — dev VM-only Terraform pipeline
+- `OLC-Bioinformatics.olc_genomics_portal-dev` — dedicated Dev VM provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-dev.yml`)
+- `OLC-Bioinformatics.olc_genomics_portal-full-infra` — dedicated full infra provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-full-infra.yml`)
+- `OLC-Bioinformatics.olc_genomics_portal (968)` — direct app update pipeline (`olc_genomics_portal/azure-pipelines.update.yml`)
+
+The old combined dispatcher pipeline, `olc_genomics_portal/azure-pipelines.yml`, is now legacy and can be removed once the new dedicated pipelines are validated.
 
 ### Pipeline purposes
 
-`olc_genomics_portal/azure-pipelines.yml` supports the deployment scenarios:
+`olc_genomics_portal/azure-pipelines-dev.yml` is the end-to-end Dev VM deploy pipeline:
 
-- `infrastructure=dev-vm` + `bootstrapRemoteVm=true`
-  - downloads `dev-vm-trigger` from `foodport-tf (964)`
-  - loads the portal VM IP
-  - bootstraps the remote VM and deploys the portal app
-- `infrastructure=full-infra` + `bootstrapRemoteVm=true`
-  - downloads `portal-trigger` from `foodport-tf`
-  - loads the portal VM IP from full infra
-  - bootstraps the remote VM and deploys the portal app
-- `infrastructure=none` + `bootstrapRemoteVm=false`
-  - local app deployment only
-  - does not download a VM IP or bootstrap a remote host
+- provisions the Dev VM via Terraform
+- publishes the VM IP artifact
+- bootstraps the remote VM via SSH if `bootstrapRemoteVm=true`
+- deploys the portal app using downloaded artifacts and secrets
 
-`olc_genomics_portal/azure-pipelines.update.yml` is a separate direct update pipeline.
-It is intended for app updates on an existing portal VM and always runs:
+`olc_genomics_portal/azure-pipelines-full-infra.yml` is the end-to-end full infra deploy pipeline:
 
-- `git fetch origin`
-- `git reset --hard origin/main`
-- `docker compose down`
-- `docker compose up -d --build`
+- provisions the portal infrastructure via Terraform
+- publishes the portal VM IP artifact
+- bootstraps the remote VM via SSH if `bootstrapRemoteVm=true`
+- deploys the portal app using downloaded artifacts and secrets
 
-This pipeline uses a private SSH key secure file named `prod_ssh_key` to access the portal VM.
+`olc_genomics_portal/azure-pipelines.update.yml` is a separate direct app update pipeline.
+It is intended for updates to an existing portal VM and runs a repo pull and compose stack restart.
 
 ### Self-hosted agent support
 
-The portal deployment pipelines can run on a self-hosted Azure DevOps agent instead of a hosted Microsoft agent.
-This applies to both the direct update pipeline (`azure-pipelines.update.yml`) and the main portal pipeline (`azure-pipelines.yml`).
+The deploy pipelines can run on a self-hosted Azure DevOps agent instead of a hosted Microsoft agent.
+This applies to both the dedicated end-to-end deploy pipelines and the direct app update pipeline.
 Use the pipeline parameters:
 
 ```bash
@@ -277,10 +275,10 @@ This is useful when the portal VM is on a private network and a hosted Azure Dev
 
 #### What is involved in the self-hosted agent setup
 
-1. Create a cheap Azure VM in the same VNet or peered network as the portal VM.
+1. Create a small Azure VM in the same VNet or peered network as the portal VM.
 2. Install the Azure Pipelines agent software on that VM.
 3. Register the VM with an Azure DevOps agent pool, e.g. `my-self-hosted-pool`.
-4. Give the VM outbound internet access so it can reach Azure DevOps, but no inbound SSH is required from the public internet if it is only used internally.
+4. Give the VM outbound internet access so it can reach Azure DevOps, but no public inbound SSH is required for the portal VM.
 5. Configure the VM to auto-shutdown when idle and start only when needed.
 
 You can create and manage the Azure VM with `az cli`, and use the VM auto-shutdown feature or a schedule to minimize cost.
@@ -288,7 +286,7 @@ You can create and manage the Azure VM with `az cli`, and use the VM auto-shutdo
 ### Example self-hosted agent run
 
 ```bash
-az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal (968)" --branch main \
+az pipelines run --name "<your-dedicated-pipeline-name>" --branch main \
   --parameters useHostedAgent=false selfHostedPool="my-self-hosted-pool"
 ```
 
@@ -303,7 +301,7 @@ Then the pipeline will use the self-hosted agent pool instead of `ubuntu-latest`
 
 ### Important
 
-This pipeline still requires `prod_ssh_key` to be uploaded as a secure file, but a self-hosted agent is the right way to reach a private portal VM.
+The dedicated deploy pipelines still require `prod_ssh_key` and other secure files in the Azure DevOps library, as well as access to the portal VM via SSH.
 
 ### Azure CLI setup
 
@@ -320,34 +318,32 @@ If you need to disable connection verification while installing the extension:
 AZURE_CLI_DISABLE_CONNECTION_VERIFICATION=1 az extension add --name azure-devops
 ```
 
-### Run the app deployment pipeline
+### Run the dedicated deploy pipelines
 
 ```bash
-az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=dev-vm bootstrapRemoteVm=true
+az pipelines run --name "<your-dev-pipeline-name>" --branch main \
+  --parameters destroy=false deployEnvironment=dev useHostedAgent=false sshPublicKey="<public-key>" bootstrapRemoteVm=true
 ```
 
 ```bash
-az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=full-infra bootstrapRemoteVm=true
-```
-
-```bash
-az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal" --branch main --parameters infrastructure=none bootstrapRemoteVm=false
+az pipelines run --name "<your-full-infra-pipeline-name>" --branch main \
+  --parameters destroy=false deployEnvironment=dev useHostedAgent=false sshPublicKey="<public-key>" bootstrapRemoteVm=true
 ```
 
 ### Run the direct app update pipeline
 
-If you register `azure-pipelines.update.yml` as a separate pipeline called `OLC-Bioinformatics.olc_genomics_portal (968)`, run:
+If you register `azure-pipelines.update.yml` as a separate pipeline, run:
 
 ```bash
-az pipelines run --name "OLC-Bioinformatics.olc_genomics_portal (968)" --branch main
+az pipelines run --name "<your-update-pipeline-name>" --branch main
 ```
 
 This is the pipeline to use when you want to push a code update to the portal VM and rebuild the compose stack.
 
 ### Pipeline file locations
 
-- Dev VM pipeline: `foodport-tf/dev-vm/azure-pipelines-dev-vm.yml`
-- Full infra pipeline: `foodport-tf/full-infra/azure-pipelines.infra.yml`
-- App deploy pipeline: `olc_genomics_portal/azure-pipelines.yml`
-- App update pipeline: `olc_genomics_portal/azure-pipelines.update.yml`
+- Dev VM deploy pipeline: `olc_genomics_portal/azure-pipelines-dev.yml`
+- Full infra deploy pipeline: `olc_genomics_portal/azure-pipelines-full-infra.yml`
+- Direct app update pipeline: `olc_genomics_portal/azure-pipelines.update.yml`
+- Legacy dispatcher pipeline: `olc_genomics_portal/azure-pipelines.yml` (deprecated)
 

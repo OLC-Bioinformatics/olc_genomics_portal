@@ -1,39 +1,16 @@
-# Azure DevOps pipeline resource mappings:
-# - fullInfra: source pipeline name for full infrastructure provisioning
-# - devVm: source pipeline name for dev VM provisioning
-#
-# Update the source values below if the actual DevOps pipeline display
-# names differ from the examples used here.
-resources:
-  pipelines:
-  - pipeline: fullInfra
-    source: 'FoodPort-full-infra-tf'
-    project: 'FoodPort'
-    trigger: none
-  - pipeline: devVm
-    source: 'FoodPort-dev-VM-tf'
-    project: 'FoodPort'
-    trigger: none
+trigger: none
+pr: none
 
-# The BootstrapRemoteVm stage SSHs into the target VM.
-# For private endpoint / private network access, use a self-hosted agent pool.
 parameters:
+- name: destroy
+  type: boolean
+  default: false
 - name: deployEnvironment
   type: string
   default: dev
   values:
     - dev
     - prod
-- name: infrastructure
-  type: string
-  default: dev-vm
-  values:
-    - dev-vm
-    - full-infra
-    - none
-- name: bootstrapRemoteVm
-  type: boolean
-  default: true
 - name: useHostedAgent
   type: boolean
   default: false
@@ -46,9 +23,9 @@ parameters:
 - name: sshPublicKey
   type: string
   default: ''
-
-trigger: none
-pr: none
+- name: bootstrapRemoteVm
+  type: boolean
+  default: true
 
 variables:
 - name: DEPLOY_ENVIRONMENT
@@ -75,36 +52,11 @@ variables:
   value: ${{ parameters.selfHostedPool }}
 - name: SELF_HOSTED_AGENT_NAME
   value: 'CFDC-FoodPort-self-hosted-agent-vm'
-- name: INFRA_NAME
-  ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-    value: 'devVm'
-  ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-    value: 'fullInfra'
-- name: INFRA_PIPELINE_NAME
-  ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-    value: 'FoodPort-dev-VM-tf'
-  ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-    value: 'FoodPort-full-infra-tf'
-- name: INFRA_ARTIFACT_NAME
-  ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-    value: 'dev-vm-trigger'
-  ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-    value: 'portal-trigger'
-- name: INFRA_DOWNLOAD_DIR
-  ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-    value: '$(Pipeline.Workspace)/devVm'
-  ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-    value: '$(Pipeline.Workspace)/fullInfra'
-- name: INFRA_TARGET_HOST_FILE
-  ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-    value: '$(Pipeline.Workspace)/devVm/dev-vm-trigger/vm_ip.txt'
-  ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-    value: '$(Pipeline.Workspace)/fullInfra/portal-trigger/vm_ip.txt'
 
 stages:
 - stage: EnsureSelfHostedAgent
   displayName: 'Ensure self-hosted agent'
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
+  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true), ne(${{ parameters.destroy }}, true))
   jobs:
   - job: EnsureAgent
     displayName: 'Ensure self-hosted agent is available'
@@ -240,7 +192,7 @@ stages:
             if online:
                 print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
                 sys.exit(0)
-            print(f'No agent online yet; sleeping {interval}s...')
+            print(f'No agent online yet; sleeping {interval}s...', file=sys.stderr)
             time.sleep(interval)
 
         print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
@@ -255,78 +207,85 @@ stages:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
 
-- stage: PrepareInfrastructureArtifact
-  displayName: 'Queue infrastructure pipeline and fetch artifact'
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
+- stage: ProvisionFullInfra
+  displayName: 'Provision full infrastructure'
+  condition: succeeded()
   jobs:
-  - job: PrepareInfra
-    displayName: 'Run infrastructure pipeline and download artifact'
+  - job: Terraform
+    displayName: Full Infra Terraform
     pool:
-      vmImage: 'ubuntu-latest'
+      ${{ if eq(parameters.useHostedAgent, true) }}:
+        vmImage: ${{ parameters.hostedVmImage }}
+      ${{ if ne(parameters.useHostedAgent, true) }}:
+        name: ${{ parameters.selfHostedPool }}
     steps:
-    - checkout: none
-    - task: AzureCLI@2
-      displayName: 'Queue infra pipeline and download artifact'
-      env:
-        SSH_PUBLIC_KEY: $(sshPublicKey)
-        INFRA_PIPELINE_NAME: $(INFRA_PIPELINE_NAME)
-        INFRA_ARTIFACT_NAME: $(INFRA_ARTIFACT_NAME)
-        INFRA_DOWNLOAD_DIR: $(INFRA_DOWNLOAD_DIR)
+    - checkout: self
+
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+      displayName: Install Terraform
       inputs:
-        azureSubscription: 'CFDC-FoodPort-service-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -euo pipefail
+        terraformVersion: 'latest'
 
-          pipeline_name="${INFRA_PIPELINE_NAME}"
-          artifact_name="${INFRA_ARTIFACT_NAME}"
-          download_dir="${INFRA_DOWNLOAD_DIR}"
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
 
-          mkdir -p "$download_dir"
-
-          if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
-            echo "ERROR: sshPublicKey is required when running ${pipeline_name}."
-            exit 1
-          fi
-
-          az extension add --name azure-devops --yes || true
-          az devops configure --defaults organization=https://dev.azure.com/CFIA-DevOps-ACIA project=FoodPort
-
-          if [ "${pipeline_name}" = 'FoodPort-full-infra-tf' ]; then
-            run_id=$(az pipelines run --name "$pipeline_name" --branch main --variables sshPublicKey="$SSH_PUBLIC_KEY" skipPortalTrigger=true --query id -o tsv)
-          else
-            run_id=$(az pipelines run --name "$pipeline_name" --branch main --variables sshPublicKey="$SSH_PUBLIC_KEY" --query id -o tsv)
-          fi
-          echo "Queued pipeline ${pipeline_name} run ${run_id}"
-
-          while true; do
-            state=$(az pipelines runs show --id "$run_id" --query state -o tsv)
-            result=$(az pipelines runs show --id "$run_id" --query result -o tsv)
-            echo "Run ${run_id} state=${state} result=${result}"
-            if [ "$state" = 'completed' ]; then
-              if [ "$result" != 'succeeded' ]; then
-                echo "Pipeline run ${run_id} failed with result ${result}."
-                exit 1
-              fi
-              break
+    - ${{ if not(parameters.destroy) }}:
+      - task: AzureCLI@2
+        displayName: Apply Terraform for full infra
+        env:
+          SSH_PUBLIC_KEY: $(sshPublicKey)
+        inputs:
+          azureSubscription: 'CFDC-FoodPort-service-connection'
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -e
+            cd "$(Build.SourcesDirectory)"
+            if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
+              echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
+              exit 1
             fi
-            sleep 15
-          done
+            export TF_VAR_ssh_public_key="${SSH_PUBLIC_KEY}"
+            terraform init
+            terraform plan -out=tfplan
+            terraform apply -auto-approve tfplan
 
-          az pipelines runs artifact download --run-id "$run_id" --artifact-name "$artifact_name" --path "$download_dir"
-          echo "Downloaded artifact ${artifact_name} to ${download_dir}"
-    - task: PublishPipelineArtifact@1
-      inputs:
-        targetPath: '$(INFRA_DOWNLOAD_DIR)'
-        artifact: '$(INFRA_NAME)'
+            VM_IP="$(terraform output -raw portal_vm_private_ip)"
+            echo "VM_IP=$VM_IP" > vm_ip.txt
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish portal VM IP artifact
+        inputs:
+          targetPath: '$(Build.SourcesDirectory)/vm_ip.txt'
+          artifact: 'fullInfra'
+
+    - ${{ if parameters.destroy }}:
+      - task: AzureCLI@2
+        displayName: Destroy Terraform-managed full infra
+        env:
+          SSH_PUBLIC_KEY: $(sshPublicKey)
+        inputs:
+          azureSubscription: 'CFDC-FoodPort-service-connection'
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -e
+            cd "$(Build.SourcesDirectory)"
+            if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
+              echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
+              exit 1
+            fi
+            export TF_VAR_ssh_public_key="${SSH_PUBLIC_KEY}"
+            terraform init
+            terraform destroy -auto-approve
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
+  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true))
   dependsOn:
+    - ProvisionFullInfra
     - EnsureSelfHostedAgent
-    - PrepareInfrastructureArtifact
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne('${{ parameters.infrastructure }}', 'none'))
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
@@ -337,15 +296,15 @@ stages:
         name: $(SELF_HOSTED_POOL)
     steps:
     - task: DownloadPipelineArtifact@2
-      displayName: 'Download infra artifact from helper stage'
+      displayName: 'Download full infra artifact'
       inputs:
-        artifact: '$(INFRA_NAME)'
+        artifact: 'fullInfra'
         path: '$(Pipeline.Workspace)'
 
     - script: |
-        TARGET_HOST=$(cat "$(INFRA_TARGET_HOST_FILE)")
+        TARGET_HOST=$(cat "$(Pipeline.Workspace)/fullInfra/vm_ip.txt")
         echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
-      displayName: 'Load TARGET_HOST from infra artifact'
+      displayName: 'Load TARGET_HOST from full infra artifact'
 
     - task: DownloadSecureFile@1
       name: sshKey
@@ -557,35 +516,22 @@ stages:
         chmod 600 "${BUILD_SOURCESDIRECTORY}/.env"
       displayName: 'Write .env file for docker compose interpolation'
 
-    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-      - download: devVm
-        artifact: dev-vm-trigger
-    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-      - download: fullInfra
-        artifact: portal-trigger
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download full infra artifact for deploy'
+      inputs:
+        artifact: 'fullInfra'
+        path: '$(Pipeline.Workspace)'
 
-    - ${{ if eq(parameters.infrastructure, 'dev-vm') }}:
-      - script: |
-          set -e
-          VM_IP=$(cat "$(Pipeline.Workspace)/devVm/dev-vm-trigger/vm_ip.txt")
-          ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
-          if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
-            sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
-          else
-            echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
-          fi
-        displayName: 'Set portal VM IP in env file from dev-vm artifact'
-    - ${{ if eq(parameters.infrastructure, 'full-infra') }}:
-      - script: |
-          set -e
-          VM_IP=$(cat "$(Pipeline.Workspace)/fullInfra/portal-trigger/vm_ip.txt")
-          ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
-          if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
-            sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
-          else
-            echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
-          fi
-        displayName: 'Set portal VM IP in env file from full-infra artifact'
+    - script: |
+        set -e
+        VM_IP=$(cat "$(Pipeline.Workspace)/fullInfra/vm_ip.txt")
+        ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
+        if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
+          sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
+        else
+          echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
+        fi
+      displayName: 'Set portal VM IP in env file from full-infra artifact'
 
     - script: |
         python3 <<'PY'
@@ -593,7 +539,6 @@ stages:
         from pathlib import Path
 
         root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
-
         secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
         secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
 
@@ -660,76 +605,3 @@ stages:
         docker compose down
         docker compose up -d
       displayName: 'Restart containers'
-
-- stage: CleanupSelfHostedAgent
-  displayName: 'Cleanup self-hosted agent infrastructure'
-  dependsOn: DeployPortal
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
-  jobs:
-  - job: DestroyAgent
-    displayName: 'Destroy self-hosted agent infrastructure'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: none
-    - script: |
-        set -euo pipefail
-
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
-          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
-          exit 1
-        fi
-
-        python3 - <<'PY'
-        import base64
-        import json
-        import os
-        import sys
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
-        project = os.environ['SYSTEM_TEAMPROJECT']
-        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
-
-        auth = base64.b64encode(f':{token}'.encode()).decode()
-        headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-Type': 'application/json'
-        }
-
-        def http_request(path, method='GET', body=None):
-            if path.startswith('/_apis/distributedtask'):
-                url = f'{org_uri}{path}'
-            else:
-                url = f'{org_uri}/{project}{path}'
-            data = None
-            if body is not None:
-                data = json.dumps(body).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            try:
-                with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
-            except urllib.error.HTTPError as e:
-                body = e.read().decode('utf-8', errors='ignore')
-                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
-                if body:
-                    print('Response body:', file=sys.stderr)
-                    print(body, file=sys.stderr)
-                raise
-
-        body = {
-            'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-            'templateParameters': {'destroy': True},
-            'variables': {'System.Debug': {'value': 'true'}}
-        }
-        response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
-        print('Queued cleanup pipeline run id:', response.get('id'))
-        PY
-      displayName: 'Queue self-hosted destroy pipeline run'
-      env:
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
