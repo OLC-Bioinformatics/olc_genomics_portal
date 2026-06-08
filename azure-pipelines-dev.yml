@@ -1,6 +1,13 @@
 trigger: none
 pr: none
 
+resources:
+  repositories:
+  - repository: foodport-tf
+    type: git
+    name: FoodPort/foodport-tf
+    trigger: none
+
 parameters:
 - name: destroy
   type: boolean
@@ -51,6 +58,12 @@ variables:
   value: 'CFDC-FoodPort-self-hosted-agent-vm'
 - name: sshPublicKey
   value: ''
+- name: existingNetworkRg
+  value: 'CFDC-FoodPort-network-rg'
+- name: existingVnetName
+  value: 'CFDC-FoodPort-vnet'
+- name: existingSubnetName
+  value: 'CFDC-FoodPort-Portal-snet'
 
 stages:
 - stage: EnsureSelfHostedAgent
@@ -219,6 +232,10 @@ stages:
         name: ${{ parameters.selfHostedPool }}
     steps:
     - checkout: self
+      persistCredentials: true
+    - checkout: foodport-tf
+      path: foodport-tf
+      persistCredentials: true
 
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
@@ -236,7 +253,7 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Build.SourcesDirectory)/dev-vm"
+            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
@@ -256,7 +273,7 @@ stages:
       - task: PublishPipelineArtifact@1
         displayName: Publish VM IP artifact
         inputs:
-          targetPath: '$(Build.SourcesDirectory)/dev-vm/vm_ip.txt'
+          targetPath: '$(Build.SourcesDirectory)/foodport-tf/dev-vm/vm_ip.txt'
           artifact: 'devVm'
 
     - ${{ if parameters.destroy }}:
@@ -270,7 +287,7 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Build.SourcesDirectory)/dev-vm"
+            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
