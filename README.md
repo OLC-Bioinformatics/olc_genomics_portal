@@ -149,16 +149,13 @@ The dedicated deploy pipelines do not require a separate repo-specific pipeline 
 `foodport-tf` is an Azure Repos Git repository in the same organization. Pipeline access is handled by Azure DevOps
 repo resource authorization and the agent's OAuth credential.
 
-The new dedicated pipelines also accept `sshPublicKey` as a runtime parameter. Use either:
-
-- pipeline variable `sshPublicKey`
-- or pipeline parameter `sshPublicKey`
+The new dedicated pipelines accept `sshPublicKey` as a pipeline variable only.
 
 For example, via Azure DevOps CLI:
 
 ```bash
 az pipelines run --name "<your-dev-pipeline-name>" --branch main \
-  --parameters destroy=false deployEnvironment=dev useHostedAgent=false sshPublicKey="<public-key>" bootstrapRemoteVm=true
+  --variables sshPublicKey="<public-key>" destroy=false deployEnvironment=dev useHostedAgent=false bootstrapRemoteVm=true
 ```
 
 If the repo is in a different Azure DevOps project, ensure the pipeline is authorized to access the external repo from
