@@ -310,7 +310,25 @@ stages:
         path: '$(Pipeline.Workspace)'
 
     - script: |
-        TARGET_HOST=$(cat "$(Pipeline.Workspace)/fullInfra/vm_ip.txt")
+        set -euo pipefail
+
+        artifact_dir="$(Pipeline.Workspace)/fullInfra"
+        echo "Listing downloaded artifact contents: ${artifact_dir}"
+        find "${artifact_dir}" -maxdepth 6 -type f | sort
+
+        artifact_file=$(find "${artifact_dir}" -type f -name 'vm_ip.txt' | head -n 1 || true)
+        if [ -z "${artifact_file:-}" ]; then
+          echo "ERROR: full infra artifact file vm_ip.txt not found under ${artifact_dir}"
+          exit 1
+        fi
+
+        TARGET_HOST=$(cat "${artifact_file}")
+        if [ -z "${TARGET_HOST:-}" ]; then
+          echo "ERROR: full infra artifact file is empty: ${artifact_file}"
+          exit 1
+        fi
+
+        echo "Found vm_ip.txt at: ${artifact_file}"
         echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
       displayName: 'Load TARGET_HOST from full infra artifact'
 
