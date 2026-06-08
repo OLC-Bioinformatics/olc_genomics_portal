@@ -253,7 +253,7 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
+            cd "$(Pipeline.Workspace)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
@@ -273,7 +273,7 @@ stages:
       - task: PublishPipelineArtifact@1
         displayName: Publish VM IP artifact
         inputs:
-          targetPath: '$(Build.SourcesDirectory)/foodport-tf/dev-vm/vm_ip.txt'
+          targetPath: '$(Pipeline.Workspace)/foodport-tf/dev-vm/vm_ip.txt'
           artifact: 'devVm'
 
     - ${{ if parameters.destroy }}:
@@ -287,7 +287,7 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
+            cd "$(Pipeline.Workspace)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
