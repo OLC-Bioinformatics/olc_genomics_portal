@@ -27,6 +27,9 @@ parameters:
 - name: selfHostedPool
   type: string
   default: 'foodport-self-hosted'
+- name: sshPublicKey
+  type: string
+  default: ''
 - name: bootstrapRemoteVm
   type: boolean
   default: true
@@ -244,7 +247,7 @@ stages:
       - task: AzureCLI@2
         displayName: Apply Terraform for full infra
         env:
-          SSH_PUBLIC_KEY: $(sshPublicKey)
+          SSH_PUBLIC_KEY: $[ coalesce(variables['sshPublicKey'], parameters.sshPublicKey) ]
         inputs:
           azureSubscription: 'CFDC-FoodPort-service-connection'
           scriptType: bash
@@ -274,7 +277,7 @@ stages:
       - task: AzureCLI@2
         displayName: Destroy Terraform-managed full infra
         env:
-          SSH_PUBLIC_KEY: $(sshPublicKey)
+          SSH_PUBLIC_KEY: $[ coalesce(variables['sshPublicKey'], parameters.sshPublicKey) ]
         inputs:
           azureSubscription: 'CFDC-FoodPort-service-connection'
           scriptType: bash
