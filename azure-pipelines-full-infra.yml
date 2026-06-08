@@ -56,8 +56,6 @@ variables:
   value: ${{ parameters.selfHostedPool }}
 - name: SELF_HOSTED_AGENT_NAME
   value: 'CFDC-FoodPort-self-hosted-agent-vm'
-- name: sshPublicKey
-  value: ''
 
 stages:
 - stage: EnsureSelfHostedAgent
