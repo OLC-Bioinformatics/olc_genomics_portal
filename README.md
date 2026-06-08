@@ -129,6 +129,32 @@ A separate deployment pipeline is available at `olc_genomics_portal/azure-pipeli
 This pipeline is designed to run on pushes to `main`, SSH to the portal VM at `10.148.57.4`, pull the latest
 repo state, and restart the compose stack with `docker compose up -d --build`.
 
+## External Terraform repo dependency
+
+The dedicated deploy pipelines in `olc_genomics_portal/azure-pipelines-dev.yml` and
+`olc_genomics_portal/azure-pipelines-full-infra.yml` now checkout the external repository
+`FoodPort/foodport-tf` from Azure DevOps.
+That repo contains the Terraform code used by these pipelines under:
+
+- `foodport-tf/dev-vm`
+- `foodport-tf/full-infra`
+
+The pipeline uses the repo alias `foodport-tf` and checks it out to
+`$(Build.SourcesDirectory)/foodport-tf`.
+
+If you are running these pipelines, the Azure DevOps project must contain the
+`foodport-tf` repo and the pipeline must be allowed to fetch it.
+
+The dedicated deploy pipelines do not require a separate repo-specific pipeline variable for checkout when
+`foodport-tf` is an Azure Repos Git repository in the same organization. Pipeline access is handled by Azure DevOps
+repo resource authorization and the agent's OAuth credential.
+
+If the repo is in a different Azure DevOps project, ensure the pipeline is authorized to access the external repo from
+Pipeline settings > Resources > Repositories, or via the repo resource permissions dialog.
+
+If you later need to run git commands against the checked-out `foodport-tf` repo from script tasks, the pipeline
+checkout also persists credentials for that repo so the task can use the repo access token.
+
 ## Branch-based update workflow
 
 Because `main` is protected, use a branch-based workflow for repository changes:
