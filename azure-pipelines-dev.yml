@@ -411,6 +411,19 @@ stages:
         secureFile: 'portal_ssh_key'
 
     - script: |
+        set -euo pipefail
+        if [ -n "${SSH_PUBLIC_KEY:-}" ]; then
+          derived_pub=$(ssh-keygen -y -f "$(sshKey.secureFilePath)" 2>/dev/null || true)
+          if [ -z "$derived_pub" ]; then
+            echo "ERROR: failed to derive public key from private key file"
+            exit 1
+          fi
+          if [ "$derived_pub" != "$SSH_PUBLIC_KEY" ]; then
+            echo "ERROR: the private key in secure file does not match sshPublicKey"
+            echo "Please provide the matching private key for the public key used by Terraform."
+            exit 1
+          fi
+        fi
         chmod 600 "$(sshKey.secureFilePath)"
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
           set -e
@@ -445,6 +458,8 @@ stages:
             /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
           fi
         EOF
+      env:
+        SSH_PUBLIC_KEY: $(sshPublicKey)
       displayName: 'Bootstrap remote VM with Docker, Docker Compose, Git, Python, Conda, and Azure CLI'
 
 - stage: DeployPortal
