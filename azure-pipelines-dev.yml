@@ -262,11 +262,25 @@ stages:
             export TF_VAR_existing_subnet_name="$(existingSubnetName)"
 
             terraform init
-            terraform plan -out=tfplan
-            terraform apply -auto-approve tfplan
 
-            VM_IP="$(terraform output -raw dev_vm_private_ip)"
-            echo "VM_IP=$VM_IP" > vm_ip.txt
+            SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+            SSH_PUBLIC_KEY_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/CFDC-FoodPort-Portal-rg/providers/Microsoft.Compute/sshPublicKeys/CFDC-FoodPort-dev-vm-24-04-key"
+            NIC_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/CFDC-FoodPort-Portal-rg/providers/Microsoft.Network/networkInterfaces/CFDC-FoodPort-dev-vm-24.04645_z1"
+            VM_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/CFDC-FoodPort-Portal-rg/providers/Microsoft.Compute/virtualMachines/CFDC-FoodPort-portal-dev-vm-24.04"
+
+            if az resource show --ids "$SSH_PUBLIC_KEY_ID" >/dev/null 2>&1; then
+              echo "Importing existing SSH public key resource into Terraform state."
+              terraform import azurerm_ssh_public_key.dev_vm "$SSH_PUBLIC_KEY_ID" || true
+            fi
+            if az resource show --ids "$NIC_ID" >/dev/null 2>&1; then
+              echo "Importing existing network interface resource into Terraform state."
+              terraform import azurerm_network_interface.dev_vm "$NIC_ID" || true
+            fi
+            if az resource show --ids "$VM_ID" >/dev/null 2>&1; then
+              echo "Importing existing VM resource into Terraform state."
+              terraform import azurerm_linux_virtual_machine.dev_vm "$VM_ID" || true
+            fi
+
 
       - task: PublishPipelineArtifact@1
         displayName: Publish VM IP artifact
