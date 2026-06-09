@@ -251,7 +251,7 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Pipeline.Workspace)/foodport-tf/dev-vm"
+            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
@@ -281,11 +281,16 @@ stages:
               terraform import azurerm_linux_virtual_machine.dev_vm "$VM_ID" || true
             fi
 
+            terraform plan -out=tfplan
+            terraform apply -auto-approve tfplan
+
+            VM_IP="$(terraform output -raw dev_vm_private_ip)"
+            echo "VM_IP=$VM_IP" > vm_ip.txt
 
       - task: PublishPipelineArtifact@1
         displayName: Publish VM IP artifact
         inputs:
-          targetPath: '$(Pipeline.Workspace)/foodport-tf/dev-vm/vm_ip.txt'
+          targetPath: '$(Build.SourcesDirectory)/foodport-tf/dev-vm/vm_ip.txt'
           artifact: 'devVm'
 
     - ${{ if parameters.destroy }}:
