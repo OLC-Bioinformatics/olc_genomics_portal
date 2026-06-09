@@ -383,13 +383,15 @@ stages:
     - script: |
         set -euo pipefail
 
-        artifact_dir="$(Pipeline.Workspace)/devVm"
+        artifact_dir="$(Pipeline.Workspace)"
         echo "Listing downloaded artifact contents: ${artifact_dir}"
-        find "${artifact_dir}" -maxdepth 6 -type f | sort
+        find "${artifact_dir}" -maxdepth 8 -type f | sort
 
         artifact_file=$(find "${artifact_dir}" -type f -name 'vm_ip.txt' | head -n 1 || true)
         if [ -z "${artifact_file:-}" ]; then
           echo "ERROR: dev VM artifact file vm_ip.txt not found under ${artifact_dir}"
+          echo "Downloaded workspace contents:"
+          find "${artifact_dir}" -maxdepth 3 -mindepth 1 | sort
           exit 1
         fi
 
