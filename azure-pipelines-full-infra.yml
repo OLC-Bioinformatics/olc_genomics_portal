@@ -260,7 +260,7 @@ stages:
             terraform apply -auto-approve tfplan
 
             VM_IP="$(terraform output -raw portal_vm_private_ip)"
-            echo "VM_IP=$VM_IP" > vm_ip.txt
+            echo "$VM_IP" > vm_ip.txt
 
       - task: PublishPipelineArtifact@1
         displayName: Publish portal VM IP artifact
