@@ -251,7 +251,24 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            cd "$(Build.SourcesDirectory)/foodport-tf/dev-vm"
+            repo_root="$(Build.SourcesDirectory)/foodport-tf"
+            alt_repo_root="$(Pipeline.Workspace)/foodport-tf"
+            if [ -d "$repo_root/dev-vm" ]; then
+              cd "$repo_root/dev-vm"
+            elif [ -d "$alt_repo_root/dev-vm" ]; then
+              cd "$alt_repo_root/dev-vm"
+            else
+              echo "ERROR: Terraform repo path not found."
+              echo "Expected one of:"
+              echo "  $repo_root/dev-vm"
+              echo "  $alt_repo_root/dev-vm"
+              echo "$(Build.SourcesDirectory) contents:"
+              ls -la "$(Build.SourcesDirectory)" || true
+              echo "$(Pipeline.Workspace) contents:"
+              ls -la "$(Pipeline.Workspace)" || true
+              exit 1
+            fi
+
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
@@ -286,11 +303,12 @@ stages:
 
             VM_IP="$(terraform output -raw dev_vm_private_ip)"
             echo "VM_IP=$VM_IP" > vm_ip.txt
-
+            mkdir -p "$(Pipeline.Workspace)/dev-vm"
+            cp vm_ip.txt "$(Pipeline.Workspace)/dev-vm/vm_ip.txt"
       - task: PublishPipelineArtifact@1
         displayName: Publish VM IP artifact
         inputs:
-          targetPath: '$(Build.SourcesDirectory)/foodport-tf/dev-vm/vm_ip.txt'
+          targetPath: '$(Pipeline.Workspace)/dev-vm/vm_ip.txt'
           artifact: 'devVm'
 
     - ${{ if parameters.destroy }}:
