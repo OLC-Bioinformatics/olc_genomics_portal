@@ -437,6 +437,7 @@ stages:
           sudo cp /tmp/GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
           sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
           sudo update-ca-certificates
+          sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
 

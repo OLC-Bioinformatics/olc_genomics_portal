@@ -356,6 +356,7 @@ stages:
         chmod 600 "$(sshKey.secureFilePath)"
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
           set -e
+          sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
 
