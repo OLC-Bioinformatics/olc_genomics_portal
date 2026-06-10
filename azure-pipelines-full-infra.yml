@@ -333,12 +333,20 @@ stages:
       displayName: 'Load TARGET_HOST from full infra artifact'
 
     - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - task: DownloadSecureFile@1
       name: sshKey
       inputs:
         secureFile: 'portal_ssh_key'
 
     - script: |
         set -euo pipefail
+        sudo cp "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
         chmod 600 "$(sshKey.secureFilePath)"
         if [ -n "${SSH_PUBLIC_KEY:-}" ]; then
           derived_pub=$(ssh-keygen -y -f "$(sshKey.secureFilePath)" 2>/tmp/sshkeygen.err || true)
