@@ -370,7 +370,7 @@ stages:
 
           if ! command -v docker >/dev/null 2>&1; then
             echo "DEBUG: docker not installed, entering docker bootstrap block"
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --yes --no-tty --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
             sudo mkdir -p /etc/apt/sources.list.d
             arch="$(dpkg --print-architecture)"
             codename="$(lsb_release -cs)"
