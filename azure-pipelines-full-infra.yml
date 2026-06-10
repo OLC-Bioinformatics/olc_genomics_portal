@@ -369,11 +369,7 @@ stages:
 
           if ! command -v docker >/dev/null 2>&1; then
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            arch="$$(dpkg --print-architecture)"
-            codename="$$(lsb_release -cs)"
-            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null <<EOF
-deb [arch=$arch signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $codename stable
-EOF
+            sudo bash -lc "arch=\"\$(dpkg --print-architecture)\"; codename=\"\$(lsb_release -cs)\"; printf 'deb [arch=%s signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu %s stable\n' \"\$arch\" \"\$codename\" > /etc/apt/sources.list.d/docker.list"
             sudo cat /etc/apt/sources.list.d/docker.list
             sudo DEBIAN_FRONTEND=noninteractive apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io
