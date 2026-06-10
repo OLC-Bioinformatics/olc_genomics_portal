@@ -368,8 +368,17 @@ stages:
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
 
           if ! command -v docker >/dev/null 2>&1; then
+            echo "DEBUG: docker not installed, entering docker bootstrap block"
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            sudo sh -c "arch=$$(dpkg --print-architecture); codename=$$(lsb_release -cs); ts=$$(date -u +%Y-%m-%dT%H:%M:%SZ); { printf '### generated: %s\\n' \"$ts\"; printf 'deb [arch=%s signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu %s stable\\n' \"$arch\" \"$codename\"; } > /etc/apt/sources.list.d/docker.list"
+            sudo mkdir -p /etc/apt/sources.list.d
+            arch="$(dpkg --print-architecture)"
+            codename="$(lsb_release -cs)"
+            ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "DEBUG: arch=$arch codename=$codename ts=$ts"
+            sudo rm -f /etc/apt/sources.list.d/docker.list
+            sudo bash -lc "printf '### generated: %s\n' \"$ts\" > /etc/apt/sources.list.d/docker.list"
+            sudo bash -lc "printf 'deb [arch=%s signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu %s stable\n' \"$arch\" \"$codename\" >> /etc/apt/sources.list.d/docker.list"
+            sudo ls -l /etc/apt/sources.list.d/docker.list
             sudo cat /etc/apt/sources.list.d/docker.list
             sudo DEBIAN_FRONTEND=noninteractive apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io
