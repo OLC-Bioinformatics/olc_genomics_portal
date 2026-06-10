@@ -344,10 +344,8 @@ stages:
 
     - script: |
         set -euo pipefail
-        sudo cp "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
-        sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
-        sudo update-ca-certificates
         chmod 600 "$(sshKey.secureFilePath)"
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(rootCA.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/GoC-GdC-Root-A.crt"
         if [ -n "${SSH_PUBLIC_KEY:-}" ]; then
           derived_pub=$(ssh-keygen -y -f "$(sshKey.secureFilePath)" 2>/tmp/sshkeygen.err || true)
           if [ -z "$derived_pub" ]; then
@@ -363,6 +361,9 @@ stages:
         fi
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
           set -e
+          sudo cp /tmp/GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+          sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+          sudo update-ca-certificates
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
 
