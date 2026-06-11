@@ -359,7 +359,7 @@ stages:
           fi
           rm -f /tmp/sshkeygen.err
         fi
-        ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<'EOF'
+        ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" <<EOF
           set -e
           sudo cp /tmp/GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
           sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
@@ -372,9 +372,9 @@ stages:
             echo "DEBUG: docker not installed, entering docker bootstrap block"
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --yes --no-tty --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
             sudo mkdir -p /etc/apt/sources.list.d
-            arch="$(dpkg --print-architecture)"
-            codename="$(lsb_release -cs)"
-            ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            arch="\$(dpkg --print-architecture)"
+            codename="\$(lsb_release -cs)"
+            ts="\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "DEBUG: arch=$arch codename=$codename ts=$ts"
             sudo rm -f /etc/apt/sources.list.d/docker.list
             sudo bash -lc "printf '### generated: %s\n' \"$ts\" > /etc/apt/sources.list.d/docker.list"
@@ -398,8 +398,8 @@ stages:
             curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
             bash /tmp/miniconda.sh -b -p "/home/${TARGET_SSH_USER}/miniconda"
             rm /tmp/miniconda.sh
-            echo 'export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"' >> "/home/${TARGET_SSH_USER}/.bashrc"
-            export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+            echo 'export PATH="/home/'"${TARGET_SSH_USER}"'/miniconda/bin:$PATH"' >> "/home/${TARGET_SSH_USER}/.bashrc"
+            export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH"
             /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
             /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
             /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
