@@ -545,11 +545,12 @@ stages:
       displayName: 'Write env file from Key Vault variables'
 
     - script: |
+        set -e
         python3 <<'PY'
         import os
         from pathlib import Path
 
-        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+        root = Path(os.environ.get('BUILD_SOURCESDIRECTORY', os.getcwd()))
         env_path = root / 'env'
         dotenv_path = root / '.env'
 
@@ -567,15 +568,23 @@ stages:
 
         def get_value(key):
             dashed = key.lower().replace('_', '-')
+            underscored = key.replace('-', '_')
             return (
                 os.environ.get(key)
                 or os.environ.get(dashed)
+                or os.environ.get(underscored)
                 or env_values.get(key)
                 or env_values.get(dashed)
+                or env_values.get(underscored)
                 or ''
             )
 
-        mysql_password = get_value('MYSQL_PASSWORD') or get_value('DB_PASS')
+        mysql_password = (
+            get_value('MYSQL_PASSWORD')
+            or get_value('DB_PASS')
+            or get_value('db-pass')
+            or get_value('mysql-password')
+        )
         if not mysql_password:
             raise SystemExit('Required environment variable MYSQL_PASSWORD or DB_PASS is missing for .env')
 
