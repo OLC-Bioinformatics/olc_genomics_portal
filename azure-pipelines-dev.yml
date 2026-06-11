@@ -482,6 +482,8 @@ stages:
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
           /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
           /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
         EOF
       env:
