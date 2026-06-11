@@ -377,8 +377,8 @@ stages:
             ts="\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "DEBUG: arch=$arch codename=$codename ts=$ts"
             sudo rm -f /etc/apt/sources.list.d/docker.list
-            sudo bash -lc "printf '### generated: %s\n' \"$ts\" > /etc/apt/sources.list.d/docker.list"
-            sudo bash -lc "printf 'deb [arch=%s signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu %s stable\n' \"$arch\" \"$codename\" >> /etc/apt/sources.list.d/docker.list"
+            sudo bash -lc "printf '### generated: %s\n' \"\$ts\" > /etc/apt/sources.list.d/docker.list"
+            sudo bash -lc "printf 'deb [arch=%s signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu %s stable\n' \"\$arch\" \"\$codename\" >> /etc/apt/sources.list.d/docker.list"
             sudo ls -l /etc/apt/sources.list.d/docker.list
             sudo cat /etc/apt/sources.list.d/docker.list
             sudo DEBIAN_FRONTEND=noninteractive apt-get update
