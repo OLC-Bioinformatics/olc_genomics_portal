@@ -474,7 +474,7 @@ stages:
       inputs:
         azureSubscription: 'CFDC-FoodPort-service-connection'
         KeyVaultName: 'FoodPort-key-vault'
-        SecretsFilter: 'secret-key-base,redmine-database-password,azure-account-name,azure-account-key,batch-account-name,batch-account-url,batch-account-key,batch-account-subnet,vm-image,cowbat-node-agent-sku,ampliseq-image,ampliseq-node-agent-sku,cowsnphr-image,cowsnphr-node-agent-sku,vm-client-id,vm-secret,vm-tenant,ad-app-id,ad-app-secret-id,ad-app-secret,entra-id-client-id,entra-id-client-secret,entra-id-tenant-id,redmine-default-from,email-host-user,email-host-password,email-relay-secret,db-name,db-user,db-pass,db-service,db-port,django-email-backend,sentry-dsn,environment,connection-string,flower-user,flower-password,site-url,django-server-name,redmine-server-name,api-key,dev-api-key,maria-db-root-password,mysql-password'
+        SecretsFilter: 'secret-key-base,redmine-database-password,azure-account-name,azure-account-key,batch-account-name,batch-account-url,batch-account-key,batch-account-subnet,vm-image,cowbat-node-agent-sku,ampliseq-image,ampliseq-node-agent-sku,cowsnphr-image,cowsnphr-node-agent-sku,vm-client-id,vm-secret,vm-tenant,ad-app-id,ad-app-secret-id,ad-app-secret,entra-id-client-id,entra-id-client-secret,entra-id-tenant-id,redmine-default-from,email-host-user,email-host-password,email-relay-secret,db-name,db-user,db-pass,db-service,db-port,django-email-backend,sentry-dsn,environment,connection-string,site-url,django-server-name,redmine-server-name,api-key,dev-api-key,maria-db-root-password,mysql-password'
 
     - script: |
         python3 <<'PY'
@@ -566,18 +566,16 @@ stages:
             or os.environ.get('maria-db-root-password')
             or mysql_password
         )
-        flower_user = os.environ.get('FLOWER_USER') or os.environ.get('flower-user')
-        flower_password = os.environ.get('FLOWER_PASSWORD') or os.environ.get('flower-password')
+        flower_user = os.environ.get('FLOWER_USER') or os.environ.get('flower-user') or ''
+        flower_password = os.environ.get('FLOWER_PASSWORD') or os.environ.get('flower-password') or ''
         email_host_user = os.environ.get('EMAIL_HOST_USER') or os.environ.get('email-host-user')
         email_host_password = os.environ.get('EMAIL_HOST_PASSWORD') or os.environ.get('email-host-password')
 
         with open(dotenv_path, 'w', encoding='utf-8') as f:
             f.write(f"MYSQL_PASSWORD={mysql_password}\n")
             f.write(f"MARIA_DB_ROOT_PASSWORD={maria_db_root_password}\n")
-            if flower_user is not None:
-                f.write(f"FLOWER_USER={flower_user}\n")
-            if flower_password is not None:
-                f.write(f"FLOWER_PASSWORD={flower_password}\n")
+            f.write(f"FLOWER_USER={flower_user}\n")
+            f.write(f"FLOWER_PASSWORD={flower_password}\n")
             if email_host_user is not None:
                 f.write(f"EMAIL_HOST_USER={email_host_user}\n")
             if email_host_password is not None:
