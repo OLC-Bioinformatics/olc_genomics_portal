@@ -532,17 +532,68 @@ stages:
           'MARIA_DB_ROOT_PASSWORD',
         ]
         with open(path, 'w', encoding='utf-8') as f:
+            written_keys = set()
             for key in keys:
+                underscored_key = key.lower().replace('-', '_')
+                dashed_key = key.lower().replace('_', '-')
                 if key in os.environ:
                     f.write(f"{key}={os.environ[key]}\n")
+                    written_keys.add(key)
                     continue
 
-                dashed_key = key.lower().replace('_', '-')
                 if dashed_key in os.environ:
                     f.write(f"{key}={os.environ[dashed_key]}\n")
+                    written_keys.add(key)
+                    continue
+
+                if underscored_key in os.environ:
+                    f.write(f"{key}={os.environ[underscored_key]}\n")
+                    written_keys.add(key)
+                    continue
+
+            for key in ['DB_PASS', 'MYSQL_PASSWORD']:
+                if key in written_keys:
+                    continue
+                underscored_key = key.lower().replace('-', '_')
+                dashed_key = key.lower().replace('_', '-')
+                if key in os.environ:
+                    f.write(f"{key}={os.environ[key]}\n")
+                elif dashed_key in os.environ:
+                    f.write(f"{key}={os.environ[dashed_key]}\n")
+                elif underscored_key in os.environ:
+                    f.write(f"{key}={os.environ[underscored_key]}\n")
         PY
         chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
       displayName: 'Write env file from Key Vault variables'
+
+    - script: |
+        set -e
+        python3 <<'PY'
+        import os
+        from pathlib import Path
+
+        root = Path(os.environ.get('BUILD_SOURCESDIRECTORY', os.getcwd()))
+        dotenv_path = root / '.env'
+        keys = ['DB_PASS', 'MYSQL_PASSWORD']
+
+        with open(dotenv_path, 'w', encoding='utf-8') as f:
+            for key in keys:
+                dashed = key.lower().replace('_', '-')
+                underscored = key.lower().replace('-', '_')
+                if key in os.environ:
+                    value = os.environ[key]
+                elif dashed in os.environ:
+                    value = os.environ[dashed]
+                elif underscored in os.environ:
+                    value = os.environ[underscored]
+                else:
+                    value = ''
+                f.write(f"{key}={value}\n")
+            f.write("FLOWER_USER=\n")
+            f.write("FLOWER_PASSWORD=\n")
+        PY
+        chmod 600 "${BUILD_SOURCESDIRECTORY}/.env"
+      displayName: 'Write minimal .env from env variables'
 
     - script: |
         set -e
@@ -566,6 +617,18 @@ stages:
                     key, value = line.split('=', 1)
                     env_values[key] = value
 
+        dotenv_values = {}
+        if dotenv_path.exists():
+            with open(dotenv_path, encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    dotenv_values[key] = value
+
         def get_value(key):
             dashed = key.lower().replace('_', '-')
             underscored = key.replace('-', '_')
@@ -576,6 +639,9 @@ stages:
                 or env_values.get(key)
                 or env_values.get(dashed)
                 or env_values.get(underscored)
+                or dotenv_values.get(key)
+                or dotenv_values.get(dashed)
+                or dotenv_values.get(underscored)
                 or ''
             )
 
