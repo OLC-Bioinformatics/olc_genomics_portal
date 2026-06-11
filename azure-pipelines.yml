@@ -551,26 +551,43 @@ stages:
         from pathlib import Path
 
         root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+        env_path = root / 'env'
         dotenv_path = root / '.env'
 
-        mysql_password = (
-            os.environ.get('MYSQL_PASSWORD')
-            or os.environ.get('mysql-password')
-            or os.environ.get('DB_PASS')
-            or os.environ.get('db-pass')
-        )
+        env_values = {}
+        if env_path.exists():
+            with open(env_path, encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    env_values[key] = value
+
+        def get_value(key):
+            dashed = key.lower().replace('_', '-')
+            return (
+                os.environ.get(key)
+                or os.environ.get(dashed)
+                or env_values.get(key)
+                or env_values.get(dashed)
+                or ''
+            )
+
+        mysql_password = get_value('MYSQL_PASSWORD') or get_value('DB_PASS')
         if not mysql_password:
             raise SystemExit('Required environment variable MYSQL_PASSWORD or DB_PASS is missing for .env')
 
         maria_db_root_password = (
-            os.environ.get('MARIA_DB_ROOT_PASSWORD')
-            or os.environ.get('maria-db-root-password')
+            get_value('MARIA_DB_ROOT_PASSWORD')
             or mysql_password
         )
-        flower_user = os.environ.get('FLOWER_USER') or os.environ.get('flower-user') or ''
-        flower_password = os.environ.get('FLOWER_PASSWORD') or os.environ.get('flower-password') or ''
-        email_host_user = os.environ.get('EMAIL_HOST_USER') or os.environ.get('email-host-user')
-        email_host_password = os.environ.get('EMAIL_HOST_PASSWORD') or os.environ.get('email-host-password')
+        flower_user = get_value('FLOWER_USER')
+        flower_password = get_value('FLOWER_PASSWORD')
+        email_host_user = get_value('EMAIL_HOST_USER')
+        email_host_password = get_value('EMAIL_HOST_PASSWORD')
 
         with open(dotenv_path, 'w', encoding='utf-8') as f:
             f.write(f"MYSQL_PASSWORD={mysql_password}\n")
