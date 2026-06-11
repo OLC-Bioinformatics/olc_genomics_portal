@@ -393,6 +393,9 @@ stages:
             export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH"
             /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
             /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
+            export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+            export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
             /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
           fi
         EOF
