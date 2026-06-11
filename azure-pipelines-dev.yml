@@ -466,19 +466,23 @@ stages:
             curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
           fi
 
-          if ! command -v conda >/dev/null 2>&1; then
+          if [ ! -x "/home/${TARGET_SSH_USER}/miniconda/bin/conda" ]; then
             curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
             bash /tmp/miniconda.sh -b -p "/home/${TARGET_SSH_USER}/miniconda"
             rm /tmp/miniconda.sh
-            echo 'export PATH="/home/'"${TARGET_SSH_USER}"'/miniconda/bin:$PATH"' >> "/home/${TARGET_SSH_USER}/.bashrc"
-            export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH"
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
-            export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-            export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
+          else
+            echo "Conda already installed at /home/${TARGET_SSH_USER}/miniconda"
           fi
+          if ! grep -qxF "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" "/home/${TARGET_SSH_USER}/.bashrc"; then
+            echo "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" >> "/home/${TARGET_SSH_USER}/.bashrc"
+          fi
+          export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
+          export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+          export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
