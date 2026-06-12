@@ -312,7 +312,7 @@ stages:
     - script: |
         set -euo pipefail
 
-        artifact_dir="$(Pipeline.Workspace)/fullInfra"
+        ARTIFACT_DIR="$(Pipeline.Workspace)"
         echo "Listing downloaded artifact contents: ${artifact_dir}"
         find "${artifact_dir}" -maxdepth 6 -type f | sort
 

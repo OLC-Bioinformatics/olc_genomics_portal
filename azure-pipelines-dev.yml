@@ -767,7 +767,7 @@ stages:
 
     - script: |
         set -e
-        ARTIFACT_DIR="$(Pipeline.Workspace)/devVm"
+        ARTIFACT_DIR="$(Pipeline.Workspace)"
         VM_IP_FILE=$(find "$ARTIFACT_DIR" -type f -name 'vm_ip.txt' | head -n 1 || true)
         if [ -z "${VM_IP_FILE:-}" ]; then
           echo "ERROR: vm_ip.txt not found under $ARTIFACT_DIR"
