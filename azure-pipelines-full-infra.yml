@@ -726,10 +726,15 @@ stages:
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
         tar --exclude='.git' -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
 
+        safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
+        safe_VM_CLIENT_ID=$(printf '%q' "${VM_CLIENT_ID:-}")
+        safe_VM_SECRET=$(printf '%q' "${VM_SECRET:-}")
+        safe_VM_TENANT=$(printf '%q' "${VM_TENANT:-}")
+        safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
+
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "VM_CLIENT_ID=$(printf '%q' "$VM_CLIENT_ID") VM_SECRET=$(printf '%q' "$VM_SECRET") VM_TENANT=$(printf '%q' "$VM_TENANT") TARGET_HOST=$(printf '%q' "$TARGET_HOST") bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR VM_CLIENT_ID=$safe_VM_CLIENT_ID VM_SECRET=$safe_VM_SECRET VM_TENANT=$safe_VM_TENANT TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
           set -xeuo pipefail
-          REMOTE_DIR="$REMOTE_DIR"
 
           export AZURE_CONFIG_DIR="$REMOTE_DIR/.azure"
           mkdir -p "$AZURE_CONFIG_DIR"
