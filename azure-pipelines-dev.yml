@@ -554,6 +554,38 @@ stages:
     - script: |
         python3 <<'PY'
         import os
+        import re
+
+        candidates = sorted(
+            k for k in os.environ
+            if re.search(r'SECRET|REDMINE|AZURE|DB|MYSQL|EMAIL|SITE|CLIENT|SUBSCRIPTION|TENANT', k, re.IGNORECASE)
+        )
+        print('Relevant env var names from current step:')
+        for name in candidates:
+            print(name)
+        PY
+      displayName: 'List candidate Key Vault env var names'
+
+    - task: AzureCLI@2
+      displayName: 'Debug direct Key Vault access'
+      inputs:
+        azureSubscription: 'CFDC-FoodPort-service-connection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          for secret in secret-key-base redmine-database-password azure-account-name azure-account-key db-pass mysql-password; do
+            echo "Checking secret: $secret"
+            if az keyvault secret show --vault-name FoodPort-key-vault --name "$secret" --query "id" -o tsv >/dev/null 2>&1; then
+              echo "OK: $secret"
+            else
+              echo "MISSING: $secret"
+            fi
+          done
+
+    - script: |
+        python3 <<'PY'
+        import os
 
         required = {
             'SECRET_KEY_BASE': ['SECRET_KEY_BASE', 'secret-key-base'],
@@ -577,96 +609,6 @@ stages:
             raise SystemExit('Missing required Key Vault variables: ' + ', '.join(missing))
         PY
       displayName: 'Debug Key Vault env vars presence'
-
-    - script: |
-        python3 <<'PY'
-        import os
-        import os.path
-        path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
-        keys = [
-          'SECRET_KEY',
-          'SECRET_KEY_BASE',
-          'AZURE_ACCOUNT_NAME',
-          'AZURE_ACCOUNT_KEY',
-          'BATCH_ACCOUNT_NAME',
-          'BATCH_ACCOUNT_URL',
-          'BATCH_ACCOUNT_KEY',
-          'BATCH_ACCOUNT_SUBNET',
-          'VM_IMAGE',
-          'COWBAT_NODE_AGENT_SKU',
-          'AMPLISEQ_IMAGE',
-          'AMPLISEQ_NODE_AGENT_SKU',
-          'COWSNPHR_IMAGE',
-          'COWSNPHR_NODE_AGENT_SKU',
-          'VM_CLIENT_ID',
-          'VM_SECRET',
-          'VM_TENANT',
-          'AD_APP_ID',
-          'AD_APP_SECRET_ID',
-          'AD_APP_SECRET',
-          'ENTRA_ID_CLIENT_ID',
-          'ENTRA_ID_CLIENT_SECRET',
-          'ENTRA_ID_TENANT_ID',
-          'REDMINE_DEFAULT_FROM',
-          'EMAIL_HOST_USER',
-          'EMAIL_HOST_PASSWORD',
-          'EMAIL_RELAY_SECRET',
-          'API_KEY',
-          'DEV_API_KEY',
-          'DJANGO_SERVER_NAME',
-          'REDMINE_SERVER_NAME',
-          'DB_NAME',
-          'DB_USER',
-          'DB_PASS',
-          'DB_SERVICE',
-          'DB_PORT',
-          'DJANGO_EMAIL_BACKEND',
-          'SENTRY_DSN',
-          'ENVIRONMENT',
-          'CONNECTION_STRING',
-          'FLOWER_USER',
-          'FLOWER_PASSWORD',
-          'SITE_URL',
-          'BUILD_SOURCESDIRECTORY',
-          'REDMINE_DB_PASSWORD',
-          'MYSQL_ROOT_PASSWORD',
-          'MYSQL_PASSWORD',
-          'MARIA_DB_ROOT_PASSWORD',
-        ]
-        with open(path, 'w', encoding='utf-8') as f:
-            written_keys = set()
-            for key in keys:
-                underscored_key = key.lower().replace('-', '_')
-                dashed_key = key.lower().replace('_', '-')
-                if key in os.environ:
-                    f.write(f"{key}={os.environ[key]}\n")
-                    written_keys.add(key)
-                    continue
-
-                if dashed_key in os.environ:
-                    f.write(f"{key}={os.environ[dashed_key]}\n")
-                    written_keys.add(key)
-                    continue
-
-                if underscored_key in os.environ:
-                    f.write(f"{key}={os.environ[underscored_key]}\n")
-                    written_keys.add(key)
-                    continue
-
-            for key in ['DB_PASS', 'MYSQL_PASSWORD']:
-                if key in written_keys:
-                    continue
-                underscored_key = key.lower().replace('-', '_')
-                dashed_key = key.lower().replace('_', '-')
-                if key in os.environ:
-                    f.write(f"{key}={os.environ[key]}\n")
-                elif dashed_key in os.environ:
-                    f.write(f"{key}={os.environ[dashed_key]}\n")
-                elif underscored_key in os.environ:
-                    f.write(f"{key}={os.environ[underscored_key]}\n")
-        PY
-        chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
-      displayName: 'Write env file from Key Vault variables'
 
     - script: |
         python3 <<'PY'
