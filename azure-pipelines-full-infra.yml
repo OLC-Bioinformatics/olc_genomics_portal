@@ -410,8 +410,21 @@ stages:
             sudo usermod -aG docker "${TARGET_SSH_USER}"
           fi
 
-          if ! command -v docker compose >/dev/null 2>&1; then
+          if ! docker compose version >/dev/null 2>&1; then
             sudo apt-get install -y docker-compose-plugin
+          fi
+
+          if ! command -v docker >/dev/null 2>&1; then
+            echo 'ERROR: Docker CLI is not available after installation.'
+            exit 1
+          fi
+          if ! docker compose version >/dev/null 2>&1; then
+            echo 'ERROR: Docker Compose is not available after installation.'
+            echo 'DEBUG: docker --version:'
+            docker --version || true
+            echo 'DEBUG: docker compose version:'
+            docker compose version || true
+            exit 1
           fi
 
           if ! command -v az >/dev/null 2>&1; then
@@ -778,8 +791,25 @@ stages:
       displayName: 'Generate nginx site configs from templates'
 
     - script: |
+        set -euo pipefail
         cd "$(Build.SourcesDirectory)"
-        sudo rm -f celerybeat-schedule.db celerybeat.pid
-        docker compose down
-        docker compose up -d
+
+        if command -v docker >/dev/null 2>&1; then
+          rm -f celerybeat-schedule.db celerybeat.pid
+          docker compose down
+          docker compose up -d
+          exit 0
+        fi
+
+        if sudo -n true 2>/dev/null; then
+          sudo rm -f celerybeat-schedule.db celerybeat.pid
+          sudo docker compose down
+          sudo docker compose up -d
+          exit 0
+        fi
+
+        echo 'ERROR: Docker CLI not available on this agent, or sudo requires a password.'
+        echo '  - If running on a self-hosted agent, install Docker and ensure the agent user can run it without sudo/password.'
+        echo '  - Or use a hosted agent with Docker installed by setting useHostedAgent: true for this pipeline.'
+        exit 1
       displayName: 'Restart containers'
