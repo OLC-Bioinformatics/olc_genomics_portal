@@ -553,80 +553,125 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
           set -euo pipefail
-          python3 <<'PY'
-          import subprocess
-          import sys
+          vault='FoodPort-key-vault'
+          secrets=(
+            secret-key-base
+            redmine-database-password
+            azure-account-name
+            azure-account-key
+            batch-account-name
+            batch-account-url
+            batch-account-key
+            batch-account-subnet
+            vm-image
+            cowbat-node-agent-sku
+            ampliseq-image
+            ampliseq-node-agent-sku
+            cowsnphr-image
+            cowsnphr-node-agent-sku
+            vm-client-id
+            vm-secret
+            vm-tenant
+            ad-app-id
+            ad-app-secret-id
+            ad-app-secret
+            entra-id-client-id
+            entra-id-client-secret
+            entra-id-tenant-id
+            redmine-default-from
+            email-host-user
+            email-host-password
+            email-relay-secret
+            db-name
+            db-user
+            db-pass
+            db-service
+            db-port
+            django-email-backend
+            sentry-dsn
+            environment
+            connection-string
+            site-url
+            django-server-name
+            redmine-server-name
+            api-key
+            dev-api-key
+            maria-db-root-password
+            mysql-password
+            subscription-id
+            tenant-id
+            client-id
+            client-secret
+            resource-group-name
+            storage-account-name
+          )
 
-          vault = 'FoodPort-key-vault'
-          mappings = [
-            ('secret-key-base', 'SECRET_KEY_BASE'),
-            ('redmine-database-password', 'REDMINE_DB_PASSWORD'),
-            ('azure-account-name', 'AZURE_ACCOUNT_NAME'),
-            ('azure-account-key', 'AZURE_ACCOUNT_KEY'),
-            ('batch-account-name', 'BATCH_ACCOUNT_NAME'),
-            ('batch-account-url', 'BATCH_ACCOUNT_URL'),
-            ('batch-account-key', 'BATCH_ACCOUNT_KEY'),
-            ('batch-account-subnet', 'BATCH_ACCOUNT_SUBNET'),
-            ('vm-image', 'VM_IMAGE'),
-            ('cowbat-node-agent-sku', 'COWBAT_NODE_AGENT_SKU'),
-            ('ampliseq-image', 'AMPLISEQ_IMAGE'),
-            ('ampliseq-node-agent-sku', 'AMPLISEQ_NODE_AGENT_SKU'),
-            ('cowsnphr-image', 'COWSNPHR_IMAGE'),
-            ('cowsnphr-node-agent-sku', 'COWSNPHR_NODE_AGENT_SKU'),
-            ('vm-client-id', 'VM_CLIENT_ID'),
-            ('vm-secret', 'VM_SECRET'),
-            ('vm-tenant', 'VM_TENANT'),
-            ('ad-app-id', 'AD_APP_ID'),
-            ('ad-app-secret-id', 'AD_APP_SECRET_ID'),
-            ('ad-app-secret', 'AD_APP_SECRET'),
-            ('entra-id-client-id', 'ENTRA_ID_CLIENT_ID'),
-            ('entra-id-client-secret', 'ENTRA_ID_CLIENT_SECRET'),
-            ('entra-id-tenant-id', 'ENTRA_ID_TENANT_ID'),
-            ('redmine-default-from', 'REDMINE_DEFAULT_FROM'),
-            ('email-host-user', 'EMAIL_HOST_USER'),
-            ('email-host-password', 'EMAIL_HOST_PASSWORD'),
-            ('email-relay-secret', 'EMAIL_RELAY_SECRET'),
-            ('db-name', 'DB_NAME'),
-            ('db-user', 'DB_USER'),
-            ('db-pass', 'DB_PASS'),
-            ('db-service', 'DB_SERVICE'),
-            ('db-port', 'DB_PORT'),
-            ('django-email-backend', 'DJANGO_EMAIL_BACKEND'),
-            ('sentry-dsn', 'SENTRY_DSN'),
-            ('environment', 'ENVIRONMENT'),
-            ('connection-string', 'CONNECTION_STRING'),
-            ('site-url', 'SITE_URL'),
-            ('django-server-name', 'DJANGO_SERVER_NAME'),
-            ('redmine-server-name', 'REDMINE_SERVER_NAME'),
-            ('api-key', 'API_KEY'),
-            ('dev-api-key', 'DEV_API_KEY'),
-            ('maria-db-root-password', 'MARIA_DB_ROOT_PASSWORD'),
-            ('mysql-password', 'MYSQL_PASSWORD'),
-            ('subscription-id', 'SUBSCRIPTION_ID'),
-            ('tenant-id', 'TENANT_ID'),
-            ('client-id', 'CLIENT_ID'),
-            ('client-secret', 'CLIENT_SECRET'),
-            ('resource-group-name', 'RESOURCE_GROUP_NAME'),
-            ('storage-account-name', 'STORAGE_ACCOUNT_NAME'),
-          ]
+          for secret in "${secrets[@]}"; do
+            case "$secret" in
+              secret-key-base) var_name='SECRET_KEY_BASE' ;;
+              redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
+              azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
+              azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
+              batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
+              batch-account-url) var_name='BATCH_ACCOUNT_URL' ;;
+              batch-account-key) var_name='BATCH_ACCOUNT_KEY' ;;
+              batch-account-subnet) var_name='BATCH_ACCOUNT_SUBNET' ;;
+              vm-image) var_name='VM_IMAGE' ;;
+              cowbat-node-agent-sku) var_name='COWBAT_NODE_AGENT_SKU' ;;
+              ampliseq-image) var_name='AMPLISEQ_IMAGE' ;;
+              ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
+              cowsnphr-image) var_name='COWSNPHR_IMAGE' ;;
+              cowsnphr-node-agent-sku) var_name='COWSNPHR_NODE_AGENT_SKU' ;;
+              vm-client-id) var_name='VM_CLIENT_ID' ;;
+              vm-secret) var_name='VM_SECRET' ;;
+              vm-tenant) var_name='VM_TENANT' ;;
+              ad-app-id) var_name='AD_APP_ID' ;;
+              ad-app-secret-id) var_name='AD_APP_SECRET_ID' ;;
+              ad-app-secret) var_name='AD_APP_SECRET' ;;
+              entra-id-client-id) var_name='ENTRA_ID_CLIENT_ID' ;;
+              entra-id-client-secret) var_name='ENTRA_ID_CLIENT_SECRET' ;;
+              entra-id-tenant-id) var_name='ENTRA_ID_TENANT_ID' ;;
+              redmine-default-from) var_name='REDMINE_DEFAULT_FROM' ;;
+              email-host-user) var_name='EMAIL_HOST_USER' ;;
+              email-host-password) var_name='EMAIL_HOST_PASSWORD' ;;
+              email-relay-secret) var_name='EMAIL_RELAY_SECRET' ;;
+              db-name) var_name='DB_NAME' ;;
+              db-user) var_name='DB_USER' ;;
+              db-pass) var_name='DB_PASS' ;;
+              db-service) var_name='DB_SERVICE' ;;
+              db-port) var_name='DB_PORT' ;;
+              django-email-backend) var_name='DJANGO_EMAIL_BACKEND' ;;
+              sentry-dsn) var_name='SENTRY_DSN' ;;
+              environment) var_name='ENVIRONMENT' ;;
+              connection-string) var_name='CONNECTION_STRING' ;;
+              site-url) var_name='SITE_URL' ;;
+              django-server-name) var_name='DJANGO_SERVER_NAME' ;;
+              redmine-server-name) var_name='REDMINE_SERVER_NAME' ;;
+              api-key) var_name='API_KEY' ;;
+              dev-api-key) var_name='DEV_API_KEY' ;;
+              maria-db-root-password) var_name='MARIA_DB_ROOT_PASSWORD' ;;
+              mysql-password) var_name='MYSQL_PASSWORD' ;;
+              subscription-id) var_name='SUBSCRIPTION_ID' ;;
+              tenant-id) var_name='TENANT_ID' ;;
+              client-id) var_name='CLIENT_ID' ;;
+              client-secret) var_name='CLIENT_SECRET' ;;
+              resource-group-name) var_name='RESOURCE_GROUP_NAME' ;;
+              storage-account-name) var_name='STORAGE_ACCOUNT_NAME' ;;
+              *) echo "Unknown secret mapping: $secret" >&2; exit 1 ;;
+            esac
 
-          for secret_name, var_name in mappings:
-              proc = subprocess.run([
-                  'az', 'keyvault', 'secret', 'show',
-                  '--vault-name', vault,
-                  '--name', secret_name,
-                  '--query', 'value',
-                  '-o', 'tsv'
-              ], capture_output=True, text=True)
-              if proc.returncode != 0:
-                  print(proc.stderr.strip(), file=sys.stderr)
-                  raise SystemExit(f'Missing or unreadable Key Vault secret: {secret_name}')
-              value = proc.stdout.strip()
-              if not value:
-                  raise SystemExit(f'Key Vault secret {secret_name} is empty')
-              print(f'##vso[task.setvariable variable={var_name};issecret=true]{value}')
-              print(f'Fetched Key Vault secret {secret_name} as pipeline variable {var_name}')
-          PY
+            value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"
+            if [ $? -ne 0 ]; then
+              echo "Failed to read Key Vault secret: $secret" >&2
+              exit 1
+            fi
+            if [ -z "$value" ]; then
+              echo "Key Vault secret $secret is empty" >&2
+              exit 1
+            fi
+            echo "##vso[task.setvariable variable=$var_name;issecret=true]$value"
+            echo "Fetched Key Vault secret $secret as pipeline variable $var_name"
+          done
 
     - script: |
         python3 <<'PY'
