@@ -692,7 +692,14 @@ stages:
 
     - script: |
         set -e
-        VM_IP=$(cat "$(Pipeline.Workspace)/fullInfra/vm_ip.txt")
+        ARTIFACT_DIR="$(Pipeline.Workspace)/fullInfra"
+        VM_IP_FILE=$(find "$ARTIFACT_DIR" -type f -name 'vm_ip.txt' | head -n 1 || true)
+        if [ -z "${VM_IP_FILE:-}" ]; then
+          echo "ERROR: vm_ip.txt not found under $ARTIFACT_DIR"
+          find "$ARTIFACT_DIR" -maxdepth 6 -type f | sort
+          exit 1
+        fi
+        VM_IP=$(cat "$VM_IP_FILE")
         ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
         if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
           sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
