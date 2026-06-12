@@ -794,6 +794,9 @@ stages:
         secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
         secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
 
+        for key, value in os.environ.items():
+          print(f'{key}={value}')
+
         text = secrets_src.read_text(encoding='utf-8')
         secret_key = os.environ.get('SECRET_KEY_BASE') or os.environ.get('secret-key-base')
         if not secret_key:
@@ -807,9 +810,9 @@ stages:
         db_dst = root / 'redmine' / 'config' / 'database.yml'
 
         db_text = db_src.read_text(encoding='utf-8')
-        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('redmine-database-password')
+        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('REDMINE_DATABASE_PASSWORD') or os.environ.get('redmine-database-password')
         if not db_password:
-            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / redmine-database-password is missing')
+            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing')
 
         db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
         db_dst.write_text(db_text, encoding='utf-8')

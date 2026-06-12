@@ -732,9 +732,9 @@ stages:
         db_dst = root / 'redmine' / 'config' / 'database.yml'
 
         db_text = db_src.read_text(encoding='utf-8')
-        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('redmine-database-password')
+        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('REDMINE_DATABASE_PASSWORD') or os.environ.get('redmine-database-password')
         if not db_password:
-            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / redmine-database-password is missing')
+            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing')
 
         db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
         db_dst.write_text(db_text, encoding='utf-8')
