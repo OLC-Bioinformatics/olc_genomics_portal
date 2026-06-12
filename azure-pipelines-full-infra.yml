@@ -711,6 +711,7 @@ stages:
     - script: |
         python3 <<'PY'
         import os
+        import secrets
         from pathlib import Path
 
         root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
@@ -720,7 +721,8 @@ stages:
         text = secrets_src.read_text(encoding='utf-8')
         secret_key = os.environ.get('SECRET_KEY_BASE') or os.environ.get('secret-key-base')
         if not secret_key:
-            raise SystemExit('Required environment variable SECRET_KEY_BASE / secret-key-base is missing')
+            secret_key = secrets.token_hex(64)
+            print('Generated SECRET_KEY_BASE fallback for Redmine', file=sys.stderr)
 
         text = text.replace('${SECRET_KEY_BASE}', secret_key)
         secrets_dst.write_text(text, encoding='utf-8')
