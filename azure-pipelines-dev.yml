@@ -582,20 +582,66 @@ stages:
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
       displayName: Copy root CA into Docker build contexts
 
-    - task: AzureCLI@2
-      displayName: 'Fetch Key Vault secrets via Azure CLI'
+    - script: |
+        echo 'Skipping local Key Vault fetch and env validation; this will happen on the target VM.'
+      displayName: 'Skip local Key Vault fetch/validation'
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download dev VM artifact for deploy'
       inputs:
-        azureSubscription: 'CFDC-FoodPort-service-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -euo pipefail
+        artifact: 'devVm'
+        path: '$(Pipeline.Workspace)'
+
+    - script: |
+        set -e
+        ARTIFACT_DIR="$(Pipeline.Workspace)"
+        VM_IP_FILE=$(find "$ARTIFACT_DIR" -type f -name 'vm_ip.txt' | head -n 1 || true)
+        if [ -z "${VM_IP_FILE:-}" ]; then
+          echo "ERROR: vm_ip.txt not found under $ARTIFACT_DIR"
+          find "$ARTIFACT_DIR" -maxdepth 6 -type f | sort
+          exit 1
+        fi
+        VM_IP=$(cat "$VM_IP_FILE")
+        echo "##vso[task.setvariable variable=TARGET_HOST]$VM_IP"
+      displayName: 'Set target VM IP variable'
+
+    - task: DownloadSecureFile@1
+      name: sshKey
+      inputs:
+        secureFile: 'portal_ssh_key'
+
+    - script: |
+        set -euo pipefail
+        chmod 600 "$(sshKey.secureFilePath)"
+        echo 'DEBUG: downloaded ssh key for remote restart'
+      displayName: 'Prepare SSH key for remote restart'
+
+    - script: |
+        set -euo pipefail
+        chmod 600 "$(sshKey.secureFilePath)"
+        REMOTE_DIR="/home/${TARGET_SSH_USER}/foodport_deploy"
+
+        echo "Copying portal source tree to ${TARGET_HOST}:${REMOTE_DIR}"
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
+        tar --exclude='.git' -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
+
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
+          "VM_CLIENT_ID=$(printf '%q' "$VM_CLIENT_ID") VM_SECRET=$(printf '%q' "$VM_SECRET") VM_TENANT=$(printf '%q' "$VM_TENANT") TARGET_HOST=$(printf '%q' "$TARGET_HOST") bash -s" <<'EOF'
+          set -xeuo pipefail
+          REMOTE_DIR="$REMOTE_DIR"
+
+          export AZURE_CONFIG_DIR="$REMOTE_DIR/.azure"
+          mkdir -p "$AZURE_CONFIG_DIR"
+          az login --service-principal -u "$VM_CLIENT_ID" -p "$VM_SECRET" --tenant "$VM_TENANT"
+
           vault='FoodPort-key-vault'
-          env_file="$BUILD_SOURCESDIRECTORY/env"
-          dotenv_file="$BUILD_SOURCESDIRECTORY/.env"
-          mkdir -p "$(dirname "$env_file")"
+          env_file="$REMOTE_DIR/env"
+          dotenv_file="$REMOTE_DIR/.env"
           : > "$env_file"
           : > "$dotenv_file"
+          django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
+          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
+          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
           secrets=(
             secret-key-base
             redmine-database-password
@@ -611,9 +657,6 @@ stages:
             ampliseq-node-agent-sku
             cowsnphr-image
             cowsnphr-node-agent-sku
-            vm-client-id
-            vm-secret
-            vm-tenant
             ad-app-id
             ad-app-secret-id
             ad-app-secret
@@ -647,7 +690,6 @@ stages:
             resource-group-name
             storage-account-name
           )
-
           for secret in "${secrets[@]}"; do
             case "$secret" in
               secret-key-base) var_name='SECRET_KEY_BASE' ;;
@@ -664,9 +706,6 @@ stages:
               ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
               cowsnphr-image) var_name='COWSNPHR_IMAGE' ;;
               cowsnphr-node-agent-sku) var_name='COWSNPHR_NODE_AGENT_SKU' ;;
-              vm-client-id) var_name='VM_CLIENT_ID' ;;
-              vm-secret) var_name='VM_SECRET' ;;
-              vm-tenant) var_name='VM_TENANT' ;;
               ad-app-id) var_name='AD_APP_ID' ;;
               ad-app-secret-id) var_name='AD_APP_SECRET_ID' ;;
               ad-app-secret) var_name='AD_APP_SECRET' ;;
@@ -701,7 +740,6 @@ stages:
               storage-account-name) var_name='STORAGE_ACCOUNT_NAME' ;;
               *) echo "Unknown secret mapping: $secret" >&2; exit 1 ;;
             esac
-
             value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"
             if [ $? -ne 0 ]; then
               echo "Failed to read Key Vault secret: $secret" >&2
@@ -711,280 +749,99 @@ stages:
               echo "Key Vault secret $secret is empty" >&2
               exit 1
             fi
-            echo "##vso[task.setvariable variable=$var_name;issecret=true]$value"
-            printf '%s=%s\n' "$var_name" "$value" >> "$BUILD_SOURCESDIRECTORY/env"
+            printf '%s=%s\n' "$var_name" "$value" >> "$env_file"
             case "$var_name" in
               SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
-                printf '%s=%s\n' "$var_name" "$value" >> "$BUILD_SOURCESDIRECTORY/.env"
+                printf '%s=%s\n' "$var_name" "$value" >> "$dotenv_file"
                 ;;
             esac
-            echo "Fetched Key Vault secret $secret as pipeline variable $var_name"
           done
-          printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$BUILD_SOURCESDIRECTORY/.env"
-          chmod 600 "$BUILD_SOURCESDIRECTORY/env" "$BUILD_SOURCESDIRECTORY/.env"
+          printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$dotenv_file"
+          chmod 600 "$env_file" "$dotenv_file"
 
-    - script: |
-        python3 <<'PY'
-        import os
-        import re
+          python3 <<'PY'
+            import os
+            from pathlib import Path
 
-        candidates = sorted(
-            k for k in os.environ
-            if re.search(r'SECRET|REDMINE|AZURE|DB|MYSQL|EMAIL|SITE|CLIENT|SUBSCRIPTION|TENANT', k, re.IGNORECASE)
-        )
-        print('Relevant env var names from current step:')
-        for name in candidates:
-            print(name)
-        PY
-      displayName: 'List candidate Key Vault env var names'
-
-    - task: AzureCLI@2
-      displayName: 'Debug direct Key Vault access'
-      inputs:
-        azureSubscription: 'CFDC-FoodPort-service-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -euo pipefail
-          for secret in secret-key-base redmine-database-password azure-account-name azure-account-key db-pass mysql-password; do
-            echo "Checking secret: $secret"
-            if az keyvault secret show --vault-name FoodPort-key-vault --name "$secret" --query "id" -o tsv >/dev/null 2>&1; then
-              echo "OK: $secret"
-            else
-              echo "MISSING: $secret"
-            fi
-          done
-
-    - script: |
-        python3 <<'PY'
-        import os
-        import os.path
-
-        def parse(path):
-            values = {}
-            if not os.path.exists(path):
+            def parse(path):
+                values = {}
+                with open(path, encoding='utf-8') as f:
+                    for line in f:
+                        if not line.strip() or line.strip().startswith('#') or '=' not in line:
+                            continue
+                        key, _, value = line.rstrip('\n').partition('=')
+                        values[key] = value
                 return values
-            with open(path, encoding='utf-8') as f:
-                for line in f:
-                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
-                        continue
-                    key, _, value = line.rstrip('\n').partition('=')
-                    values[key] = value
-            return values
 
-        env_path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
-        values = parse(env_path)
-        required = [
-            'SECRET_KEY_BASE',
-            'REDMINE_DB_PASSWORD',
-            'AZURE_ACCOUNT_NAME',
-            'AZURE_ACCOUNT_KEY',
-            'DB_PASS',
-            'MYSQL_PASSWORD',
-            'DJANGO_SERVER_NAME',
-            'REDMINE_SERVER_NAME',
-        ]
+            root = Path(os.environ['REMOTE_DIR'])
+            env_values = parse(root / 'env')
 
-        for key in required:
-            print(f"{key}: {'present' if values.get(key) else 'MISSING'}")
+            secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
+            secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
+            text = secrets_src.read_text(encoding='utf-8')
+            secret_key = env_values.get('SECRET_KEY_BASE') or env_values.get('secret-key-base')
+            if not secret_key:
+                secret_key = secrets.token_hex(64)
+                print('Generated SECRET_KEY_BASE fallback for Redmine', file=sys.stderr)
+            text = text.replace('${SECRET_KEY_BASE}', secret_key)
+            secrets_dst.write_text(text, encoding='utf-8')
 
-        missing = [key for key in required if not values.get(key)]
-        if missing:
-            raise SystemExit('Missing required generated env values: ' + ', '.join(missing))
-        PY
-      displayName: 'Debug generated env file presence'
+            db_src = root / 'redmine' / 'config' / 'database.yml.template'
+            db_dst = root / 'redmine' / 'config' / 'database.yml'
+            db_text = db_src.read_text(encoding='utf-8')
+            db_password = env_values.get('REDMINE_DB_PASSWORD') or env_values.get('REDMINE_DATABASE_PASSWORD') or env_values.get('redmine-database-password')
+            if not db_password:
+                raise SystemExit('Required REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing in env file')
+            db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
+            db_dst.write_text(db_text, encoding='utf-8')
 
-    - script: |
-        set -euo pipefail
-        env_file="${BUILD_SOURCESDIRECTORY}/env"
-        dotenv_file="${BUILD_SOURCESDIRECTORY}/.env"
-        if [ ! -f "$env_file" ] || [ ! -f "$dotenv_file" ]; then
-          echo "Expected env files to exist, but one or both are missing:" >&2
-          ls -l "${BUILD_SOURCESDIRECTORY}" || true
-          exit 1
-        fi
-        chmod 600 "$env_file" "$dotenv_file"
-      displayName: 'Confirm generated env files'
-
-    - script: |
-        python3 <<'PY'
-        import os
-        from pathlib import Path
-
-        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
-        env_path = root / 'env'
-        dotenv_path = root / '.env'
-
-        def parse(path):
-            values = {}
-            if not path.exists():
-                return values
-            with path.open(encoding='utf-8') as f:
-                for line in f:
-                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
-                        continue
-                    key, _, value = line.rstrip('\n').partition('=')
-                    values[key] = value
-            return values
-
-        env_values = parse(env_path)
-        dot_env_values = parse(dotenv_path)
-
-        required = [
-            'SECRET_KEY_BASE',
-            'REDMINE_DB_PASSWORD',
-            'DB_PASS',
-            'MYSQL_PASSWORD',
-            'AZURE_ACCOUNT_NAME',
-            'AZURE_ACCOUNT_KEY',
-        ]
-
-        missing = [key for key in required if not env_values.get(key)]
-        print('env file keys:', sorted(env_values.keys()))
-        print('.env file keys:', sorted(dot_env_values.keys()))
-        if missing:
-            raise SystemExit('Missing required generated env values: ' + ', '.join(missing))
-        print('Generated env/.env file validation passed.')
-        PY
-      displayName: 'Validate generated env and .env files'
-
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download dev VM artifact for deploy'
-      inputs:
-        artifact: 'devVm'
-        path: '$(Pipeline.Workspace)'
-
-    - script: |
-        set -e
-        ARTIFACT_DIR="$(Pipeline.Workspace)"
-        VM_IP_FILE=$(find "$ARTIFACT_DIR" -type f -name 'vm_ip.txt' | head -n 1 || true)
-        if [ -z "${VM_IP_FILE:-}" ]; then
-          echo "ERROR: vm_ip.txt not found under $ARTIFACT_DIR"
-          find "$ARTIFACT_DIR" -maxdepth 6 -type f | sort
-          exit 1
-        fi
-        VM_IP=$(cat "$VM_IP_FILE")
-        ENV_FILE="${BUILD_SOURCESDIRECTORY}/env"
-        if grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
-          sed -i "s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP|" "$ENV_FILE"
-        else
-          echo "DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,$VM_IP" >> "$ENV_FILE"
-        fi
-      displayName: 'Set portal VM IP in env file from dev-vm artifact'
-
-    - script: |
-        python3 <<'PY'
-        import os
-        import secrets
-        import sys
-        from pathlib import Path
-
-        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
-        secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
-        secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
-
-        def parse(path):
-            values = {}
-            with open(path, encoding='utf-8') as f:
-                for line in f:
-                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
-                        continue
-                    key, _, value = line.rstrip('\n').partition('=')
-                    values[key] = value
-            return values
-
-        env_values = parse(root / 'env')
-
-        text = secrets_src.read_text(encoding='utf-8')
-        secret_key = env_values.get('SECRET_KEY_BASE') or env_values.get('secret-key-base')
-        if not secret_key:
-            secret_key = secrets.token_hex(64)
-            print('Generated SECRET_KEY_BASE fallback for Redmine', file=sys.stderr)
-
-        text = text.replace('${SECRET_KEY_BASE}', secret_key)
-        secrets_dst.write_text(text, encoding='utf-8')
-
-        db_src = root / 'redmine' / 'config' / 'database.yml.template'
-        db_dst = root / 'redmine' / 'config' / 'database.yml'
-
-        db_text = db_src.read_text(encoding='utf-8')
-        db_password = env_values.get('REDMINE_DB_PASSWORD') or env_values.get('REDMINE_DATABASE_PASSWORD') or env_values.get('redmine-database-password')
-        if not db_password:
-            raise SystemExit('Required REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing in env file')
-
-        db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
-        db_dst.write_text(db_text, encoding='utf-8')
-        PY
-      displayName: 'Render redmine config files from templates'
-
-    - script: |
-        python3 <<'PY'
-        import os
-        from pathlib import Path
-
-        def parse(path):
-            values = {}
-            with open(path, encoding='utf-8') as f:
-                for line in f:
-                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
-                        continue
-                    key, _, value = line.rstrip('\n').partition('=')
-                    values[key] = value
-            return values
-
-        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
-        env_values = parse(root / 'env')
-
-        deploy_env = env_values.get('DEPLOY_ENVIRONMENT', 'dev').lower()
-        if deploy_env not in ('dev', 'prod'):
-            raise SystemExit(f'Unsupported DEPLOY_ENVIRONMENT: {deploy_env}')
-
-        django_server_name = env_values.get('DJANGO_SERVER_NAME')
-        if not django_server_name:
-            raise SystemExit('Required env file value DJANGO_SERVER_NAME is missing')
-
-        src = root / 'nginx' / 'templates' / 'django.template'
-        dst = root / 'nginx' / 'sites-enabled' / 'django'
-        text = src.read_text(encoding='utf-8')
-        text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-        dst.write_text(text, encoding='utf-8')
-
-        https_dst = root / 'nginx' / 'sites-enabled' / 'django-https'
-        if deploy_env == 'prod':
-            redmine_server_name = env_values.get('REDMINE_SERVER_NAME')
-            if not redmine_server_name:
-                raise SystemExit('Required env file value REDMINE_SERVER_NAME is missing')
-            src = root / 'nginx' / 'templates' / 'django-https.template'
+            src = root / 'nginx' / 'templates' / 'django.template'
+            dst = root / 'nginx' / 'sites-enabled' / 'django'
             text = src.read_text(encoding='utf-8')
+            django_server_name = env_values.get('DJANGO_SERVER_NAME')
+            if not django_server_name:
+                raise SystemExit('Required env file value DJANGO_SERVER_NAME is missing')
             text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-            text = text.replace('${REDMINE_SERVER_NAME}', redmine_server_name)
-            https_dst.write_text(text, encoding='utf-8')
-        else:
-            if https_dst.exists():
-                https_dst.unlink()
-        PY
-      displayName: 'Generate nginx site configs from templates'
+            dst.write_text(text, encoding='utf-8')
 
-    - script: |
-        set -euo pipefail
-        cd "$(Build.SourcesDirectory)"
+            https_dst = root / 'nginx' / 'sites-enabled' / 'django-https'
+            deploy_env = env_values.get('DEPLOY_ENVIRONMENT', 'dev').lower()
+            if deploy_env == 'prod':
+                redmine_server_name = env_values.get('REDMINE_SERVER_NAME')
+                if not redmine_server_name:
+                    raise SystemExit('Required env file value REDMINE_SERVER_NAME is missing')
+                src = root / 'nginx' / 'templates' / 'django-https.template'
+                text = src.read_text(encoding='utf-8')
+                text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
+                text = text.replace('${REDMINE_SERVER_NAME}', redmine_server_name)
+                https_dst.write_text(text, encoding='utf-8')
+            else:
+                if https_dst.exists():
+                    https_dst.unlink()
+          PY
 
-        if command -v docker >/dev/null 2>&1; then
-          rm -f celerybeat-schedule.db celerybeat.pid
-          docker compose down
-          docker compose up -d
-          exit 0
-        fi
+          if command -v docker >/dev/null 2>&1; then
+            rm -f celerybeat-schedule.db celerybeat.pid
+            docker compose down
+            docker compose up -d
+            exit 0
+          fi
 
-        if sudo -n true 2>/dev/null; then
-          sudo rm -f celerybeat-schedule.db celerybeat.pid
-          sudo docker compose down
-          sudo docker compose up -d
-          exit 0
-        fi
+          if sudo -n true 2>/dev/null; then
+            sudo -n env PATH="$PATH" docker compose version || true
+            sudo rm -f celerybeat-schedule.db celerybeat.pid
+            sudo env PATH="$PATH" docker compose down || true
+            sudo env PATH="$PATH" docker compose up -d
+            exit 0
+          fi
 
-        echo 'ERROR: Docker CLI not available on this agent, or sudo requires a password.'
-        echo '  - If running on a self-hosted agent, install Docker and ensure the agent user can run it without sudo/password.'
-        echo '  - Or use a hosted agent with Docker installed by setting useHostedAgent: true for this pipeline.'
-        exit 1
-      displayName: 'Restart containers'
+          echo 'ERROR: Docker CLI not available on this VM, or sudo requires a password.'
+          echo '  - Install Docker and Docker Compose on the target VM.'
+          echo '  - Make sure the target user is in the docker group or can run sudo docker commands.'
+          if command -v sudo >/dev/null 2>&1; then
+            echo 'DEBUG: sudo -l output:'
+            sudo -l || true
+          fi
+          exit 1
+        EOF
+      displayName: 'Deploy portal on dev VM'
