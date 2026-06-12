@@ -554,6 +554,11 @@ stages:
         inlineScript: |
           set -euo pipefail
           vault='FoodPort-key-vault'
+          env_file="$BUILD_SOURCESDIRECTORY/env"
+          dotenv_file="$BUILD_SOURCESDIRECTORY/.env"
+          mkdir -p "$(dirname "$env_file")"
+          : > "$env_file"
+          : > "$dotenv_file"
           secrets=(
             secret-key-base
             redmine-database-password
@@ -670,8 +675,16 @@ stages:
               exit 1
             fi
             echo "##vso[task.setvariable variable=$var_name;issecret=true]$value"
+            printf '%s=%s\n' "$var_name" "$value" >> "$BUILD_SOURCESDIRECTORY/env"
+            case "$var_name" in
+              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
+                printf '%s=%s\n' "$var_name" "$value" >> "$BUILD_SOURCESDIRECTORY/.env"
+                ;;
+            esac
             echo "Fetched Key Vault secret $secret as pipeline variable $var_name"
           done
+          printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$BUILD_SOURCESDIRECTORY/.env"
+          chmod 600 "$BUILD_SOURCESDIRECTORY/env" "$BUILD_SOURCESDIRECTORY/.env"
 
     - script: |
         python3 <<'PY'
@@ -708,147 +721,56 @@ stages:
     - script: |
         python3 <<'PY'
         import os
+        import os.path
 
-        required = {
-            'SECRET_KEY_BASE': ['SECRET_KEY_BASE', 'secret-key-base'],
-            'REDMINE_DB_PASSWORD': ['REDMINE_DB_PASSWORD', 'REDMINE_DATABASE_PASSWORD', 'redmine-database-password'],
-            'AZURE_ACCOUNT_NAME': ['AZURE_ACCOUNT_NAME', 'azure-account-name'],
-            'AZURE_ACCOUNT_KEY': ['AZURE_ACCOUNT_KEY', 'azure-account-key'],
-            'DB_PASS': ['DB_PASS', 'db-pass', 'db_pass'],
-            'MYSQL_PASSWORD': ['MYSQL_PASSWORD', 'mysql-password', 'mysql_password'],
-        }
+        def parse(path):
+            values = {}
+            if not os.path.exists(path):
+                return values
+            with open(path, encoding='utf-8') as f:
+                for line in f:
+                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
+                        continue
+                    key, _, value = line.rstrip('\n').partition('=')
+                    values[key] = value
+            return values
 
-        for canonical, candidates in required.items():
-            found = None
-            for name in candidates:
-                if name in os.environ:
-                    found = name
-                    break
-            print(f'{canonical}: {found or "MISSING"}')
+        env_path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
+        values = parse(env_path)
+        required = [
+            'SECRET_KEY_BASE',
+            'REDMINE_DB_PASSWORD',
+            'AZURE_ACCOUNT_NAME',
+            'AZURE_ACCOUNT_KEY',
+            'DB_PASS',
+            'MYSQL_PASSWORD',
+        ]
 
-        missing = [canonical for canonical, candidates in required.items() if not any(name in os.environ for name in candidates)]
+        for key in required:
+            print(f"{key}: {'present' if values.get(key) else 'MISSING'}")
+
+        missing = [key for key in required if not values.get(key)]
         if missing:
-            raise SystemExit('Missing required Key Vault variables: ' + ', '.join(missing))
+            raise SystemExit('Missing required generated env values: ' + ', '.join(missing))
         PY
-      displayName: 'Debug Key Vault env vars presence'
+      displayName: 'Debug generated env file presence'
 
     - script: |
-        python3 <<'PY'
-        import os
-        import os.path
-        path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
-        dotenv_path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], '.env')
-        keys = [
-          'SECRET_KEY',
-          'SECRET_KEY_BASE',
-          'AZURE_ACCOUNT_NAME',
-          'AZURE_ACCOUNT_KEY',
-          'BATCH_ACCOUNT_NAME',
-          'BATCH_ACCOUNT_URL',
-          'BATCH_ACCOUNT_KEY',
-          'BATCH_ACCOUNT_SUBNET',
-          'VM_IMAGE',
-          'COWBAT_NODE_AGENT_SKU',
-          'AMPLISEQ_IMAGE',
-          'AMPLISEQ_NODE_AGENT_SKU',
-          'COWSNPHR_IMAGE',
-          'COWSNPHR_NODE_AGENT_SKU',
-          'VM_CLIENT_ID',
-          'VM_SECRET',
-          'VM_TENANT',
-          'AD_APP_ID',
-          'AD_APP_SECRET_ID',
-          'AD_APP_SECRET',
-          'ENTRA_ID_CLIENT_ID',
-          'ENTRA_ID_CLIENT_SECRET',
-          'ENTRA_ID_TENANT_ID',
-          'REDMINE_DEFAULT_FROM',
-          'EMAIL_HOST_USER',
-          'EMAIL_HOST_PASSWORD',
-          'EMAIL_RELAY_SECRET',
-          'API_KEY',
-          'DEV_API_KEY',
-          'DJANGO_SERVER_NAME',
-          'REDMINE_SERVER_NAME',
-          'DB_NAME',
-          'DB_USER',
-          'DB_PASS',
-          'DB_SERVICE',
-          'DB_PORT',
-          'DJANGO_EMAIL_BACKEND',
-          'SENTRY_DSN',
-          'ENVIRONMENT',
-          'CONNECTION_STRING',
-          'FLOWER_USER',
-          'FLOWER_PASSWORD',
-          'SITE_URL',
-          'BUILD_SOURCESDIRECTORY',
-          'REDMINE_DB_PASSWORD',
-          'MYSQL_ROOT_PASSWORD',
-          'MYSQL_PASSWORD',
-          'MARIA_DB_ROOT_PASSWORD',
-        ]
-        with open(path, 'w', encoding='utf-8') as f:
-            written_keys = set()
-            for key in keys:
-                underscored_key = key.lower().replace('-', '_')
-                dashed_key = key.lower().replace('_', '-')
-                if key in os.environ:
-                    f.write(f"{key}={os.environ[key]}\n")
-                    written_keys.add(key)
-                    continue
+        set -euo pipefail
+        env_file="${BUILD_SOURCESDIRECTORY}/env"
+        dotenv_file="${BUILD_SOURCESDIRECTORY}/.env"
+        if [ ! -f "$env_file" ] || [ ! -f "$dotenv_file" ]; then
+          echo "Expected env files to exist, but one or both are missing:" >&2
+          ls -l "${BUILD_SOURCESDIRECTORY}" || true
+          exit 1
+        fi
+        chmod 600 "$env_file" "$dotenv_file"
+      displayName: 'Confirm generated env files'
 
-                if dashed_key in os.environ:
-                    f.write(f"{key}={os.environ[dashed_key]}\n")
-                    written_keys.add(key)
-                    continue
-
-                if underscored_key in os.environ:
-                    f.write(f"{key}={os.environ[underscored_key]}\n")
-                    written_keys.add(key)
-                    continue
-
-            for key in ['DB_PASS', 'MYSQL_PASSWORD']:
-                if key in written_keys:
-                    continue
-                underscored_key = key.lower().replace('-', '_')
-                dashed_key = key.lower().replace('_', '-')
-                if key in os.environ:
-                    f.write(f"{key}={os.environ[key]}\n")
-                elif dashed_key in os.environ:
-                    f.write(f"{key}={os.environ[dashed_key]}\n")
-                elif underscored_key in os.environ:
-                    f.write(f"{key}={os.environ[underscored_key]}\n")
-        dotenv_keys = [
-          'SUBSCRIPTION_ID',
-          'TENANT_ID',
-          'CLIENT_ID',
-          'CLIENT_SECRET',
-          'STORAGE_ACCOUNT_NAME',
-          'RESOURCE_GROUP_NAME',
-          'CONNECTION_STRING',
-          'MYSQL_PASSWORD',
-          'MARIA_DB_ROOT_PASSWORD',
-          'DB_PASS',
-          'EMAIL_HOST_USER',
-          'EMAIL_HOST_PASSWORD'
-        ]
-        with open(dotenv_path, 'w', encoding='utf-8') as f:
-            for key in dotenv_keys:
-                underscored_key = key.lower().replace('-', '_')
-                dashed_key = key.lower().replace('_', '-')
-                if key in os.environ:
-                    f.write(f"{key}={os.environ[key]}\n")
-                elif dashed_key in os.environ:
-                    f.write(f"{key}={os.environ[dashed_key]}\n")
-                elif underscored_key in os.environ:
-                    f.write(f"{key}={os.environ[underscored_key]}\n")
-            f.write("FLOWER_USER=\n")
-            f.write("FLOWER_PASSWORD=\n")
-        PY
-        chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
-        chmod 600 "${BUILD_SOURCESDIRECTORY}/.env"
-      displayName: 'Write env and .env files from Key Vault variables'
+    - script: |
+        set -euo pipefail
+        echo 'Env files already generated by Azure CLI Key Vault fetch step.'
+      displayName: 'Skip redundant env generation'
 
     - script: |
         python3 <<'PY'
@@ -927,11 +849,20 @@ stages:
         secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
         secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
 
-        for key, value in os.environ.items():
-          print(f'{key}={value}')
+        def parse(path):
+            values = {}
+            with open(path, encoding='utf-8') as f:
+                for line in f:
+                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
+                        continue
+                    key, _, value = line.rstrip('\n').partition('=')
+                    values[key] = value
+            return values
+
+        env_values = parse(root / 'env')
 
         text = secrets_src.read_text(encoding='utf-8')
-        secret_key = os.environ.get('SECRET_KEY_BASE') or os.environ.get('secret-key-base')
+        secret_key = env_values.get('SECRET_KEY_BASE') or env_values.get('secret-key-base')
         if not secret_key:
             secret_key = secrets.token_hex(64)
             print('Generated SECRET_KEY_BASE fallback for Redmine', file=sys.stderr)
@@ -943,9 +874,9 @@ stages:
         db_dst = root / 'redmine' / 'config' / 'database.yml'
 
         db_text = db_src.read_text(encoding='utf-8')
-        db_password = os.environ.get('REDMINE_DB_PASSWORD') or os.environ.get('REDMINE_DATABASE_PASSWORD') or os.environ.get('redmine-database-password')
+        db_password = env_values.get('REDMINE_DB_PASSWORD') or env_values.get('REDMINE_DATABASE_PASSWORD') or env_values.get('redmine-database-password')
         if not db_password:
-            raise SystemExit('Required environment variable REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing')
+            raise SystemExit('Required REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing in env file')
 
         db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
         db_dst.write_text(db_text, encoding='utf-8')
