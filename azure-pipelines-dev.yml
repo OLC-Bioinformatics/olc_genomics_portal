@@ -554,6 +554,33 @@ stages:
     - script: |
         python3 <<'PY'
         import os
+
+        required = {
+            'SECRET_KEY_BASE': ['SECRET_KEY_BASE', 'secret-key-base'],
+            'REDMINE_DB_PASSWORD': ['REDMINE_DB_PASSWORD', 'REDMINE_DATABASE_PASSWORD', 'redmine-database-password'],
+            'AZURE_ACCOUNT_NAME': ['AZURE_ACCOUNT_NAME', 'azure-account-name'],
+            'AZURE_ACCOUNT_KEY': ['AZURE_ACCOUNT_KEY', 'azure-account-key'],
+            'DB_PASS': ['DB_PASS', 'db-pass', 'db_pass'],
+            'MYSQL_PASSWORD': ['MYSQL_PASSWORD', 'mysql-password', 'mysql_password'],
+        }
+
+        for canonical, candidates in required.items():
+            found = None
+            for name in candidates:
+                if name in os.environ:
+                    found = name
+                    break
+            print(f'{canonical}: {found or "MISSING"}')
+
+        missing = [canonical for canonical, candidates in required.items() if not any(name in os.environ for name in candidates)]
+        if missing:
+            raise SystemExit('Missing required Key Vault variables: ' + ', '.join(missing))
+        PY
+      displayName: 'Debug Key Vault env vars presence'
+
+    - script: |
+        python3 <<'PY'
+        import os
         import os.path
         path = os.path.join(os.environ['BUILD_SOURCESDIRECTORY'], 'env')
         keys = [
@@ -758,6 +785,48 @@ stages:
         chmod 600 "${BUILD_SOURCESDIRECTORY}/env"
         chmod 600 "${BUILD_SOURCESDIRECTORY}/.env"
       displayName: 'Write env and .env files from Key Vault variables'
+
+    - script: |
+        python3 <<'PY'
+        import os
+        from pathlib import Path
+
+        root = Path(os.environ['BUILD_SOURCESDIRECTORY'])
+        env_path = root / 'env'
+        dotenv_path = root / '.env'
+
+        def parse(path):
+            values = {}
+            if not path.exists():
+                return values
+            with path.open(encoding='utf-8') as f:
+                for line in f:
+                    if not line.strip() or line.strip().startswith('#') or '=' not in line:
+                        continue
+                    key, _, value = line.rstrip('\n').partition('=')
+                    values[key] = value
+            return values
+
+        env_values = parse(env_path)
+        dot_env_values = parse(dotenv_path)
+
+        required = [
+            'SECRET_KEY_BASE',
+            'REDMINE_DB_PASSWORD',
+            'DB_PASS',
+            'MYSQL_PASSWORD',
+            'AZURE_ACCOUNT_NAME',
+            'AZURE_ACCOUNT_KEY',
+        ]
+
+        missing = [key for key in required if not env_values.get(key)]
+        print('env file keys:', sorted(env_values.keys()))
+        print('.env file keys:', sorted(dot_env_values.keys()))
+        if missing:
+            raise SystemExit('Missing required generated env values: ' + ', '.join(missing))
+        print('Generated env/.env file validation passed.')
+        PY
+      displayName: 'Validate generated env and .env files'
 
     - task: DownloadPipelineArtifact@2
       displayName: 'Download dev VM artifact for deploy'
