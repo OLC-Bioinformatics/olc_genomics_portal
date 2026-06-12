@@ -406,7 +406,25 @@ stages:
             sudo ls -l /etc/apt/sources.list.d/docker.list
             sudo cat /etc/apt/sources.list.d/docker.list
             sudo DEBIAN_FRONTEND=noninteractive apt-get update
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io || true
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo 'WARNING: docker-ce install failed, trying ubuntu docker.io fallback'
+              sudo DEBIAN_FRONTEND=noninteractive apt-get update
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io || true
+            fi
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo 'WARNING: docker.io fallback failed, trying get.docker.com convenience script'
+              curl -fsSL https://get.docker.com | sudo sh || true
+            fi
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo 'ERROR: Docker CLI is still unavailable after primary and fallback installs.'
+              echo 'DEBUG: apt-cache policy docker-ce docker-ce-cli containerd.io docker.io'
+              sudo apt-cache policy docker-ce docker-ce-cli containerd.io docker.io || true
+              exit 1
+            fi
             sudo usermod -aG docker "${TARGET_SSH_USER}"
           fi
 
