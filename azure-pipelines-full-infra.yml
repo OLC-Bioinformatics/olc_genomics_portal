@@ -461,12 +461,8 @@ stages:
           fi
           export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-          if /home/${TARGET_SSH_USER}/miniconda/bin/conda help | grep -q 'tos'; then
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-            /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          else
-            echo "Skipping conda tos accept because this conda version does not support the 'tos' command."
-          fi
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
