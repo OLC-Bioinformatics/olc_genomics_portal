@@ -470,7 +470,8 @@ stages:
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set solver classic
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q --solver=classic mamba -n base
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
