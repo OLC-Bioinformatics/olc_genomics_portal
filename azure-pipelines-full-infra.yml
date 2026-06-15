@@ -460,6 +460,7 @@ stages:
             echo "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" >> "/home/${TARGET_SSH_USER}/.bashrc"
           fi
           export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+          export CONDA_NO_PLUGINS=true
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
           /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
