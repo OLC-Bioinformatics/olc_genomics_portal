@@ -38,9 +38,14 @@
 <form class="login" method="POST" action="{% url 'account_login' %}">
   {% csrf_token %}
   {{ form|crispy }}
-  {% if redirect_field_value %}
-  <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-  {% endif %}
+  {% with redirect_field_name|default:"next" as redirect_field_name %}
+    {% with redirect_field_value|default:redirect_to|default:"" as redirect_field_value %}
+      {% if redirect_field_value %}
+      <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+      <input type="hidden" name="redirect_to" value="{{ redirect_field_value }}" />
+      {% endif %}
+    {% endwith %}
+  {% endwith %}
   <button class="primaryAction btn btn-primary" type="submit">{% trans "Sign In" %}</button><br>
   <br>
   <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
