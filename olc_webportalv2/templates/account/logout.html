@@ -12,9 +12,14 @@
 
 <form method="post" action="{% url 'account_logout' %}">
   {% csrf_token %}
-  {% if redirect_field_value %}
-  <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
-  {% endif %}
+  {% with redirect_field_name|default:"next" as redirect_field_name %}
+    {% with redirect_field_value|default:redirect_to|default:"" as redirect_field_value %}
+      {% if redirect_field_value %}
+      <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+      <input type="hidden" name="redirect_to" value="{{ redirect_field_value }}"/>
+      {% endif %}
+    {% endwith %}
+  {% endwith %}
   <button class="btn btn-danger" type="submit">{% trans 'Sign out' %} <i class="fas fa-sign-out-alt"></i></button>
 </form>
 
