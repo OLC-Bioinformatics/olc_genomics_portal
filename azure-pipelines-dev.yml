@@ -801,6 +801,7 @@ stages:
           chmod 600 "$env_file" "$dotenv_file"
 
           python3 "$REMOTE_DIR/remote_deploy_env.py"
+          cd "$REMOTE_DIR"
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
