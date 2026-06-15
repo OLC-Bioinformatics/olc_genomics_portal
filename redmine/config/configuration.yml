@@ -11,6 +11,8 @@ production:
       domain: inspection.gc.ca
       authentication: :login
       enable_starttls_auto: true
+      user_name: AKIA4DJHEGSUOUVSDQGV
+      password: BET13W9isVZOJXbHy8B94ES22at4L5sKynPgvZxjcrI+
   default_from: CFIA Redmine <cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca>
   self_registration: false
   default_language: en

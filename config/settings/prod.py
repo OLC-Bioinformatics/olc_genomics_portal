@@ -44,6 +44,7 @@ if READ_DOT_ENV_FILE:
     env.read_env(ENV_FILE)
     print('The .env file has been loaded. See base.py for more information')
 
+MICROSOFT_AUTH_ENABLED = env.bool('MICROSOFT_AUTH_ENABLED', default=True)
 print('Loaded prod settings')
 
 # APP CONFIGURATION
@@ -70,8 +71,9 @@ THIRD_PARTY_APPS = [
     'allauth',  # registration
     'allauth.account',  # registration
     'allauth.socialaccount',  # registration
-    'microsoft_authentication',  # MS AD authentication
 ]
+if MICROSOFT_AUTH_ENABLED:
+    THIRD_PARTY_APPS.append('microsoft_authentication')
 
 # Apps specific for this project go here.
 LOCAL_APPS = [
@@ -263,6 +265,7 @@ TEMPLATES = [
                 'django.template.context_processors.static',
                 'django.template.context_processors.tz',
                 'django.contrib.messages.context_processors.messages',
+                'config.context_processors.auth_settings',
                 # Your stuff: custom template context processors go here
             ],
         },
@@ -500,9 +503,15 @@ VM_SECRET = env('VM_SECRET')
 VM_TENANT = env('VM_TENANT')
 AMPLISEQ_IMAGE = env('AMPLISEQ_IMAGE')
 COWSNPHR_IMAGE = env('COWSNPHR_IMAGE')
-AD_APP_ID = env("AD_APP_ID")
-AD_APP_SECRET = env("AD_APP_SECRET")
-SITE_URL = env("SITE_URL", default="https://foodport-dev.cloud-nuage.inspection.gc.ca")
+SITE_URL = env('SITE_URL', default="https://foodport-dev.cloud-nuage.inspection.gc.ca")
+if MICROSOFT_AUTH_ENABLED:
+    AD_APP_ID = env("AD_APP_ID")
+    AD_APP_SECRET = env("AD_APP_SECRET")
+    VM_TENANT = env('VM_TENANT')
+else:
+    AD_APP_ID = None
+    AD_APP_SECRET = None
+    VM_TENANT = None
 
 # Define the URL for the batch service API
 BATCH_SERVICE_URL = "http://batch:5000/submit_batch_request"
@@ -523,16 +532,24 @@ sentry_sdk.init(dsn=env('SENTRY_DSN'), integrations=[DjangoIntegration()])
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Microsoft AD login
-MICROSOFT = {
-    "app_id": AD_APP_ID,
-    "app_secret": AD_APP_SECRET,
-    "redirect": SITE_URL + "/microsoft_authentication/callback",
-    "scopes": ["user.read"],
-    "authority": "https://login.microsoftonline.com/" + VM_TENANT,
-    "valid_email_domains": ["inspection.gc.ca", "gmail.com"],
-    "logout_uri": SITE_URL + "/",
-}
-LOGIN_URL = "/microsoft_authentication/login"
+if MICROSOFT_AUTH_ENABLED:
+    MICROSOFT = {
+        "app_id": AD_APP_ID,
+        "app_secret": AD_APP_SECRET,
+        "redirect": SITE_URL + "/microsoft_authentication/callback",
+        "scopes": ["user.read"],
+        "authority": "https://login.microsoftonline.com/" + VM_TENANT,
+        "valid_email_domains": ["inspection.gc.ca", "gmail.com"],
+        "logout_uri": SITE_URL + "/",
+    }
+LOGIN_URL = '/accounts/login/'
+LOGIN_EXEMPT_URLS = [
+    r'^accounts/',
+    r'^static/',
+    r'^media/',
+]
+if MICROSOFT_AUTH_ENABLED:
+    LOGIN_EXEMPT_URLS.append(r'^microsoft_authentication/')
 # LOGIN_REDIRECT_URL = "/admin"  # optional and can be changed to any other url
 
 LOGIN_REDIRECT_URL = "/"  # optional and can be changed to any other url

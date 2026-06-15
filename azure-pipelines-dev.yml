@@ -645,11 +645,11 @@ stages:
     - script: |
         set -euo pipefail
         chmod 600 "$(sshKey.secureFilePath)"
-        REMOTE_DIR="/home/${TARGET_SSH_USER}/foodport_deploy"
+        REMOTE_DIR="/home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal"
 
         echo "Copying portal source tree to ${TARGET_HOST}:${REMOTE_DIR}"
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-        tar --exclude='.git' -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
+        tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
@@ -680,6 +680,8 @@ stages:
           dotenv_file="$REMOTE_DIR/.env"
           : > "$env_file"
           : > "$dotenv_file"
+          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
+          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
           django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
