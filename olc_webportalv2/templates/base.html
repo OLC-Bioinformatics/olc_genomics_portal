@@ -129,20 +129,35 @@
                 class="fas fa-user-circle"></i></a>
           </li>
 
-<!--'microsoft_authentication:microsoft_authentication_logout'-->
-
+          {% if MICROSOFT_AUTH_ENABLED %}
           <li class="nav-item active">
-            {# URL provided by django-allauth/account/urls.py #}
+            {# URL provided by microsoft_authentication.urls #}
             <a class="nav-link" href="{% url 'microsoft_authentication:microsoft_authentication_logout' %}">{% trans "Sign Out" %} <i
                 class="fas fa-sign-out-alt"></i></a>
           </li>
+          {% else %}
+          <li class="nav-item active">
+            {# URL provided by django-allauth/account/urls.py #}
+            <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %} <i
+                class="fas fa-sign-out-alt"></i></a>
+          </li>
+          {% endif %}
 
           {% else %}
-          <li class="nav-item">
-            {# URL provided by django-allauth/account/urls.py #}
-            <a id="log-in-link" class="nav-link" href="{% url 'microsoft_authentication:microsoft_authentication_login' %}">{% trans "Login" %} <i
-                class="fas fa-sign-in-alt"></i> </a>
-          </li>
+            {% if MICROSOFT_AUTH_ENABLED %}
+            <li class="nav-item">
+              <a id="log-in-link" class="nav-link" href="{% url 'microsoft_authentication:microsoft_authentication_login' %}">{% trans "Login" %} <i
+                  class="fas fa-sign-in-alt"></i> </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'account_login' %}">{% trans "Login with Email" %}</a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+              <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Login" %} <i
+                  class="fas fa-sign-in-alt"></i> </a>
+            </li>
+            {% endif %}
 
           <!-- <li class="nav-item">
             {# URL provided by django-allauth/account/urls.py #}

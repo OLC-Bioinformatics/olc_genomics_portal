@@ -46,16 +46,22 @@ urlpatterns = [
 
     # Django Admin, use {% url 'admin:index' %}
     url(settings.ADMIN_URL, admin.site.urls),
-    # MS AD authentication
-    path(
-        'microsoft_authentication/',
-        include('microsoft_authentication.urls')
-    ),
-
-    # Your stuff: custom urls includes go here
-    path('i18n/', include('django.conf.urls.i18n')),
-    path('api-auth/', include('rest_framework.urls'))
 ]
+
+if settings.MICROSOFT_AUTH_ENABLED:
+    urlpatterns += [
+        path(
+            'microsoft_authentication/',
+            include('microsoft_authentication.urls')
+        ),
+    ]
+
+urlpatterns += [
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('api-auth/', include('rest_framework.urls')),
+]
+
+# Your stuff: custom urls includes go here
 
 # Allows for url translation
 urlpatterns += i18n_patterns(
