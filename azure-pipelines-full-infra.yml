@@ -963,7 +963,7 @@ stages:
           else:
               if https_dst.exists():
                   https_dst.unlink()
-          PY
+        PY
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
