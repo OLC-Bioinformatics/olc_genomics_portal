@@ -902,68 +902,7 @@ stages:
           printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$dotenv_file"
           chmod 600 "$env_file" "$dotenv_file"
 
-          python3 <<'PY'
-          import os
-          import secrets
-          import sys
-          from pathlib import Path
-
-          def parse(path):
-              values = {}
-              with open(path, encoding='utf-8') as f:
-                  for line in f:
-                      if not line.strip() or line.strip().startswith('#') or '=' not in line:
-                          continue
-                      key, _, value = line.rstrip('\n').partition('=')
-                      values[key] = value
-              return values
-
-          root = Path(os.environ['REMOTE_DIR'])
-          env_values = parse(root / 'env')
-
-          secrets_src = root / 'redmine' / 'config' / 'secrets.yml.template'
-          secrets_dst = root / 'redmine' / 'config' / 'secrets.yml'
-          text = secrets_src.read_text(encoding='utf-8')
-          secret_key = env_values.get('SECRET_KEY_BASE') or env_values.get('secret-key-base')
-          if not secret_key:
-              secret_key = secrets.token_hex(64)
-              print('Generated SECRET_KEY_BASE fallback for Redmine', file=sys.stderr)
-          text = text.replace('${SECRET_KEY_BASE}', secret_key)
-          secrets_dst.write_text(text, encoding='utf-8')
-
-          db_src = root / 'redmine' / 'config' / 'database.yml.template'
-          db_dst = root / 'redmine' / 'config' / 'database.yml'
-          db_text = db_src.read_text(encoding='utf-8')
-          db_password = env_values.get('REDMINE_DB_PASSWORD') or env_values.get('REDMINE_DATABASE_PASSWORD') or env_values.get('redmine-database-password')
-          if not db_password:
-              raise SystemExit('Required REDMINE_DB_PASSWORD / REDMINE_DATABASE_PASSWORD / redmine-database-password is missing in env file')
-          db_text = db_text.replace('${REDMINE_DB_PASSWORD}', db_password)
-          db_dst.write_text(db_text, encoding='utf-8')
-
-          src = root / 'nginx' / 'templates' / 'django.template'
-          dst = root / 'nginx' / 'sites-enabled' / 'django'
-          text = src.read_text(encoding='utf-8')
-          django_server_name = env_values.get('DJANGO_SERVER_NAME')
-          if not django_server_name:
-              raise SystemExit('Required env file value DJANGO_SERVER_NAME is missing')
-          text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-          dst.write_text(text, encoding='utf-8')
-
-          https_dst = root / 'nginx' / 'sites-enabled' / 'django-https'
-          deploy_env = env_values.get('DEPLOY_ENVIRONMENT', 'dev').lower()
-          if deploy_env == 'prod':
-              redmine_server_name = env_values.get('REDMINE_SERVER_NAME')
-              if not redmine_server_name:
-                  raise SystemExit('Required env file value REDMINE_SERVER_NAME is missing')
-              src = root / 'nginx' / 'templates' / 'django-https.template'
-              text = src.read_text(encoding='utf-8')
-              text = text.replace('${DJANGO_SERVER_NAME}', django_server_name)
-              text = text.replace('${REDMINE_SERVER_NAME}', redmine_server_name)
-              https_dst.write_text(text, encoding='utf-8')
-          else:
-              if https_dst.exists():
-                  https_dst.unlink()
-        PY
+          python3 "$REMOTE_DIR/remote_deploy_env.py"
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
