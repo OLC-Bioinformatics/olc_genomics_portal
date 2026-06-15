@@ -541,18 +541,21 @@ stages:
             echo "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" >> "/home/${TARGET_SSH_USER}/.bashrc"
           fi
           export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
-          export CONDA_NO_PLUGINS=true
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
+          if /home/${TARGET_SSH_USER}/miniconda/bin/conda help | grep -q 'tos'; then
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+            /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+          else
+            echo "Skipping conda tos accept because this conda version does not support the 'tos' command."
+          fi
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
+          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q mamba -n base
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
