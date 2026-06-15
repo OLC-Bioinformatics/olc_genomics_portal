@@ -605,6 +605,31 @@ stages:
         echo "##vso[task.setvariable variable=TARGET_HOST]$VM_IP"
       displayName: 'Set target VM IP variable'
 
+    - task: AzureCLI@2
+      name: fetchVmCreds
+      displayName: 'Fetch VM Azure service principal credentials'
+      inputs:
+        azureSubscription: 'CFDC-FoodPort-service-connection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          vault='FoodPort-key-vault'
+          for secret in vm-client-id vm-secret vm-tenant; do
+            case "$secret" in
+              vm-client-id) var_name='VM_CLIENT_ID' ;;
+              vm-secret) var_name='VM_SECRET' ;;
+              vm-tenant) var_name='VM_TENANT' ;;
+              *) echo "Unexpected secret name: $secret" >&2; exit 1 ;;
+            esac
+            value=$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)
+            if [ -z "$value" ]; then
+              echo "Failed to read Key Vault secret: $secret" >&2
+              exit 1
+            fi
+            echo "##vso[task.setvariable variable=$var_name;isOutput=true;issecret=true]$value"
+          done
+
     - task: DownloadSecureFile@1
       name: sshKey
       inputs:
@@ -626,9 +651,19 @@ stages:
         tar --exclude='.git' -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
-        safe_VM_CLIENT_ID=$(printf '%q' "${VM_CLIENT_ID:-}")
-        safe_VM_SECRET=$(printf '%q' "${VM_SECRET:-}")
-        safe_VM_TENANT=$(printf '%q' "${VM_TENANT:-}")
+        VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
+        VM_SECRET_VAL="$(fetchVmCreds.VM_SECRET)"
+        VM_TENANT_VAL="$(fetchVmCreds.VM_TENANT)"
+        if [ -z "${VM_CLIENT_ID_VAL:-}" ] || [ -z "${VM_SECRET_VAL:-}" ] || [ -z "${VM_TENANT_VAL:-}" ]; then
+          echo 'ERROR: VM Azure service principal credentials are not set. Check the fetchVmCreds task and Key Vault access.' >&2
+          echo "VM_CLIENT_ID set: ${VM_CLIENT_ID_VAL:+yes}"
+          echo "VM_SECRET set: ${VM_SECRET_VAL:+yes}"
+          echo "VM_TENANT set: ${VM_TENANT_VAL:+yes}"
+          exit 1
+        fi
+        safe_VM_CLIENT_ID=$(printf '%q' "$VM_CLIENT_ID_VAL")
+        safe_VM_SECRET=$(printf '%q' "$VM_SECRET_VAL")
+        safe_VM_TENANT=$(printf '%q' "$VM_TENANT_VAL")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
