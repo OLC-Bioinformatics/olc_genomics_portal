@@ -560,13 +560,13 @@ stages:
 
     - script: |
         set -e
-        mkdir -p ~/.ssh
-        cp "$(sshKey.secureFilePath)" ~/.ssh/portal_ssh_key
-        chmod 600 ~/.ssh/portal_ssh_key
+        mkdir -p $HOME/.ssh
+        cp "$(sshKey.secureFilePath)" $HOME/.ssh/portal_ssh_key
+        chmod 600 $HOME/.ssh/portal_ssh_key
 
-        echo -e "Host github.com\n\tHostName github.com\n\tIdentityFile ~/.ssh/portal_ssh_key\n\tIdentitiesOnly yes\n\tUser git\n\tStrictHostKeyChecking no" >> ~/.ssh/config
+        echo -e "Host github.com\n\tHostName github.com\n\tIdentityFile $HOME/.ssh/portal_ssh_key\n\tIdentitiesOnly yes\n\tUser git\n\tStrictHostKeyChecking no" >> $HOME/.ssh/config
         # Optionally add github.com to known_hosts for safe CI cloning
-        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        ssh-keyscan github.com >> $HOME/.ssh/known_hosts
 
         # Ensure the git remote uses SSH, not HTTPS
         git remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git
