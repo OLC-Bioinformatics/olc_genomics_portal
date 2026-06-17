@@ -558,6 +558,25 @@ stages:
         SSH_PUBLIC_KEY: $(sshPublicKey)
       displayName: 'Bootstrap remote VM with Docker, Docker Compose, Git, Python, Conda, and Azure CLI'
 
+    - script: |
+        set -e
+        mkdir -p ~/.ssh
+        cp "$(sshKey.secureFilePath)" ~/.ssh/portal_ssh_key
+        chmod 600 ~/.ssh/portal_ssh_key
+
+        echo -e "Host github.com\n\tHostName github.com\n\tIdentityFile ~/.ssh/portal_ssh_key\n\tIdentitiesOnly yes\n\tUser git\n\tStrictHostKeyChecking no" >> ~/.ssh/config
+        # Optionally add github.com to known_hosts for safe CI cloning
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+        # Ensure the git remote uses SSH, not HTTPS
+        git remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git
+      displayName: 'Setup SSH key and git remote for GitHub'
+
+    # Now you can run your git push/pull/clone commands as needed
+    - script: |
+        cd /home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal && git push -u origin dev
+      displayName: 'Push dev branch to GitHub'
+
 - stage: DeployPortal
   displayName: 'Deploy portal'
   dependsOn: BootstrapRemoteVm
@@ -686,6 +705,7 @@ stages:
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
           secrets=(
+            secret-key
             secret-key-base
             redmine-database-password
             azure-account-name
@@ -695,6 +715,9 @@ stages:
             batch-account-key
             batch-account-subnet
             vm-image
+            vm-client-id
+            vm-secret
+            vm-tenant
             cowbat-node-agent-sku
             ampliseq-image
             ampliseq-node-agent-sku
@@ -735,6 +758,7 @@ stages:
           )
           for secret in "${secrets[@]}"; do
             case "$secret" in
+              secret-key) var_name='SECRET_KEY' ;;
               secret-key-base) var_name='SECRET_KEY_BASE' ;;
               redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
               azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
@@ -744,6 +768,9 @@ stages:
               batch-account-key) var_name='BATCH_ACCOUNT_KEY' ;;
               batch-account-subnet) var_name='BATCH_ACCOUNT_SUBNET' ;;
               vm-image) var_name='VM_IMAGE' ;;
+              vm-client-id) var_name='VM_CLIENT_ID' ;;
+              vm-secret) var_name='VM_SECRET' ;;
+              vm-tenant) var_name='VM_TENANT' ;;
               cowbat-node-agent-sku) var_name='COWBAT_NODE_AGENT_SKU' ;;
               ampliseq-image) var_name='AMPLISEQ_IMAGE' ;;
               ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
