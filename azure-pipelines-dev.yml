@@ -572,11 +572,6 @@ stages:
         git remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git
       displayName: 'Setup SSH key and git remote for GitHub'
 
-    # Now you can run your git push/pull/clone commands as needed
-    - script: |
-        cd /home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal && git push -u origin dev
-      displayName: 'Push dev branch to GitHub'
-
 - stage: DeployPortal
   displayName: 'Deploy portal'
   dependsOn: BootstrapRemoteVm
