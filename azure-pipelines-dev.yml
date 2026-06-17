@@ -464,6 +464,28 @@ stages:
           sudo chmod 644 /etc/foodport/tls/cloud-nuage.crt
           sudo chmod 600 /etc/foodport/tls/cloud-nuage.key
           sudo chmod 644 /etc/foodport/tls/cloud-nuage-chain.pem
+          sudo mkdir -p "/home/${TARGET_SSH_USER}/.ssh"
+          sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh"
+          sudo chmod 700 "/home/${TARGET_SSH_USER}/.ssh"
+          sudo mv /tmp/portal_ssh_key "/home/${TARGET_SSH_USER}/.ssh/portal_ssh_key"
+          sudo chmod 600 "/home/${TARGET_SSH_USER}/.ssh/portal_ssh_key"
+          sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/portal_ssh_key"
+          cat <<'SSHCONFIG' | sudo tee "/home/${TARGET_SSH_USER}/.ssh/config" > /dev/null
+            Host github.com
+              HostName github.com
+              IdentityFile /home/${TARGET_SSH_USER}/.ssh/portal_ssh_key
+              IdentitiesOnly yes
+              User git
+              StrictHostKeyChecking no
+            SSHCONFIG
+          sudo chmod 600 "/home/${TARGET_SSH_USER}/.ssh/config"
+          sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/config"
+          sudo -u "${TARGET_SSH_USER}" ssh-keyscan github.com >> "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
+          sudo chmod 644 "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
+          sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
+          if [ -d "$REMOTE_DIR/.git" ]; then
+            sudo -u "${TARGET_SSH_USER}" git -C "$REMOTE_DIR" remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git || true
+          fi
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
@@ -558,19 +580,6 @@ stages:
         SSH_PUBLIC_KEY: $(sshPublicKey)
       displayName: 'Bootstrap remote VM with Docker, Docker Compose, Git, Python, Conda, and Azure CLI'
 
-    - script: |
-        set -e
-        mkdir -p $HOME/.ssh
-        cp "$(sshKey.secureFilePath)" $HOME/.ssh/portal_ssh_key
-        chmod 600 $HOME/.ssh/portal_ssh_key
-
-        echo -e "Host github.com\n\tHostName github.com\n\tIdentityFile $HOME/.ssh/portal_ssh_key\n\tIdentitiesOnly yes\n\tUser git\n\tStrictHostKeyChecking no" >> $HOME/.ssh/config
-        # Optionally add github.com to known_hosts for safe CI cloning
-        ssh-keyscan github.com >> $HOME/.ssh/known_hosts
-
-        # Ensure the git remote uses SSH, not HTTPS
-        git remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git
-      displayName: 'Setup SSH key and git remote for GitHub'
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
@@ -664,6 +673,7 @@ stages:
         echo "Copying portal source tree to ${TARGET_HOST}:${REMOTE_DIR}"
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
         tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
