@@ -673,7 +673,7 @@ stages:
         REMOTE_DIR="/home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal"
 
         echo "Copying portal source tree to ${TARGET_HOST}:${REMOTE_DIR}"
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "sudo rm -rf '$REMOTE_DIR' && sudo mkdir -p '$REMOTE_DIR' && sudo chown ${TARGET_SSH_USER}:${TARGET_SSH_USER} '$REMOTE_DIR'"
         tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
 
