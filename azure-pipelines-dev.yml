@@ -479,8 +479,10 @@ stages:
           sudo -u "${TARGET_SSH_USER}" ssh-keyscan github.com >> "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
           sudo chmod 644 "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
           sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
+          sudo -u "${TARGET_SSH_USER}" git config --global user.name "adamkoziol"
+          sudo -u "${TARGET_SSH_USER}" git config --global user.email "adam.koziol@inspection.gc.ca"
           if [ -d "$REMOTE_DIR/.git" ]; then
-            sudo -u "${TARGET_SSH_USER}" git -C "$REMOTE_DIR" remote set-url origin git@github.com:olcbioinformatics/olc_genomics_portal.git || true
+            sudo -u "${TARGET_SSH_USER}" git -C "$REMOTE_DIR" remote set-url origin git@github.com:OLC-Bioinformatics/olc_genomics_portal.git || true
           fi
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
