@@ -129,7 +129,7 @@ sipprverse==0.2.22
 six==1.12.0
 sqlparse==0.2.4
 termcolor==1.1.0
-tornado==5.1.1
+tornado==6.5.7
 Unidecode==0.4.21
 urllib3==1.24.2
 uWSGI==2.0.18
