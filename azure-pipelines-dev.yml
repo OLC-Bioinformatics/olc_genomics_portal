@@ -438,6 +438,7 @@ stages:
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(tlsCert.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/cloud-nuage.crt"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(tlsKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/cloud-nuage.key"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(tlsChain.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/cloud-nuage-chain.pem"
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
         if [ -n "${SSH_PUBLIC_KEY:-}" ]; then
           derived_pub=$(ssh-keygen -y -f "$(sshKey.secureFilePath)" 2>/tmp/sshkeygen.err || true)
           if [ -z "$derived_pub" ]; then
