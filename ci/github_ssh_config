@@ -1,0 +1,6 @@
+Host github.com
+  HostName github.com
+  IdentityFile /home/cfiaadmin/.ssh/portal_ssh_key
+  IdentitiesOnly yes
+  User git
+  StrictHostKeyChecking no
