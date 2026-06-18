@@ -433,6 +433,7 @@ stages:
     - script: |
         set -euo pipefail
         chmod 600 "$(sshKey.secureFilePath)"
+        REMOTE_DIR="/home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(rootCA.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/GoC-GdC-Root-A.crt"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(tlsCert.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/cloud-nuage.crt"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(tlsKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/cloud-nuage.key"
