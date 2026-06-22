@@ -1,14 +1,42 @@
-from django.utils.translation import gettext_lazy as _
-from django.conf.urls import url, include
+"""
+URL configuration for the vir_typer app.
+"""
 
+# Django imports
+from django.urls import path
+from django.utils.translation import gettext_lazy as _
+
+# Local imports
 from olc_webportalv2.vir_typer import views
 
-# app_name = 'vir_typer'
+# App name for namespacing
+app_name = "vir_typer"
+
+# URL patterns for the vir_typer app
 urlpatterns = [
-    # Vir_typer Stuff
-    url(r'^$', views.vir_typer_home, name='vir_typer_home'),
-    url(_(r'^create/'), views.vir_typer_request, name='vir_typer_request'),
-    url(_(r'^upload/(?P<vir_typer_pk>\d+)/$'), views.vir_typer_upload, name='vir_typer_upload'),
-    url(_(r'^results/(?P<vir_typer_pk>\d+)/$'), views.vir_typer_results, name='vir_typer_results'),
-    url(_(r'^edit/(?P<vir_typer_pk>\d+)/$'), views.vir_typer_rename, name='vir_typer_rename'),
+    path(
+        "",
+        views.vir_typer_home,
+        name="vir_typer_home"
+    ),
+    path(
+        _("create/"),
+        views.vir_typer_request,
+        name="vir_typer_request"
+    ),
+    path(
+        _("upload/<int:vir_typer_pk>/"),
+        views.vir_typer_upload,
+        name="vir_typer_upload"
+    ),
+    path(
+        _("results/<int:vir_typer_pk>/"),
+        views.vir_typer_results,
+        name="vir_typer_results"
+    ),
+    path(
+        _("edit/<int:vir_typer_pk>/"),
+        views.vir_typer_rename,
+        name="vir_typer_rename"
+    ),
 ]
