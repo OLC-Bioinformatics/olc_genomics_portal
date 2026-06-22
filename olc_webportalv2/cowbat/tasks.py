@@ -3015,19 +3015,19 @@ def clean_old_containers():
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = [
         re.compile('^ampliseq.+'),
-        re.compile('^amrsummary-\d+-\w+$'),
+        re.compile(r'^amrsummary-\d+-\w+$'),
         re.compile('^cowsnphr.+'),
-        re.compile('^data-request-\d+$'),
-        re.compile('^geneseekr-\d+-\w+$'),
-        re.compile('^mash-\d+-\w+$'),
-        re.compile('^neighbor-\d+$'),
-        re.compile('^neighbor-\w+-\d+$'),
-        re.compile('^parsnp-\d+-\w+$'),
-        re.compile('^primer-\w+-\d+$'),
-        re.compile('^primer-\w+-\d+-\w+$'),
-        re.compile('^prokka-\d+-\w+$'),
-        re.compile('^tree-\d+-\w+$'),
-    ]
+        re.compile(r'^data-request-\d+$'),
+        re.compile(r'^geneseekr-\d+-\w+$'),
+        re.compile(r'^mash-\d+-\w+$'),
+        re.compile(r'^neighbor-\d+$'),
+        re.compile(r'^neighbor-\w+-\d+$'),
+        re.compile(r'^parsnp-\d+-\w+$'),
+        re.compile(r'^primer-\w+-\d+$'),
+        re.compile(r'^primer-\w+-\d+-\w+$'),
+        re.compile(r'^prokka-\d+-\w+$'),
+        re.compile(r'^tree-\d+-\w+$'),
+        re.compile(r'^vir-typer-\d+-\w+$')]
     generator = blob_client.list_containers(include_metadata=True)
     for container in generator:
         for pattern in patterns_to_search:
