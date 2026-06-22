@@ -17,10 +17,7 @@ import tarfile
 # Django
 from django.conf import settings
 from django.db import DatabaseError
-try:
-    from django.utils.translation import gettext_lazy as _
-except ImportError:
-    from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 # Celery Task Management
 from celery import shared_task

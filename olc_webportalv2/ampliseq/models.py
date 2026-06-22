@@ -9,10 +9,7 @@ import os
 # Django imports
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-try:
-    from django.utils.translation import gettext_lazy as _
-except ImportError:
-    from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 # Portal-specific imports
 from olc_webportalv2.users.models import User

@@ -1,6 +1,6 @@
 from olc_webportalv2.sequence_database.models import UniqueGenus, UniqueSpecies, UniqueMLST, UniqueMLSTCC, \
     UniqueRMLST, UniqueSerovar, DatabaseQuery
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.forms.formsets import BaseFormSet
 from dal import autocomplete, forward
 from django.forms import ModelForm
