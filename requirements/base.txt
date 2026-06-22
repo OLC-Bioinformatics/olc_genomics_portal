@@ -13,6 +13,7 @@ django-environ
 
 # Forms
 django-crispy-forms
+crispy-bootstrap5
 
 # Form autocompletion
 django-autocomplete-light
@@ -36,9 +37,6 @@ psycopg2
 # Unicode slugification
 awesome-slugify
 
-# Time zones support
-pytz
-
 # Redis support
 django-redis
 redis
@@ -56,7 +54,6 @@ sentry-sdk
 
 # Django rest framework
 djangorestframework
-coreapi
 
 # Custom requirements beyond cookiecutter-django
 adal
@@ -79,22 +76,19 @@ confindr
 cryptography
 cycler
 defusedxml
-django-bootstrap-form
-django-compat
 django-debug-toolbar
+django-filter
 django-extensions
 django-multiselectfield
 django-pandas
 django-tables2
 django-widget-tweaks
-geneseekr
 gunicorn
 idna
 interop
 isodate
 kiwisolver
 kombu
-KubeJobSub
 matplotlib
 more-itertools
 msrest
@@ -103,7 +97,6 @@ numpy
 oauthlib
 olefile
 pandas
-pathlib2
 pipdeptree
 pluggy
 psutil
@@ -111,37 +104,24 @@ py
 pycparser
 PyJWT
 pyparsing
-pysam
 pytest
 python-dateutil
-python3-openid
-PyYAML
-rauth
+PyYAML==6.0.3
 regex
 requests
 requests-oauthlib
-scipy
 seaborn
-six
 sqlparse
-strainchoosr
 termcolor
 tornado
 Unidecode
 urllib3
-uWSGI
-validator-helper
 vine
 XlsxWriter
 xlrd
-django-filter
-django-bulk-update
 
 # Azure AD
 django-microsoft-authentication
-
-# Docker
-docker-compose
 
 # Redmine
 python-redmine
