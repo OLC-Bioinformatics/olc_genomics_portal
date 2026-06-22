@@ -67,3 +67,4 @@ urlpatterns = [
         views.primer_verifier_report,
         name="primer_verifier_report",
     ),
+]
