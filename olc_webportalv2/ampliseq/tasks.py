@@ -1,9 +1,8 @@
-# Standard imports
-
 """
 Tasks for the AmpliSeq app
 """
 
+# Standard imports
 import datetime
 from glob import glob
 import logging
@@ -24,11 +23,6 @@ from celery import shared_task
 
 # Azure
 import azure.batch.batch_auth as batch_auth
-try:
-    import azure.batch as batch
-except ImportError:
-    import azure.batch.batch_service_client as batch
-
 import azure.batch.models as batchmodels
 from azure.common import AzureMissingResourceHttpError, AzureHttpError
 try:
@@ -36,7 +30,7 @@ try:
 except ImportError:
     from azure.storage.blob import BlockBlobService
 
-try: 
+try:
     from azure.storage.blob import BlobSasPermissions as BlobPermissions
 except ImportError:
     from azure.storage.blob import BlobPermissions
@@ -50,13 +44,11 @@ from olc_webportalv2.ampliseq.models import (
     AmpliSeqRequest,
     ContainerName
 )
-from olc_webportalv2.common.methods import generic_api_submit
+from olc_webportalv2.common.methods import (
+    create_batch_client,
+    generic_api_submit,
+)
 from olc_webportalv2.primer_finder.methods import send_email
-
-try:
-    from azure_batch.azure_cli import AzureBatch
-except ImportError:
-    from olc_webportalv2.cowbat.methods import AzureBatch
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -271,173 +263,43 @@ def create_system_call(ampliseq: AmpliSeqRequest):
             )
     )
     if ampliseq.metadata:
-        cmd += '--metadata /datadrive/{container_name}/{metadata_file} ' \
-            .format(
-                container_name=ampliseq.container_name,
-                metadata_file=ampliseq.metadata.name
-            )
+        cmd += (
+            f'--metadata /datadrive/{ampliseq.container_name}/'
+            f'{ampliseq.metadata.name} '
+        )
     if ampliseq.max_len:
-        cmd += '--max_len {max_len} '.format(max_len=ampliseq.max_len)
+        cmd += f'--max_len {ampliseq.max_len} '
     if ampliseq.min_len:
-        cmd += '--min_len {min_len} '.format(min_len=ampliseq.min_len)
+        cmd += f'--min_len {ampliseq.min_len} '
     if ampliseq.max_ee:
-        cmd += '--max_ee {max_ee} '.format(max_ee=ampliseq.max_ee)
+        cmd += f'--max_ee {ampliseq.max_ee} '
     if ampliseq.trunc_len_f:
-        cmd += '--trunclenf {trunc_len_f} '.format(
-            trunc_len_f=ampliseq.trunc_len_f
-        )
+        cmd += f'--trunclenf {ampliseq.trunc_len_f} '
     if ampliseq.trunc_len_r:
-        cmd += '--trunclenr {trunc_len_r} '.format(
-            trunc_len_r=ampliseq.trunc_len_r
-        )
+        cmd += f'--trunclenr {ampliseq.trunc_len_r} '
     if ampliseq.forward_primer:
-        cmd += '--FW_primer {forward_primer} '.format(
-            forward_primer=ampliseq.forward_primer
-        )
+        cmd += f'--FW_primer {ampliseq.forward_primer} '
     if ampliseq.reverse_primer:
-        cmd += '--RV_primer {reverse_primer} '.format(
-            reverse_primer=ampliseq.reverse_primer
-        )
+        cmd += f'--RV_primer {ampliseq.reverse_primer} '
     if not ampliseq.forward_primer and not ampliseq.reverse_primer:
         cmd += '--skip_cutadapt '
     if ampliseq.taxonomy == 'dada':
-        cmd += '--dada_ref_taxonomy {dada_ref_taxonomy} ' \
-            .format(dada_ref_taxonomy=ampliseq.dada_ref_taxonomy)
+        cmd += f'--dada_ref_taxonomy {ampliseq.dada_ref_taxonomy} '
     elif ampliseq.taxonomy == 'qiime':
-        cmd += '--qiime_ref_taxonomy {qiime_ref_taxonomy} ' \
-            .format(qiime_ref_taxonomy=ampliseq.qiime_ref_taxonomy)
+        cmd += f'--qiime_ref_taxonomy {ampliseq.qiime_ref_taxonomy} '
     elif ampliseq.taxonomy == 'qiime_custom':
-        cmd += '--classifier /datadrive/{container_name}/{classifier_file} ' \
-            .format(
-                container_name=ampliseq.container_file_name,
-                classifier_file=ampliseq.classifier.name
-            )
-    if ampliseq.exclude_taxa:
-        cmd += '--exclude_taxa {exclude_taxa} ' \
-            .format(exclude_taxa=ampliseq.exclude_taxa)
-    cmd += '; nextflow clean -k -f; rsync -a /datadrive/{container_name} ' \
-        '$AZ_BATCH_TASK_WORKING_DIR/ && ' \
-        'rm -rf /datadrive/{container_name}'.format(
-            container_name=ampliseq.container_name
+        cmd += (
+            f'--classifier /datadrive/{ampliseq.container_name}/'
+            f'{ampliseq.classifier.name} '
         )
+    if ampliseq.exclude_taxa:
+        cmd += f'--exclude_taxa {ampliseq.exclude_taxa} '
+    cmd += (
+        f'; nextflow clean -k -f; rsync -a /datadrive/'
+        f'{ampliseq.container_name} $AZ_BATCH_TASK_WORKING_DIR/ && '
+        f'rm -rf /datadrive/{ampliseq.container_name}'
+    )
     return cmd
-
-
-def create_batch_config(
-        ampliseq: AmpliSeqRequest,
-        local_folder: str,
-        cmd: str,
-        vm_size='Standard_D32s_v3'):
-    """
-    Create the batch config file that is used by (the soon to be deprecated)
-    AzureBatch
-    :param AmpliSeqRequest ampliseq: AmpliSeqRequest model for the current
-        analyses
-    :param str local_folder: Name and path of folder in local storage storing
-        the batch_config_file
-    and into which error files are
-    :param str cmd: Command line argument to use
-    :param str vm_size: Size of virtual machine to create for batch analyses
-    """
-    # Create a configuration file to be used by the Azure batch script.
-    batch_config_file = os.path.join(local_folder, 'batch_config.txt')
-    with open(batch_config_file, 'w', encoding='utf-8') as batch_file:
-        batch_file.write('BATCH_ACCOUNT_NAME:={}\n'.format(
-            settings.BATCH_ACCOUNT_NAME
-        ))
-        batch_file.write('BATCH_ACCOUNT_KEY:={}\n'.format(
-            settings.BATCH_ACCOUNT_KEY
-        ))
-        batch_file.write('BATCH_ACCOUNT_URL:={}\n'.format(
-            settings.BATCH_ACCOUNT_URL
-        ))
-        batch_file.write('STORAGE_ACCOUNT_NAME:={}\n'.format(
-            settings.AZURE_ACCOUNT_NAME
-        ))
-        batch_file.write('STORAGE_ACCOUNT_KEY:={}\n'.format(
-            settings.AZURE_ACCOUNT_KEY
-        ))
-        batch_file.write('JOB_NAME:={}\n'.format(ampliseq.container_name))
-        batch_file.write('VM_IMAGE:={}\n'.format(settings.AMPLISEQ_IMAGE))
-        batch_file.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-        batch_file.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
-        batch_file.write('VM_SIZE:={}\n'.format(vm_size))
-        batch_file.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
-
-        batch_file.write('CLOUDIN:={} {}\n'.format(
-            os.path.join(
-                ampliseq.container_name,
-                '*.tar'
-                ), ampliseq.container_name)
-            )
-        if ampliseq.metadata:
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(
-                    ampliseq.container_name,
-                    ampliseq.metadata.name),
-                ampliseq.container_name
-            ))
-        if ampliseq.classifier:
-            batch_file.write('CLOUDIN:={} {}\n'.format(
-                os.path.join(
-                    ampliseq.container_name,
-                    ampliseq.classifier.name),
-                ampliseq.container_name
-            ))
-        # Define which folder(s)/file(s) to copy to the output container
-        batch_file.write('OUTPUT:={}/\n'.format(ampliseq.container_name))
-        # Add the system call
-        batch_file.write('COMMAND:={cmd}'.format(cmd=cmd))
-        batch_file.write('\n')
-    return batch_config_file
-
-
-def submit_batch(
-        ampliseq: AmpliSeqRequest,
-        local_folder: str,
-        batch_config_file: str,
-        vm_size: str = 'Standard_D32s_v3'):
-    """
-    Use (the soon to be deprecated) AzureBatch class to submit the batch
-    config file 
-    :param AmpliSeqRequest ampliseq: AmpliSeqRequest model for the
-    current analyses
-    :param str local_folder: Name and path of folder in local storage storing
-        the batch_config_file and into which error files are to be written
-    :param str batch_config_file: Name and path of file containing necessary
-        information for submitting batch jobs
-    :param str vm_size: Size of virtual machine to use for batch analyses.
-        Default is Standard_D32s_v3
-    """
-    try:
-        # Submit the file to batch with our package.
-        # azure_task = AzureBatch()
-        # azure_task.main(
-        #     configuration_file=batch_config_file,
-        #     job_name=ampliseq.container_name,
-        #     output_dir=os.path.join('olc_webportalv2', 'media'),
-        #     settings=settings,
-        #     keep_input_container=True,
-        #     download_output_files=False,
-        #     no_clean=True,
-        #     vm_size=vm_size,
-        #     vm_image='AMPLISEQ_IMAGE'
-        # )
-
-        # Create an AmpliSeqAzureTask entry, so the progress of the analyses
-        # can be followed by
-        AmpliSeqAzureTask.objects.create(
-            ampliseq=ampliseq,
-            exit_code_file=os.path.join(local_folder, 'exit_codes.txt'))
-    except Exception as exc:
-        file_handler = logging.FileHandler(os.path.join(local_folder, 'error'))
-        file_handler.setLevel(logging.INFO)
-        logger.addHandler(file_handler)
-        logger.exception(exc)
-        capture_exception(exc)
-        ampliseq.status = 'Error'
-        ampliseq.error_list.append(exc)
-        ampliseq.save()
 
 
 @shared_task
@@ -468,66 +330,11 @@ def run_ampliseq_batch(primary_key: int):
         ampliseq=ampliseq,
         exit_code_file=os.path.join(local_folder, 'exit_codes.txt'))
 
-    # Check to see which version of AzureBatch is to be used
-    # if 'azure_batch' in sys.modules:
-    #     AzureBatch(
-    #         command_file=cmd,
-    #         vm_size='Standard_D32s_v3',
-    #         settings=settings,
-    #         container=ampliseq.container_name,
-    #         path=None,
-    #         upload_folder=None,
-    #         input_file_pattern=None,
-    #         bulk_input_file_pattern=None,
-    #         download_file_pattern=None,
-    #         unique_id=ampliseq.pk,
-    #         worker=True,
-    #         no_tidy=True
-    #     )
-    # # Create an AmpliSeqAzureTask entry, so the progress of the analyses
-    # # can be followed by FoodPort
-    # AmpliSeqAzureTask.objects.create(
-    #     ampliseq=ampliseq,
-    #     exit_code_file=os.path.join(local_folder, 'exit_codes.txt'))
-    # else:
-    #     # Create the batch_config.txt file
-    #     batch_config_file = create_batch_config(
-    #         ampliseq=ampliseq,
-    #         local_folder=local_folder,
-    #         cmd=cmd,
-    #     )
-    #     package_files_for_upload(
-    #         container_name=ampliseq.container_name
-    #     )
-    #     # Create a batch request
-    #     submit_batch(
-    #         ampliseq=ampliseq,
-    #         local_folder=local_folder,
-    #         batch_config_file=batch_config_file,
-    #         vm_size='Standard_D32s_v3'
-    #     )
-
-
-def create_batch_client():
-    """
-    Create a batch client using the stored credentials
-    :return batch.BatchServiceClient batch_client: Azure batch client
-    """
-    credentials = batch_auth.SharedKeyCredentials(
-        settings.BATCH_ACCOUNT_NAME,
-        settings.BATCH_ACCOUNT_KEY
-    )
-    # Create a batch client for manipulating batch jobs, and pools
-    batch_client = batch.BatchServiceClient(
-        credentials,
-        base_url=settings.BATCH_ACCOUNT_URL
-    )
-    return batch_client
-
 
 def check_for_task_completion(
-        task: AmpliSeqAzureTask,
-        batch_client: batch.BatchServiceClient):
+    task: AmpliSeqAzureTask,
+    batch_client: create_batch_client
+) -> tuple[bool, AmpliSeqRequest]:
     """
     Check to see if the task is complete
     :param AmpliSeqAzureTask task: Current Azure task
@@ -558,12 +365,14 @@ def check_for_task_completion(
 
 
 def delete_pool_job(
-        batch_client: batch.BatchServiceClient,
-        batch_job_name: str):
+    batch_client: create_batch_client,
+    batch_job_name: str
+) -> bool:
     """
     Delete the pool and job for an analyses
     :param batch.BatchServiceClient batch_client: Azure batch client
     :param str batch_job_name: Name of batch job and pool
+    :return bool exit_codes_good: True if all tasks have exit code 0, False
     """
     # Initialise the exit code status to True
     exit_codes_good = True
@@ -609,23 +418,17 @@ def create_sas_urls(ampliseq):
     # execution timeline
     execution_report_sas_url = blob_client.make_blob_url(
         container_name=output_container,
-        blob_name='{folder_path}_execution_report.html'.format(
-            folder_path=folder_path
-        ),
+        blob_name=f'{folder_path}_execution_report.html',
         sas_token=sas_token
     )
     execution_trace_sas_url = blob_client.make_blob_url(
         container_name=output_container,
-        blob_name='{folder_path}_execution_trace.txt'.format(
-            folder_path=folder_path
-        ),
+        blob_name=f'{folder_path}_execution_trace.txt',
         sas_token=sas_token
     )
     execution_timeline_sas_url = blob_client.make_blob_url(
         container_name=output_container,
-        blob_name='{folder_path}_execution_timeline.html'.format(
-            folder_path=folder_path
-        ),
+        blob_name=f'{folder_path}_execution_timeline.html',
         sas_token=sas_token
     )
     return (
@@ -646,27 +449,21 @@ def download_reports(ampliseq: AmpliSeqRequest):
         account_key=settings.AZURE_ACCOUNT_KEY
     )
     blob_client.get_blob_to_path(
-        '{container}-output'.format(container=ampliseq.container_name),
-        '{container}/reports/{container}_execution_report.html'.format(
-            container=ampliseq.container_name
-        ),
+        f'{ampliseq.container_name}-output',
+        f'{ampliseq.container_name}/reports/'
+        f'{ampliseq.container_name}_execution_report.html',
         os.path.join(
             local_folder,
-            '{container_name}_execution_report.html'.format(
-                container_name=ampliseq.container_name
-            )
+            f'{ampliseq.container_name}_execution_report.html'
         )
     )
     blob_client.get_blob_to_path(
-        '{container}-output'.format(container=ampliseq.container_name),
-        '{container}/reports/{container}_execution_timeline.html'.format(
-            container=ampliseq.container_name
-        ),
+        f'{ampliseq.container_name}-output',
+        f'{ampliseq.container_name}/reports/'
+        f'{ampliseq.container_name}_execution_timeline.html',
         os.path.join(
             local_folder,
-            '{container}_execution_timeline.html'.format(
-                container=ampliseq.container_name
-            )
+            f'{ampliseq.container_name}_execution_timeline.html'
         )
     )
 
@@ -677,11 +474,13 @@ def download_results(ampliseq: AmpliSeqRequest):
     """
     # Set the folder name where the HTML reports are to be written
     local_folder = os.path.join('olc_webportalv2', 'media', 'ampliseq')
-    # print(local_folder)
+
     results_folder = os.path.join(local_folder, ampliseq.container_name)
+
     # results_dir: the directory where results will be saved by the system call
     results_dir = 'results2'
-    # print(results_folder)
+
+    # Create the results folder if it doesn't exist
     os.makedirs(results_folder, exist_ok=True)
     blob_client = BlockBlobService(
         account_name=settings.AZURE_ACCOUNT_NAME,
@@ -694,9 +493,7 @@ def download_results(ampliseq: AmpliSeqRequest):
     for blob in blobs:
         # Only look at files within {container_name}/{results_dir}:
         if '/'.join(pathlib.Path(blob.name).parts[0:2]) == \
-                "{container}/{results_dir}".format(
-                    container=ampliseq.container_name, results_dir=results_dir
-                ):
+                f"{ampliseq.container_name}/{results_dir}":
             file_name = pathlib.Path(blob.name).name
             # Obtain the path between '{container_name}/{results_dir}' and the
             # file name
@@ -708,18 +505,19 @@ def download_results(ampliseq: AmpliSeqRequest):
                 blob_name=blob.name,
                 file_path=os.path.join(path_to_create + '/' + file_name)
             )
-  
+
     # With that done, create a zipfile.
     blob_name = os.path.join(local_folder, ampliseq.container_name + '.zip')
-    # print(blob_name)
     shutil.make_archive(os.path.splitext(blob_name)[0], 'zip', results_folder)
-    sas_url = generate_download_link(blob_client=blob_client,
-                                     container_name=ampliseq.container_name,
-                                     output_zipfile=blob_name,
-                                     expiry=730)
-    # print(sas_url)
+    sas_url = generate_download_link(
+        blob_client=blob_client,
+        container_name=ampliseq.container_name,
+        output_zipfile=blob_name,
+        expiry=730
+    )
+
+    # Update the AmpliSeqRequest with the SAS URL for the results
     ampliseq.results_download_link = sas_url
-    # print(ampliseq.results_download_link)
     ampliseq.save()
     shutil.rmtree(results_folder)
     os.remove(blob_name)
@@ -747,25 +545,20 @@ def task_succeeded(ampliseq: AmpliSeqRequest):
     # Send emails
     for email in ampliseq.emails_array:
         send_email(
-            subject='AmpliSeq Analysis "{name}" Complete'
-                    .format(name=str(ampliseq.project_name)),
-            body='Dear {user},\n'
-                 'Your AmpliSeq analysis, "{name}", is complete.\n'
-                 'The AmpliSeq analysis results are available '
-                 'here: {results_url}.\n'
-                 'The AmpliSeq report is available here: {report_url}.\n'
-                 'The AmpliSeq trace is available here: {trace_url}.\n'
-                 'The AmpliSeq timeline is available here: {timeline_url}\n\n'
+            subject=f'AmpliSeq Analysis "{ampliseq.project_name}" Complete',
+            body=f'Dear {ampliseq.user},\n'
+                 f'Your AmpliSeq analysis, "{ampliseq.project_name}", '
+                 'is complete.\n'
+                 f'The AmpliSeq analysis results are available '
+                 f'here: {ampliseq.results_download_link}.\n'
+                 f'The AmpliSeq report is available here: '
+                 f'{ampliseq.execution_report_download_link}.\n'
+                 f'The AmpliSeq trace is available here: '
+                 f'{ampliseq.execution_trace_download_link}.\n'
+                 f'The AmpliSeq timeline is available here: '
+                 f'{ampliseq.execution_timeline_download_link}\n\n'
                  'Best regards,\n'
-                 'The FoodPort development team'
-                 .format(
-                     user=ampliseq.user,
-                     name=str(ampliseq.project_name),
-                     results_url=ampliseq.results_download_link,
-                     report_url=ampliseq.execution_report_download_link,
-                     trace_url=ampliseq.execution_trace_download_link,
-                     timeline_url=ampliseq.execution_timeline_download_link
-                 ),
+                 'The FoodPort development team',
             recipient=email
         )
 
@@ -779,19 +572,15 @@ def task_failed(ampliseq):
     errors = '\n'.join(ampliseq.error_list) if ampliseq.error_list else 'None'
     for email in ampliseq.emails_array:
         send_email(
-            subject='AmpliSeq Analysis "{name}" Failed'
-                    .format(name=str(ampliseq.project_name)),
-            body='Dear {user},\n'
-                    'Your AmpliSeq analysis, "{name}", has failed.\n'
-                    'The following errors were recorded: {errors}\n\n'
-                    'Sorry for the inconvenience,\n'
-                    'The FoodPort development team'
-                    .format(
-                        user=ampliseq.user,
-                        name=str(ampliseq.project_name),
-                        errors=errors,
-                    ),
+            subject=f'AmpliSeq Analysis "{ampliseq.project_name}" Failed',
+            body=f'Dear {ampliseq.user},\n'
+                 f'Your AmpliSeq analysis, "{ampliseq.project_name}", '
+                 'has failed.\n'
+                 f'The following errors were recorded: {errors}\n\n'
+                 'Sorry for the inconvenience,\n'
+                 'The FoodPort development team',
             recipient=email)
+
     # Update the model with the error status
     ampliseq.status = 'Error'
     ampliseq.save()
@@ -817,26 +606,30 @@ def check_ampliseq_tasks():
         # Allow the task to complete
         if not task_completed:
             continue
+
         # Clean up the job and pool if the task is complete
         exit_codes_good = delete_pool_job(
             batch_client=batch_client,
             batch_job_name=ampliseq.container_name
         )
+
         # Perform appropriate actions depending on whether or not the task was
         # successful
         if exit_codes_good:
             task_succeeded(ampliseq=ampliseq)
         else:
             task_failed(ampliseq=ampliseq)
+
         # Delete the AmpliSeqAzureTask
         AmpliSeqAzureTask.objects.filter(id=task.id).delete()
 
 
 def generate_download_link(
-            blob_client,
-            container_name,
-            output_zipfile,
-            expiry=8):
+    blob_client,
+    container_name,
+    output_zipfile,
+    expiry=8
+):
     """
     Make a download link for a file that will be put into Azure blob storage,
     good for up to expiry days
