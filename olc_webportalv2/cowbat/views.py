@@ -1,41 +1,57 @@
-# Django-related imports
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.contrib import messages
-from django.utils.translation import gettext_lazy as _
-from django.views.decorators.csrf import csrf_exempt
+
 # Standard libraries
 import json
 import logging
 import fnmatch
 import os
 import re
-# Portal-specific things
-from olc_webportalv2.cowbat.models import SequencingRun, DataFile, ResearchRun, SummaryMetadata
-from olc_webportalv2.cowbat.forms import RunNameForm, RealTimeForm, RunRequestForm, CustomRunForm
+
+# Azure
+from azure.storage.blob import BlockBlobService
+import azure.batch.batch_auth as batch_auth
+import azure.batch.models as batchmodels
+
+# Django-related imports
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib import messages
+from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
+
+# Task Management
+from kombu import Queue
+
+# Autocomplete
+from dal import autocomplete
+
+# Local imports
+from olc_webportalv2.cowbat.models import (
+    DataFile,
+    ResearchRun,
+    SequencingRun,
+    SummaryMetadata
+)
+from olc_webportalv2.cowbat.forms import (
+    CustomRunForm,
+    RealTimeForm,
+    RunNameForm,
+    RunRequestForm
+)
+from olc_webportalv2.cowbat.tasks import create_batch_client
 from olc_webportalv2.cowbat.tasks import escape_ansi, run_cowbat_batch
 from olc_webportalv2.filezone.methods import calculate_checksum
 from olc_webportalv2.geneseekr.forms import EmailForm
-# Azure!
-from azure.storage.blob import BlockBlobService
-import azure.batch.batch_service_client as batch
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-# Task Management
-from kombu import Queue
-# Autocomplete
-from dal import autocomplete
-from django.db.models import Q
 
+# Set up logging
 log = logging.getLogger(__name__)
 
 
 def find_percent_complete(sequencing_run):
     try:
         job_id = str(sequencing_run).lower().replace('_', '-')
-        credentials = batch_auth.SharedKeyCredentials(settings.BATCH_ACCOUNT_NAME, settings.BATCH_ACCOUNT_KEY)
-        batch_client = batch.BatchServiceClient(credentials, base_url=settings.BATCH_ACCOUNT_URL)
+        batch_client = create_batch_client()
         node_files = batch_client.file.list_from_task(job_id=job_id, task_id=job_id, recursive=True)
         final_num_reports = 26
         current_subfolders = 0
@@ -54,14 +70,8 @@ def find_percent_complete(sequencing_run):
 
 def find_percentage_complete(sequencing_run):
     job_id = sequencing_run.job_id
-    credentials = batch_auth.SharedKeyCredentials(
-        settings.BATCH_ACCOUNT_NAME,
-        settings.BATCH_ACCOUNT_KEY
-    )
-    batch_client = batch.BatchServiceClient(
-        credentials,
-        base_url=settings.BATCH_ACCOUNT_URL
-    )
+    batch_client = create_batch_client()
+    
     node_files = batch_client.file.list_from_task(
         job_id=job_id,
         task_id=sequencing_run.task_id,
