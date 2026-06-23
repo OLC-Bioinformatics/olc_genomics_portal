@@ -39,7 +39,7 @@ from olc_webportalv2.cowbat.forms import (
     RunNameForm,
     RunRequestForm
 )
-from olc_webportalv2.cowbat.tasks import create_batch_client
+from olc_webportalv2.common.methods import create_batch_client
 from olc_webportalv2.cowbat.tasks import escape_ansi, run_cowbat_batch
 from olc_webportalv2.filezone.methods import calculate_checksum
 from olc_webportalv2.geneseekr.forms import EmailForm
@@ -174,16 +174,6 @@ def check_uploaded_seqids(sequencing_run):
         else:
             if seqid not in sequencing_run.reverse_reads_to_upload:
                 sequencing_run.reverse_reads_to_upload.append(seqid)
-        # if len(forward_reads) == 1 and len(reverse_reads) == 1:
-        #     sequencing_run.uploaded_seqids.append(seqid)
-        # else:
-        #     seqids_to_upload.append(seqid)
-        # for seqid in seqids_to_upload:
-        #     if seqid not in sequencing_run.seqids_to_upload:
-        #         sequencing_run.seqids_to_upload.append(seqid)
-        # for seqid in uploaded_seqids:
-        #     if seqid not in sequencing_run.uploaded_seqids:
-        #         sequencing_run.uploaded_seqids.append(seqid)
         sequencing_run.save()
 
 

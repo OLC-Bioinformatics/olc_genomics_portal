@@ -49,7 +49,7 @@ from django.core.exceptions import ObjectDoesNotExist
 # Local imports
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
-from olc_webportalv2.cowbat.methods import create_batch_client
+from olc_webportalv2.common.methods import create_batch_client
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
     AzureTask,
