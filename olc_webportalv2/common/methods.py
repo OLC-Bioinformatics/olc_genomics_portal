@@ -12,6 +12,7 @@ from typing import Optional
 # Azure imports
 from azure.batch import BatchClient
 from azure.core.credentials import AzureNamedKeyCredential
+from azure.storage.blob import BlobServiceClient
 
 # Third-party imports
 from celery import shared_task
@@ -113,3 +114,50 @@ def create_batch_client() -> BatchClient:
         endpoint=settings.BATCH_ACCOUNT_URL
     )
     return batch_client
+
+
+def create_blob_service() -> BlobServiceClient:
+    """
+    Creates a blob service client using the settings from the Django settings
+    file.
+    :return: BlobServiceClient object
+    """
+    blob_service_client = BlobServiceClient(
+        account_url=
+            f"https://{settings.AZURE_ACCOUNT_NAME}.blob.core.windows.net",
+        credential=settings.AZURE_ACCOUNT_KEY
+    )
+    return blob_service_client
+
+
+def create_blob_client(
+    container_name: str,
+    blob_name: str,
+    blob_service_client: BlobServiceClient
+) -> BlobServiceClient.get_blob_client:
+    """
+    Creates a blob client using the settings from the Django settings file.
+    :param container_name: Name of the container
+    :param blob_name: Name of the blob
+    :return: BlobServiceClient object
+    """
+    return blob_service_client.get_blob_client(
+        container=container_name,
+        blob=blob_name
+    )
+
+
+def create_blob_from_path(
+    blob_client: BlobServiceClient.get_blob_client,
+    file_path: str
+) -> None:
+    """
+    Creates a blob from a file path using the settings from the Django settings
+    file.
+    :param blob_client: Blob client object
+    :param file_path: Path to the file to be uploaded
+    :return: None
+    """
+    with open(file_path, "rb") as data:
+        blob_client.upload_blob(data, overwrite=True
+)
