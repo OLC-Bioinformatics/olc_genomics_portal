@@ -1,29 +1,32 @@
-from azure.common.credentials import ServicePrincipalCredentials
+"""
+Methods for COWBAT app
+"""
+
+# Standard imports
+from time import sleep
+import datetime
+import fnmatch
+import logging
+import random
+import string
+import glob
+import os
+
+# Azure imports
+from azure.batch import BatchClient
+from azure.core.credentials import AzureNamedKeyCredential
 from azure.common import AzureMissingResourceHttpError
 from azure.storage.blob import BlockBlobService
 import azure.batch.batch_auth as batch_auth
 import azure.batch.batch_service_client as batch
 from azure.storage.blob import BlobPermissions
 import azure.batch.models as batchmodels
-from time import sleep, time
-import datetime
-import fnmatch
-import logging
+
+# Django imports
+from django.conf import settings
+
+# Third-party imports
 import msrest
-import random
-import string
-import glob
-import os
-
-
-# Local imports
-from olc_webportalv2.geneseekr.models import (
-    AMRSummary,
-    GeneSeekrRequest,
-    NearestNeighbors,
-    ProkkaRequest,
-    Tree
-)
 
 
 class BatchClass:
@@ -539,6 +542,22 @@ class BatchClass:
         # This would get everything in container_name and put it into destination_dir, while preserving directory
         # structure if there was any
         self.cloud_input = dict()
+
+
+def create_batch_client() -> BatchClient:
+    """
+    Creates a batch client using the settings from the Django settings file.
+    :return: BatchClient object
+    """
+    credentials = AzureNamedKeyCredential(
+        settings.BATCH_ACCOUNT_NAME,
+        settings.BATCH_ACCOUNT_KEY
+    )
+    batch_client = BatchClient(
+        credential=credentials,
+        endpoint=settings.BATCH_ACCOUNT_URL
+    )
+    return batch_client
 
 
 class AzureBatch(object):
