@@ -1,128 +1,128 @@
 # Wheel 0.25+ needed to install certain packages on CPython 3.5+
 # like Pillow and psycopg2
-# See http://bitly.com/wheel-building-fails-CPython-35
-# Verified bug on Python 3.5.1
-wheel
+wheel==0.47.0
 
 # Bleeding edge Django
-# pyup: >=1.10,<1.11
-django
+django==6.0.6
 
 # Configuration
-django-environ
+django-environ==0.14.0
 
 # Forms
-django-crispy-forms
-crispy-bootstrap5
+django-crispy-forms==2.6
+crispy-bootstrap5==2026.3
 
 # Form autocompletion
-django-autocomplete-light
+django-autocomplete-light==5.0.0
 
 # Models
-django-model-utils
+django-model-utils==5.0.0
 
 # Images
-Pillow
+Pillow==12.2.0
 
 # Password storage
-argon2-cffi
+argon2-cffi==25.1.0
 
 # For user registration, either via email or social
-# Well-built with regular release cycles!
-django-allauth
+django-allauth==65.18.0
 
 # Python-PostgreSQL Database Adapter
-psycopg2
+psycopg2==2.9.12
 
 # Unicode slugification
-awesome-slugify
+awesome-slugify==1.6.5
 
 # Redis support
-django-redis
-redis
+django-redis==7.0.0
+redis==8.0.1
 
 # Task Management and Monitoring
-celery
-flower
+celery==5.6.3
+flower==2.0.1
 
 # Testing
-selenium
-django-test-plus
+selenium==4.45.0
+django-test-plus==2.4.1
 
 # Sentry, for error reporting
-sentry-sdk
+sentry-sdk==2.63.0
 
 # Django rest framework
-djangorestframework
+djangorestframework==3.17.1
 
 # Custom requirements beyond cookiecutter-django
-adal
-amqp
-asn1crypto
-atomicwrites
-attrs
-azure-batch
-azure-identity
-azure-storage-blob
-azure-storage-file-share
-Babel
-billiard
-biopython
-certifi
-cffi
-chardet
-Click
-confindr
-cryptography
-cycler
-defusedxml
-django-debug-toolbar
-django-filter
-django-extensions
-django-multiselectfield
-django-pandas
-django-tables2
-django-widget-tweaks
-gunicorn
-idna
-interop
-isodate
-kiwisolver
-kombu
-matplotlib
-more-itertools
-msrest
-msrestazure
-numpy
-oauthlib
-olefile
-pandas
-pipdeptree
-pluggy
-psutil
-py
-pycparser
-PyJWT
-pyparsing
-pytest
-python-dateutil
+adal==1.2.7
+amqp==5.3.1
+asn1crypto==1.5.1
+atomicwrites==1.4.1
+attrs==26.1.0
+
+# Azure SDK
+azure-core==1.41.0
+azure-batch==15.1.0
+azure-identity==1.25.3
+azure-storage-blob==12.30.0
+azure-storage-file-share==12.26.0
+
+Babel==2.18.0
+billiard==4.2.4
+biopython==1.87
+certifi==2026.6.17
+cffi==2.0.0
+chardet==7.4.3
+Click==8.4.2
+confindr==0.8.2
+cryptography==49.0.0
+cycler==0.12.1
+defusedxml==0.7.1
+django-debug-toolbar==7.0.0
+django-filter==25.2
+django-extensions==4.1
+django-multiselectfield==1.0.1
+django-pandas==0.6.7
+django-tables2==3.0.0
+django-widget-tweaks==1.5.1
+gunicorn==26.0.0
+idna==3.18
+interop==1.9.0
+isodate==0.7.2
+kiwisolver==1.5.0
+kombu==5.6.2
+matplotlib==3.11.0
+more-itertools==11.1.0
+msrest==0.7.1
+msrestazure==0.6.4.post1
+numpy==2.5.0
+oauthlib==3.3.1
+olefile==0.47
+pandas==3.0.3
+pipdeptree==3.1.0
+pluggy==1.6.0
+psutil==7.2.2
+py==1.11.0
+pycparser==3.0
+PyJWT==2.13.0
+pyparsing==3.3.2
+pytest==9.1.1
+python-dateutil==2.9.0.post0
 PyYAML==6.0.3
-regex
-requests
-requests-oauthlib
-seaborn
-sqlparse
-termcolor
-tornado
-Unidecode
-urllib3
-vine
-XlsxWriter
-xlrd
+regex==2026.5.9
+requests==2.34.2
+requests-oauthlib==2.0.0
+seaborn==0.13.2
+sqlparse==0.5.5
+termcolor==3.3.0
+tornado==6.5.7
+Unidecode==0.4.21
+urllib3==2.7.0
+vine==5.1.0
+XlsxWriter==3.2.9
+xlrd==2.0.2
 
 # Azure AD
-django-microsoft-authentication
+django-microsoft-authentication==0.1.6
 
 # Redmine
-python-redmine
-pymysql
+python-redmine==2.5.0
+pymysql==1.2.0
