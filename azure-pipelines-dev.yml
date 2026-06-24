@@ -481,9 +481,6 @@ stages:
           sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
           sudo -u "${TARGET_SSH_USER}" git config --global user.name "adamkoziol"
           sudo -u "${TARGET_SSH_USER}" git config --global user.email "adam.koziol@inspection.gc.ca"
-          if [ -d "$REMOTE_DIR/.git" ]; then
-            sudo -u "${TARGET_SSH_USER}" git -C "$REMOTE_DIR" remote set-url origin git@github.com:OLC-Bioinformatics/olc_genomics_portal.git || true
-          fi
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
@@ -672,6 +669,26 @@ stages:
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "sudo rm -rf '$REMOTE_DIR' && sudo mkdir -p '$REMOTE_DIR' && sudo chown ${TARGET_SSH_USER}:${TARGET_SSH_USER} '$REMOTE_DIR'"
         tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
+
+        ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -i "$(sshKey.secureFilePath)" \
+            -p "${TARGET_SSH_PORT}" \
+            "${TARGET_SSH_USER}@${TARGET_HOST}" <<EOF
+        set -euo pipefail
+
+        REMOTE_DIR="/home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal"
+
+        cd "\$REMOTE_DIR"
+
+        if [ -d .git ]; then
+          sudo -u "${TARGET_SSH_USER}" git remote set-url origin git@github.com:OLC-Bioinformatics/olc_genomics_portal.git
+          echo "Updated Git remotes:"
+          sudo -u "${TARGET_SSH_USER}" git remote -v
+        else
+          echo "WARNING: \$REMOTE_DIR has no .git directory; skipping git remote set-url"
+        fi
+        EOF
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
