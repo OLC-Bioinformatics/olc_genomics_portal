@@ -854,6 +854,31 @@ stages:
           python3 "$REMOTE_DIR/remote_deploy_env.py"
           cd "$REMOTE_DIR"
 
+          # --- Try to switch to dev branch (non-fatal if it fails) ---
+          if [ -d .git ]; then
+            echo "Attempting to checkout 'dev' branch"
+            sudo -u "${TARGET_SSH_USER}" git fetch origin dev || true
+            sudo -u "${TARGET_SSH_USER}" git checkout dev || echo "WARNING: could not checkout dev branch"
+            sudo -u "${TARGET_SSH_USER}" git pull origin dev || echo "WARNING: could not pull dev branch"
+          else
+            echo "WARNING: no .git directory present; skipping branch checkout"
+          fi
+
+          CONDA_BIN="/home/${TARGET_SSH_USER}/miniconda/bin/conda"
+
+          # --- Create conda environment if missing ---
+          if ! "$CONDA_BIN" env list | awk '{print $1}' | grep -qx "foodport"; then
+            echo "Creating conda environment 'foodport'"
+            sudo -u "${TARGET_SSH_USER}" "$CONDA_BIN" create -n foodport python=3.14 -y
+          else
+            echo "Conda environment 'foodport' already exists"
+          fi
+
+          # --- Install/upgrade pip + requirements inside env ---
+          echo "Installing Python dependencies into 'foodport' environment"
+          sudo -u "${TARGET_SSH_USER}" "$CONDA_BIN" run -n foodport pip install --upgrade pip
+          sudo -u "${TARGET_SSH_USER}" "$CONDA_BIN" run -n foodport pip install --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
             docker compose down
