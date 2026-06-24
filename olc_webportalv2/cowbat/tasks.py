@@ -30,10 +30,10 @@ from azure.batch.models import (
     TaskState
 )
 from azure.storage.blob import (
-    BlockBlobService,
-    BlobPermissions,
+    BlobSasPermissions,
+    generate_blob_sas,
 )
-from azure.common import AzureMissingResourceHttpError
+from azure.core.exceptions import ResourceNotFoundError
 from Bio import SeqIO
 from celery import shared_task
 import ete3
@@ -49,7 +49,15 @@ from django.core.exceptions import ObjectDoesNotExist
 # Local imports
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
-from olc_webportalv2.common.methods import create_batch_client
+from olc_webportalv2.common.methods import (
+    create_batch_client,
+    create_blob_service,
+    upload_blob_from_path,
+    download_blob_to_path,
+    generate_download_link,
+    create_container,
+    download_container,
+)
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
     AzureTask,
@@ -115,18 +123,15 @@ def run_cowbat_batch(
     sequencing_run.save()
 
     try:
-        # Create a blob client
-        blob_client = BlockBlobService(
-            account_key=settings.AZURE_ACCOUNT_KEY,
-            account_name=settings.AZURE_ACCOUNT_NAME)
+        blob_service = create_blob_service()
 
         # Check if all files are present. If not, change status to
         # 'UploadError'
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
-        blob_filenames = list()
-        blobs = blob_client.list_blobs(container_name=container_name)
+        blob_filenames = []
+        blobs = blob_service.get_container_client(container_name).list_blobs()
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
@@ -145,7 +150,7 @@ def run_cowbat_batch(
         if sequencing_run.nextseq:
             print('Processing NextSeq')
             nextseq_run(
-                blob_client=blob_client,
+                blob_service_client=blob_service,
                 blob_files=blob_filenames,
                 container_name=container_name,
                 sequencing_run=sequencing_run
@@ -304,7 +309,7 @@ def cowbat_api_submit(
 
 
 def nextseq_run(
-    blob_client: BlockBlobService,
+    blob_service_client,
     blob_files: list,
     container_name: str,
     sequencing_run: SequencingRun,
@@ -312,7 +317,7 @@ def nextseq_run(
     """
     Split NextSeq runs into manageable sizes, copy blobs to appropriate
     containers and run the assembly pipeline on each sub-sequencing run
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param blob_files: List of blob files
     :param sequencing_run: SequencingRun object
     """
@@ -320,7 +325,7 @@ def nextseq_run(
     if 'SampleSheet.csv' in blob_files:
         print('Sample sheet present')
         sub_runs = sample_sheet(
-            blob_client=blob_client,
+            blob_service_client=blob_service_client,
             container_name=container_name,
             run_name=sequencing_run.run_name,
             file_names=blob_files
@@ -328,7 +333,7 @@ def nextseq_run(
     else:
         # Create the sub_runs dictionary without a sample sheet
         sub_runs = no_sample_sheet(
-            blob_client=blob_client,
+            blob_service_client=blob_service_client,
             blob_files=blob_files,
             container_name=container_name,
         )
@@ -400,7 +405,7 @@ def nextseq_run(
 
 
 def sample_sheet(
-    blob_client: BlockBlobService,
+    blob_service_client,
     container_name: str,
     run_name: str,
     file_names: list,
@@ -409,7 +414,7 @@ def sample_sheet(
     """
     Download the SampleSheet.csv from the blob container and parse it to
     determine the number of samples and the number of sub-runs required
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param container_name: Name of the blob container
     :param run_name: Name of the sequencing run
     :param file_names: List of file names in the blob container
@@ -418,7 +423,7 @@ def sample_sheet(
     :return: Dictionary containing the samples for each sub-run
     """
     # Download the SampleSheet.csv from the blob container
-    blob_client.get_blob_to_path(
+    download_blob_to_path(
         container_name=container_name,
         blob_name='SampleSheet.csv',
         file_path=os.path.join(
@@ -426,7 +431,8 @@ def sample_sheet(
             'media',
             run_name,
             'SampleSheet.csv'
-        )
+        ),
+        blob_service_client=blob_service_client,
     )
     # Parse the SampleSheet.csv to determine the number of samples and the
     # number of sub-runs required
@@ -531,7 +537,7 @@ def sample_sheet(
 
     # Create and upload the sub-sample sheets to the blob container
     create_sub_sample_sheet(
-        blob_client=blob_client,
+        blob_service_client=blob_service_client,
         sub_runs=sub_runs_copy,
         container_name=container_name,
         header=header,
@@ -542,7 +548,7 @@ def sample_sheet(
 
 
 def create_sub_sample_sheet(
-        blob_client: BlockBlobService,
+        blob_service_client,
         container_name: str,
         file_names: list,
         file_path: str,
@@ -550,7 +556,7 @@ def create_sub_sample_sheet(
         sub_runs: dict):
     """
     Create a sub-sample sheet for each sub-run
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param container_name: Name of the blob container
     :param file_names: List of file names in the blob container
     :param file_path: Path to the sub-sample sheets
@@ -580,7 +586,7 @@ def create_sub_sample_sheet(
 
         # Create the sub-container
         sub_container_name = create_sub_container(
-            blob_client=blob_client,
+            blob_service_client=blob_service_client,
             container_name=container_name,
             i=i,
         )
@@ -593,7 +599,7 @@ def create_sub_sample_sheet(
 
             # Copy the FASTQ files for the sample to the sub-container
             copy_blobs(
-                blob_client=blob_client,
+                blob_service_client=blob_service_client,
                 container_name=container_name,
                 sample_name=sample_name,
                 file_names=file_names,
@@ -601,37 +607,39 @@ def create_sub_sample_sheet(
             )
 
         # Upload the sample sheet to the sub-container
-        blob_client.create_blob_from_path(
+        upload_blob_from_path(
             container_name=sub_container_name,
             blob_name='SampleSheet.csv',
             file_path=os.path.join(
                 sub_sample_sheet_path,
                 'SampleSheet.csv'
-            )
+            ),
+            blob_service_client=blob_service_client,
         )
 
 
 def create_sub_container(
-    blob_client: BlockBlobService,
+    blob_service_client,
     container_name: str,
     i: int
 ):
     """
     Create a sub-container for the sub-run
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param container_name: Name of the blob container
     :param i: Index of the sub-run
     :return: Name of the sub-container
     """
-    # Create the new container for the sub-run
     sub_container_name = container_name + f'-{i}'
-    blob_client.create_container(sub_container_name)
-
+    create_container(
+        container_name=sub_container_name,
+        blob_service_client=blob_service_client,
+    )
     return sub_container_name
 
 
 def copy_blobs(
-    blob_client: BlockBlobService,
+    blob_service_client,
     container_name: str,
     file_names: list,
     sample_name: str,
@@ -639,36 +647,33 @@ def copy_blobs(
 ):
     """
     Copy blobs from a container to a sub-container
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param container_name: Name of the blob container
     :param file_names: List of file names in the blob container
     :param sample_name: Name of the sample
     :param sub_container_name: Name of the sub-container
     """
-    # Extract the FASTQ files for the samples
     fastq_files = [fastq for fastq in file_names if sample_name in fastq]
 
-    # Iterate over the FASTQ files and copy them to the sub-container
     for fastq in fastq_files:
-        # Generate a SAS token for the source blob
-        sas_token = blob_client.generate_blob_shared_access_signature(
+        sas_token = generate_blob_sas(
+            account_name=settings.AZURE_ACCOUNT_NAME,
             container_name=container_name,
             blob_name=fastq,
-            permission=BlobPermissions.READ,
+            account_key=settings.AZURE_ACCOUNT_KEY,
+            permission=BlobSasPermissions(read=True),
             expiry=datetime.utcnow() + timedelta(hours=1),
         )
-        source_url = blob_client.make_blob_url(
-            container_name=container_name,
-            blob_name=fastq,
-            sas_token=sas_token
+        source_url = f"{blob_service_client.url}/{container_name}/{fastq}?{sas_token}"
+        dest_blob_client = blob_service_client.get_blob_client(
+            container=sub_container_name,
+            blob=fastq,
         )
-
-        # Use copy_blob with the source_url
-        blob_client.copy_blob(sub_container_name, fastq, source_url)
+        dest_blob_client.start_copy_from_url(source_url)
 
 
 def archive_sub_run(
-    blob_client: BlockBlobService,
+    blob_service_client,
     local_path: str,
     sub_container_name: str
 ):
@@ -676,36 +681,25 @@ def archive_sub_run(
     Create an archive of the FASTQ files (and sample sheet if present) for the
     sub-run and upload it to the destination
     """
-    # Create an archive of all the FASTQ files (and the sample sheet if
-    # present)
     shutil.make_archive(local_path, 'zip', local_path)
-
-    # Set the name of the archive
     archive = local_path + '.zip'
-
-    # Set the name of the blob file
     blob_file = os.path.basename(archive)
 
-    # Upload the archive to the destination container
-    blob_client.create_blob_from_path(
+    upload_blob_from_path(
         container_name=sub_container_name,
         blob_name=blob_file,
-        file_path=archive
+        file_path=archive,
+        blob_service_client=blob_service_client,
     )
 
-    # Remove the archive
     os.remove(archive)
-
-    # Use glob to find all FASTQ files in the local path
     fastq_files = glob(os.path.join(local_path, '*.fastq.gz'))
-
-    # Delete the FASTQ files from the local path
     for fastq in fastq_files:
         os.remove(fastq)
 
 
 def no_sample_sheet(
-    blob_client: BlockBlobService,
+    blob_service_client,
     blob_files: list,
     container_name: str,
     max_samples: int = 40
@@ -713,52 +707,37 @@ def no_sample_sheet(
     """
     Count the number of samples in a blob container and distribute the
     samples across sub-runs
-    :param blob_client: BlockBlobService object
+    :param blob_service_client: BlobServiceClient object
     :param blob_files: List of file names in the blob container
     :param container_name: Name of the blob container
     :param max_samples: Maximum number of samples per sub-run
     :return: Dictionary containing the samples for each sub-run
     """
-    # Extract the sample names from the blob files
     sample_names = {
         fastq.split('_')[0] for fastq in blob_files if fastq.endswith('.gz')
         }
 
-    # Count the number of samples
     num_samples = len(sample_names)
-
-    # Perform floor division to determine the number of sub-runs required
-    # e.g. 125 samples / 50 samples = 2 sub-runs
     num_sub_runs = num_samples // max_samples
-
-    # Calculate the remainder of the division to determine if there are any
-    # samples left over that will be added to an additional sub-run
     if num_samples % max_samples != 0:
         num_sub_runs += 1
 
-    # Create a dictionary to hold the samples for each sub-run
     sub_runs = {i + 1: [] for i in range(num_sub_runs)}
 
-    # Distribute the samples across the sub-runs
     for i, sample in enumerate(sorted(sample_names)):
-        # Calculate the sub-run index
         sub_run_index = i // max_samples
-        # Add the sample to the appropriate sub-run
         sub_runs[sub_run_index + 1].append(sample)
 
-    # Copy the FASTQ files for the samples to sub-containers
     for i, sub_run in sub_runs.items():
-        # Create the sub-container
         sub_container_name = create_sub_container(
-            blob_client=blob_client,
+            blob_service_client=blob_service_client,
             container_name=container_name,
             i=i,
         )
 
         for sample_name in sorted(sub_run):
-            # Copy the FASTQ files for the sample to the sub-container
             copy_blobs(
-                blob_client=blob_client,
+                blob_service_client=blob_service_client,
                 container_name=container_name,
                 sample_name=sample_name,
                 file_names=blob_files,
@@ -920,10 +899,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
         os.makedirs(reports_and_assemblies_folder)
     container_name = \
         sequencing_run.run_name.lower().replace('_', '-')
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_service = create_blob_service()
     # Download all reports and assemblies to reports and assemblies folder.
     assemblies_folder = os.path.join(
         'olc_webportalv2',
@@ -947,38 +923,41 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
     # List all the things in the container - if it's a file in reports folder
     # or an assembly, download it.
-    blobs = list(blob_client.list_blobs(container_name=container_name))
+    blobs = list(blob_service.get_container_client(container_name).list_blobs())
     blob_filenames = [b.name for b in blobs]
     for blob in blobs:
         if fnmatch.fnmatch(
             blob.name,
             os.path.join("BestAssemblies", "*.fasta")
         ):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     assemblies_folder,
                     os.path.split(blob.name)[1]
                 ),
+                blob_service_client=blob_service,
             )
         elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.csv")):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     reports_folder,
                     os.path.split(blob.name)[1]
                 ),
+                blob_service_client=blob_service,
             )
         elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.tsv")):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     reports_folder,
                     os.path.split(blob.name)[1]
                 ),
+                blob_service_client=blob_service,
             )
         elif fnmatch.fnmatch(
             blob.name,
@@ -987,13 +966,14 @@ def cowbat_cleanup(sequencing_run_pk: int):
                 '*.fa'
             )
         ):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     reports_folder,
                     os.path.split(blob.name)[1]
-                )
+                ),
+                blob_service_client=blob_service,
             )
         elif fnmatch.fnmatch(
             blob.name,
@@ -1002,13 +982,14 @@ def cowbat_cleanup(sequencing_run_pk: int):
                 '*.xlsx'
             )
         ):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     reports_folder,
                     os.path.split(blob.name)[1]
-                )
+                ),
+                blob_service_client=blob_service,
             )
 
         # Also get the SampleSheet put into the reports folder.
@@ -1018,19 +999,20 @@ def cowbat_cleanup(sequencing_run_pk: int):
                 'SampleSheet.csv'
             )
         ):
-            blob_client.get_blob_to_path(
+            download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
                     reports_folder,
                     os.path.split(blob.name)[1]
-                )
+                ),
+                blob_service_client=blob_service,
             )
 
     # Update combinedMetadata.csv with read‑filenames
     add_read_filenames_to_metadata(
         sequencing_run=sequencing_run,
-        blob_client=blob_client,
+        blob_service_client=blob_service,
         container_name=container_name,
         reports_folder=reports_folder,
         blob_filenames=blob_filenames,
@@ -1062,12 +1044,12 @@ def cowbat_cleanup(sequencing_run_pk: int):
     # Generate a SAS URL for the zip file and update the SequencingRun object
     # with the download link
     sas_url = generate_download_link(
-        blob_client=blob_client,
+        blob_service_client=blob_service,
         container_name=report_assembly_container,
-        output_zipfile=os.path.join(
+        blob_name=os.path.basename(os.path.join(
             run_folder,
             blob_name
-        ),
+        )),
         expiry=730
     )
 
@@ -1155,13 +1137,13 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
 def add_read_filenames_to_metadata(
     sequencing_run: SequencingRun,
-    blob_client: BlockBlobService,
+    blob_service_client,
     container_name: str,
     reports_folder: str,
     blob_filenames: list,
 ) -> None:
     """
-    Add two columns, ``R1_file`` and ``R2_file``, to
+    Add two columns, ``R1_file`` and ``R2_file`` to
     ``combinedMetadata.csv`` and upload the modified file to the run container.
 
     ``blob_filenames`` should be a simple list of all blob names in the
@@ -1242,10 +1224,11 @@ def add_read_filenames_to_metadata(
     # Write back and upload
     try:
         df.to_csv(csv_path, index=False)
-        blob_client.create_blob_from_path(
+        upload_blob_from_path(
             container_name=container_name,
             blob_name=os.path.join("reports", csv_name),
             file_path=csv_path,
+            blob_service_client=blob_service_client,
         )
 
     except Exception as exc:  # pragma: no cover
@@ -1685,15 +1668,10 @@ def check_tree_tasks() -> None:
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                # Create a blob client to handle Azure Blob Storage operations
-                blob_client = BlockBlobService(
-                    account_key=settings.AZURE_ACCOUNT_KEY,
-                    account_name=settings.AZURE_ACCOUNT_NAME
-                )
+                blob_client = create_blob_service()
 
-                # Download the output container to zip it
                 download_container(
-                    blob_service=blob_client,
+                    blob_service_client=blob_client,
                     container_name=f'{batch_job_name}-output',
                     output_dir=os.path.join(
                         'olc_webportalv2',
@@ -1729,7 +1707,7 @@ def check_tree_tasks() -> None:
                         blob_client.delete_container(
                             container_name=f'tree-{tree_object.pk}{suffix}'
                         )
-                    except AzureMissingResourceHttpError:
+                    except ResourceNotFoundError:
                         pass
 
                 # Prepare the output folder and remove the batch config file
@@ -1749,9 +1727,9 @@ def check_tree_tasks() -> None:
                 )
                 tree_result_container = f'tree-{tree_object.pk}'
                 sas_url = generate_download_link(
-                    blob_client=blob_client,
+                    blob_service_client=blob_client,
                     container_name=tree_result_container,
-                    output_zipfile=f'{tree_output_folder}.zip',
+                    blob_name=os.path.basename(f'{tree_output_folder}.zip'),
                     expiry=8
                 )
 
@@ -1832,15 +1810,10 @@ def check_amr_summary_tasks():
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                # Generate an SAS URL and update the download link
-                blob_client = BlockBlobService(
-                    account_key=settings.AZURE_ACCOUNT_KEY,
-                    account_name=settings.AZURE_ACCOUNT_NAME
-                )
+                blob_client = create_blob_service()
 
-                # Download the output container to zip it
                 download_container(
-                    blob_service=blob_client,
+                    blob_service_client=blob_client,
                     container_name=batch_job_name,
                     output_dir='olc_webportalv2/media'
                 )
@@ -1861,9 +1834,9 @@ def check_amr_summary_tasks():
 
                 amr_result_container = f'amrsummary-{amr_object.pk}'
                 sas_url = generate_download_link(
-                    blob_client=blob_client,
+                    blob_service_client=blob_client,
                     container_name=amr_result_container,
-                    output_zipfile=f'{output_dir}.zip',
+                    blob_name=os.path.basename(f'{output_dir}.zip'),
                     expiry=8
                 )
 
@@ -1973,16 +1946,12 @@ def check_vir_typer_tasks():
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                # Set up Blob service client
-                blob_client = BlockBlobService(
-                    account_key=settings.AZURE_ACCOUNT_KEY,
-                    account_name=settings.AZURE_ACCOUNT_NAME)
+                blob_client = create_blob_service()
 
                 vir_typer_result_container = batch_job_name
 
-                # Download the output container to zip it
                 download_container(
-                    blob_service=blob_client,
+                    blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
                     output_dir='olc_webportalv2/media')
 
@@ -2013,9 +1982,9 @@ def check_vir_typer_tasks():
 
                 # Generate a download link for the output zip file
                 sas_url = generate_download_link(
-                    blob_client=blob_client,
+                    blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
-                    output_zipfile=output_dir + '.zip',
+                    blob_name=os.path.basename(output_dir + '.zip'),
                     expiry=8)
 
                 vir_typer_task.download_link = sas_url
@@ -2124,15 +2093,10 @@ def handle_successful_tasks(
     """
     Handle successful tasks.
     """
-    # Create a Blob service client
-    blob_client = BlockBlobService(
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        account_name=settings.AZURE_ACCOUNT_NAME
-    )
+    blob_client = create_blob_service()
 
-    # Download the container
     download_container(
-        blob_service=blob_client,
+        blob_service_client=blob_client,
         container_name=batch_job_name,
         output_dir=os.path.join('olc_webportalv2', 'media')
     )
@@ -2152,9 +2116,9 @@ def handle_successful_tasks(
 
     # Generate a download link for the zip file
     sas_url = generate_download_link(
-        blob_client=blob_client,
+        blob_service_client=blob_client,
         container_name=prokka_result_container,
-        output_zipfile=output_dir + '.zip',
+        blob_name=os.path.basename(output_dir + '.zip'),
         expiry=8
     )
 
@@ -2374,14 +2338,9 @@ def check_geneseekr_tasks():
                     batch_job_name
                 )
 
-                # Create a blob client to interact with Azure Blob Storage
-                blob_client = BlockBlobService(
-                    account_name=settings.AZURE_ACCOUNT_NAME,
-                    account_key=settings.AZURE_ACCOUNT_KEY
-                )
+                blob_client = create_blob_service()
 
-                # List all blobs in the output container
-                blobs = blob_client.list_blobs(container_name=output_container)
+                blobs = blob_client.get_container_client(output_container).list_blobs()
 
                 # Iterate over each blob
                 for blob in blobs:
@@ -2394,27 +2353,30 @@ def check_geneseekr_tasks():
                             'geneseekr_blastn.csv'
                         )
                     ):
-                        blob_client.get_blob_to_path(
+                        download_blob_to_path(
                             container_name=output_container,
                             blob_name=blob.name,
                             file_path=os.path.join(
                                 run_folder,
                                 os.path.split(blob.name)[1]
-                            )
+                            ),
+                            blob_service_client=blob_client,
                         )
-
-                    # If the blob is a TSV report, download it
-                    elif fnmatch.fnmatch(blob.name, os.path.join(
-                        'reports',
-                        '*.tsv')
+                    elif fnmatch.fnmatch(
+                        blob.name,
+                        os.path.join(
+                            'reports',
+                            '*.tsv'
+                        )
                     ):
-                        blob_client.get_blob_to_path(
+                        download_blob_to_path(
                             container_name=output_container,
                             blob_name=blob.name,
                             file_path=os.path.join(
                                 run_folder,
                                 os.path.split(blob.name)[1]
-                            )
+                            ),
+                            blob_service_client=blob_client,
                         )
 
                 # If the GeneSeekr request is a benchmark, update the seqids
@@ -2451,22 +2413,17 @@ def check_geneseekr_tasks():
 
                 # Generate an SAS url with read access that users will be able
                 # to use to download their sequences.
-                sas_token = \
-                    blob_client.generate_container_shared_access_signature(
-                        container_name=output_container,
-                        permission=BlobPermissions.READ,
-                        expiry=datetime.utcnow() +
-                        timedelta(days=8)
-                    )
-                sas_url = blob_client.make_blob_url(
+                sas_url = generate_download_link(
+                    blob_service_client=blob_client,
                     container_name=output_container,
                     blob_name='reports/geneseekr_blastn.xlsx',
-                    sas_token=sas_token
+                    expiry=8,
                 )
-                sas_url_sequence = blob_client.make_blob_url(
+                sas_url_sequence = generate_download_link(
+                    blob_service_client=blob_client,
                     container_name=output_container,
                     blob_name='reports/geneseekr_blastn.csv',
-                    sas_token=sas_token
+                    expiry=8,
                 )
 
                 # Update request status and download links
@@ -2556,104 +2513,6 @@ def monitor_tasks():
         check_cowsnphr_tasks()
     except Exception as exc:
         capture_exception(exc)
-
-
-def generate_download_link(
-    blob_client,
-    container_name,
-    output_zipfile,
-    expiry=8
-):
-    """
-    Make a download link for a file that will be put into Azure blob storage,
-    good for up to expiry days
-    :param blob_client: Instance of azure.storage.blob.BlockBlobService
-    :param container_name: Name of container you want to create.
-    :param output_zipfile: Zipfile you want to upload and create a link for.
-    :param expiry: Number of days link should be valid for.
-    :return: String of a link that allows people to download container.
-    """
-    # Create a new container in the blob storage
-    blob_client.create_container(container_name)
-
-    # Get the name of the file from the full path
-    blob_name = os.path.split(output_zipfile)[1]
-
-    # Upload the file to the blob storage
-    blob_client.create_blob_from_path(
-        container_name=container_name,
-        blob_name=blob_name,
-        file_path=output_zipfile
-    )
-
-    # Generate a shared access signature (SAS) token
-    # This token allows read access to the container
-    # It expires after a certain number of days
-    sas_token = blob_client.generate_container_shared_access_signature(
-        container_name=container_name,
-        permission=BlobPermissions.READ,
-        expiry=datetime.utcnow() + timedelta(days=expiry)
-    )
-
-    # Create a URL for the blob that includes the SAS token
-    # This URL can be used to access the blob without the storage account key
-    sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=blob_name,
-        sas_token=sas_token
-    )
-
-    # Return the SAS URL
-    return sas_url
-
-
-def download_container(blob_service, container_name, output_dir):
-    """
-    Download all files in a container to local storage
-    Modified from:
-    https://blogs.msdn.microsoft.com/brijrajsingh/2017/05/27/
-    downloading-a-azure-blob-storage-container-python/
-    """
-    generator = blob_service.list_blobs(container_name)
-    for blob in generator:
-        # check if the path contains a folder structure, create the folder
-        # structure
-        if "/" in blob.name:
-            # extract the folder path and check if that folder exists locally,
-            # and if not create it
-            head, tail = os.path.split(blob.name)
-            if os.path.isdir(os.path.join(output_dir, head)):
-                # download the files to this directory
-                blob_service.get_blob_to_path(
-                    container_name,
-                    blob.name,
-                    os.path.join(
-                        output_dir,
-                        head,
-                        tail
-                    )
-                )
-            else:
-                # create the diretcory and download the file to it
-                os.makedirs(os.path.join(output_dir, head))
-                blob_service.get_blob_to_path(
-                    container_name,
-                    blob.name,
-                    os.path.join(
-                        output_dir,
-                        head,
-                        tail
-                    )
-                )
-        else:
-            blob_service.get_blob_to_path(
-                container_name,
-                blob.name,
-                os.path.join(
-                    output_dir,
-                    blob.name
-                )
-            )
 
 
 def check_sample_sheet_format(
@@ -2852,10 +2711,7 @@ def clean_old_containers():
     """
     Remove containers matching regexes if they are over one week old
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = create_blob_service()
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = [
