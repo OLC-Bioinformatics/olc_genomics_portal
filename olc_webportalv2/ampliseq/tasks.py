@@ -23,10 +23,10 @@ from celery import shared_task
 from azure.batch import BatchClient
 from azure.batch.models import BatchTaskState
 from azure.core.exceptions import (
-    AzureError, 
-    HttpResponseError, 
-    ResourceNotFoundError, 
-) 
+    AzureError,
+    HttpResponseError,
+    ResourceNotFoundError,
+)
 
 # Sentry
 from sentry_sdk import capture_exception
@@ -45,10 +45,11 @@ from olc_webportalv2.common.methods import (
     generate_download_link,
     create_container,
     generic_api_submit,
+    send_email,
     upload_blob_from_path,
 )
-from olc_webportalv2.primer_finder.methods import send_email
 
+# Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -352,7 +353,7 @@ def check_for_task_completion(
     #   case, give up.
     except Exception as exc:
         AmpliSeqRequest.objects.filter(
-            pk=task.ampliseq.pk).update(status='Error', errors=exc)
+            pk=task.ampliseq.pk).update(status='Error', errors=[str(exc)])
         # Delete task, so we don't keep iterating over it.
         AmpliSeqAzureTask.objects.filter(id=task.id).delete()
 
