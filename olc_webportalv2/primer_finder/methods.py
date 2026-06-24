@@ -5,14 +5,10 @@ Methods for the primer_finder app
 """
 
 # Standard imports
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import json
 import os
 import shutil
-import smtplib
 import tempfile
-from time import sleep
 from typing import (
     Any,
     Dict,
@@ -45,6 +41,7 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorRequest,
     ValidatorSEQID
 )
+from olc_webportalv2.common.methods import send_email
 from olc_webportalv2.cowbat.methods import AzureBatch
 
 
@@ -129,92 +126,6 @@ def upload_probe(request: ValidatorRequest):
         blob_name=file_name,
         blob=probe_sequence.encode('utf-8')
     )
-
-
-def send_email(
-    *,  # Enforce keyword arguments
-    subject: str,
-    body: str,
-    recipient: str
-) -> None:
-    """
-    Sends an email with the given subject, body, and recipient.
-
-    If an "Access denied" SMTP data error or a "wrong version number" SMTP
-    server disconnected error occurs, the function will wait for 5 seconds and
-    then retry the operation. This retry process will happen up to 50 times.
-    If any other error occurs, it will be raised immediately.
-
-    Args:
-        subject (str): The subject of the email.
-        body (str): The body of the email.
-        recipient (str): The recipient's email address.
-
-    Raises:
-        smtplib.SMTPDataError: If an SMTP data error occurs that is not an
-        "Access denied" error.
-        smtplib.SMTPServerDisconnected: If an SMTP server disconnected error
-        occurs that is not a "wrong version number" error.
-    """
-    # Define the sender's email address
-    from_addr = \
-        'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
-    # Define the recipient's email address
-    to_addr = recipient
-
-    # Create a MIME multipart message
-    msg = MIMEMultipart()
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-
-    # Attempt to send the email up to 50 times
-    for _ in range(50):
-        try:
-            # Connect to the SMTP server
-            server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
-
-            # Start TLS encryption
-            server.starttls()
-
-            # Login to the SMTP server
-            server.login(
-                user=os.environ.get('EMAIL_HOST_USER'),
-                password=os.environ.get('EMAIL_HOST_PASSWORD')
-            )
-
-            # Convert the message to a string
-            text = msg.as_string()
-
-            # Send the email
-            server.sendmail(from_addr, to_addr, text)
-
-            # If the email is sent successfully, break out of the loop
-            break
-        except smtplib.SMTPDataError as exc:
-            # If an SMTP data error occurs...
-            if exc.smtp_code == 554 and b"Access denied" in exc.smtp_error:
-                # If the error is an "Access denied" error, print a message
-                # and wait for 5 seconds before retrying
-                print("Access denied error occurred, retrying...")
-                sleep(5)
-            else:
-                # If it's a different error, re-raise it
-                raise
-        except smtplib.SMTPServerDisconnected as exc:
-            # If the SMTP server gets disconnected...
-            if "wrong version number" in str(exc):
-                # If the error is a "wrong version number" error, print a
-                # message, wait for 5 seconds, and reconnect to the server
-                print("Wrong version number error occurred, retrying...")
-                sleep(5)
-            else:
-                # If it's a different error, re-raise it
-                raise
-        finally:
-            # Close the connection to the SMTP server
-            server.quit()
 
 
 def populate_primer_sets(
