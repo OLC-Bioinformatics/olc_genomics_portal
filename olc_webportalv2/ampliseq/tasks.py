@@ -3,7 +3,6 @@ Tasks for the AmpliSeq app
 """
 
 # Standard imports
-import datetime
 from glob import glob
 import logging
 import os
@@ -14,7 +13,6 @@ import sys
 import tarfile
 
 # Django
-from django.conf import settings
 from django.db import DatabaseError
 from django.utils.translation import gettext_lazy as _
 
@@ -22,18 +20,13 @@ from django.utils.translation import gettext_lazy as _
 from celery import shared_task
 
 # Azure
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-from azure.common import AzureMissingResourceHttpError, AzureHttpError
-try:
-    from azure.storage.blob import BlobServiceClient as BlockBlobService
-except ImportError:
-    from azure.storage.blob import BlockBlobService
-
-try:
-    from azure.storage.blob import BlobSasPermissions as BlobPermissions
-except ImportError:
-    from azure.storage.blob import BlobPermissions
+from azure.batch import BatchClient
+from azure.batch.models import BatchTaskState
+from azure.core.exceptions import (
+    AzureError, 
+    HttpResponseError, 
+    ResourceNotFoundError, 
+) 
 
 # Sentry
 from sentry_sdk import capture_exception
@@ -46,7 +39,13 @@ from olc_webportalv2.ampliseq.models import (
 )
 from olc_webportalv2.common.methods import (
     create_batch_client,
+    create_blob_service,
+    create_blob_from_bytes,
+    download_blob_to_path,
+    generate_download_link,
+    create_container,
     generic_api_submit,
+    upload_blob_from_path,
 )
 from olc_webportalv2.primer_finder.methods import send_email
 
@@ -57,21 +56,20 @@ logger.setLevel(logging.INFO)
 def find_containers():
     """
     Find all containers with names that match either a sequencing run, or
-    have "ampliseq". Ignore any output containers
+    have "ampliseq".
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    containers = blob_client.list_containers()
+    blob_service = create_blob_service()
+    containers = blob_service.list_containers()
     # Compile the regular expressions
-    seq_run_re = re.compile('\d{6}')
+    seq_run_re = re.compile(r'\d{6}')
     ampliseq_re = re.compile('ampliseq')
     # Use a list comprehension to find the matching container names
     run_set = {
         container.name for container in containers
-        if ((seq_run_re.match(container.name) or ampliseq_re.match(container.name))
-            and '-output' not in container.name)
+        if (
+            (seq_run_re.match(container.name) or
+             ampliseq_re.match(container.name))
+        )
     }
     return sorted(run_set)
 
@@ -101,9 +99,11 @@ def refresh_container_names():
         # Delete removed container names
         ContainerName.objects.filter(container_name__in=deleted_names).delete()
     except (
-            AzureMissingResourceHttpError,
-            AzureHttpError,
-            DatabaseError) as exc:
+        ResourceNotFoundError,
+        HttpResponseError,
+        AzureError,
+        DatabaseError
+    ) as exc:
         capture_exception(exc)
 
 
@@ -114,27 +114,15 @@ def upload_file(
     """
     Upload the user-supplied files to blob storage
     """
-    # Create a blob client
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
+    blob_service = create_blob_service()
+    create_container(container_name, blob_service)
+    blob_name = archive if archive else file.name
+    create_blob_from_bytes(
+        container_name=container_name,
+        blob_name=blob_name,
+        data=file.read(),
+        blob_service_client=blob_service,
     )
-    # Create the container (if required)
-    blob_client.create_container(container_name)
-    if not archive:
-        # Upload the file to blob
-        blob_client.create_blob_from_bytes(
-            container_name=container_name,
-            blob_name=file.name,
-            blob=file.read()
-        )
-    # Upload an archive
-    else:
-        blob_client.create_blob_from_bytes(
-            container_name=container_name,
-            blob_name=archive,
-            blob=file.read()
-        )
 
 
 def download_sequence_files(container_name: str):
@@ -159,19 +147,15 @@ def download_sequence_files(container_name: str):
     except FileNotFoundError:
         pass
     os.makedirs(tmp_storage_dir, exist_ok=True)
-    # Create a blob client
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    blobs = blob_client.list_blobs(container_name=container_name)
+    blob_service = create_blob_service()
+    container_client = blob_service.get_container_client(container_name)
+    blobs = container_client.list_blobs()
     for blob in blobs:
-        blob_client.get_blob_to_path(
+        download_blob_to_path(
             container_name=container_name,
             blob_name=blob.name,
-            file_path=os.path.join(
-                tmp_storage_dir, os.path.split(blob.name)[1]
-            )
+            file_path=os.path.join(tmp_storage_dir, os.path.split(blob.name)[1]),
+            blob_service_client=blob_service,
         )
     return tmp_storage_dir
 
@@ -294,11 +278,22 @@ def create_system_call(ampliseq: AmpliSeqRequest):
         )
     if ampliseq.exclude_taxa:
         cmd += f'--exclude_taxa {ampliseq.exclude_taxa} '
+
+    # Add the cleanup commands to the end of the system call
     cmd += (
-        f'; nextflow clean -k -f; rsync -a /datadrive/'
-        f'{ampliseq.container_name} $AZ_BATCH_TASK_WORKING_DIR/ && '
-        f'rm -rf /datadrive/{ampliseq.container_name}'
+        f'; nextflow_status=$?; '
+        f'nextflow clean -k -f || true; '
+        f'mkdir -p '
+        f'$AZ_BATCH_NODE_MOUNTS_DIR/{ampliseq.container_name}/reports '
+        f'$AZ_BATCH_NODE_MOUNTS_DIR/{ampliseq.container_name}/results2; '
+        f'rsync -a /datadrive/{ampliseq.container_name}/reports/ '
+        f'$AZ_BATCH_NODE_MOUNTS_DIR/{ampliseq.container_name}/reports/; '
+        f'rsync -a /datadrive/{ampliseq.container_name}/results2/ '
+        f'$AZ_BATCH_NODE_MOUNTS_DIR/{ampliseq.container_name}/results2/; '
+        f'rm -rf /datadrive/{ampliseq.container_name}; '
+        f'exit $nextflow_status'
     )
+
     return cmd
 
 
@@ -333,7 +328,7 @@ def run_ampliseq_batch(primary_key: int):
 
 def check_for_task_completion(
     task: AmpliSeqAzureTask,
-    batch_client: create_batch_client
+    batch_client: BatchClient
 ) -> tuple[bool, AmpliSeqRequest]:
     """
     Check to see if the task is complete
@@ -351,7 +346,7 @@ def check_for_task_completion(
     tasks_completed = True
     try:
         for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != batchmodels.TaskState.completed:
+            if cloudtask.state != BatchTaskState.COMPLETED:
                 tasks_completed = False
     # If something errors first time through, jobs can't get deleted. In that
     #   case, give up.
@@ -365,7 +360,7 @@ def check_for_task_completion(
 
 
 def delete_pool_job(
-    batch_client: create_batch_client,
+    batch_client: BatchClient,
     batch_job_name: str
 ) -> bool:
     """
@@ -391,45 +386,32 @@ def delete_pool_job(
 
 def create_sas_urls(ampliseq):
     """
-    Create SAS URLs for the report, tracce, and timeline files
+    Create SAS URLs for the report, trace, and timeline files.
     """
-    # Set the name of the output container and run folder
-    output_container = ampliseq.container_name + '-output'
-    # Create the blob service client for manipulating blobs
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    # Generate an SAS url with read access that users will be able to use to
-    # download their reports.
-    sas_token = blob_client.generate_container_shared_access_signature(
-        container_name=output_container,
-        permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8)
-    )
+    # Create a blob service client
+    blob_service = create_blob_service()
 
-    # Create a variable to store part of the path information
-    # (decreases line length)
     folder_path = '{container}/reports/{container}'.format(
         container=ampliseq.container_name
     )
 
-    # Create SAS URLs for both the execution report,the execution trace, and
-    # execution timeline
-    execution_report_sas_url = blob_client.make_blob_url(
-        container_name=output_container,
+    execution_report_sas_url = generate_download_link(
+        blob_service_client=blob_service,
+        container_name=ampliseq.container_name,
         blob_name=f'{folder_path}_execution_report.html',
-        sas_token=sas_token
+        expiry=8,
     )
-    execution_trace_sas_url = blob_client.make_blob_url(
-        container_name=output_container,
+    execution_trace_sas_url = generate_download_link(
+        blob_service_client=blob_service,
+        container_name=ampliseq.container_name,
         blob_name=f'{folder_path}_execution_trace.txt',
-        sas_token=sas_token
+        expiry=8,
     )
-    execution_timeline_sas_url = blob_client.make_blob_url(
-        container_name=output_container,
+    execution_timeline_sas_url = generate_download_link(
+        blob_service_client=blob_service,
+        container_name=ampliseq.container_name,
         blob_name=f'{folder_path}_execution_timeline.html',
-        sas_token=sas_token
+        expiry=8,
     )
     return (
         execution_report_sas_url,
@@ -442,29 +424,28 @@ def download_reports(ampliseq: AmpliSeqRequest):
     """
     Download the HTML reports to disk
     """
-    # Set the folder name where the HTML reports are to be written
     local_folder = os.path.join('olc_webportalv2', 'templates', 'ampliseq')
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    blob_client.get_blob_to_path(
-        f'{ampliseq.container_name}-output',
-        f'{ampliseq.container_name}/reports/'
-        f'{ampliseq.container_name}_execution_report.html',
-        os.path.join(
+    blob_service = create_blob_service()
+
+    download_blob_to_path(
+        container_name=ampliseq.container_name,
+        blob_name=f'{ampliseq.container_name}/reports/'
+                  f'{ampliseq.container_name}_execution_report.html',
+        file_path=os.path.join(
             local_folder,
             f'{ampliseq.container_name}_execution_report.html'
-        )
+        ),
+        blob_service_client=blob_service,
     )
-    blob_client.get_blob_to_path(
-        f'{ampliseq.container_name}-output',
-        f'{ampliseq.container_name}/reports/'
-        f'{ampliseq.container_name}_execution_timeline.html',
-        os.path.join(
+    download_blob_to_path(
+        container_name=ampliseq.container_name,
+        blob_name=f'{ampliseq.container_name}/reports/'
+                  f'{ampliseq.container_name}_execution_timeline.html',
+        file_path=os.path.join(
             local_folder,
             f'{ampliseq.container_name}_execution_timeline.html'
-        )
+        ),
+        blob_service_client=blob_service,
     )
 
 
@@ -472,55 +453,75 @@ def download_results(ampliseq: AmpliSeqRequest):
     """
     Download the results to disk and create SAS URL
     """
-    # Set the folder name where the HTML reports are to be written
     local_folder = os.path.join('olc_webportalv2', 'media', 'ampliseq')
-
     results_folder = os.path.join(local_folder, ampliseq.container_name)
-
-    # results_dir: the directory where results will be saved by the system call
     results_dir = 'results2'
 
-    # Create the results folder if it doesn't exist
     os.makedirs(results_folder, exist_ok=True)
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_service = create_blob_service()
 
-    # List all the results in the container
-    blobs = blob_client.list_blobs(container_name=ampliseq.container_name)
+    # List all blobs in the container
+    blobs = blob_service.get_container_client(
+        ampliseq.container_name
+    ).list_blobs()
 
+    # Boolean to track if any blobs were found for the results directory
+    results_found = False
+
+    # Iterate through the blobs and download those that are in the results
+    # directory
     for blob in blobs:
-        # Only look at files within {container_name}/{results_dir}:
+        # Check if the blob is in the results directory
         if '/'.join(pathlib.Path(blob.name).parts[0:2]) == \
                 f"{ampliseq.container_name}/{results_dir}":
+            # Set the boolean to True since we found at least one result
+            results_found = True
+
+            # Create the appropriate subpath and ensure the directory exists
             file_name = pathlib.Path(blob.name).name
-            # Obtain the path between '{container_name}/{results_dir}' and the
-            # file name
             subpath = '/'.join(pathlib.Path(blob.name).parts[2:-1])
             path_to_create = os.path.join(results_folder, subpath)
             os.makedirs(path_to_create, exist_ok=True)
-            blob_client.get_blob_to_path(
+
+            # Download the blob to the appropriate path
+            download_blob_to_path(
                 container_name=ampliseq.container_name,
                 blob_name=blob.name,
-                file_path=os.path.join(path_to_create + '/' + file_name)
+                file_path=os.path.join(path_to_create, file_name),
+                blob_service_client=blob_service,
             )
 
-    # With that done, create a zipfile.
-    blob_name = os.path.join(local_folder, ampliseq.container_name + '.zip')
-    shutil.make_archive(os.path.splitext(blob_name)[0], 'zip', results_folder)
-    sas_url = generate_download_link(
-        blob_client=blob_client,
+    # If no results were found, raise a FileNotFoundError
+    if not results_found:
+        raise FileNotFoundError(
+            f"No results found in container {ampliseq.container_name} "
+            f"under {ampliseq.container_name}/{results_dir}"
+        )
+
+    # Create a zip file of the results
+    zip_path = os.path.join(local_folder, ampliseq.container_name + '.zip')
+    shutil.make_archive(os.path.splitext(zip_path)[0], 'zip', results_folder)
+
+    # Upload the zip file to blob storage
+    upload_blob_from_path(
         container_name=ampliseq.container_name,
-        output_zipfile=blob_name,
-        expiry=730
+        blob_name=os.path.basename(zip_path),
+        file_path=zip_path,
+        blob_service_client=blob_service,
+    )
+
+    sas_url = generate_download_link(
+        blob_service_client=blob_service,
+        container_name=ampliseq.container_name,
+        blob_name=os.path.basename(zip_path),
+        expiry=730,
     )
 
     # Update the AmpliSeqRequest with the SAS URL for the results
     ampliseq.results_download_link = sas_url
     ampliseq.save()
     shutil.rmtree(results_folder)
-    os.remove(blob_name)
+    os.remove(zip_path)
 
 
 def task_succeeded(ampliseq: AmpliSeqRequest):
@@ -622,38 +623,3 @@ def check_ampliseq_tasks():
 
         # Delete the AmpliSeqAzureTask
         AmpliSeqAzureTask.objects.filter(id=task.id).delete()
-
-
-def generate_download_link(
-    blob_client,
-    container_name,
-    output_zipfile,
-    expiry=8
-):
-    """
-    Make a download link for a file that will be put into Azure blob storage,
-    good for up to expiry days
-    :param blob_client: Instance of azure.storage.blob.BlockBlobService
-    :param container_name: Name of container you want to create.
-    :param output_zipfile: Zipfile you want to upload and create a link for.
-    :param expiry: Number of days link should be valid for.
-    :return: String of a link that allows people to download container.
-    """
-    blob_client.create_container(container_name)
-    blob_name = os.path.split(output_zipfile)[1]
-    blob_client.create_blob_from_path(
-        container_name=container_name,
-        blob_name=blob_name,
-        file_path=output_zipfile
-    )
-    sas_token = blob_client.generate_container_shared_access_signature(
-        container_name=container_name,
-        permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry)
-    )
-    sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=blob_name,
-        sas_token=sas_token
-    )
-    return sas_url
