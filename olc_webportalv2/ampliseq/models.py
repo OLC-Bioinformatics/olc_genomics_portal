@@ -16,16 +16,44 @@ from olc_webportalv2.users.models import User
 
 
 def set_metadata_file_path(instance, filename):
+    """
+    Set the file path for the metadata file associated with an AmpliSeqRequest
+    instance. The file will be stored in a directory named after the primary
+    key of the instance.
+    Args:
+        instance (AmpliSeqRequest): The AmpliSeqRequest instance for which the
+        file path is being set.
+        filename (str): The name of the file being uploaded.
+    Returns:
+        str: The file path where the metadata file will be stored, in the
+        format '<instance.pk>/<filename>'.
+    """
     return os.path.join(instance.pk, filename)
 
 def set_classifier_file_path(instance, filename):
+    """
+    Set the file path for the classifier file associated with an
+    AmpliSeqRequest instance. The file will be stored in a directory named
+    after the primary key of the instance.
+    Args:
+        instance (AmpliSeqRequest): The AmpliSeqRequest instance for which the
+        file path is being set.
+        filename (str): The name of the file being uploaded.
+    Returns:
+        str: The file path where the classifier file will be stored, in the
+        format '<instance.pk>/<filename>'.
+    """
     return os.path.join(instance.pk, filename)
 
 class ContainerName(models.Model):
+    """
+    Model to store the container name for AmpliSeq analyses submitted to
+    Azure Batch.
+    """
     container_name = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
-        return self.container_name
+        return str(self.container_name)
 
 class AmpliSeqRequest(models.Model):
     """
@@ -35,12 +63,22 @@ class AmpliSeqRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project_name = models.CharField(max_length=256, blank=True)
     status = models.CharField(max_length=64, default='Unprocessed')
-    execution_report_download_link = models.CharField(max_length=512, blank=True)
-    execution_trace_download_link = models.CharField(max_length=512, blank=True)
-    execution_timeline_download_link = models.CharField(max_length=512, blank=True)
-    results_download_link = models.CharField(max_length=512, blank=True)
+    execution_report_download_link = models.CharField(
+        max_length=512, blank=True
+    )
+    execution_trace_download_link = models.CharField(
+        max_length=512, blank=True
+    )
+    execution_timeline_download_link = models.CharField(
+        max_length=512, blank=True
+    )
+    results_download_link = models.CharField(
+        max_length=512, blank=True
+    )
     created_at = models.DateField(auto_now_add=True)
-    error_list = ArrayField(models.CharField(max_length=2048), blank=True, default=list)
+    error_list = ArrayField(
+        models.CharField(max_length=2048), blank=True, default=list
+    )
     exit_code_file = models.CharField(max_length=2048, blank=True, null=True)
     emails_array = ArrayField(
         models.EmailField(max_length=100),
@@ -50,7 +88,8 @@ class AmpliSeqRequest(models.Model):
     )
     # Command line arguments
     """
-    source $CONDA/activate && nextflow run /opt/nf-core-ampliseq-2.6.1/workflow/ 
+    source $CONDA/activate && nextflow run
+    /opt/nf-core-ampliseq-2.6.1/workflow/ 
     -profile singularity
     -resume 
     --input $AZ_BATCH_NODE_MOUNTS_DIR/ampliseq-191224/data/raw/fastq_gz/ 
@@ -84,7 +123,9 @@ class AmpliSeqRequest(models.Model):
     TAXONOMY = [
         (DADA, _('Train a classifier for DADA2 taxonomic assignment')),
         (QIIME, _('Train a classifier for QIIME2 taxonomic assignment')),
-        (QIIME_CUSTOM, _('Use custom classifier for QIIME2 taxonomic assignment'))
+        (QIIME_CUSTOM, _(
+            'Use custom classifier for QIIME2 taxonomic assignment'
+        ))
     ]
 
     taxonomy =models.CharField(
