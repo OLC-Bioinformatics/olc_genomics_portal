@@ -483,7 +483,9 @@ stages:
           sudo -u "${TARGET_SSH_USER}" git config --global user.email "adam.koziol@inspection.gc.ca"
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv python3-dev apt-transport-https software-properties-common libpq-dev
+          sudo mkdir -p /etc/pip
+          echo -e "[global]\ntrusted-host = pypi.org pypi.python.org files.pythonhosted.org" | sudo tee /etc/pip.conf
 
           if ! command -v docker >/dev/null 2>&1; then
             echo "DEBUG: docker not installed, entering docker bootstrap block"
