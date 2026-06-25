@@ -9,42 +9,41 @@ from datetime import (
     timedelta,
     timezone,
 )
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import fnmatch
 from glob import glob
 from io import StringIO
+from time import sleep
+from urllib.parse import quote
+import fnmatch
 import json
 import logging
 import os
 import re
 import shutil
-import smtplib
-from time import sleep
 
-
-# Third-party library imports
-import azure.batch.models as batchmodels
-from azure.batch.models import (
-    BatchErrorException,
-    TaskState
+# Azure-related imports
+from azure.batch import BatchClient
+from azure.batch.models import BatchTaskState
+from azure.core.exceptions import (
+    AzureError,
+    HttpResponseError,
+    ResourceNotFoundError,
 )
 from azure.storage.blob import (
     BlobSasPermissions,
     generate_blob_sas,
 )
-from azure.core.exceptions import ResourceNotFoundError
-from Bio import SeqIO
-from celery import shared_task
-import ete3
-import pandas as pd
-import requests
-from sentry_sdk import capture_exception
-from strainchoosr import strainchoosr
 
 # Django-related imports
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+
+# Third-party library imports
+from Bio import SeqIO
+from celery import shared_task
+import ete3
+import pandas as pd
+from sentry_sdk import capture_exception
+from strainchoosr import strainchoosr
 
 # Local imports
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
@@ -52,11 +51,13 @@ from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
 from olc_webportalv2.common.methods import (
     create_batch_client,
     create_blob_service,
-    upload_blob_from_path,
-    download_blob_to_path,
-    generate_download_link,
     create_container,
+    download_blob_to_path,
     download_container,
+    generate_download_link,
+    generic_api_submit,
+    send_email,
+    upload_blob_from_path,
 )
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
@@ -226,11 +227,19 @@ def submit_batch(
     # Update the command with the final steps to copy the files back from the
     # datadrive to the container
     command += (
-        f' ; cp -R /datadrive/{sequencing_run.container} '
-        '$AZ_BATCH_NODE_MOUNTS_DIR'
+        f'; pipeline_status=$?; '
+        f'rsync -a /datadrive/{sequencing_run.container}/ '
+        f'$AZ_BATCH_NODE_MOUNTS_DIR/{sequencing_run.container}/; '
+        f'rsync_status=$?; '
+        f'sync; '
+        f'rm -rf /datadrive/{sequencing_run.container}; '
+        f'if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; '
+        f'if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; '
+        f'exit 0'
     )
 
-    # Create the API call
+
+    # Submit the API call
     cowbat_api_submit(
         command=command,
         run_folder=run_folder,
@@ -263,40 +272,30 @@ def cowbat_api_submit(
     Returns:
         None
     """
-    # Define the data
-    data = {
-        "container": sequencing_run.container,
-        "command_file": command,
-        "vm_size": vm_size,
-        "input_file_pattern": None,
-        "download_file_pattern": None,
-        "analysis_type": "COWBAT",
-        "unique_id": 'FoodPort'
-    }
 
-    # Make the POST request with a timeout of 10 seconds
-    response = requests.post(
-        settings.BATCH_SERVICE_URL,
-        headers=settings.BATCH_URL_HEADERS,
-        data=json.dumps(data),
-        timeout=10
+    # Submit the API call and get the JSON data from the response
+    response_data = generic_api_submit(
+        command=command,
+        container_name=sequencing_run.container,
+        vm_size=vm_size,
+        input_file_pattern=None,
+        analysis_type="COWBAT",
+        unique_id='FoodPort'
     )
-
-    # Get the JSON data from the response
-    response_data = response.json()
 
     # Print the data
     print('Batch API response', response_data)
 
     # Update the model with the response data
-    sequencing_run.pool_id = response_data['pool_id']
-    sequencing_run.job_id = response_data['job_id']
+    sequencing_run.pool_id = response_data.get('pool_id', '')
+    sequencing_run.job_id = response_data.get('job_id', '')
 
     # This is only taking the first entry from the tasks, as there should
     # only be one
-    sequencing_run.task_id = response_data['tasks'][0]
-    sequencing_run.batch_submit_status = response_data['status']
-    sequencing_run.batch_submit_errors = response_data['error']
+    tasks = response_data.get('tasks', [])
+    sequencing_run.task_id = tasks[0] if tasks else ''
+    sequencing_run.batch_submit_status = response_data.get('status', '')
+    sequencing_run.batch_submit_errors = response_data.get('error', '')
 
     # Save the changes
     sequencing_run.save()
@@ -337,11 +336,16 @@ def nextseq_run(
             blob_files=blob_files,
             container_name=container_name,
         )
+
+    # Store the base container name for use in creating sub-container names
+    base_container_name = container_name
+    
     # Submit the each sub-sequencing job to Azure Batch
     for i in sub_runs:
         run_name = sequencing_run.run_name
-        container_name = f'{run_name}-{i}'
-        print(f'Processing run {run_name} in container {container_name}')
+        sub_container_name = f'{base_container_name}-{i}'
+        print(f'Processing run {run_name} in container {sub_container_name}')
+
         # Set the path to store the configuration file
         local_path = os.path.join(os.path.join(
             'olc_webportalv2',
@@ -353,8 +357,8 @@ def nextseq_run(
 
         # Create a SequenceRun object for each sub-sequencing run
         sub_sequencing_run = SequencingRun.objects.get_or_create(
-            run_name=container_name,
-            container=container_name,
+            run_name=sub_container_name,
+            container=sub_container_name,
             seqids=sub_runs[i],
             basic_assembly=sequencing_run.basic_assembly,
             preprocess=sequencing_run.preprocess,
@@ -371,23 +375,31 @@ def nextseq_run(
             # archive_name = 'sub_sample_sheets-{i}.zip'.format(i=i)
 
             # Redefine the batch nodes path
-            path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
+            path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}'
 
             # Define the system call
             command = (
                 f'source $CONDA/activate /envs/cowbat && '
-                f'mkdir -p /datadrive/{container_name} && '
+                f'mkdir -p /datadrive/{sub_container_name} && '
                 f'cp -R {path} /datadrive/ && '
                 f'assembly_pipeline.py '
-                f'-s /datadrive/{container_name} '
-                f'-r /databases/0.5.0.23 && '
-                f'cp -R /datadrive/{container_name} $AZ_BATCH_NODE_MOUNTS_DIR'
+                f'-s /datadrive/{sub_container_name} '
+                f'-r /databases/0.5.0.23 '
+                f'; pipeline_status=$?; '
+                f'rsync -a /datadrive/{sub_container_name}/ '
+                f'$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}/; '
+                f'rsync_status=$?; '
+                f'sync; '
+                f'rm -rf /datadrive/{sub_container_name}; '
+                f'if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; '
+                f'if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; '
+                f'exit 0'
             )
 
             # Submit the API batch request
             cowbat_api_submit(
                 command=command,
-                run_folder=os.path.join(local_path, 'exit_codes.txt'),
+                run_folder=local_path,
                 sequencing_run=sub_sequencing_run,
                 vm_size='Standard_D48s_v3'
             )
@@ -662,9 +674,16 @@ def copy_blobs(
             blob_name=fastq,
             account_key=settings.AZURE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True),
-            expiry=datetime.utcnow() + timedelta(hours=1),
+            expiry=datetime.now(timezone.utc) + timedelta(hours=1),
         )
-        source_url = f"{blob_service_client.url}/{container_name}/{fastq}?{sas_token}"
+        
+        source_url = (
+            f"{blob_service_client.url}/"
+            f"{container_name}/"
+            f"{quote(fastq, safe='/')}?"
+            f"{sas_token}"
+        )
+
         dest_blob_client = blob_service_client.get_blob_client(
             container=sub_container_name,
             blob=fastq,
@@ -745,86 +764,6 @@ def no_sample_sheet(
             )
 
     return sub_runs
-
-
-def send_email(
-    subject: str,
-    body: str,
-    recipient: str
-):
-    """
-    Sends an email with the given subject, body, and recipient.
-
-    If an "Access denied" SMTP data error or a "wrong version number" SMTP
-    server disconnected error occurs, the function will wait for 5 seconds and
-    then retry the operation. This retry process will happen up to 50 times.
-    If any other error occurs, it will be raised immediately.
-
-    Args:
-        subject (str): The subject of the email.
-        body (str): The body of the email.
-        recipient (str): The recipient's email address.
-
-    Raises:
-        smtplib.SMTPDataError: If an SMTP data error occurs that is not an
-        "Access denied" error.
-        smtplib.SMTPServerDisconnected: If an SMTP server disconnected error
-        occurs that is not a "wrong version number" error.
-    """
-    # Define the sender's email address
-    from_addr = \
-        'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
-    # Define the recipient's email address
-    to_addr = recipient
-
-    # Create a MIME multipart message
-    msg = MIMEMultipart()
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-
-    # Attempt to send the email up to 50 times
-    for _ in range(50):
-        try:
-            # Connect to the SMTP server
-            server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
-            # Start TLS encryption
-            server.starttls()
-            # Login to the SMTP server
-            server.login(
-                user=os.environ.get('EMAIL_HOST_USER'),
-                password=os.environ.get('EMAIL_HOST_PASSWORD')
-            )
-            # Convert the message to a string
-            text = msg.as_string()
-            # Send the email
-            server.sendmail(from_addr, to_addr, text)
-            # If the email is sent successfully, break out of the loop
-            break
-        except smtplib.SMTPDataError as e:
-            # If an SMTP data error occurs...
-            if e.smtp_code == 554 and b"Access denied" in e.smtp_error:
-                # If the error is an "Access denied" error, print a message
-                # and wait for 5 seconds before retrying
-                print("Access denied error occurred, retrying...")
-                sleep(5)
-            else:
-                # If it's a different error, re-raise it
-                raise
-        except smtplib.SMTPServerDisconnected as e:
-            # If the SMTP server gets disconnected...
-            if "wrong version number" in str(e):
-                # If the error is a "wrong version number" error, print a
-                # message, wait for 5 seconds, and reconnect to the server
-                print("Wrong version number error occurred, retrying...")
-                sleep(5)
-            else:
-                # If it's a different error, re-raise it
-                raise
-        finally:
-            # Close the connection to the SMTP server
-            server.quit()
 
 
 def load_report(report, seq_run):
@@ -1040,6 +979,17 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
     # Set the name of the blob container where the zip file will be uploaded
     report_assembly_container = 'reports-and-assemblies'
+
+    # Upload the zip file to the blob container
+    upload_blob_from_path(
+        container_name=report_assembly_container,
+        blob_name=blob_name,
+        file_path=os.path.join(
+            run_folder,
+            blob_name
+        ),
+        blob_service_client=blob_service,
+    )
 
     # Generate a SAS URL for the zip file and update the SequencingRun object
     # with the download link
@@ -1263,13 +1213,6 @@ def check_cowbat_progress(
     :param batch_job_name: Name of the batch job
     :param sequencing_run: SequencingRun object
     """
-    # Get the list of files from the task in the batch job
-    node_files = batch_client.file.list_from_task(
-        job_id=batch_job_name,
-        task_id=batch_task_name,
-        recursive=True
-    )
-
     # Ensure that the model status is set to "Processing"
     sequencing_run.status = 'Processing'
     sequencing_run.save()
@@ -1311,7 +1254,7 @@ def check_cowbat_progress(
                         )
                 except Exception as exc:
                     sequencing_run.errors.append('stderr issue:')
-                    sequencing_run.errors.append(exc)
+                    sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
             elif 'log' in node_file.name or 'err' in node_file.name or \
                     'metadata.json' in node_file.name:
@@ -1326,7 +1269,7 @@ def check_cowbat_progress(
                     sequencing_run.errors.append(
                         'log/err/metadata.json issue:'
                     )
-                    sequencing_run.errors.append(exc)
+                    sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
             elif 'reports' in node_file.name and not \
                     node_file.name.endswith('reports'):
@@ -1342,11 +1285,11 @@ def check_cowbat_progress(
                     sequencing_run.errors.append(node_file.name)
                     sequencing_run.errors.append(text_files)
                     sequencing_run.errors.append(type(exc))
-                    sequencing_run.errors.append(exc)
+                    sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
-    except BatchErrorException as exc:
-        sequencing_run.errors.append('BatchErrorException:')
-        sequencing_run.errors.append(exc)
+    except (AzureError, HttpResponseError) as exc:
+        sequencing_run.errors.append('Azure error:')
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
     # Otherwise, update the model
@@ -1360,7 +1303,7 @@ def check_cowbat_progress(
                 sequencing_run.save()
             except Exception as exc:
                 sequencing_run.errors.append('Update model error:')
-                sequencing_run.errors.append(exc)
+                sequencing_run.errors.append(str(exc))
                 sequencing_run.save()
     # Save the files
     try:
@@ -1382,7 +1325,7 @@ def check_cowbat_progress(
                     text_output.write(content_chunk.decode())
     except Exception as exc:
         sequencing_run.errors.append('Saving file error:')
-        sequencing_run.errors.append(exc)
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
 
@@ -1410,12 +1353,13 @@ def check_cowbat_tasks():
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != batchmodels.TaskState.completed:
+                if cloudtask.state != BatchTaskState.COMPLETED:
                     tasks_completed = False
-        except BatchErrorException as exc:
+        except (AzureError, HttpResponseError) as exc:
             sequencing_run.errors.append('Running task error:')
-            sequencing_run.errors.append(exc)
+            sequencing_run.errors.append(str(exc))
             sequencing_run.save()
+            continue
 
         # If tasks have completed, check exit codes
         if tasks_completed:
@@ -1511,25 +1455,26 @@ def handle_task_completion(
                 exit_code = cloudtask.execution_info.exit_code
                 exit_codes_good = False
                 sequencing_run.errors.append('Exit code issue: ')
-                sequencing_run.errors.append(cloudtask.execution_info)
-    except BatchErrorException as exc:
+                sequencing_run.errors.append(str(cloudtask.execution_info))
+    except (AzureError, HttpResponseError) as exc:
         sequencing_run.errors.append('Terminating task error:')
-        sequencing_run.errors.append(exc)
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
+        return
 
     # Get rid of job and pool, so we don't waste big $$$ and do cleanup/get
     # files downloaded in tasks.
     try:
         batch_client.job.delete(job_id=batch_job_name)
-    except BatchErrorException as exc:
+    except (AzureError, HttpResponseError) as exc:
         sequencing_run.errors.append('Terminating job error:')
-        sequencing_run.errors.append(exc)
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
     try:
         batch_client.pool.delete(pool_id=sequencing_run.pool_id)
-    except BatchErrorException as exc:
+    except (AzureError, HttpResponseError) as exc:
         sequencing_run.errors.append('Terminating pool error:')
-        sequencing_run.errors.append(exc)
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
     # Add the exit code to the sequencing run
@@ -1544,7 +1489,7 @@ def handle_task_completion(
             )
         except Exception as exc:
             sequencing_run.errors.append('Clean-up error:')
-            sequencing_run.errors.append(exc)
+            sequencing_run.errors.append(str(exc))
             sequencing_run.save()
     else:
         # Something went wrong - update status to error so user knows.
@@ -1556,7 +1501,7 @@ def handle_task_completion(
         AzureTask.objects.filter(id=azure_task_id).delete()
     except Exception as exc:
         sequencing_run.errors.append('AzureTask deletion error:')
-        sequencing_run.errors.append(exc)
+        sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
 
@@ -1576,13 +1521,28 @@ def handle_incomplete_tasks(
     azure_task_id (int): The ID of the Azure task.
     """
     # Locate all the batch pools
-    pools = batch_client.pool.list()
+    try:
+        pools = list(batch_client.pool.list())
+    except AzureError as exc:
+        sequencing_run.errors.append('Pool listing error:')
+        sequencing_run.errors.append(str(exc))
+        sequencing_run.save()
+        return
+
     # Determine whether the batch job is in the list of pools
     present = batch_job_name in [pool.id for pool in pools]
     if not present and sequencing_run.status == 'Resize Error':
         handle_resize_error(sequencing_run, batch_job_name, azure_task_id)
+
     # Recreate the pools generator
-    pools = batch_client.pool.list()
+    try:
+        pools = list(batch_client.pool.list())
+    except AzureError as exc:
+        sequencing_run.errors.append('Pool listing error:')
+        sequencing_run.errors.append(str(exc))
+        sequencing_run.save()
+        return
+
     # Iterate over the pools
     for pool in pools:
         # Ensure that the current batch job is being evaluated
@@ -1642,10 +1602,10 @@ def check_tree_tasks() -> None:
         try:
             # Check if all tasks related to this job have completed
             tasks_completed = all(
-                task.state == TaskState.completed
+                task.state == BatchTaskState.COMPLETED
                 for task in batch_client.task.list(batch_job_name)
             )
-        except BatchErrorException as exc:
+        except (AzureError, HttpResponseError) as exc:
             # If job doesn't exist, update status to 'Error' and delete
             # the task
             Tree.objects.filter(
@@ -1672,7 +1632,7 @@ def check_tree_tasks() -> None:
 
                 download_container(
                     blob_service_client=blob_client,
-                    container_name=f'{batch_job_name}-output',
+                    container_name=batch_job_name,
                     output_dir=os.path.join(
                         'olc_webportalv2',
                         'media'
@@ -1702,7 +1662,7 @@ def check_tree_tasks() -> None:
                 tree_object.save()
 
                 # Delete the containers related to this tree task
-                for suffix in ['', '-input', '-output']:
+                for suffix in ['-input', '-output']:
                     try:
                         blob_client.delete_container(
                             container_name=f'tree-{tree_object.pk}{suffix}'
@@ -1719,6 +1679,9 @@ def check_tree_tasks() -> None:
                     os.path.join(tree_output_folder, 'batch_config.txt')
                 )
 
+                # Create a variable to store the zip path
+                zip_path = f'{tree_output_folder}.zip'
+
                 # Zip the output folder and upload it to the cloud
                 shutil.make_archive(
                     tree_output_folder,
@@ -1726,10 +1689,18 @@ def check_tree_tasks() -> None:
                     tree_output_folder
                 )
                 tree_result_container = f'tree-{tree_object.pk}'
+
+                # Upload the zip file to the cloud and generate a SAS URL for download
+                upload_blob_from_path(
+                    blob_service_client=blob_client,
+                    container_name=tree_result_container,
+                    blob_name=os.path.basename(zip_path),
+                    file_path=zip_path
+                )
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=tree_result_container,
-                    blob_name=os.path.basename(f'{tree_output_folder}.zip'),
+                    blob_name=os.path.basename(zip_path),
                     expiry=8
                 )
 
@@ -1786,10 +1757,10 @@ def check_amr_summary_tasks():
         try:
             # Check if all tasks related to this job have completed
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != batchmodels.TaskState.completed:
+                if cloudtask.state != BatchTaskState.COMPLETED:
                     tasks_completed = False
         # If job doesn't exist, update status to 'Error' and delete the task
-        except BatchErrorException:
+        except (AzureError, HttpResponseError):
             AMRSummary.objects.filter(
                 pk=amr_task.amr_request.pk
             ).update(status='Error')
@@ -1833,6 +1804,16 @@ def check_amr_summary_tasks():
                 )
 
                 amr_result_container = f'amrsummary-{amr_object.pk}'
+
+                # Generate a SAS URL for the zip file and update the
+                # AMRSummary object with the download link
+                upload_blob_from_path(
+                    blob_service_client=blob_client,
+                    container_name=amr_result_container,
+                    blob_name=os.path.basename(f'{output_dir}.zip'),
+                    file_path=f'{output_dir}.zip'
+                )
+
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=amr_result_container,
@@ -1920,10 +1901,10 @@ def check_vir_typer_tasks():
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != batchmodels.TaskState.completed:
+                if cloudtask.state != BatchTaskState.COMPLETED:
                     tasks_completed = False
         # Catch specific Azure Batch exceptions
-        except batchmodels.BatchErrorException:
+        except (AzureError, HttpResponseError):
             VirTyperProject.objects.filter(
                 pk=vir_typer_task.pk).update(status='Error')
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
@@ -1980,7 +1961,14 @@ def check_vir_typer_tasks():
                 with open(json_output, 'r', encoding='utf-8') as json_report:
                     vir_typer_task.report = json.load(json_report)
 
-                # Generate a download link for the output zip file
+                # Upload the zip file to the cloud and generate a SAS URL for
+                # download
+                upload_blob_from_path(
+                    blob_service_client=blob_client,
+                    container_name=vir_typer_result_container,
+                    blob_name=os.path.basename(output_dir + '.zip'),
+                    file_path=output_dir + '.zip'
+                )
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
@@ -2029,9 +2017,9 @@ def check_prokka_tasks() -> None:
             # Check the status of each task in the batch
             for cloud_task in batch_client.task.list(batch_job_name):
                 # If any task is not completed, set tasks_completed to False
-                if cloud_task.state != batchmodels.TaskState.completed:
+                if cloud_task.state != BatchTaskState.COMPLETED:
                     tasks_completed = False
-        except (batchmodels.BatchErrorException, Exception):
+        except (AzureError, HttpResponseError):
             # Handle exceptions
             ProkkaRequest.objects.filter(
                 pk=prokka_task.prokka_request.pk
@@ -2050,7 +2038,7 @@ def check_prokka_tasks() -> None:
 
 
 def handle_completed_tasks(
-    batch_client: create_batch_client,
+    batch_client: BatchClient,
     batch_job_name: str,
     prokka_object: ProkkaRequest,
     prokka_task: ProkkaAzureRequest
@@ -2114,7 +2102,15 @@ def handle_successful_tasks(
     # Define the result container name
     prokka_result_container = f'prokka-result-{prokka_object.pk}'
 
-    # Generate a download link for the zip file
+    # Upload the zip file to the cloud
+    upload_blob_from_path(
+        blob_service_client=blob_client,
+        container_name=prokka_result_container,
+        blob_name=os.path.basename(output_dir + '.zip'),
+        file_path=output_dir + '.zip'
+    )
+
+    # Generate a SAS URL for the zip file
     sas_url = generate_download_link(
         blob_service_client=blob_client,
         container_name=prokka_result_container,
@@ -2290,11 +2286,11 @@ def check_geneseekr_tasks():
             for cloudtask in batch_client.task.list(batch_job_name):
 
                 # If any task is not completed, set the flag to False
-                if cloudtask.state != batchmodels.TaskState.completed:
+                if cloudtask.state != BatchTaskState.COMPLETED:
                     tasks_completed = False
 
-        # If a BatchErrorException occurs, handle it
-        except batchmodels.BatchErrorException:
+        # If an Azure-related error occurs, handle it
+        except (AzureError, HttpResponseError):
             GeneSeekrRequest.objects.filter(
                 pk=geneseekr_task.geneseekr_request.pk
             ).update(status='Error')
