@@ -5,7 +5,7 @@ Common methods shared between multiple apps
 """
 
 # Standard imports
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.parse import quote
@@ -29,14 +29,12 @@ from azure.storage.blob import (
 )
 
 # Third-party imports
-from celery import shared_task
 import requests
 
 # Django-related imports
 from django.conf import settings
 
 
-@shared_task
 def generic_api_submit(
     command: str,
     container_name: str,
@@ -44,7 +42,7 @@ def generic_api_submit(
     analysis_type: str = "COWBAT",
     input_file_pattern: Optional[list] = None,
     unique_id: Optional[str] = None
-) -> None:
+) -> dict:
     """
     Submits a job to the Batch API.
 
@@ -64,7 +62,7 @@ def generic_api_submit(
             using a random hash. Default is None
 
     Returns:
-        None
+        dict: The response from the Batch API as a dictionary.
     """
     # Ensure that empty lists are converted to None
     input_file_pattern = input_file_pattern if input_file_pattern else None
@@ -122,6 +120,17 @@ def generic_api_submit(
 
     response.raise_for_status()  # Raise an error for bad responses
 
+    # Check if the response is a JSON object and return it, otherwise
+    # raise an error
+    if isinstance(response_json, dict):
+        return response_json
+
+    raise ValueError(
+        f"Batch API did not return a JSON object. "
+        f"content_type={content_type!r}, response_json={response_json!r}"
+    )
+
+
 
 def send_email(
     *,  # Enforce keyword arguments
@@ -163,6 +172,7 @@ def send_email(
 
     # Attempt to send the email up to 50 times
     for _ in range(50):
+        server = None  # Initialize server variable
         try:
             # Connect to the SMTP server
             server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
@@ -206,7 +216,8 @@ def send_email(
                 raise
         finally:
             # Close the connection to the SMTP server
-            server.quit()
+            if server is not None:
+                server.quit()
 
 
 def create_batch_client() -> BatchClient:
@@ -308,10 +319,20 @@ def upload_blob_from_path(
     :param blob_service_client: BlobServiceClient instance
     :return: None
     """
+
+    # Ensure the container exists before uploading
+    create_container(
+        container_name=container_name,
+        blob_service_client=blob_service_client
+    )
+
+    # Get the blob client for the specified container and blob
     blob_client = blob_service_client.get_blob_client(
         container=container_name,
         blob=blob_name
     )
+
+    # Upload the file to the blob
     with open(file_path, "rb") as data:
         blob_client.upload_blob(data, overwrite=True)
 
@@ -371,7 +392,7 @@ def generate_download_link(
         blob_name=blob_name,
         account_key=settings.AZURE_ACCOUNT_KEY,
         permission=BlobSasPermissions(read=True),
-        expiry=datetime.utcnow() + timedelta(days=expiry),
+        expiry=datetime.now(timezone.utc) + timedelta(days=expiry),
         content_disposition=content_disposition,
     )
 
@@ -402,7 +423,7 @@ def generate_container_download_link(
         container_name=container_name,
         account_key=settings.AZURE_ACCOUNT_KEY,
         permission=ContainerSasPermissions(read=True),
-        expiry=datetime.utcnow() + timedelta(days=expiry),
+        expiry=datetime.now(timezone.utc) + timedelta(days=expiry),
     )
     return f"{blob_service_client.url}/{container_name}?{sas_token}"
 
