@@ -121,8 +121,9 @@ services:
       - celeryworker
       - celerybeat
     command: [
+      "python",
+      "-m",
       "flower",
-      "--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD",
       "--broker=redis://redis:6379/0",
       "--port=8888"
     ]
