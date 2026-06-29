@@ -89,6 +89,8 @@ RESOURCE_NAME_MAP = {
     'projects': 'project',
     'user': 'user',
     'users': 'user',
+    'group': 'group',
+    'groups': 'group',
     'tracker': 'tracker',
     'trackers': 'tracker',
     'issue_status': 'issue_status',
@@ -132,9 +134,10 @@ def list_supported_resources():
 
 
 ALL_EXPORT_RESOURCES = [
-    'projects', 'users', 'trackers', 'issue_statuses', 'enumerations',
+    'projects', 'users', 'groups', 'trackers', 'issue_statuses', 'enumerations',
     'custom_fields', 'versions', 'categories', 'roles',
-    'queries', 'wiki_pages', 'news', 'documents', 'time_entries'
+    'queries', 'wiki_pages', 'news', 'documents', 'time_entries',
+    'memberships',
 ]
 
 
@@ -374,7 +377,7 @@ def issue_attachments_need_sync(
     if attachment_project_id is None:
         return False
 
-    if get_issue_project_id(issue_data) != attachment_project_id:
+    if get_issue_project_id(issue_data) not in attachment_project_id:
         return False
 
     for attachment in get_issue_attachments(issue_data):
@@ -418,7 +421,7 @@ def download_issue_attachments(
     if attachment_project_id is None:
         return issue_data
 
-    if get_issue_project_id(issue_data) != attachment_project_id:
+    if get_issue_project_id(issue_data) not in attachment_project_id:
         return issue_data
 
     for attachment in get_issue_attachments(issue_data):
@@ -666,7 +669,7 @@ def retrieve_resources(
         try:
             # Some resources (project, user, etc.) do not support filter().
             no_filter_resources = {
-                'project', 'user', 'role', 'tracker', 'issue_status',
+                'project', 'user', 'group', 'role', 'tracker', 'issue_status',
                 'enumeration', 'custom_field', 'version', 'query',
                 'wiki_page', 'news', 'document', 'time_entry'
             }
@@ -801,6 +804,7 @@ def export_resources(
     sleep_seconds=0.25,
     max_retries=3,
     retry_backoff=1.0,
+    state_suffix=None,
 ):
     """Export a named set of resource objects from Redmine."""
     resource_dir = os.path.join(output_base, resource_name)
@@ -820,7 +824,12 @@ def export_resources(
     for item in all_items:
         save_resource(item, resource_dir)
 
-    state_file = os.path.join(output_base, f'{resource_name}_state.json')
+    state_name = resource_name
+    if state_suffix:
+        state_name = f'{resource_name}_{state_suffix}'
+
+    state_file = os.path.join(output_base, f'{state_name}_state.json')
+
     write_state(state_file, {
         'resource': resource_name,
         'count': len(all_items),
@@ -841,8 +850,22 @@ def export_all_resources(
     max_retries=3,
     retry_backoff=1.0,
 ):
-    """Export a set of resources defined by name list."""
+    """Export a set of resources defined by name list.
+
+    Project-scoped resources are fetched once per project_id to avoid passing
+    a list as project_id to Redmine endpoints that expect a scalar value.
+    """
     results = {}
+
+    project_scoped_resources = {
+        'issue',
+        'time_entry',
+        'wiki_page',
+        'document',
+        'news',
+        'membership',
+    }
+
     for name in resource_names:
         normalized = normalize_resource_name(name)
         if not normalized:
@@ -850,22 +873,48 @@ def export_all_resources(
             results[name] = 0
             continue
 
-        params = {}
-        if normalized in ('issue', 'time_entry', 'wiki_page', 'document', 'news', 'membership') and project_ids:
-            params['project_id'] = project_ids
+        total_exported = 0
 
-        # output folder uses original token to preserve user intent
-        results[name] = export_resources(
-            redmine,
-            output_base=output_base,
-            resource_name=normalized,
-            params=params,
-            max_items=max_items,
-            batch_limit=batch_limit,
-            sleep_seconds=sleep_seconds,
-            max_retries=max_retries,
-            retry_backoff=retry_backoff,
-        )
+        if normalized in project_scoped_resources and project_ids:
+            for pid in project_ids:
+                params = {'project_id': pid}
+
+                logging.info(
+                    'Exporting project-scoped resource %s for project %s',
+                    normalized,
+                    pid,
+                )
+
+                count = export_resources(
+                    redmine,
+                    output_base=output_base,
+                    resource_name=normalized,
+                    params=params,
+                    max_items=max_items,
+                    batch_limit=batch_limit,
+                    sleep_seconds=sleep_seconds,
+                    max_retries=max_retries,
+                    retry_backoff=retry_backoff,
+                    state_suffix=str(pid),
+                )
+
+                total_exported += count
+
+        else:
+            total_exported = export_resources(
+                redmine,
+                output_base=output_base,
+                resource_name=normalized,
+                params={},
+                max_items=max_items,
+                batch_limit=batch_limit,
+                sleep_seconds=sleep_seconds,
+                max_retries=max_retries,
+                retry_backoff=retry_backoff,
+            )
+
+        results[name] = total_exported
+
     return results
 
 
@@ -883,7 +932,7 @@ def export_issues(
     max_retries=3,
     retry_backoff=1.0,
     download_attachments=False,
-    attachment_project_id=67,
+    attachment_project_id=[67, 78],
     attachment_output_dir=DEFAULT_ATTACHMENT_OUTPUT_DIR,
     local_redmine_url="http://127.0.0.1:3000",
     request_timeout=60,
@@ -1154,7 +1203,7 @@ def parse_args():
     )
     parser.add_argument(
         '--resources',
-        default='projects,users,trackers,issue_statuses,enumerations,custom_fields,versions,categories,time_entries',
+        default='projects,users,groups,trackers,issue_statuses,enumerations,custom_fields,versions,categories,roles,memberships,time_entries',
         help='Comma-separated list of resources to export via API (default common set; include "all" for all except issues)'
     )
     parser.add_argument(
@@ -1208,9 +1257,9 @@ def parse_args():
     )
     parser.add_argument(
         '--attachment-project-id',
-        type=int,
-        default=67,
-        help='Only download attachments for issues in this project id'
+        type=lambda s: [int(item) for item in s.split(',')],
+        default=[67,78],
+        help='Only download attachments for issues in these project ids (comma-separated)'
     )
     parser.add_argument(
         '--attachment-output-dir',
