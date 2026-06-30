@@ -476,17 +476,16 @@ stages:
           sudo cp /tmp/github_ssh_config "/home/${TARGET_SSH_USER}/.ssh/config"
           sudo chmod 600 "/home/${TARGET_SSH_USER}/.ssh/config"
           sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/config"
-          sudo -u "${TARGET_SSH_USER}" ssh-keyscan github.com >> "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
+          ssh-keyscan github.com >> "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
           sudo chmod 644 "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
           sudo chown "${TARGET_SSH_USER}:${TARGET_SSH_USER}" "/home/${TARGET_SSH_USER}/.ssh/known_hosts"
-          sudo -u "${TARGET_SSH_USER}" git config --global user.name "adamkoziol"
-          sudo -u "${TARGET_SSH_USER}" git config --global user.email "adam.koziol@inspection.gc.ca"
-          if [ -d "$REMOTE_DIR/.git" ]; then
-            sudo -u "${TARGET_SSH_USER}" git -C "$REMOTE_DIR" remote set-url origin git@github.com:OLC-Bioinformatics/olc_genomics_portal.git || true
-          fi
+          git config --global user.name "adamkoziol"
+          git config --global user.email "adam.koziol@inspection.gc.ca"
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
-          sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv python3-dev apt-transport-https software-properties-common libpq-dev
+          sudo mkdir -p /etc/pip
+          echo -e "[global]\ntrusted-host = pypi.org pypi.python.org files.pythonhosted.org" | sudo tee /etc/pip.conf
 
           if ! command -v docker >/dev/null 2>&1; then
             echo "DEBUG: docker not installed, entering docker bootstrap block"
@@ -673,6 +672,26 @@ stages:
         tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
 
+        ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -i "$(sshKey.secureFilePath)" \
+            -p "${TARGET_SSH_PORT}" \
+            "${TARGET_SSH_USER}@${TARGET_HOST}" <<EOF
+        set -euo pipefail
+
+        REMOTE_DIR="/home/${TARGET_SSH_USER}/FoodPort/olc_genomics_portal"
+
+        cd "\$REMOTE_DIR"
+
+        if [ -d .git ]; then
+          git remote set-url origin git@github.com:OLC-Bioinformatics/olc_genomics_portal.git
+          echo "Updated Git remotes:"
+          git remote -v
+        else
+          echo "WARNING: \$REMOTE_DIR has no .git directory; skipping git remote set-url"
+        fi
+        EOF
+
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
         VM_SECRET_VAL="$(fetchVmCreds.VM_SECRET)"
@@ -834,6 +853,31 @@ stages:
 
           python3 "$REMOTE_DIR/remote_deploy_env.py"
           cd "$REMOTE_DIR"
+
+          # --- Try to switch to dev branch (non-fatal if it fails) ---
+          if [ -d .git ]; then
+            echo "Attempting to checkout 'dev' branch"
+            git fetch origin dev || true
+            git checkout dev || echo "WARNING: could not checkout dev branch"
+            git pull origin dev || echo "WARNING: could not pull dev branch"
+          else
+            echo "WARNING: no .git directory present; skipping branch checkout"
+          fi
+
+          CONDA_BIN="$HOME/miniconda/bin/conda"
+
+          # --- Create conda environment if missing ---
+          if ! "$CONDA_BIN" env list | grep -qE '(^|/)\bfoodport\b'; then
+            echo "Creating conda environment 'foodport'"
+            "$CONDA_BIN" create -n foodport python=3.14 -y
+          else
+            echo "Conda environment 'foodport' already exists"
+          fi
+
+          # --- Install/upgrade pip + requirements inside env ---
+          echo "Installing Python dependencies into 'foodport' environment"
+          "$CONDA_BIN" run -n foodport pip install --upgrade pip
+          "$CONDA_BIN" run -n foodport pip install --upgrade -r "$REMOTE_DIR/requirements/base.txt"
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid

@@ -366,15 +366,17 @@ def get_attachment_storage_path(attachment_root, attachment_id, filename):
 
 def issue_attachments_need_sync(
     issue_data,
-    attachment_project_id,
+    attachment_project_ids,
     attachment_root,
     local_redmine_url,
 ):
     """Check whether issue attachments need download or URL rewrite."""
-    if attachment_project_id is None:
+    attachment_project_ids = normalize_attachment_project_ids(attachment_project_ids)
+
+    if not attachment_project_ids:
         return False
 
-    if get_issue_project_id(issue_data) != attachment_project_id:
+    if get_issue_project_id(issue_data) not in attachment_project_ids:
         return False
 
     for attachment in get_issue_attachments(issue_data):
@@ -405,7 +407,7 @@ def issue_attachments_need_sync(
 
 def download_issue_attachments(
     issue_data,
-    attachment_project_id,
+    attachment_project_ids,
     attachment_root,
     local_redmine_url,
     api_key,
@@ -415,10 +417,12 @@ def download_issue_attachments(
     ca_bundle_path=None,
 ):
     """Download issue attachments and rewrite their content URLs."""
-    if attachment_project_id is None:
+    attachment_project_ids = normalize_attachment_project_ids(attachment_project_ids)
+    
+    if not attachment_project_ids:
         return issue_data
 
-    if get_issue_project_id(issue_data) != attachment_project_id:
+    if get_issue_project_id(issue_data) not in attachment_project_ids:
         return issue_data
 
     for attachment in get_issue_attachments(issue_data):
@@ -869,6 +873,20 @@ def export_all_resources(
     return results
 
 
+def normalize_attachment_project_ids(project_ids):
+    """Return attachment project IDs as a set of integers."""
+    if project_ids is None:
+        return set()
+
+    if isinstance(project_ids, int):
+        return {project_ids}
+
+    if isinstance(project_ids, str):
+        return {int(pid.strip()) for pid in project_ids.split(",") if pid.strip()}
+
+    return {int(pid) for pid in project_ids}
+
+
 def export_issues(
     redmine,
     output_base,
@@ -883,7 +901,7 @@ def export_issues(
     max_retries=3,
     retry_backoff=1.0,
     download_attachments=False,
-    attachment_project_id=67,
+    attachment_project_ids=(67, 78),
     attachment_output_dir=DEFAULT_ATTACHMENT_OUTPUT_DIR,
     local_redmine_url="http://127.0.0.1:3000",
     request_timeout=60,
@@ -1002,7 +1020,7 @@ def export_issues(
             if download_attachments:
                 needs_attachment_sync = issue_attachments_need_sync(
                     existing,
-                    attachment_project_id,
+                    attachment_project_ids,
                     attachment_output_dir,
                     local_redmine_url,
                 )
@@ -1041,7 +1059,7 @@ def export_issues(
         if download_attachments:
             issue_data = download_issue_attachments(
                 issue_data,
-                attachment_project_id,
+                attachment_project_ids,
                 attachment_output_dir,
                 local_redmine_url,
                 API_KEY,
@@ -1207,10 +1225,9 @@ def parse_args():
         help='Download issue attachments and rewrite their URLs locally'
     )
     parser.add_argument(
-        '--attachment-project-id',
-        type=int,
-        default=67,
-        help='Only download attachments for issues in this project id'
+        "--attachment-project-ids",
+        default="67,78",
+        help="Only download attachments for issues in these project ids (comma-separated)",
     )
     parser.add_argument(
         '--attachment-output-dir',
@@ -1357,7 +1374,7 @@ def main():
             max_retries=args.retries,
             retry_backoff=args.retry_backoff,
             download_attachments=args.download_attachments,
-            attachment_project_id=args.attachment_project_id,
+            attachment_project_ids=args.attachment_project_ids,
             attachment_output_dir=args.attachment_output_dir,
             local_redmine_url=args.local_redmine_url,
             request_timeout=args.timeout,
