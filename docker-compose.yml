@@ -55,6 +55,8 @@ services:
       - REDMINE_NO_DB_MIGRATE=1
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DB_NAME=redmine
+      - DB_USER=redmine
     volumes:
       - ./redmine/files:/usr/src/redmine/files
       - ./redmine/log:/usr/src/redmine/log
