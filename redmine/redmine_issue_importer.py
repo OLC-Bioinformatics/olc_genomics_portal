@@ -625,28 +625,32 @@ def get_user_name_by_legacy_id(conn, legacy_user_id):
 
 
 def translate_issue_record(raw, conn):
-    # Map foreign key IDs using id_mapping for 1st-tier resource migration.
-    for fk in ('project_id', 'tracker_id', 'status_id', 'author_id', 'assigned_to_id', 'priority_id', 'category_id', 'fixed_version_id'):
+    fk_resource_map = {
+        "project_id": "projects",
+        "tracker_id": "trackers",
+        "status_id": "issue_statuses",
+        "author_id": "users",
+        "assigned_to_id": "users",
+        "priority_id": "enumerations",
+        "category_id": "issue_categories",
+        "fixed_version_id": "versions",
+    }
+
+    for fk, resource in fk_resource_map.items():
         value = raw.get(fk)
-        if value is not None:
-            if fk == 'category_id':
-                resource = 'issue_categories'
-            elif fk == 'fixed_version_id':
-                resource = 'versions'
-            else:
-                resource = fk.replace('_id', 's')
-            mapped = get_id_mapping(conn, resource, value)
-            # priorities may be under 'enumerations' in export
-            if mapped is None and fk == 'priority_id':
-                mapped = get_id_mapping(conn, 'enumerations', value)
-            if mapped:
-                raw[fk] = mapped
-    # parent issue mapping is special because it refers to issues
-    parent_value = raw.get('parent_id')
+        if value is None:
+            continue
+
+        mapped = get_id_mapping(conn, resource, value)
+        if mapped:
+            raw[fk] = mapped
+
+    parent_value = raw.get("parent_id")
     if parent_value is not None:
-        mapped_parent = get_id_mapping(conn, 'issues', parent_value)
+        mapped_parent = get_id_mapping(conn, "issues", parent_value)
         if mapped_parent:
-            raw['parent_id'] = mapped_parent
+            raw["parent_id"] = mapped_parent
+
     return raw
 
 
@@ -690,11 +694,19 @@ PLURAL_RESOURCE_MAP = {
     'issue': 'issues',
 }
 
-
 def get_resource_path(resource):
-    if resource.endswith('s'):
+    explicit = {
+        "issue_status": "issue_statuses",
+        "issue_statuses": "issue_statuses",
+    }
+
+    if resource in explicit:
+        return explicit[resource]
+
+    if resource.endswith("s"):
         return resource
-    return PLURAL_RESOURCE_MAP.get(resource, resource + 's')
+
+    return PLURAL_RESOURCE_MAP.get(resource, resource + "s")
 
 
 def get_db_connection(host, port, user, password, db):
@@ -837,12 +849,19 @@ def get_existing_remote_ids(redmine, resource, api_key=None):
     return ids, total_count
 
 
-def get_default_project_id(redmine):
-    try:
-        project = redmine.project.all(limit=1).first()
-        return project.id if project else None
-    except Exception:
-        return None
+# def get_default_project_id(redmine):
+#     try:
+#         project = redmine.project.all(limit=1).first()
+#         return project.id if project else None
+#     except Exception:
+#         return None
+
+def get_default_project_id(redmine, api_key=None):
+    data = fetch_remote_resource_json(
+        redmine, "projects", {"limit": 1, "offset": 0}, api_key=api_key
+    )
+    projects = data.get("projects", []) if isinstance(data, dict) else []
+    return projects[0]["id"] if projects else None
 
 
 def normalize_name(value):
@@ -938,7 +957,7 @@ def ensure_user_project_membership(redmine, user_id, project_id):
         return False
 
 
-def create_dummy_resource(redmine, resource, dummy_id, keep=False):
+def create_dummy_resource(redmine, resource, dummy_id, keep=False, api_key=None):
     logging.debug('create_dummy_resource: resource=%s, dummy_id=%s, keep=%s', resource, dummy_id, keep)
     try:
         if resource == 'project':
@@ -1006,7 +1025,7 @@ def create_dummy_resource(redmine, resource, dummy_id, keep=False):
             return created_id
 
         elif resource == 'issue':
-            project_id = get_default_project_id(redmine)
+            project_id = get_default_project_id(redmine, api_key=api_key)
             if not project_id:
                 logging.warning('No project found via API; using fallback project id=11 for dummy issue')
                 project_id = 11
@@ -1017,7 +1036,12 @@ def create_dummy_resource(redmine, resource, dummy_id, keep=False):
                     raise Exception('fallback project missing')
             except Exception:
                 logging.warning('Fallback project id=11 not found; creating temporary project __dummy_proj_for_issue__')
-                proj = redmine.project.create(name='__dummy_proj_for_issue__', identifier='__dummy_proj_for_issue_{0}__'.format(int(datetime.now(timezone.utc).timestamp())))
+                unique_tag = int(datetime.now(timezone.utc).timestamp() * 1000)
+
+                proj = redmine.project.create(
+                    name='__dummy_proj_for_issue__',
+                    identifier='dummy-proj-for-issue-{0}-{1}'.format(dummy_id, unique_tag)
+                )
                 project_id = proj.id
 
             tracker_objs = redmine.tracker.all(limit=1)
@@ -1100,7 +1124,13 @@ def ensure_target_id_sequence(redmine, resource, target_legacy, api_key=None, db
 
             logging.info('Creating dummy stub %s for %s to approach target %s (current_max=%s)',
                          next_id_fill, resource, target_legacy, current_max)
-            created_id = create_dummy_resource(redmine, resource, next_id_fill, keep=False)
+            created_id = create_dummy_resource(
+                redmine,
+                resource,
+                next_id_fill,
+                keep=False,
+                api_key=api_key,
+            )
             if created_id is None:
                 logging.warning('Failed to create dummy stub %s for %s; aborting sequence', next_id_fill, resource)
                 return False
@@ -1133,7 +1163,13 @@ def ensure_target_id_sequence(redmine, resource, target_legacy, api_key=None, db
             continue
 
         logging.info('Creating dummy stub for %s to approach target %s (current_max=%s next=%s)', resource, target_legacy, current_max, next_id_fill)
-        created_id = create_dummy_resource(redmine, resource, next_id_fill, keep=False)
+        created_id = create_dummy_resource(
+            redmine,
+            resource,
+            next_id_fill,
+            keep=False,
+            api_key=api_key,
+        )
         if created_id is None:
             logging.warning('Failed to create dummy stub for %s at target %s; aborting sequence', resource, next_id_fill)
             return False
@@ -1226,44 +1262,88 @@ def consume_attachment_match(pool, filename, filesize):
     return True
 
 
-def push_issue_attachments(redmine, conn, issue_legacy_id, created_issue_id, api_key=None, attachment_root=None):
+def push_issue_attachments(
+    redmine, conn, issue_legacy_id, created_issue_id, api_key=None, attachment_root=None
+):
     """Upload attachments for a created issue from SQLite migration cache."""
-    logging.debug('push_issue_attachments issue_legacy_id=%s created_issue_id=%s', issue_legacy_id, created_issue_id)
+    logging.debug(
+        "push_issue_attachments issue_legacy_id=%s created_issue_id=%s",
+        issue_legacy_id,
+        created_issue_id,
+    )
 
     # Skip if no attachments are in export for this issue.
     cur = conn.execute(
-        'SELECT legacy_id, filename, content_type, description, filesize, local_storage_path FROM issue_attachments WHERE issue_legacy_id=? ORDER BY legacy_id ASC',
+        """
+        SELECT
+            legacy_id,
+            filename,
+            content_type,
+            description,
+            filesize,
+            local_storage_path
+        FROM issue_attachments
+        WHERE issue_legacy_id=?
+        ORDER BY legacy_id ASC
+        """,
         (issue_legacy_id,),
     )
     attachments = cur.fetchall()
-    logging.debug('Found %d cached attachments for issue %s', len(attachments), issue_legacy_id)
+    logging.debug(
+        "Found %d cached attachments for issue %s", len(attachments), issue_legacy_id
+    )
+
     if not attachments:
         return
 
     # Track existing attachment counts by filename and size so duplicate names
     # can still be restored when the issue legitimately contains repeats.
     try:
-        remote_issue = redmine.issue.get(created_issue_id, include='attachments')
+        remote_issue = redmine.issue.get(created_issue_id, include="attachments")
         existing_attachment_pool = build_attachment_size_pool(remote_issue)
-        logging.debug('Target issue %s has %d existing attachment names', created_issue_id, len(existing_attachment_pool))
+        logging.debug(
+            "Target issue %s has %d existing attachment names",
+            created_issue_id,
+            len(existing_attachment_pool),
+        )
     except Exception as exc:
         existing_attachment_pool = {}
-        logging.debug('Could not fetch existing attachments for issue %s: %s', created_issue_id, exc)
+        logging.debug(
+            "Could not fetch existing attachments for issue %s: %s",
+            created_issue_id,
+            exc,
+        )
 
-    for legacy_id, filename, content_type, description, filesize, local_storage_path in attachments:
+    for (
+        legacy_id,
+        filename,
+        content_type,
+        description,
+        filesize,
+        local_storage_path,
+    ) in attachments:
         if consume_attachment_match(existing_attachment_pool, filename, filesize):
-            logging.info('Attachment %s already exists on target issue %s; skipping', filename, created_issue_id)
+            logging.info(
+                "Attachment %s already exists on target issue %s; skipping",
+                filename,
+                created_issue_id,
+            )
             continue
 
         if not local_storage_path:
-            logging.warning('No local_storage_path for attachment legacy %s; skipping', legacy_id)
+            logging.warning(
+                "No local_storage_path for attachment legacy %s; skipping",
+                legacy_id,
+            )
             continue
 
+        # Resolve attachment path if the stored local_storage_path is relative
+        # or points to a path that does not exist in this container/runtime.
         if not os.path.isfile(local_storage_path) and attachment_root:
             candidate = os.path.join(attachment_root, local_storage_path)
             if os.path.isfile(candidate):
                 logging.debug(
-                    'Resolved missing attachment relative path for legacy %s to %s',
+                    "Resolved missing attachment relative path for legacy %s to %s",
                     legacy_id,
                     candidate,
                 )
@@ -1272,7 +1352,7 @@ def push_issue_attachments(redmine, conn, issue_legacy_id, created_issue_id, api
                 candidate = os.path.join(attachment_root, str(legacy_id), filename)
                 if os.path.isfile(candidate):
                     logging.debug(
-                        'Resolved missing attachment path for legacy %s to %s',
+                        "Resolved missing attachment path for legacy %s to %s",
                         legacy_id,
                         candidate,
                     )
@@ -1281,112 +1361,185 @@ def push_issue_attachments(redmine, conn, issue_legacy_id, created_issue_id, api
                     candidate = os.path.join(attachment_root, filename)
                     if os.path.isfile(candidate):
                         logging.debug(
-                            'Resolved missing attachment path for legacy %s to %s',
+                            "Resolved missing attachment path for legacy %s to %s",
                             legacy_id,
                             candidate,
                         )
                         local_storage_path = candidate
 
         if not os.path.isfile(local_storage_path):
-            logging.warning('Attachment file missing on disk, skipping: %s', local_storage_path)
+            logging.warning(
+                "Attachment file missing on disk, skipping: %s",
+                local_storage_path,
+            )
             continue
 
         upload_token = None
 
         # First try redminelib native upload API if available.
+        # Use application/octet-stream for the upload-token creation step.
+        # The original content_type is preserved later when attaching the token
+        # to the issue.
         try:
-            if hasattr(redmine, 'upload') and callable(redmine.upload):
+            if hasattr(redmine, "upload") and callable(redmine.upload):
+                upload_obj = None
+
                 try:
                     upload_obj = redmine.upload(
                         path=local_storage_path,
                         filename=filename,
-                        content_type=content_type or 'application/octet-stream',
+                        content_type="application/octet-stream",
                     )
                 except TypeError:
                     # Some redminelib versions use a different signature.
                     try:
-                        with open(local_storage_path, 'rb') as f:
+                        with open(local_storage_path, "rb") as f:
                             upload_obj = redmine.upload(
                                 f,
                                 filename=filename,
-                                content_type=content_type or 'application/octet-stream',
+                                content_type="application/octet-stream",
                             )
                     except TypeError:
                         upload_obj = None
 
                 if upload_obj is not None:
-                    if hasattr(upload_obj, 'token'):
+                    if hasattr(upload_obj, "token"):
                         upload_token = upload_obj.token
                     elif isinstance(upload_obj, dict):
-                        upload_token = upload_obj.get('token') or (upload_obj.get('upload', {}) or {}).get('token')
+                        upload_token = upload_obj.get("token") or (
+                            upload_obj.get("upload", {}) or {}
+                        ).get("token")
                     elif isinstance(upload_obj, str):
                         upload_token = upload_obj
 
                     if upload_token:
-                        logging.debug('Created upload token via redmine.upload for file %s', filename)
+                        logging.debug(
+                            "Created upload token via redmine.upload for file %s",
+                            filename,
+                        )
                     else:
-                        logging.debug('redmine.upload did not return token for %s', filename)
+                        logging.debug(
+                            "redmine.upload did not return token for %s",
+                            filename,
+                        )
             else:
-                logging.debug('redmine.upload is not callable; falling back to direct HTTP upload for %s', filename)
+                logging.debug(
+                    "redmine.upload is not callable; falling back to direct HTTP upload for %s",
+                    filename,
+                )
+
         except Exception as exc:
-            logging.warning('Could not create upload using redmine.upload: %s; fallback to direct HTTP upload', exc)
+            logging.warning(
+                "Could not create upload using redmine.upload for %s: %s; falling back to direct HTTP upload",
+                filename,
+                exc,
+            )
 
         # Fallback: direct Redmine REST API upload endpoint.
+        #
+        # Important:
+        #   Redmine expects the upload-token request as raw binary data sent to:
+        #       /uploads.json?filename=<filename>
+        #
+        #   The upload request should use application/octet-stream.
+        #   The original attachment MIME type should be used later in the
+        #   issue update payload.
         if upload_token is None:
             try:
-                content_type_value = content_type or 'application/octet-stream'
-                url = redmine.url.rstrip('/') + '/uploads.json'
+                url = redmine.url.rstrip("/") + "/uploads.json"
+
                 headers = {
-                    'Content-Type': content_type_value,
+                    "Content-Type": "application/octet-stream",
+                    "Accept": "application/json",
+                    "Expect": "",
                 }
+
                 if api_key:
-                    headers['X-Redmine-API-Key'] = api_key
-                elif hasattr(redmine, 'key') and redmine.key:
-                    headers['X-Redmine-API-Key'] = redmine.key
+                    headers["X-Redmine-API-Key"] = api_key
+                elif hasattr(redmine, "key") and redmine.key:
+                    headers["X-Redmine-API-Key"] = redmine.key
 
-                with open(local_storage_path, 'rb') as f:
-                    data = f.read()
+                params = {
+                    "filename": filename,
+                }
 
-                resp = requests.post(url, headers=headers, data=data, verify=False, timeout=120)
+                with open(local_storage_path, "rb") as f:
+                    resp = requests.post(
+                        url,
+                        headers=headers,
+                        params=params,
+                        data=f,
+                        verify=False,
+                        timeout=120,
+                    )
+
                 if resp.status_code in (200, 201):
                     upload_json = resp.json()
-                    upload_token = upload_json.get('upload', {}).get('token')
-                    logging.debug('Created upload token via HTTP for file %s (status=%s)', filename, resp.status_code)
+                    upload_token = upload_json.get("upload", {}).get("token")
+
+                    logging.debug(
+                        "Created upload token via HTTP for file %s status=%s token_present=%s",
+                        filename,
+                        resp.status_code,
+                        bool(upload_token),
+                    )
                 else:
-                    logging.warning('Upload HTTP request failed for %s: %s %s', filename, resp.status_code, resp.text[:200])
-                    if resp.status_code == 406 and content_type_value != 'application/octet-stream':
-                        logging.debug('Retrying upload token request for %s with application/octet-stream', filename)
-                        headers['Content-Type'] = 'application/octet-stream'
-                        resp = requests.post(url, headers=headers, data=data, verify=False, timeout=120)
-                        if resp.status_code in (200, 201):
-                            upload_json = resp.json()
-                            upload_token = upload_json.get('upload', {}).get('token')
-                            logging.debug('Created upload token via HTTP for file %s on fallback (status=%s)', filename, resp.status_code)
-                        else:
-                            logging.warning('Fallback upload HTTP request failed for %s: %s %s', filename, resp.status_code, resp.text[:200])
+                    logging.warning(
+                        "Upload HTTP request failed for %s: status=%s body=%s",
+                        filename,
+                        resp.status_code,
+                        resp.text[:500],
+                    )
+
             except Exception as exc:
-                logging.exception('Failed HTTP upload token request for attachment %s: %s', filename, exc)
+                logging.exception(
+                    "Failed HTTP upload token request for attachment %s: %s",
+                    filename,
+                    exc,
+                )
 
         if not upload_token:
-            logging.error('No upload token available for attachment %s; skipping', filename)
+            logging.error(
+                "No upload token available for attachment %s; skipping",
+                filename,
+            )
             continue
 
+        # Attach uploaded token to the issue.
+        # Use the original content_type here, not necessarily octet-stream.
         try:
             update_payload = {
-                'uploads': [
+                "uploads": [
                     {
-                        'token': upload_token,
-                        'filename': filename,
-                        'content_type': content_type or 'application/octet-stream',
-                        'description': description or '',
+                        "token": upload_token,
+                        "filename": filename,
+                        "content_type": content_type or "application/octet-stream",
+                        "description": description or "",
                     }
                 ]
             }
+
             redmine.issue.update(created_issue_id, **update_payload)
+
             existing_attachment_pool.setdefault(filename, []).append(filesize)
-            logging.info('Uploaded attachment %s to issue %s (legacy %s)', filename, created_issue_id, issue_legacy_id)
+
+            logging.info(
+                "Uploaded attachment %s to issue %s legacy %s attachment_legacy_id=%s",
+                filename,
+                created_issue_id,
+                issue_legacy_id,
+                legacy_id,
+            )
+
         except Exception as exc:
-            logging.exception('Failed to attach %s to issue %s: %s', filename, created_issue_id, exc)
+            logging.exception(
+                "Failed to attach %s to issue %s legacy %s attachment_legacy_id=%s: %s",
+                filename,
+                created_issue_id,
+                issue_legacy_id,
+                legacy_id,
+                exc,
+            )
 
 
 def create_resource_payload(resource, row):

@@ -68,13 +68,17 @@ bundle exec rails runner "Setting['rest_api_enabled'] = '1'"
 
 echo "=== Applying fallback password migration ==="
 bundle exec rails runner - <<'RUBY'
-fallback_password = 'Migrated123!'
-users = User.where(admin: false).where('passwd_changed_on IS NULL OR last_login_on IS NULL')
-puts "Setting fallback password for #{users.count} user(s)"
+require 'securerandom'
+
+users = User.where(admin: false, status: User::STATUS_ACTIVE)
+            .where("hashed_password IS NULL OR must_change_passwd = ?", true)
+puts "Preparing #{users.count} user(s) for Entra ID SSO"
+
 users.find_each do |u|
-  u.password = fallback_password
-  u.password_confirmation = fallback_password
-  u.must_change_passwd = true
+  random_password = SecureRandom.hex(32)
+  u.password = random_password
+  u.password_confirmation = random_password
+  u.must_change_passwd = false   # critical
   u.save!(validate: false)
 end
 RUBY
