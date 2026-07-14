@@ -1,0 +1,6 @@
+Flask==3.1.1
+gunicorn==23.0.0
+psycopg[binary]==3.2.9
+pgvector==0.4.1
+python-dotenv==1.1.1
+pytest==8.4.1

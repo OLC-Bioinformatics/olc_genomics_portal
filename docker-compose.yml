@@ -131,5 +131,73 @@ services:
     ports:
       - "8888:8888"
 
+  rag:
+    restart: always
+    build:
+      context: ./rag
+      dockerfile: Dockerfile
+    expose:
+      - "8001"
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      rag-db:
+        condition: service_healthy
+    env_file:
+      - env
+    environment:
+      - RAG_DB_HOST=rag-db
+      - RAG_DB_PORT=5432
+      - RAG_DB_NAME=redmine_assistant
+      - RAG_DB_USER=redmine_assistant
+      - RAG_DB_PASSWORD=${RAG_DB_PASSWORD}
+      - DOCUMENTATION_ROOT=/documentation
+      - MODEL_CACHE_DIR=/models
+      - RAG_TOP_K=5
+      - RAG_MAX_TOP_K=10
+      - RAG_WORKERS=1
+      - RAG_THREADS=4
+      - RAG_TIMEOUT=60
+    volumes:
+      - ./rag:/app
+      - ../redmine-docs/docs:/documentation:ro
+      - rag-model-cache:/models
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health/ready', timeout=4)"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    command: ["/app/start.sh"]
+
+  rag-db:
+    restart: always
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=redmine_assistant
+      - POSTGRES_USER=redmine_assistant
+      - POSTGRES_PASSWORD=${RAG_DB_PASSWORD}
+    volumes:
+      - rag-db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U redmine_assistant -d redmine_assistant"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   redmine-db:
+  rag-db:
+  rag-model-cache:
+
