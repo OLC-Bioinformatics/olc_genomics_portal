@@ -1,0 +1,1300 @@
+version: 1
+evaluation_semantics:
+  expected_sources: 'Any-match: at least one listed source should appear in the evaluated top-k results.'
+  expected_terms: Terms expected in the retrieved chunk content; matching should initially be case-insensitive.
+  expected_heading_terms: Terms expected in the retrieved chunk heading path.
+  should_abstain: No sufficiently relevant documentation result should be treated as a supported answer.
+  expected_access_level: Used to verify internal-content filtering.
+questions:
+- id: select-plasmid-detection
+  question: Which tool should I use to detect and type plasmids?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/mobsuite.md
+  expected_terms:
+  - MobSuite
+  notes: The intent-oriented section in index.md should rank highly.
+- id: select-gene-detection
+  question: I want to look for genes in my assemblies. Which analyses can I use?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/geneseekr.md
+  - analysis/kma.md
+  expected_terms:
+  - GeneSeekr
+  - KMA
+- id: select-metagenomic-taxonomy
+  question: Which tools can identify organisms in a metagenomic sample?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/metaphlan.md
+  - analysis/kraken2.md
+  expected_terms:
+  - MetaPhlAn
+  - Kraken2
+- id: compare-metaphlan-kraken
+  question: Should I use Kraken2 or MetaPhlAn for metagenomic taxonomy?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/kraken2.md
+  - analysis/metaphlan.md
+  expected_terms:
+  - Kraken2
+  - MetaPhlAn
+- id: select-phylogeny
+  question: What can I use to create a phylogenetic tree?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/mashtree.md
+  - analysis/bcgtree.md
+  expected_terms:
+  - MASHtree
+  - BCGTree
+- id: select-unknown-isolate
+  question: I do not know the genus or species of my isolate. What should I run?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/unknownisolate.md
+  expected_terms:
+  - Unknown Isolate
+- id: select-close-relatives
+  question: How can I find the strains most closely related to a query SeqID?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/neartree.md
+  expected_terms:
+  - NearTree
+- id: select-diverse-sequences
+  question: How can I choose the most diverse genomes from a larger set?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/diversitree.md
+  expected_terms:
+  - DiverseTree
+- id: select-snp-analysis
+  question: Which automators can find SNPs in my sequences?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/snvphyl.md
+  - analysis/snippy.md
+  expected_terms:
+  - SNVPhyl
+  - Snippy
+- id: select-annotation
+  question: Which automator should I use to annotate a bacterial genome assembly?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/prokka.md
+  expected_terms:
+  - Prokka
+- id: select-gwas
+  question: How can I run a microbial genome-wide association study?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/roary.md
+  - analysis/pyseer.md
+  expected_terms:
+  - Roary
+  - Pyseer
+- id: retrieve-sequence-data
+  question: How do I download sequence data to share with a collaborator?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - data/external_retrieve.md
+  expected_terms:
+  - External retrieve
+- id: retrieve-cowbat-reports
+  question: How do I download COWBAT reports for several assemblies?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - data/report_retrieve.md
+  expected_terms:
+  - Report retrieve
+- id: geneseekr-subject
+  question: What should I put in the Redmine subject for a GeneSeekr request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - geneseekr
+  expected_heading_terms:
+  - Subject
+- id: mobsuite-subject
+  question: What subject keyword starts a MobSuite analysis?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - MobSuite
+  expected_heading_terms:
+  - Subject
+- id: gfa-subject-synonym
+  question: What issue keyword do I use to retrieve a GFA graph?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/gfa_retrieve.md
+  expected_terms:
+  - gfaretrieve
+  expected_heading_terms:
+  - Subject
+- id: downsample-subject
+  question: What do I put in the subject to downsample FASTQ reads?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - downsample
+  expected_heading_terms:
+  - Subject
+- id: report-retrieve-description
+  question: What goes in the description of a Report Retrieve request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - data/report_retrieve.md
+  expected_terms:
+  - SEQIDs
+  expected_heading_terms:
+  - Description
+- id: geneseekr-resfinder-request
+  question: How do I run ResFinder through GeneSeekr?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - analysis=resfinder
+  expected_heading_terms:
+  - Description
+- id: geneseekr-cgmlst-request
+  question: What parameters do I need for a GeneSeekr cgMLST request?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - cgmlst
+  - organism
+  expected_heading_terms:
+  - Description
+- id: geneseekr-custom-attachment
+  question: What file do I need to attach for a custom GeneSeekr analysis?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - custom
+  - FASTA
+- id: geneseekr-cutoff
+  question: How do I change the GeneSeekr match cutoff to 80?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - cutoff=80
+- id: geneseekr-alignments
+  question: Can GeneSeekr include alignments in its reports?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - align=True
+- id: geneseekr-unique-hits
+  question: How do I make GeneSeekr report only unique hits?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - unique=True
+- id: geneseekr-runtime
+  question: Approximately how long does GeneSeekr take for ten SeqIDs?
+  category: runtime
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - minute
+  - SEQID
+  expected_heading_terms:
+  - How long does it take?
+- id: geneseekr-results
+  question: What output file does GeneSeekr upload when it finishes?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - geneseekr_output.zip
+  expected_heading_terms:
+  - Interpreting Results
+- id: geneseekr-custom-failure
+  question: Why did my custom GeneSeekr request fail?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/geneseekr.md
+  expected_terms:
+  - FASTA
+  - attach
+  expected_heading_terms:
+  - What can go wrong?
+- id: mobsuite-input
+  question: What information does a MobSuite request need?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - SEQID
+  expected_heading_terms:
+  - Description
+- id: mobsuite-contig-report
+  question: Which MobSuite file tells me whether a contig is plasmid or chromosomal?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - contig_report.txt
+  expected_heading_terms:
+  - Interpreting Results
+- id: mobsuite-runtime
+  question: How long should MobSuite take for each assembly?
+  category: runtime
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - minute
+  expected_heading_terms:
+  - How long does it take?
+- id: mobsuite-missing-seqid
+  question: What happens if MobSuite cannot find one of my requested SeqIDs?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - SEQIDs
+  expected_heading_terms:
+  - What can go wrong?
+- id: downsample-coverage
+  question: How do I downsample reads to five-times coverage?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - COVERAGE=5
+- id: downsample-target-size
+  question: How can I limit the compressed downsample output to 500 MB?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - TARGETSIZE=500M
+- id: downsample-reproducible
+  question: How do I make a random downsampling run reproducible?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  - analysis/downsample_reformat_options.md
+  expected_terms:
+  - SAMPLESEED
+- id: downsample-exact-read-count
+  question: Which reformat option requests an exact number of output reads?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  - analysis/downsample_reformat_options.md
+  expected_terms:
+  - SAMPLEREADSTARGET
+- id: downsample-exact-base-count
+  question: Which option requests an exact number of output bases?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  - analysis/downsample_reformat_options.md
+  expected_terms:
+  - SAMPLEBASETARGET
+- id: downsample-default
+  question: What happens if I do not provide COVERAGE or TARGETSIZE?
+  category: default_behavior
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - 1 GB
+  - compression
+- id: downsample-paired-files
+  question: Will downsampling keep my R1 and R2 reads synchronized?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - _R1
+  - _R2
+  - synchronized
+- id: downsample-invalid-option
+  question: What happens if I misspell a reformat option in a downsample request?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - unsupported
+  - error
+  expected_heading_terms:
+  - What can go wrong?
+- id: create-redmine-issue
+  question: How do I submit a new analysis request in Redmine?
+  category: getting_started
+  enabled: true
+  expected_sources:
+  - getting_started.md
+  expected_terms:
+  - New Issue
+  - Subject
+  - Description
+- id: redmine-email-settings
+  question: How do I stop Redmine from emailing me about every issue?
+  category: getting_started
+  enabled: true
+  expected_sources:
+  - getting_started.md
+  expected_terms:
+  - My Account
+  - email notifications
+- id: redmine-access
+  question: How do I get access to the OLC Genomics Redmine project?
+  category: getting_started
+  enabled: true
+  expected_sources:
+  - getting_started.md
+  expected_terms:
+  - access
+- id: unsupported-human-genome
+  question: Which automator should I use to call variants in a human genome?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+  notes: The system should not invent support for human genomic analysis.
+- id: unsupported-protein-structure
+  question: Can Redmine predict a protein's three-dimensional structure?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+  notes: The system should report that this is not documented.
+- id: unsupported-clinical-treatment
+  question: Which antibiotic should be prescribed based on my ResFinder results?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+  notes: The assistant must not provide clinical treatment advice.
+- id: internal-merge
+  question: How do I use the internal merge workflow?
+  category: access_control
+  enabled: true
+  expected_sources:
+  - internal_only/merge.md
+  expected_access_level: internal
+  notes: This source must be excluded for users without internal access.
+- id: phastest-purpose
+  question: Which automator can identify prophage regions in bacterial genomes?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - PHASTEST
+  - prophage
+  expected_heading_terms:
+  - What does it do?
+- id: phastest-subject
+  question: What subject keyword should I use for a PHASTEST request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - phastest
+  expected_heading_terms:
+  - Subject
+- id: phastest-deep-mode
+  question: How do I run PHASTEST using deep annotation mode?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - deep
+  expected_heading_terms:
+  - Description
+- id: phastest-phage-only
+  question: Can PHASTEST annotate only the phage regions?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - phage-only
+- id: phastest-runtime-25
+  question: Approximately how long will PHASTEST take for 25 SeqIDs?
+  category: runtime
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - '20'
+  - two hours
+  expected_heading_terms:
+  - How long does it take?
+- id: phastest-output
+  question: What output archive does PHASTEST create?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - phastest_output
+  - zip
+  expected_heading_terms:
+  - Interpreting Results
+- id: sipprverse-purpose
+  question: Which tool detects gene targets directly in raw FASTQ reads?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - sipprverse
+  - raw FASTQ
+- id: sipprverse-full-analysis
+  question: How do I request all available sipprverse analyses?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - analysis=full
+- id: sipprverse-custom-file
+  question: What attachment is required for a custom sipprverse analysis?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - FASTA
+  - custom
+- id: sipprverse-cutoff
+  question: How can I change the sipprverse match cutoff to 0.85?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - cutoff=0.85
+- id: sipprverse-soft-clips
+  question: How do I stop sipprverse from automatically discarding hits with internal soft clips?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - allowsoftclips=True
+- id: sipprverse-results
+  question: What output file is produced by sipprverse?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/sipprverse.md
+  expected_terms:
+  - sipprverse_output.zip
+- id: pointfinder-purpose
+  question: Which tool detects chromosomal point mutations associated with antimicrobial resistance?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/pointfinder.md
+  - analysis/resfinder.md
+  expected_terms:
+  - PointFinder
+  - point mutations
+- id: pointfinder-supported-genera
+  question: Which genera are supported by PointFinder?
+  category: supported_inputs
+  enabled: true
+  expected_sources:
+  - analysis/pointfinder.md
+  expected_terms:
+  - Campylobacter
+  - Escherichia
+  - Mycobacterium
+  - Neisseria
+  - Salmonella
+- id: pointfinder-unsupported-genus
+  question: What happens if I submit a genus that PointFinder does not support?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/pointfinder.md
+  expected_terms:
+  - genera
+  - will not attempt
+  expected_heading_terms:
+  - What can go wrong?
+- id: pointfinder-results-file
+  question: Which PointFinder file lists the mutations and the resistance they confer?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/pointfinder.md
+  expected_terms:
+  - PointFinder_results.txt
+- id: resfinder-acquired-versus-point-mutation
+  question: Does ResFinder detect resistance caused by chromosomal point mutations?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/resfinder.md
+  - analysis/pointfinder.md
+  expected_terms:
+  - acquired
+  - PointFinder
+- id: resfinder-output-quality
+  question: Which columns should I check before trusting a ResFinder hit?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/resfinder.md
+  expected_terms:
+  - PercentIdentity
+  - PercentCovered
+- id: staramr-supported-genera
+  question: Which genera can I analyze with the StarAMR automator?
+  category: supported_inputs
+  enabled: true
+  expected_sources:
+  - analysis/staramr.md
+  expected_terms:
+  - Campylobacter
+  - Salmonella
+- id: staramr-gene-or-mutation
+  question: Which StarAMR result shows whether resistance is caused by a gene or a point mutation?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/staramr.md
+  expected_terms:
+  - results.xlsx
+  - gene
+  - point mutation
+- id: amrsummary-plasmid-location
+  question: Which AMRsummary result tells me whether an AMR gene is plasmid-borne or chromosomal?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/amrsummary.md
+  expected_terms:
+  - amr_summary.csv
+  - Location
+- id: plasmid-borne-identity-attachment
+  question: What attachment is required for a Plasmid-Borne Identity request?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/plasmidborneidentity.md
+  expected_terms:
+  - FASTA
+  - gene
+- id: plasmid-borne-summary
+  question: Which Plasmid-Borne Identity report combines GeneSeekr and MOB-suite results?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/plasmidborneidentity.md
+  expected_terms:
+  - plasmid_borne_summary.csv
+- id: neartree-description-format
+  question: How should I format the description for a NearTree request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/neartree.md
+  expected_terms:
+  - query
+  - reference
+  - closest strains
+- id: neartree-result-order
+  question: How are the NearTree results ordered?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/neartree.md
+  expected_terms:
+  - most closely related
+  - listed first
+- id: closerelatives-description-format
+  question: How do I request the five closest genomes to a SeqID?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/closerelatives.md
+  expected_terms:
+  - first line
+  - number
+  - second line
+  - SeqID
+- id: closerelatives-all-distances
+  question: Which CloseRelatives file contains distances for every genome in the CFIA collection?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/closerelatives.md
+  expected_terms:
+  - close_relatives_results.csv
+- id: unknownisolate-query-format
+  question: How do I specify my query SeqID for an Unknown Isolate analysis?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - query=SEQID
+- id: unknownisolate-genus-analysis
+  question: What extra parameter is required when I select the genus option for Unknown Isolate?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - genus=QUERY
+- id: unknownisolate-broadest-search
+  question: Which Unknown Isolate analysis compares my query against all available reference sequences?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - unknown
+  - all reference sequences
+- id: unknownisolate-grobi-agreement
+  question: What does it mean if the rMLST, ANIb, ANIm, and MASH species all agree in a GROBI report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - species
+  - determined
+  expected_heading_terms:
+  - Interpreting GROBI Report
+- id: unknownisolate-grobi-disagreement
+  question: What should I check when the species predictions disagree in an Unknown Isolate GROBI report?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - analysis
+  - reference
+  - broader
+  expected_heading_terms:
+  - Interpreting GROBI Report
+- id: roary-analysis-parameter
+  question: What parameter selects the Roary analysis type?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - analysistype=
+- id: roary-gene-multifasta
+  question: How do I extract multifasta files for selected genes with Roary?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - gene_multifasta
+  - genes=
+- id: roary-difference-sets
+  question: How do I separate the two groups for a Roary difference analysis?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - set_two
+- id: scoary-required-attachment
+  question: What file must I attach to run Scoary?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - traits.csv
+- id: scoary-trait-format
+  question: How must the trait values be formatted for Scoary?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - binary
+  - '0'
+  - '1'
+- id: scoary-no-results
+  question: Why did Roary finish without producing Scoary trait result files?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - traits.csv
+  - formatted
+  expected_heading_terms:
+  - What can go wrong?
+- id: drep-purpose
+  question: Which automator can compare genomes using average nucleotide identity?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - dRep
+  - average nucleotide identity
+- id: drep-dereplicate
+  question: How do I make dRep dereplicate genomes instead of only comparing them?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - command=dereplicate
+- id: drep-mash-threshold
+  question: How do I change the dRep MASH ANI threshold to 80 percent?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - mash_ANI_threshold=0.8
+- id: drep-fastani
+  question: How do I make dRep use FastANI for its secondary comparison?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - comparisonalgorithm=fastANI
+- id: drep-missing-ani
+  question: Why are ANI values missing for some genomes in my dRep output?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - MASH ANI cutoff
+  - clusters
+- id: kraken2-assembly
+  question: How do I run Kraken2 on assemblies instead of paired raw reads?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kraken2.md
+  expected_terms:
+  - seqtype=assembly
+- id: kraken2-nanopore
+  question: How do I tell Kraken2 that my input is Nanopore data?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kraken2.md
+  expected_terms:
+  - seqtype=nanopore
+- id: kraken2-databases
+  question: Which alternative databases can I select for Kraken2?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kraken2.md
+  expected_terms:
+  - greengenes
+  - plusPF
+  - rdp
+  - silva
+- id: kraken2-memory-limit
+  question: How many metagenomes should I submit in one Kraken2 request?
+  category: operational_limit
+  enabled: true
+  expected_sources:
+  - analysis/kraken2.md
+  expected_terms:
+  - '10'
+  - memory
+- id: metaphlan-sequence-types
+  question: How do I specify FASTQ and FASTA inputs in one MetaPhlAn request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/metaphlan.md
+  expected_terms:
+  - fastqs
+  - fastas
+  - BOTH
+- id: metaphlan-analysis-mode
+  question: How do I request clade profiles from MetaPhlAn?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/metaphlan.md
+  expected_terms:
+  - analysis=clade_profiles
+- id: bcgtree-bootstrap
+  question: How do I run BCGTree with 1,000 bootstraps?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/bcgtree.md
+  expected_terms:
+  - bootstraps=1000
+- id: bcgtree-results
+  question: Which BCGTree output files contain the phylogenetic trees?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/bcgtree.md
+  expected_terms:
+  - RAxML_bestTree.final
+  - RAxML_bipartitions.final
+- id: mashtree-analysis-options
+  question: Which reference-set analyses are supported by MashTree?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mashtree.md
+  expected_terms:
+  - custom
+  - enterobacterales
+  - listeriaceae
+- id: mashtree-kmer-size
+  question: How do I change the MashTree k-mer length to 30?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mashtree.md
+  expected_terms:
+  - kmerlength=30
+- id: diversitree-mashtree
+  question: How can I make DiverseTree use MashTree instead of Parsnp?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/diversitree.md
+  expected_terms:
+  - treeprogram=mashtree
+- id: diversitree-results
+  question: Which DiverseTree file contains the Newick tree?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/diversitree.md
+  expected_terms:
+  - tree.nwk
+- id: snvphyl-reference-format
+  question: How do I specify the reference and comparison strains for SNVPhyl?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - reference
+  - compare
+- id: snvphyl-matrix
+  question: Which SNVPhyl file contains the pairwise SNV counts?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - snvMatrix.tsv
+- id: snvphyl-core-coverage
+  question: Which SNVPhyl result tells me how much of the genome was included in the core analysis?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - vcf2core.tsv
+- id: snvphyl-no-files
+  question: Why did SNVPhyl complete without producing its usual output files?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - NO_RESULTS.txt
+  - output
+- id: cowsnphr-reference-attached
+  question: How do I use an attached reference file with COWSNPhR?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/cowsnphr.md
+  expected_terms:
+  - reference
+  - attached
+  - compare
+- id: cowsnphr-output-folders
+  question: What folders are included in a COWSNPhR result archive?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/cowsnphr.md
+  expected_terms:
+  - vcf_files
+  - summary_tables
+  - alignments
+  - tree_files
+- id: snippy-attached-reference
+  question: How do I use an attached reference genome with Snippy?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  expected_terms:
+  - reference=attached
+- id: snippy-clean-tree
+  question: How do I make Snippy clean the core SNP alignment and generate a tree?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  expected_terms:
+  - cleanup_&_tree=True
+- id: snippy-core-summary
+  question: Which Snippy file summarizes aligned, unaligned, variant, and low-coverage bases?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  expected_terms:
+  - core.txt
+- id: compare-snippy-snvphyl
+  question: Should I use Snippy or SNVPhyl if I have both paired-end and single-end reads?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  - analysis/snvphyl.md
+  expected_terms:
+  - single-end
+  - paired-end
+  - Snippy
+- id: kma-custom-targets
+  question: How do I run KMA with my own custom target FASTA file?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kma.md
+  expected_terms:
+  - analysis=custom
+  - targetsfile=
+- id: kma-raw-reads
+  question: How do I use KMA on Illumina raw reads?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kma.md
+  expected_terms:
+  - seqtype=fastq
+- id: kma-alignment-files
+  question: How do I make KMA produce consensus alignment files?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kma.md
+  expected_terms:
+  - align=TRUE
+- id: kma-vcf
+  question: How do I make KMA produce VCF files?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kma.md
+  expected_terms:
+  - vcf=TRUE
+- id: kma-read-count
+  question: Which KMA option reports how many reads map to each target?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/kma.md
+  expected_terms:
+  - readcount=TRUE
+- id: cardrgi-metagenome
+  question: How do I run CARD-RGI on metagenomic raw reads?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/cardrgi.md
+  expected_terms:
+  - analysis=metagenome
+  - KMA
+- id: cardrgi-loose-hits
+  question: How do I include loose CARD-RGI hits?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/cardrgi.md
+  expected_terms:
+  - loosehits=TRUE
+- id: cardrgi-partial-genes
+  question: How do I include partial gene matches in CARD-RGI?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/cardrgi.md
+  expected_terms:
+  - partialgenes=TRUE
+- id: primerfinder-custom-attachment
+  question: What must I attach for a custom PrimerFinder analysis?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - FASTA
+  - primer
+  - custom
+- id: primerfinder-inclusivity-exclusivity
+  question: How do I define inclusivity and exclusivity panels in PrimerFinder?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - inclusivity
+  - exclusivity
+- id: primerfinder-mismatches
+  question: How do I allow one primer mismatch in PrimerFinder?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - mismatches=1
+- id: primerfinder-amplicon-range
+  question: How do I request amplicons between 150 and 1,750 bases?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - minimum_amplicon_size=150
+  - maximum_amplicon_size=1750
+- id: primerfinder-probe
+  question: Can I provide a probe sequence to PrimerFinder?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - probe=
+- id: sequence-extractor-format
+  question: How do I specify the contig and coordinates for SequenceExtractor?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/sequence_extractor.md
+  expected_terms:
+  - SEQID
+  - contig
+  - start
+  - stop
+- id: sequence-extractor-whole-contig
+  question: How do I make SequenceExtractor return an entire contig?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/sequence_extractor.md
+  expected_terms:
+  - '0'
+  - entire contig
+- id: gfa-hybrid-only
+  question: Why can I not retrieve a GFA file for an older SEQ assembly?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/gfa_retrieve.md
+  expected_terms:
+  - hybrid
+  - MIN
+  - older
+- id: confindr-contamination
+  question: When does ConFindr classify a sample as contaminated?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/confindr.md
+  expected_terms:
+  - NumContamSNVs
+  - '3'
+  - NumUniqueKmers
+  - '45000'
+- id: ectyper-output
+  question: Which file contains the ECTyper O-type and H-type results?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/ectyper.md
+  expected_terms:
+  - ec_typer_report.tsv
+- id: intimin-probability
+  question: How does IntiminTyper report an uncertain subtype prediction?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/intimintyper.md
+  expected_terms:
+  - probability
+  - guess
+- id: fastqc-output
+  question: What reports are produced by the FastQC automator?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/fastqc.md
+  expected_terms:
+  - MultiQC
+  - fastqc
+  - zip
+- id: autoclark-low-abundance
+  question: Should I trust an AutoCLARK species result below two percent abundance?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/autoclark.md
+  expected_terms:
+  - 1-2 percent
+  - artifacts
+- id: informal-find-phages
+  question: How can I see whether my bacterial genome has phages hiding in it?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - prophage
+- id: informal-check-contamination
+  question: I think my raw reads might be contaminated. What can I run?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/confindr.md
+  - analysis/autoclark.md
+- id: informal-serotype-ecoli
+  question: How do I determine the O and H serotype of an E. coli assembly?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/ectyper.md
+  expected_terms:
+  - ECTyper
+- id: informal-in-silico-pcr
+  question: Which automator can test whether my primers amplify an assembly?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - PrimerFinder
+- id: informal-pan-genome
+  question: What should I use to calculate a bacterial pan-genome?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - Roary
+- id: informal-ani
+  question: I need ANI values for a set of genomes. Which analysis should I use?
+  category: synonym_query
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - dRep
+- id: ambiguous-find-amr
+  question: How do I find antimicrobial resistance?
+  category: ambiguous
+  enabled: true
+  expected_sources:
+  - analysis/resfinder.md
+  - analysis/pointfinder.md
+  - analysis/staramr.md
+  - analysis/cardrgi.md
+  - analysis/kma.md
+  - analysis/amrsummary.md
+  notes: Multiple sources are valid; results should reflect different AMR mechanisms.
+- id: no-answer-de-novo-eukaryote
+  question: Which automator assembles and annotates a eukaryotic genome?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+- id: no-answer-rna-seq
+  question: How do I run differential gene expression on RNA-seq data?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+- id: no-answer-protein-folding
+  question: Which Redmine automator predicts a protein's folded structure?
+  category: no_answer
+  enabled: true
+  expected_sources: []
+  should_abstain: true
