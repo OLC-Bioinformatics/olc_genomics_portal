@@ -2,23 +2,40 @@
 
 """Administrative CLI for the RedmineAssistant RAG service."""
 
+# Standard library imports
+from collections import Counter
 import argparse
 import logging
+import statistics
 import sys
 import time
 
+# Third-party imports
 import psycopg
 
+# Local application imports
 from database import (
     check_database_connection,
     get_database_status,
     run_migrations,
 )
 
+from ingestion.chunking import (
+    DEFAULT_MAX_CHARS,
+    DEFAULT_TARGET_CHARS,
+    DocumentChunk,
+    chunk_document,
+)
 from ingestion.discovery import (
     discover_markdown_documents,
     discovery_summary,
     documentation_root,
+)
+from ingestion.indexer import index_documentation
+from ingestion.markdown import parse_markdown_file
+from retrieval import (
+    RetrievalError,
+    retrieve_chunks,
 )
 
 logging.basicConfig(
@@ -116,6 +133,255 @@ def discover_documents(show_paths: bool = False) -> int:
     return 0
 
 
+def dry_run_index(
+    source_path: str | None = None,
+    show_content: bool = False,
+    target_chars: int = DEFAULT_TARGET_CHARS,
+    max_chars: int = DEFAULT_MAX_CHARS,
+) -> int:
+    """
+    Parse and chunk documentation without writing to PostgreSQL.
+
+    Args:
+        source_path: Optional relative source path to inspect.
+        show_content: Display full chunk content when True.
+        target_chars: Preferred chunk size.
+        max_chars: Maximum preferred chunk size.
+
+    Returns:
+        Shell-compatible status code.
+    """
+    root = documentation_root()
+    discovered_documents = discover_markdown_documents(root)
+
+    if source_path is not None:
+        discovered_documents = [
+            document
+            for document in discovered_documents
+            if document.source_path == source_path
+        ]
+
+        if not discovered_documents:
+            LOGGER.error(
+                "Requested source was not discovered: %s",
+                source_path,
+            )
+            return 1
+
+    all_chunks: list[DocumentChunk] = []
+    document_failures: list[tuple[str, str]] = []
+    section_count = 0
+    split_section_count = 0
+
+    for discovered_document in discovered_documents:
+        try:
+            parsed_document = parse_markdown_file(
+                path=discovered_document.absolute_path,
+                source_path=discovered_document.source_path,
+            )
+
+            document_chunks = chunk_document(
+                document=parsed_document,
+                target_chars=target_chars,
+                max_chars=max_chars,
+            )
+
+            section_count += parsed_document.section_count
+
+            split_section_count += len(
+                {
+                    chunk.section_index
+                    for chunk in document_chunks
+                    if chunk.split_section
+                }
+            )
+
+            all_chunks.extend(document_chunks)
+
+            if show_content:
+                print("=" * 80)
+                print(f"Source: {parsed_document.source_path}")
+                print(f"Title: {parsed_document.title}")
+                print(f"Sections: {parsed_document.section_count}")
+                print(f"Chunks: {len(document_chunks)}")
+                print()
+
+                for chunk in document_chunks:
+                    print(f"Chunk key: {chunk.chunk_key}")
+                    print(f"Section: {chunk.heading_path_text}")
+                    print(f"Characters: {chunk.character_count}")
+                    print(f"Access level: {chunk.access_level}")
+                    print(f"Split section: {chunk.split_section}")
+                    print()
+                    print(chunk.content)
+                    print("-" * 80)
+
+        except Exception as exc:
+            LOGGER.exception(
+                "Failed to parse or chunk %s",
+                discovered_document.source_path,
+            )
+            document_failures.append(
+                (
+                    discovered_document.source_path,
+                    str(exc),
+                )
+            )
+
+    access_counts = Counter(chunk.access_level for chunk in all_chunks)
+
+    character_counts = [chunk.character_count for chunk in all_chunks]
+
+    oversized_chunks = [
+        chunk for chunk in all_chunks if chunk.character_count > max_chars
+    ]
+
+    print()
+    print("Dry-run indexing summary")
+    print("========================")
+    print(f"Documentation root: {root}")
+    print(f"Documents selected: {len(discovered_documents)}")
+    print(f"Documents parsed: {len(discovered_documents) - len(document_failures)}")
+    print(f"Documents failed: {len(document_failures)}")
+    print(f"Sections found: {section_count}")
+    print(f"Chunks generated: {len(all_chunks)}")
+    print(f"Sections split: {split_section_count}")
+    print(f"Target characters: {target_chars}")
+    print(f"Maximum preferred characters: {max_chars}")
+
+    print()
+    print("Access levels:")
+
+    for access_level, count in sorted(access_counts.items()):
+        print(f"- {access_level}: {count}")
+
+    if character_counts:
+        print()
+        print("Chunk sizes:")
+        print(f"- minimum: {min(character_counts)} characters")
+        print(f"- median: {int(statistics.median(character_counts))} characters")
+        print(f"- maximum: {max(character_counts)} characters")
+
+    largest_chunks = sorted(
+        all_chunks,
+        key=lambda chunk: chunk.character_count,
+        reverse=True,
+    )[:10]
+
+    if largest_chunks:
+        print()
+        print("Largest chunks:")
+
+        for number, chunk in enumerate(
+            largest_chunks,
+            start=1,
+        ):
+            print(f"{number}. {chunk.source_path} — {chunk.heading_path_text}")
+            print(f"   {chunk.character_count} characters")
+
+    if oversized_chunks:
+        print()
+        print("Oversized chunks (usually intact fenced code blocks):")
+
+        for chunk in oversized_chunks:
+            print(
+                f"- {chunk.source_path} — "
+                f"{chunk.heading_path_text}: "
+                f"{chunk.character_count} characters"
+            )
+
+    if document_failures:
+        print()
+        print("Failures:")
+
+        for failed_source, error_message in document_failures:
+            print(f"- {failed_source}: {error_message}")
+
+        return 1
+
+    return 0
+
+
+def index_documents() -> int:
+    """Index changed Markdown documents into PostgreSQL."""
+    summary = index_documentation()
+
+    print("Documentation indexing summary")
+    print("==============================")
+    print(f"Documents discovered: {summary.discovered}")
+    print(f"Documents added: {summary.added}")
+    print(f"Documents updated: {summary.updated}")
+    print(f"Documents unchanged: {summary.unchanged}")
+    print(f"Documents removed: {summary.removed}")
+    print(f"Chunks embedded: {summary.chunks_embedded}")
+    print(f"Failures: {summary.failure_count}")
+
+    if summary.failures:
+        print()
+        print("Failed documents:")
+
+        for source_path, error_message in summary.failures:
+            print(f"- {source_path}: {error_message}")
+
+        return 1
+
+    return 0
+
+
+def search_documents(
+    query: str,
+    limit: int | None = None,
+    include_internal: bool = False,
+    show_content: bool = False,
+) -> int:
+    """
+    Search indexed documentation.
+
+    Args:
+        query: Semantic search query.
+        limit: Maximum number of results.
+        include_internal: Include internal-only documentation.
+        show_content: Print complete chunk content instead of a preview.
+
+    Returns:
+        Shell-compatible status code.
+    """
+    results = retrieve_chunks(
+        query=query,
+        limit=limit,
+        include_internal=include_internal,
+    )
+
+    print(f"Query: {query.strip()}")
+    print(f"Results: {len(results)}")
+    print()
+
+    if not results:
+        print("No indexed documentation results were found.")
+        return 0
+
+    for result in results:
+        print(f"{result.rank}. {result.document_title} ({result.score:.4f})")
+        print(f"   Source: {result.source_path}")
+        print(f"   Section: {result.heading_path}")
+        print(f"   Access level: {result.access_level}")
+        print(f"   Chunk key: {result.chunk_key}")
+        print()
+
+        if show_content:
+            displayed_content = result.content
+        else:
+            displayed_content = " ".join(result.content.split())
+
+            if len(displayed_content) > 350:
+                displayed_content = displayed_content[:347].rstrip() + "..."
+
+        print(displayed_content)
+        print("-" * 80)
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
@@ -160,7 +426,67 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print every included relative source path",
     )
-
+    dry_run_parser = subparsers.add_parser(
+        "dry-run-index",
+        help=(
+            "Parse and chunk documentation without writing "
+            "to PostgreSQL"
+        ),
+    )
+    dry_run_parser.add_argument(
+        "--source",
+        help=(
+            "Process only the specified relative source path, "
+            "for example analysis/geneseekr.md"
+        ),
+    )
+    dry_run_parser.add_argument(
+        "--show-content",
+        action="store_true",
+        help="Print the complete content of every generated chunk",
+    )
+    dry_run_parser.add_argument(
+        "--target-chars",
+        type=int,
+        default=DEFAULT_TARGET_CHARS,
+        help="Preferred chunk size in characters",
+    )
+    dry_run_parser.add_argument(
+        "--max-chars",
+        type=int,
+        default=DEFAULT_MAX_CHARS,
+        help="Maximum preferred chunk size in characters",
+    )
+    subparsers.add_parser(
+        "index",
+        help="Index changed documentation into PostgreSQL",
+    )
+    search_parser = subparsers.add_parser(
+        "search",
+        help="Search indexed documentation semantically",
+    )
+    search_parser.add_argument(
+        "query",
+        help="Question or search phrase",
+    )
+    search_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help=(
+            "Maximum number of results; defaults to RAG_TOP_K"
+        ),
+    )
+    search_parser.add_argument(
+        "--include-internal",
+        action="store_true",
+        help="Include internal-only documentation",
+    )
+    search_parser.add_argument(
+        "--show-content",
+        action="store_true",
+        help="Print complete chunk content",
+    )
     return parser
 
 
@@ -186,7 +512,22 @@ def main() -> int:
             return discover_documents(
                 show_paths=arguments.show_paths,
             )
-
+        if arguments.command == "dry-run-index":
+            return dry_run_index(
+                source_path=arguments.source,
+                show_content=arguments.show_content,
+                target_chars=arguments.target_chars,
+                max_chars=arguments.max_chars,
+            )
+        if arguments.command == "index":
+            return index_documents()
+        if arguments.command == "search":
+            return search_documents(
+                query=arguments.query,
+                limit=arguments.limit,
+                include_internal=arguments.include_internal,
+                show_content=arguments.show_content,
+            )
         parser.error(f"Unknown command: {arguments.command}")
         return 2
 
@@ -195,6 +536,9 @@ def main() -> int:
         return 1
     except (FileNotFoundError, NotADirectoryError) as exc:
         LOGGER.error("Documentation discovery failed: %s", exc)
+        return 1
+    except RetrievalError as exc:
+        LOGGER.error("Documentation search failed: %s", exc)
         return 1
 
 
