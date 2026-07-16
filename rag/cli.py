@@ -4,6 +4,7 @@
 
 # Standard library imports
 from collections import Counter
+from pathlib import Path
 import argparse
 import logging
 import statistics
@@ -19,7 +20,14 @@ from database import (
     get_database_status,
     run_migrations,
 )
-
+from evaluation import (
+    DEFAULT_EVALUATION_PATH,
+    EvaluationError,
+    evaluate_questions,
+    load_evaluation_questions,
+    print_evaluation_summary,
+    write_json_report,
+)
 from ingestion.chunking import (
     DEFAULT_MAX_CHARS,
     DEFAULT_TARGET_CHARS,
@@ -382,6 +390,64 @@ def search_documents(
     return 0
 
 
+def evaluate_retrieval(
+    questions_path: str,
+    top_k: int,
+    category: str | None = None,
+    output_json: str | None = None,
+    show_failures: bool = True,
+) -> int:
+    """
+    Evaluate semantic retrieval against a YAML question set.
+
+    Args:
+        questions_path: Evaluation YAML path.
+        top_k: Number of results retrieved per question.
+        category: Optional question-category filter.
+        output_json: Optional JSON report destination.
+        show_failures: Print failed Hit@5 questions.
+
+    Returns:
+        Shell-compatible status code.
+    """
+    evaluation_path = Path(questions_path)
+
+    questions = load_evaluation_questions(
+        evaluation_path
+    )
+
+    summary = evaluate_questions(
+        questions=questions,
+        evaluation_path=evaluation_path,
+        top_k=top_k,
+        category=category,
+    )
+
+    print_evaluation_summary(
+        summary=summary,
+        show_failures=show_failures,
+    )
+
+    if output_json is not None:
+        report_path = Path(output_json)
+
+        write_json_report(
+            summary=summary,
+            path=report_path,
+        )
+
+        print()
+        print(f"JSON report written to: {report_path}")
+
+    if summary.errors:
+        return 1
+
+    if summary.internal_leakage_count:
+        return 1
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
@@ -487,6 +553,34 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print complete chunk content",
     )
+    evaluate_parser = subparsers.add_parser(
+        "evaluate",
+        help="Evaluate semantic retrieval using YAML questions",
+    )
+    evaluate_parser.add_argument(
+        "--questions",
+        default=str(DEFAULT_EVALUATION_PATH),
+        help="Path to evaluation_questions.yaml",
+    )
+    evaluate_parser.add_argument(
+        "--top-k",
+        type=int,
+        default=5,
+        help="Number of results retrieved per question",
+    )
+    evaluate_parser.add_argument(
+        "--category",
+        help="Evaluate only the specified question category",
+    )
+    evaluate_parser.add_argument(
+        "--output-json",
+        help="Write the complete evaluation report to JSON",
+    )
+    evaluate_parser.add_argument(
+        "--no-show-failures",
+        action="store_true",
+        help="Do not print failed Hit@5 question details",
+    )
     return parser
 
 
@@ -528,6 +622,14 @@ def main() -> int:
                 include_internal=arguments.include_internal,
                 show_content=arguments.show_content,
             )
+        if arguments.command == "evaluate":
+            return evaluate_retrieval(
+                questions_path=arguments.questions,
+                top_k=arguments.top_k,
+                category=arguments.category,
+                output_json=arguments.output_json,
+                show_failures=not arguments.no_show_failures,
+            )
         parser.error(f"Unknown command: {arguments.command}")
         return 2
 
@@ -539,6 +641,9 @@ def main() -> int:
         return 1
     except RetrievalError as exc:
         LOGGER.error("Documentation search failed: %s", exc)
+        return 1
+    except EvaluationError as exc:
+        LOGGER.error("Retrieval evaluation failed: %s", exc)
         return 1
 
 

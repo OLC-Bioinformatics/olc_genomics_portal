@@ -1,0 +1,453 @@
+{
+  "evaluation_path": "/app/tests/evaluation_questions.yaml",
+  "top_k": 5,
+  "category_filter": "synonym_query",
+  "started_at": "2026-07-16T15:57:51.081447+00:00",
+  "completed_at": "2026-07-16T15:57:51.630121+00:00",
+  "questions_loaded": 142,
+  "questions_evaluated": 6,
+  "answerable_questions": 6,
+  "no_answer_questions": 0,
+  "internal_questions": 0,
+  "errors": 0,
+  "source_hit_at_1_count": 2,
+  "source_hit_at_3_count": 6,
+  "source_hit_at_5_count": 6,
+  "source_hit_at_1_rate": 0.3333333333333333,
+  "source_hit_at_3_rate": 1.0,
+  "source_hit_at_5_rate": 1.0,
+  "heading_questions": 0,
+  "heading_hit_count": 0,
+  "heading_hit_rate": null,
+  "term_questions": 5,
+  "term_hit_count": 5,
+  "term_hit_rate": 1.0,
+  "internal_leakage_count": 0,
+  "internal_access_hit_count": 0,
+  "internal_access_hit_rate": null,
+  "no_answer_mean_top_score": null,
+  "no_answer_max_top_score": null,
+  "category_counts": {
+    "synonym_query": 6
+  },
+  "results": [
+    {
+      "identifier": "informal-find-phages",
+      "question": "How can I see whether my bacterial genome has phages hiding in it?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/phastest.md"
+      ],
+      "expected_terms": [
+        "prophage"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7340718387236896,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.7340718387236896,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/phastest.md",
+          "document_title": "PHASTEST",
+          "heading_path": "PHASTEST > What does it do?",
+          "score": 0.7258602707552638,
+          "access_level": "standard",
+          "chunk_key": "analysis/phastest.md::0000::phastest-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/amrsummary.md",
+          "document_title": "AMRsummary",
+          "heading_path": "AMRsummary > How do I use it? > Interpreting Results",
+          "score": 0.7235935063846751,
+          "access_level": "standard",
+          "chunk_key": "analysis/amrsummary.md::0004::amrsummary-how-do-i-use-it-interpreting-results::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/plasmidborneidentity.md",
+          "document_title": "Plasmid-Borne Identity",
+          "heading_path": "Plasmid-Borne Identity > How do I use it? > Interpreting Results",
+          "score": 0.7168984154583964,
+          "access_level": "standard",
+          "chunk_key": "analysis/plasmidborneidentity.md::0006::plasmid-borne-identity-how-do-i-use-it-interpreting-results::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Interpreting Results",
+          "score": 0.7154912861303189,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0004::kma-gene-detection-how-do-i-use-it-interpreting-results::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "informal-check-contamination",
+      "question": "I think my raw reads might be contaminated. What can I run?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/confindr.md"
+      ],
+      "expected_terms": [],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": null,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.6791849923619645,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/psortb.md",
+          "document_title": "PSORTb",
+          "heading_path": "PSORTb > What can go wrong?",
+          "score": 0.6791849923619645,
+          "access_level": "standard",
+          "chunk_key": "analysis/psortb.md::0006::psortb-what-can-go-wrong::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/confindr.md",
+          "document_title": "ConFindr",
+          "heading_path": "ConFindr > What does it do?",
+          "score": 0.6658462485166652,
+          "access_level": "standard",
+          "chunk_key": "analysis/confindr.md::0000::confindr-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/downsample_reformat_options.md",
+          "document_title": "Downsample: Supported reformat.sh Options",
+          "heading_path": "Downsample: Supported reformat.sh Options > Read validation and transformation",
+          "score": 0.6519556045532227,
+          "access_level": "standard",
+          "chunk_key": "analysis/downsample_reformat_options.md::0002::downsample-supported-reformat-sh-options-read-validation-and-transformation::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/mlst.md",
+          "document_title": "MLST",
+          "heading_path": "MLST > What can go wrong?",
+          "score": 0.6506714433031425,
+          "access_level": "standard",
+          "chunk_key": "analysis/mlst.md::0006::mlst-what-can-go-wrong::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/cowsnphr.md",
+          "document_title": "COWSNPhR",
+          "heading_path": "COWSNPhR > What can go wrong?",
+          "score": 0.6502450108528137,
+          "access_level": "standard",
+          "chunk_key": "analysis/cowsnphr.md::0006::cowsnphr-what-can-go-wrong::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "informal-serotype-ecoli",
+      "question": "How do I determine the O and H serotype of an E. coli assembly?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/ectyper.md"
+      ],
+      "expected_terms": [
+        "ECTyper"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8208937644958496,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/ectyper.md",
+          "document_title": "ECTyper",
+          "heading_path": "ECTyper > What does it do?",
+          "score": 0.8208937644958496,
+          "access_level": "standard",
+          "chunk_key": "analysis/ectyper.md::0000::ectyper-what-does-it-do::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.728127690776867,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/mashtree.md",
+          "document_title": "MashTree",
+          "heading_path": "MashTree > How do I use it? > Description",
+          "score": 0.7042041597244657,
+          "access_level": "standard",
+          "chunk_key": "analysis/mashtree.md::0002::mashtree-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Description",
+          "score": 0.7039698362350464,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0002::unknownisolate-genus-species-determination-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Interpreting GROBI Report",
+          "score": 0.7022122918240863,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0005::unknownisolate-genus-species-determination-how-do-i-use-it-interpreting-grobi-report::0002"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "informal-in-silico-pcr",
+      "question": "Which automator can test whether my primers amplify an assembly?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/primerfinder.md"
+      ],
+      "expected_terms": [
+        "PrimerFinder"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7104237503065927,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > What can go wrong?",
+          "score": 0.7104237503065927,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0006::primerfinder-what-can-go-wrong::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > What does it do?",
+          "score": 0.7085147537453256,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0000::primerfinder-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > How do I use it? > Description",
+          "score": 0.7081731383903718,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0002::primerfinder-how-do-i-use-it-description::0002"
+        },
+        {
+          "rank": 4,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7017828999887281,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect and type plasmids in my sequence assemblies",
+          "score": 0.701084655587952,
+          "access_level": "standard",
+          "chunk_key": "index.md::0013::olc-redmine-automator-possible-analyses-i-want-to-detect-and-type-plasmids-in-my-sequence-assemblies::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "informal-pan-genome",
+      "question": "What should I use to calculate a bacterial pan-genome?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/roary.md"
+      ],
+      "expected_terms": [
+        "Roary"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7778314716270158,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/mashtree.md",
+          "document_title": "MashTree",
+          "heading_path": "MashTree > How do I use it? > Description",
+          "score": 0.7778314716270158,
+          "access_level": "standard",
+          "chunk_key": "analysis/mashtree.md::0002::mashtree-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/roary.md",
+          "document_title": "RoaryScoary",
+          "heading_path": "RoaryScoary > What does it do? > Roary",
+          "score": 0.7724830278014265,
+          "access_level": "standard",
+          "chunk_key": "analysis/roary.md::0000::roaryscoary-what-does-it-do-roary::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/plasmidborneidentity.md",
+          "document_title": "Plasmid-Borne Identity",
+          "heading_path": "Plasmid-Borne Identity > How do I use it? > Interpreting Results",
+          "score": 0.7556549535886933,
+          "access_level": "standard",
+          "chunk_key": "analysis/plasmidborneidentity.md::0006::plasmid-borne-identity-how-do-i-use-it-interpreting-results::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.7506863847170387,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/sipprverse.md",
+          "document_title": "sipprverse",
+          "heading_path": "sipprverse > How do I use it? > Description",
+          "score": 0.7498017176926651,
+          "access_level": "standard",
+          "chunk_key": "analysis/sipprverse.md::0002::sipprverse-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "informal-ani",
+      "question": "I need ANI values for a set of genomes. Which analysis should I use?",
+      "category": "synonym_query",
+      "expected_sources": [
+        "analysis/drep.md"
+      ],
+      "expected_terms": [
+        "dRep"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8217056042464261,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Interpreting GROBI Report",
+          "score": 0.8217056042464261,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0005::unknownisolate-genus-species-determination-how-do-i-use-it-interpreting-grobi-report::0003"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/drep.md",
+          "document_title": "dRep",
+          "heading_path": "dRep > How do I use it? > Description",
+          "score": 0.8036368132721432,
+          "access_level": "standard",
+          "chunk_key": "analysis/drep.md::0002::drep-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/metaphlan.md",
+          "document_title": "MetaPhlAn4",
+          "heading_path": "MetaPhlAn4 > How do I use it? > Description",
+          "score": 0.7583091484996426,
+          "access_level": "standard",
+          "chunk_key": "analysis/metaphlan.md::0002::metaphlan4-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > How do I use it? > Attachments",
+          "score": 0.7515216097689158,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0003::primerfinder-how-do-i-use-it-attachments::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/mashtree.md",
+          "document_title": "MashTree",
+          "heading_path": "MashTree > How do I use it? > Description",
+          "score": 0.7466726080574838,
+          "access_level": "standard",
+          "chunk_key": "analysis/mashtree.md::0002::mashtree-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    }
+  ]
+}

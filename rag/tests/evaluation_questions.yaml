@@ -1235,7 +1235,6 @@ questions:
   enabled: true
   expected_sources:
   - analysis/confindr.md
-  - analysis/autoclark.md
 - id: informal-serotype-ecoli
   question: How do I determine the O and H serotype of an E. coli assembly?
   category: synonym_query
