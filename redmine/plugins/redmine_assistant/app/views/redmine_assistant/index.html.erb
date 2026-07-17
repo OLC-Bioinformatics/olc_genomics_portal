@@ -108,21 +108,33 @@
           </span>
         </header>
 
-        <div class="redmine-assistant-content">
-          <%= simple_format(
-                h(result['content']),
-                {},
-                wrapper_tag: 'div'
-              ) %>
-        </div>
+  <div class="redmine-assistant-content wiki">
+    <%= redmine_assistant_content(
+          result['content']
+        ) %>
+  </div>
 
-        <footer class="redmine-assistant-result-footer">
-          <strong>
-            <%= l(:label_redmine_assistant_source) %>:
-          </strong>
+  <footer class="redmine-assistant-result-footer">
+    <strong>
+      <%= l(:label_redmine_assistant_source) %>:
+    </strong>
 
-          <code><%= result['source_path'] %></code>
-        </footer>
+    <% source_url = redmine_assistant_source_url(
+        result['source_path']
+      ) %>
+
+    <% if source_url.present? %>
+      <%= link_to(
+            result['source_path'],
+            source_url,
+            class: 'external',
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          ) %>
+    <% else %>
+      <code><%= result['source_path'] %></code>
+    <% end %>
+  </footer>
       </article>
     <% end %>
   </div>

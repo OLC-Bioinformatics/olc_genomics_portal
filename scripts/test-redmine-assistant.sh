@@ -25,7 +25,8 @@ docker compose run --rm redmine \
         unless config.database == \"redmine_test\"
     "
 
-    echo "=== Running Redmine Assistant controller tests ==="
+    echo "=== Running Redmine Assistant tests ==="
     RAILS_ENV=test bundle exec rails test \
-      plugins/redmine_assistant/test/functional/redmine_assistant_controller_test.rb
+      plugins/redmine_assistant/test/functional/redmine_assistant_controller_test.rb \
+      plugins/redmine_assistant/test/unit/redmine_assistant_helper_test.rb
   '

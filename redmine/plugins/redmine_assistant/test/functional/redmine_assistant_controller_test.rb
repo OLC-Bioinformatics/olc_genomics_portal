@@ -139,6 +139,15 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   def test_successful_search_renders_standard_results
     @request.session[:user_id] = @administrator.id
 
+    ENV.stubs(:fetch)
+      .with(
+        'REDMINE_ASSISTANT_DOCS_BASE_URL',
+        ''
+      )
+      .returns(
+        'https://docs.example.gc.ca/redmine'
+      )
+
     rag_response = {
       'status' => 'ok',
       'results' => [
@@ -171,10 +180,26 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       '.redmine-assistant-content',
       text: /detects plasmids/
     )
-    assert_select(
-      '.redmine-assistant-result-footer code',
-      text: 'analysis/mobsuite.md'
+  assert_select(
+    '.redmine-assistant-result-footer a',
+    text: 'analysis/mobsuite.md',
+    count: 1
+  ) do |links|
+    assert_equal(
+      'https://docs.example.gc.ca/redmine/analysis/mobsuite/',
+      links.first['href']
     )
+
+    assert_equal(
+      '_blank',
+      links.first['target']
+    )
+
+    assert_equal(
+      'noopener noreferrer',
+      links.first['rel']
+    )
+  end
 
     assert_includes(
       response.body,

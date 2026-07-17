@@ -82,10 +82,6 @@
   white-space: normal;
 }
 
-.redmine-assistant-content div {
-  margin: 0;
-}
-
 .redmine-assistant-result-footer {
   border-top: 1px solid #ddd;
   color: #666;
@@ -106,4 +102,38 @@
     display: inline-block;
     margin-top: 0.6rem;
   }
+}
+
+.redmine-assistant-content {
+  line-height: 1.5;
+  margin-top: 1rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.redmine-assistant-content> :first-child {
+  margin-top: 0;
+}
+
+.redmine-assistant-content> :last-child {
+  margin-bottom: 0;
+}
+
+.redmine-assistant-content pre {
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.redmine-assistant-content code {
+  overflow-wrap: anywhere;
+}
+
+.redmine-assistant-content ul,
+.redmine-assistant-content ol {
+  margin-bottom: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.redmine-assistant-result-footer a {
+  overflow-wrap: anywhere;
 }
