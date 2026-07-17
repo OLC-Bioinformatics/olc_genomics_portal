@@ -43,7 +43,10 @@ services:
     expose:
       - "3000"
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_started
+      rag:
+        condition: service_healthy
     env_file:
       - env
     # ENTRA_ID_CLIENT_ID, ENTRA_ID_CLIENT_SECRET and ENTRA_ID_TENANT_ID are loaded from env
@@ -57,6 +60,9 @@ services:
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
       - DB_NAME=redmine
       - DB_USER=redmine
+      - REDMINE_ASSISTANT_RAG_URL=http://rag:8001
+      - REDMINE_ASSISTANT_TIMEOUT_SECONDS=15
+      - REDMINE_ASSISTANT_DEFAULT_LIMIT=5
     volumes:
       - ./redmine/files:/usr/src/redmine/files
       - ./redmine/log:/usr/src/redmine/log

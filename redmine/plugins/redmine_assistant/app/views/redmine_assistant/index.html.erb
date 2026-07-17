@@ -1,0 +1,129 @@
+<% html_title(l(:label_redmine_assistant)) %>
+
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag(
+        'plugin_assets/redmine_assistant/redmine_assistant'
+      ) %>
+<% end %>
+
+<div class="contextual">
+  <%= link_to(
+        l(:label_redmine_assistant_clear),
+        project_redmine_assistant_path(
+          project_id: @project.identifier
+        ),
+        class: 'icon icon-reload'
+      ) %>
+</div>
+
+<h2><%= l(:label_redmine_assistant) %></h2>
+
+<div class="redmine-assistant-introduction">
+  <p>
+    <%= l(:text_redmine_assistant_introduction) %>
+  </p>
+
+  <ul>
+    <li><%= l(:text_redmine_assistant_example_analysis) %></li>
+    <li><%= l(:text_redmine_assistant_example_formatting) %></li>
+    <li><%= l(:text_redmine_assistant_example_results) %></li>
+    <li><%= l(:text_redmine_assistant_example_runtime) %></li>
+    <li><%= l(:text_redmine_assistant_example_troubleshooting) %></li>
+  </ul>
+</div>
+
+<div class="box redmine-assistant-search">
+  <%= form_with(
+        url: search_project_redmine_assistant_path(
+          project_id: @project.identifier
+        ),
+        method: :post,
+        local: true
+      ) do %>
+
+    <p>
+      <%= label_tag(
+            :query,
+            l(:label_redmine_assistant_question)
+          ) %>
+
+      <%= text_field_tag(
+            :query,
+            @query,
+            maxlength: 2000,
+            required: true,
+            autofocus: true,
+            autocomplete: 'off',
+            placeholder: l(
+              :text_redmine_assistant_placeholder
+            )
+          ) %>
+    </p>
+
+    <p class="buttons">
+      <%= submit_tag(
+            l(:button_redmine_assistant_search),
+            name: nil
+          ) %>
+    </p>
+  <% end %>
+</div>
+
+<% if @query.present? && @results.empty? && flash.now[:error].blank? %>
+  <div class="nodata">
+    <%= l(:text_redmine_assistant_no_results) %>
+  </div>
+<% end %>
+
+<% if @results.present? %>
+  <h3>
+    <%= l(
+          :label_redmine_assistant_results,
+          count: @results.length
+        ) %>
+  </h3>
+
+  <div class="redmine-assistant-results">
+    <% @results.each do |result| %>
+      <article class="box redmine-assistant-result">
+        <header class="redmine-assistant-result-header">
+          <div>
+            <h4>
+              <span class="redmine-assistant-rank">
+                <%= result['rank'] %>.
+              </span>
+
+              <%= result['document_title'] %>
+            </h4>
+
+            <p class="redmine-assistant-section">
+              <%= redmine_assistant_heading_path(
+                    result['heading_path']
+                  ) %>
+            </p>
+          </div>
+
+          <span class="redmine-assistant-score">
+            <%= redmine_assistant_score(result['score']) %>
+          </span>
+        </header>
+
+        <div class="redmine-assistant-content">
+          <%= simple_format(
+                h(result['content']),
+                {},
+                wrapper_tag: 'div'
+              ) %>
+        </div>
+
+        <footer class="redmine-assistant-result-footer">
+          <strong>
+            <%= l(:label_redmine_assistant_source) %>:
+          </strong>
+
+          <code><%= result['source_path'] %></code>
+        </footer>
+      </article>
+    <% end %>
+  </div>
+<% end %>

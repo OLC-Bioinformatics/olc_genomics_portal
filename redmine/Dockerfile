@@ -9,6 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
 RUN rm -rf /usr/src/redmine/plugins/entra_id && \
     git clone https://github.com/eea/redmine_entra_id.git /usr/src/redmine/plugins/entra_id
 
+# Install the local Redmine documentation assistant plugin.
+COPY plugins/redmine_assistant \
+    /usr/src/redmine/plugins/redmine_assistant
+
 # Install the local CA so the corporate intercepting proxy can validate rubygems.org.
 COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
 
@@ -17,7 +21,10 @@ COPY boot-redmine.sh /usr/src/redmine/boot-redmine.sh
 
 RUN update-ca-certificates && \
     chmod +x /usr/src/redmine/boot-redmine.sh && \
-    mkdir -p /home/redmine/.bundle
+    mkdir -p /home/redmine/.bundle && \
+    chown -R redmine:redmine \
+        /home/redmine \
+        /usr/src/redmine/plugins/redmine_assistant
 
 
 # Install gem dependencies in the existing Redmine workdir.

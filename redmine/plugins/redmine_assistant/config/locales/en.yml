@@ -1,0 +1,38 @@
+en:
+  label_redmine_assistant: "Assistant"
+  label_redmine_assistant_clear: "Clear search"
+  label_redmine_assistant_question: "Ask a documentation question"
+  label_redmine_assistant_results:
+    one: "1 result"
+    other: "%{count} results"
+  label_redmine_assistant_source: "Documentation source"
+
+  button_redmine_assistant_search: "Search documentation"
+
+  text_redmine_assistant_introduction: >
+    Search the OLC Redmine Automator documentation for information about
+    available analyses, request formatting, results, runtimes, and
+    troubleshooting.
+  text_redmine_assistant_example_analysis: >
+    Which automator should I use to detect plasmids?
+  text_redmine_assistant_example_formatting: >
+    What should I put in a GeneSeekr request?
+  text_redmine_assistant_example_results: >
+    Which SNVPhyl file contains pairwise SNV counts?
+  text_redmine_assistant_example_runtime: >
+    How long does MobSuite take?
+  text_redmine_assistant_example_troubleshooting: >
+    Why did my custom GeneSeekr analysis fail?
+  text_redmine_assistant_placeholder: >
+    For example: Which automator detects plasmids?
+  text_redmine_assistant_no_results: >
+    No matching documentation sections were found.
+
+  error_redmine_assistant_blank_query: >
+    Enter a documentation question before searching.
+  error_redmine_assistant_query_too_long: >
+    The question must be %{maximum} characters or fewer.
+  error_redmine_assistant_unavailable: >
+    The documentation assistant is temporarily unavailable. Please try again.
+  error_redmine_assistant_unexpected: >
+    An unexpected error occurred while searching the documentation.

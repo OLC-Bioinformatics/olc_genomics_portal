@@ -1,0 +1,109 @@
+.redmine-assistant-introduction {
+  margin-bottom: 1.5rem;
+  max-width: 70rem;
+}
+
+.redmine-assistant-introduction ul {
+  margin-top: 0.5rem;
+}
+
+.redmine-assistant-search {
+  margin-bottom: 1.5rem;
+}
+
+.redmine-assistant-search form {
+  margin: 0;
+}
+
+.redmine-assistant-search label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.redmine-assistant-search input[type="text"] {
+  box-sizing: border-box;
+  font-size: 1rem;
+  max-width: 70rem;
+  padding: 0.65rem 0.75rem;
+  width: 100%;
+}
+
+.redmine-assistant-search .buttons {
+  margin-bottom: 0;
+  margin-top: 0.75rem;
+}
+
+.redmine-assistant-results {
+  max-width: 80rem;
+}
+
+.redmine-assistant-result {
+  border-left: 4px solid #628db6;
+  margin-bottom: 1rem;
+}
+
+.redmine-assistant-result-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.redmine-assistant-result-header h4 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.redmine-assistant-rank {
+  color: #666;
+}
+
+.redmine-assistant-section {
+  color: #666;
+  margin: 0.3rem 0 0;
+}
+
+.redmine-assistant-score {
+  background: #e8f1f8;
+  border: 1px solid #b9d0e3;
+  border-radius: 1rem;
+  color: #2f587a;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+}
+
+.redmine-assistant-content {
+  line-height: 1.5;
+  margin-top: 1rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.redmine-assistant-content div {
+  margin: 0;
+}
+
+.redmine-assistant-result-footer {
+  border-top: 1px solid #ddd;
+  color: #666;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.redmine-assistant-result-footer code {
+  overflow-wrap: anywhere;
+}
+
+@media screen and (max-width: 600px) {
+  .redmine-assistant-result-header {
+    display: block;
+  }
+
+  .redmine-assistant-score {
+    display: inline-block;
+    margin-top: 0.6rem;
+  }
+}
