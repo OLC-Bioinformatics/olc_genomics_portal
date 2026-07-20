@@ -146,6 +146,8 @@ class Settings:
     documentation_root: str
     top_k: int
     max_top_k: int
+    max_query_chars: int
+    max_excerpt_chars: int
 
     # Embedding model settings
     embedding_model: str
@@ -243,6 +245,16 @@ class Settings:
             documentation_root=documentation_root,
             top_k=configured_top_k,
             max_top_k=configured_max_top_k,
+            max_query_chars=integer_environment_variable(
+                "RAG_MAX_QUERY_CHARS",
+                2000,
+                minimum=1,
+            ),
+            max_excerpt_chars=integer_environment_variable(
+                "RAG_MAX_EXCERPT_CHARS",
+                1500,
+                minimum=1,
+            ),
             embedding_model=embedding_model,
             embedding_model_revision=embedding_model_revision,
             embedding_dimension=integer_environment_variable(

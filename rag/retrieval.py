@@ -67,8 +67,11 @@ def validate_query(query: str) -> str:
     normalized_query = query.strip()
 
     if not normalized_query:
+        raise RetrievalError("Search query cannot be blank")
+
+    if len(normalized_query) > settings.max_query_chars:
         raise RetrievalError(
-            "Search query cannot be blank"
+            f"Search query cannot exceed {settings.max_query_chars} characters"
         )
 
     return normalized_query

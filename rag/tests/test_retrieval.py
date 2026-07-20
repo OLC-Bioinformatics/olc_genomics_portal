@@ -353,3 +353,18 @@ def test_retrieve_chunks_wraps_embedding_failure(
             query="Which tool detects plasmids?",
             embedding_provider=FailingEmbeddingProvider(),
         )
+
+def test_validate_query_rejects_excessive_length() -> None:
+    """Queries longer than the configured maximum are rejected."""
+    with pytest.raises(
+        RetrievalError,
+        match="cannot exceed",
+    ):
+        validate_query("x" * (retrieval.settings.max_query_chars + 1))
+
+
+def test_validate_query_accepts_maximum_length() -> None:
+    """A query exactly at the configured maximum is accepted."""
+    query = "x" * retrieval.settings.max_query_chars
+
+    assert validate_query(query) == query
