@@ -149,6 +149,8 @@ services:
     depends_on:
       rag-db:
         condition: service_healthy
+    group_add:
+      - "1000"
     env_file:
       - env
     environment:

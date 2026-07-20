@@ -5,6 +5,8 @@ evaluation_semantics:
   expected_heading_terms: Terms expected in the retrieved chunk heading path.
   should_abstain: No sufficiently relevant documentation result should be treated as a supported answer.
   expected_access_level: Used to verify internal-content filtering.
+  forbidden_terms: Terms that must not occur in retrieved content; matching is case-insensitive.
+  maximum_top_score: Optional per-question maximum top retrieval score for a should_abstain question.
 questions:
 - id: select-plasmid-detection
   question: Which tool should I use to detect and type plasmids?
@@ -27,6 +29,8 @@ questions:
   expected_terms:
   - GeneSeekr
   - KMA
+  source_match: at_least
+  minimum_expected_sources: 2
 - id: select-metagenomic-taxonomy
   question: Which tools can identify organisms in a metagenomic sample?
   category: tool_selection
@@ -38,28 +42,33 @@ questions:
   expected_terms:
   - MetaPhlAn
   - Kraken2
+  source_match: at_least
+  minimum_expected_sources: 2
 - id: compare-metaphlan-kraken
   question: Should I use Kraken2 or MetaPhlAn for metagenomic taxonomy?
   category: tool_comparison
   enabled: true
   expected_sources:
-  - index.md
   - analysis/kraken2.md
   - analysis/metaphlan.md
   expected_terms:
   - Kraken2
   - MetaPhlAn
+  source_match: all
 - id: select-phylogeny
-  question: What can I use to create a phylogenetic tree?
+  question: Which general-purpose workflows can create a bacterial phylogenetic tree from genome assemblies or conserved
+    core genes?
   category: tool_selection
   enabled: true
+  source_match: at_least
+  minimum_expected_sources: 2
   expected_sources:
   - index.md
   - analysis/mashtree.md
   - analysis/bcgtree.md
   expected_terms:
-  - MASHtree
-  - BCGTree
+  - MashTree
+  - bcgTree
 - id: select-unknown-isolate
   question: I do not know the genus or species of my isolate. What should I run?
   category: tool_selection
@@ -86,7 +95,7 @@ questions:
   - index.md
   - analysis/diversitree.md
   expected_terms:
-  - DiverseTree
+  - DiversiTree
 - id: select-snp-analysis
   question: Which automators can find SNPs in my sequences?
   category: tool_selection
@@ -98,6 +107,8 @@ questions:
   expected_terms:
   - SNVPhyl
   - Snippy
+  source_match: at_least
+  minimum_expected_sources: 2
 - id: select-annotation
   question: Which automator should I use to annotate a bacterial genome assembly?
   category: tool_selection
@@ -118,6 +129,8 @@ questions:
   expected_terms:
   - Roary
   - Pyseer
+  source_match: at_least
+  minimum_expected_sources: 2
 - id: retrieve-sequence-data
   question: How do I download sequence data to share with a collaborator?
   category: tool_selection
@@ -507,10 +520,12 @@ questions:
   category: tool_selection
   enabled: true
   expected_sources:
+  - index.md
   - analysis/sipprverse.md
   expected_terms:
-  - sipprverse
-  - raw FASTQ
+  - Sipprverse
+  - raw
+  - FASTQ
 - id: sipprverse-full-analysis
   question: How do I request all available sipprverse analyses?
   category: request_parameters
@@ -929,7 +944,7 @@ questions:
   expected_terms:
   - kmerlength=30
 - id: diversitree-mashtree
-  question: How can I make DiverseTree use MashTree instead of Parsnp?
+  question: How can I make DiversiTree use MashTree instead of Parsnp?
   category: optional_parameters
   enabled: true
   expected_sources:
@@ -937,7 +952,7 @@ questions:
   expected_terms:
   - treeprogram=mashtree
 - id: diversitree-results
-  question: Which DiverseTree file contains the Newick tree?
+  question: Which DiversiTree file contains the Newick tree?
   category: results
   enabled: true
   expected_sources:
@@ -1034,6 +1049,7 @@ questions:
   - single-end
   - paired-end
   - Snippy
+  source_match: all
 - id: kma-custom-targets
   question: How do I run KMA with my own custom target FASTA file?
   category: request_parameters
@@ -1234,7 +1250,11 @@ questions:
   category: synonym_query
   enabled: true
   expected_sources:
+  - index.md
   - analysis/confindr.md
+  expected_terms:
+  - ConFindr
+  - contamination
 - id: informal-serotype-ecoli
   question: How do I determine the O and H serotype of an E. coli assembly?
   category: synonym_query
@@ -1279,6 +1299,8 @@ questions:
   - analysis/kma.md
   - analysis/amrsummary.md
   notes: Multiple sources are valid; results should reflect different AMR mechanisms.
+  source_match: at_least
+  minimum_expected_sources: 2
 - id: no-answer-de-novo-eukaryote
   question: Which automator assembles and annotates a eukaryotic genome?
   category: no_answer
@@ -1297,3 +1319,732 @@ questions:
   enabled: true
   expected_sources: []
   should_abstain: true
+- id: compare-neartree-closerelatives
+  question: Should I use NearTree or CloseRelatives to find genomes related to my query?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/neartree.md
+  - analysis/closerelatives.md
+  expected_terms:
+  - candidate
+  - CFIA collection
+  notes: NearTree ranks a supplied candidate set; CloseRelatives searches the CFIA collection.
+  source_match: all
+- id: compare-mashtree-bcgtree
+  question: What is the difference between MashTree and bcgTree?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/mashtree.md
+  - analysis/bcgtree.md
+  expected_terms:
+  - Mash
+  - core genes
+  source_match: all
+- id: compare-mobsuite-plasmidborneidentity
+  question: Should I use MobSuite or Plasmid-Borne Identity to determine whether a gene is on a plasmid?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  - analysis/plasmidborneidentity.md
+  expected_terms:
+  - plasmid
+  - target
+  source_match: all
+- id: compare-autoclark-confindr
+  question: Should I use AutoCLARK or ConFindr if I suspect contamination in raw reads?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/autoclark.md
+  - analysis/confindr.md
+  expected_terms:
+  - ConFindr
+  - contamination
+  source_match: all
+- id: compare-sra-download-upload-external
+  question: What is the difference between SRA Download, SRA Upload, and External Retrieve?
+  category: tool_comparison
+  enabled: true
+  source_match: all
+  expected_sources:
+  - data/sra_download.md
+  - data/sra_upload.md
+  - data/external_retrieve.md
+  expected_terms:
+  - imports
+  - preload
+  - exports
+- id: select-protein-localization
+  question: Which automator predicts where proteins are located within a bacterial cell?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/psortb.md
+  expected_terms:
+  - PSORTb
+  - subcellular
+- id: select-prophage-versus-plasmid
+  question: Which tools should I use to detect prophages and plasmids in an assembly?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/phastest.md
+  - analysis/mobsuite.md
+  expected_terms:
+  - PHASTEST
+  - MobSuite
+- id: select-sequence-extraction
+  question: Which automator can extract a specific coordinate range from an assembly contig?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/sequence_extractor.md
+  expected_terms:
+  - SequenceExtractor
+- id: select-read-quality
+  question: Which automator creates FastQC reports and a combined MultiQC report?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/fastqc.md
+  expected_terms:
+  - FastQC
+  - MultiQC
+- id: select-fastq-merge
+  question: Which automator combines FASTQ files from multiple sequencing runs of the same biological sample?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - index.md
+  - analysis/fastqmerge.md
+  expected_terms:
+  - fastqmerge
+  - same biological sample
+- id: fastqmerge-format
+  question: How do I specify source SeqIDs and the new merged SeqID in fastqmerge?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/fastqmerge.md
+  expected_terms:
+  - ','
+  - '='
+  notes: The exact single-versus-paired declaration remains an acknowledged documentation gap.
+- id: fastqmerge-uncertain-data-type-syntax
+  question: What exact keyword tells fastqmerge whether the data are single-end or paired-end?
+  category: known_documentation_gap
+  enabled: true
+  expected_sources:
+  - analysis/fastqmerge.md
+  expected_terms:
+  - does not show
+  - verify
+  notes: The answer should preserve the documented uncertainty and not invent syntax.
+- id: mlst-organism-format
+  question: How do I select Salmonella enterica for an MLST request?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mlst.md
+  expected_terms:
+  - organism=Salmonella enterica
+- id: mlst-ecoli-schemes
+  question: Which MLST values select the Achtman and Pasteur schemes for E. coli?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mlst.md
+  expected_terms:
+  - Escherichia coli#1
+  - Escherichia coli#2
+  - Achtman
+  - Pasteur
+- id: mlst-update
+  question: How do I request an MLST database update?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mlst.md
+  expected_terms:
+  - update
+- id: mlst-fasta-attachment
+  question: Can MLST process an attached FASTA file, and what is the attachment size limit?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/mlst.md
+  expected_terms:
+  - FASTA
+  - 5 MB
+- id: rmlst-update-version
+  question: How do I update the rMLST database, and where is the database version reported?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/rmlst.md
+  expected_terms:
+  - update
+  - Using database version
+- id: ectyper-unassigned-otype
+  question: What does a dash in the ECTyper O-type column mean?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/ectyper.md
+  expected_terms:
+  - did not assign
+  - O-type
+- id: ecgf-perfect-profile
+  question: What does a Number of Similarities value of 40 out of 40 mean in eCGF?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/eCGF.md
+  expected_terms:
+  - '40'
+  - all evaluated loci
+- id: prokka-important-files
+  question: Which Prokka output formats are especially useful for downstream analysis?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/prokka.md
+  expected_terms:
+  - .gff
+  - .gbk
+- id: psortb-gram-class
+  question: Why does my PSORTb result filename contain grampos or gramneg?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/psortb.md
+  expected_terms:
+  - Gram-positive
+  - Gram-negative
+- id: psortb-wrong-gram-class
+  question: What should I do if PSORTb classified my isolate with the wrong Gram type?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/psortb.md
+  expected_terms:
+  - Do not rely
+  - bioinformatics team
+  expected_heading_terms:
+  - What can go wrong?
+- id: phastest-lite-deep-difference
+  question: What is the difference between PHASTEST lite and deep modes?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/phastest.md
+  expected_terms:
+  - Swiss-Prot
+  - PHAST-BSD
+  - longer
+- id: mobsuite-prediction-caveat
+  question: Can I treat every MobSuite plasmid assignment as definitive?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/mobsuite.md
+  expected_terms:
+  - predictive
+  - fragmented
+  - supporting evidence
+- id: downsample-option-qtrim
+  question: Which Downsample options trim low-quality read ends and set the quality threshold?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample_reformat_options.md
+  - analysis/downsample.md
+  expected_terms:
+  - qtrim
+  - trimq
+- id: downsample-option-maxns
+  question: How do I discard reads containing any N bases during Downsample?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/downsample_reformat_options.md
+  expected_terms:
+  - maxns=0
+- id: downsample-coverage-failure
+  question: Why can a COVERAGE-based Downsample request fail before reads are sampled?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/downsample.md
+  expected_terms:
+  - genome-size
+  - kmercountexact.sh
+- id: external-retrieve-fasta-fastq
+  question: What keyword retrieves assemblies instead of raw reads with External Retrieve?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - data/external_retrieve.md
+  expected_terms:
+  - fasta
+  - fastq
+- id: external-retrieve-sra-syntax-gap
+  question: What exact option makes External Retrieve rename FASTQ files for SRA submission?
+  category: known_documentation_gap
+  enabled: true
+  expected_sources:
+  - data/external_retrieve.md
+  expected_terms:
+  - does not provide
+  - verify
+  notes: The system must not invent an undocumented keyword.
+- id: sra-download-run-name
+  question: How should I format the run name for an SRA Download request?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - data/sra_download.md
+  expected_terms:
+  - run_name=YYMMDD-sra
+- id: sra-download-preprocess
+  question: How do I download SRA reads and run only quality assessment and preprocessing without assembly?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - data/sra_download.md
+  expected_terms:
+  - preprocess
+  - without assembly
+- id: sra-download-basic-assembly
+  question: How do I run assembly without typing modules after downloading SRA reads?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - data/sra_download.md
+  expected_terms:
+  - basic_assembly
+- id: sra-upload-line-order
+  question: In what order do the username, password, folder, and SeqIDs go in an SRA Upload request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - data/sra_upload.md
+  expected_terms:
+  - username
+  - password
+  - account-folder
+  - SEQID
+- id: sra-upload-security
+  question: Is it safe to reuse or copy FTP credentials from an old SRA Upload issue?
+  category: security
+  enabled: true
+  expected_sources:
+  - data/sra_upload.md
+  expected_terms:
+  - temporary
+  - do not reuse
+  - expired
+- id: report-retrieve-versus-external
+  question: Should I use Report Retrieve or External Retrieve if I only need COWBAT reports?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - data/report_retrieve.md
+  - data/external_retrieve.md
+  expected_terms:
+  - Report Retrieve
+  - reports
+  source_match: all
+- id: gfa-bandage-steps
+  question: How do I open a retrieved GFA file and draw the assembly graph in Bandage?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/gfa_retrieve.md
+  expected_terms:
+  - Load graph
+  - Draw graph
+- id: gfa-tangled-graph
+  question: What should I check if a hybrid assembly graph is highly fragmented or tangled?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/gfa_retrieve.md
+  expected_terms:
+  - Illumina
+  - Nanopore
+  - same isolate
+- id: sequence-extractor-attachment-precedence
+  question: What happens if I provide SequenceExtractor entries in both the Description and an attachment?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/sequence_extractor.md
+  expected_terms:
+  - attachment
+  - ignored
+- id: sequence-extractor-reversed-coordinates
+  question: Can SequenceExtractor accept a stop coordinate that is lower than the start coordinate?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/sequence_extractor.md
+  expected_terms:
+  - reorders
+  - lower coordinate
+- id: autoclark-input-types
+  question: How do I tell AutoCLARK to analyze raw reads versus draft assemblies?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/autoclark.md
+  expected_terms:
+  - fastq
+  - fasta
+- id: confindr-report-columns
+  question: Which ConFindr columns support the final contamination call?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/confindr.md
+  expected_terms:
+  - NumContamSNVs
+  - NumUniqueKmers
+  - ContamStatus
+- id: strainmash-distance-caveat
+  question: Does a larger MashDistance value always mean a closer StrainMash match?
+  category: known_documentation_gap
+  enabled: true
+  expected_sources:
+  - analysis/strainmash.md
+  expected_terms:
+  - standard Mash distance
+  - confirm
+  notes: The answer must preserve the warning that the legacy field semantics may be transformed or mislabeled.
+- id: unknownisolate-not-novel-proof
+  question: Do conflicting Unknown Isolate methods prove that I found a novel species?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/unknownisolate.md
+  expected_terms:
+  - does not
+  - novel species
+  - reference
+- id: drep-primary-secondary
+  question: Why does dRep use both Mash clustering and a secondary ANI comparison?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/drep.md
+  expected_terms:
+  - primary
+  - secondary
+  - unrelated
+- id: roary-association-causation
+  question: Does a Scoary gene-trait association prove that the gene causes the trait?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/roary.md
+  expected_terms:
+  - association
+  - not proof
+  - causes
+- id: pyseer-custom-tree
+  question: How do I provide a custom population-structure tree to pyseer?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/pyseer.md
+  expected_terms:
+  - distance=custom
+  - tree.newick
+  - tip label
+- id: pyseer-snv-developmental
+  question: Is the pyseer SNV analysis ready for routine production use?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/pyseer.md
+  expected_terms:
+  - under development
+  - confirm
+- id: primerfinder-degenerate-base-caveat
+  question: How can degenerate primer bases affect PrimerFinder mismatch counting?
+  category: known_limitation
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - degenerate
+  - mismatch
+  - mismatches=3
+- id: primerfinder-split-contigs
+  question: Does a PrimerFinder positive result across separate contigs prove a complete amplicon exists?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/primerfinder.md
+  expected_terms:
+  - does not demonstrate
+  - contiguous amplicon
+- id: snippy-single-end-cleanup-loss
+  question: Why are my MinION samples missing from the final cleaned Snippy tree?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  expected_terms:
+  - single-end
+  - pre-cleaning tree
+  - Gubbins
+- id: snvphyl-paired-read-requirement
+  question: Can SNVPhyl analyze a query that has only a single FASTQ read file?
+  category: supported_inputs
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - both R1 and R2
+  - paired-end
+- id: internal-azuredownload-standard-denial
+  question: How do I run Azuredownload?
+  category: access_control
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+  expected_access_level: standard
+  notes: In the standard collection, internal-only Azuredownload content must not be retrieved or disclosed.
+- id: internal-merge-standard-denial
+  question: What columns are required in the internal Merge workbook?
+  category: access_control
+  enabled: true
+  expected_sources: []
+  should_abstain: true
+  expected_access_level: standard
+  notes: In the standard collection, internal-only Merge content must not be retrieved or disclosed.
+- id: kraken2-database-purpose
+  question: Which Kraken2 databases are intended for metagenomes, and which are 16S-oriented?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/kraken2.md
+  expected_terms:
+  - kraken2
+  - plusPF
+  - greengenes
+  - rdp
+  - silva
+  - 16S
+- id: metaphlan-both-read-and-assembly
+  question: How do I analyze both the raw reads and the assembly for the same sample with MetaPhlAn?
+  category: request_parameters
+  enabled: true
+  expected_sources:
+  - analysis/metaphlan.md
+  expected_terms:
+  - fastqs
+  - fastas
+  - same
+  - SEQID
+- id: metaphlan-default-analysis
+  question: What analysis mode does MetaPhlAn use by default?
+  category: default_behavior
+  enabled: true
+  expected_sources:
+  - analysis/metaphlan.md
+  expected_terms:
+  - rel_ab_w_read_stats
+  - relative abundance
+  - reads
+- id: strainmash-result-columns
+  question: Which fields in a StrainMash report identify the reference accession, organism, and matching-hash support?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/strainmash.md
+  expected_terms:
+  - ReferenceStrain
+  - Organism
+  - NumMatchingHashes
+- id: closerelatives-mash-direction
+  question: Does a smaller or larger Mash distance indicate a closer match in CloseRelatives?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/closerelatives.md
+  expected_terms:
+  - '0'
+  - larger values
+  - dissimilarity
+- id: diversitree-html-report
+  question: Which DiversiTree report highlights the selected diverse strains in a browser?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/diversitree.md
+  expected_terms:
+  - diversitree_report.html
+  - browser
+  - highlights
+- id: mashtree-output-format
+  question: What tree format does MashTree upload, and how should its branch lengths be interpreted?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/mashtree.md
+  expected_terms:
+  - Newick
+  - Mash distance
+  - not
+  - alignment
+- id: bcgtree-reproducibility-files
+  question: Which bcgTree files record the commands, logs, and RAxML random seed values?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/bcgtree.md
+  expected_terms:
+  - config.txt
+  - bcgtree.log
+  - random seed
+- id: cowsnphr-large-runtime
+  question: How does a COWSNPhR request with more than 30 strains affect runtime?
+  category: runtime
+  enabled: true
+  expected_sources:
+  - analysis/cowsnphr.md
+  expected_terms:
+  - one hour
+  - '30'
+  - substantially longer
+- id: snvphyl-version-reporting
+  question: Which software versions does the SNVPhyl automator report when the issue closes?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/snvphyl.md
+  expected_terms:
+  - Nextflow
+  - Singularity
+  - SNVPhyl Nextflow pipeline
+- id: snippy-variant-types
+  question: What variant types can appear in Snippy output besides a simple SNP?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/snippy.md
+  expected_terms:
+  - mnp
+  - ins
+  - del
+  - complex
+- id: prokka-runtime
+  question: Approximately how long does Prokka take per genome?
+  category: runtime
+  enabled: true
+  expected_sources:
+  - analysis/prokka.md
+  expected_terms:
+  - two to three minutes
+  - per genome
+  expected_heading_terms:
+  - How long does it take?
+- id: amrsummary-workflow-combination
+  question: Which analyses does AMRsummary combine to report both AMR genes and predicted plasmid location?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/amrsummary.md
+  expected_terms:
+  - ResFinder
+  - MOB-suite
+  - location
+- id: troubleshooting-queued-job
+  question: My valid Redmine job has not started because the cluster is busy. Should I submit a duplicate issue?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - troubleshooting.md
+  expected_terms:
+  - Do not submit duplicate issues
+  - queued
+  - compute
+- id: troubleshooting-missing-output-sample
+  question: What are some reasons a requested sample might be absent from an automator output?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - troubleshooting.md
+  expected_terms:
+  - missing
+  - unsupported
+  - no result detected
+- id: getting-started-closed-issue
+  question: Does a closed Redmine issue always mean the analysis succeeded?
+  category: getting_started
+  enabled: true
+  expected_sources:
+  - getting_started.md
+  expected_terms:
+  - successful completion
+  - failure
+  - final comments
+- id: index-amr-choice
+  question: From the documentation index, which workflows cover acquired AMR genes, point mutations, combined AMR
+    analysis, and resistome prediction?
+  category: index_navigation
+  enabled: true
+  expected_sources:
+  - index.md
+  expected_terms:
+  - ResFinder
+  - PointFinder
+  - StarAMR
+  - CARD-RGI
+- id: internal-azuredownload-authorized
+  question: How do I format an authorized internal Azuredownload request for NCBI data?
+  category: access_control
+  enabled: true
+  evaluation_context: internal
+  expected_access_level: internal
+  expected_sources:
+  - internal_only/azuredownload.md
+  expected_terms:
+  - machine=other
+  - location=ncbi
+  - sequence_folder=
+- id: internal-merge-workbook-authorized
+  question: Which workbook fields identify the new merged SeqID and the source SeqIDs in the authorized internal
+    Merge workflow?
+  category: access_control
+  enabled: true
+  evaluation_context: internal
+  expected_access_level: internal
+  expected_sources:
+  - internal_only/merge.md
+  expected_terms:
+  - SEQID
+  - OtherName
+  - MER
+  - semicolon
+- id: stale-retired-redmine-host
+  question: Is redmine.biodiversity.agr.gc.ca the current Redmine service address?
+  category: stale_content
+  enabled: true
+  expected_sources:
+  - getting_started.md
+  - index.md
+  expected_terms:
+  - redmine-dev.cloud-nuage.inspection.gc.ca
+  forbidden_terms:
+  - redmine.biodiversity.agr.gc.ca
+  notes: Useful after a destructive reindex to detect stale chunks from the retired documentation corpus.

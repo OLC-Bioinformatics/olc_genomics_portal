@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from pgvector.psycopg import register_vector
@@ -219,6 +220,10 @@ def store_index_metadata(
         document_count: Number of discovered documents.
     """
     metadata = current_index_configuration()
+    metadata["documentation_git_commit"] = os.getenv(
+        "DOCUMENTATION_GIT_COMMIT",
+        "unknown",
+    )
     metadata["documentation_document_count"] = str(
         document_count
     )
@@ -476,7 +481,7 @@ def replace_document_chunks(
                 (
                     document_id,
                     chunk.chunk_key,
-                    chunk.section_index,
+                    chunk.section_index * 1000 + chunk.chunk_index,
                     chunk.heading_path_text,
                     chunk.content,
                     chunk.embedding_content,

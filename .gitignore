@@ -144,3 +144,27 @@ missing_attachments*
 redmine/config/secrets.yml
 redmine/config/database.yml
 redmine/config/initializers/secret_token.rb
+
+# RAG evaluation output
+rag/evaluation-results/*
+!rag/evaluation-results/.gitkeep
+
+# Temporary RAG update artifacts
+rag/*.patch
+rag/apply_rag_fixes.py
+rag/*.before-rag-evaluation-update
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local model/cache content
+models/
+.cache/
+huggingface/
+
+# Redmine backup data
+redmine/holding/

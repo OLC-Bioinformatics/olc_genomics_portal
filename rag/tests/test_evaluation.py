@@ -14,6 +14,7 @@ from evaluation import (
     evaluate_questions,
     load_evaluation_questions,
     source_hit,
+    source_requirement_hit,
 )
 from retrieval import SearchResult
 
@@ -49,9 +50,14 @@ def evaluation_question(
         "analysis/mobsuite.md",
     ),
     expected_terms: tuple[str, ...] = ("MobSuite",),
+    forbidden_terms: tuple[str, ...] = (),
     expected_heading_terms: tuple[str, ...] = (),
     should_abstain: bool = False,
     expected_access_level: str = "standard",
+    evaluation_context: str | None = None,
+    source_match: str = "any",
+    minimum_expected_sources: int | None = None,
+    maximum_top_score: float | None = None,
 ) -> EvaluationQuestion:
     """Create a representative evaluation question."""
     return EvaluationQuestion(
@@ -61,9 +67,18 @@ def evaluation_question(
         enabled=True,
         expected_sources=expected_sources,
         expected_terms=expected_terms,
+        forbidden_terms=forbidden_terms,
         expected_heading_terms=expected_heading_terms,
         should_abstain=should_abstain,
         expected_access_level=expected_access_level,
+        evaluation_context=(
+            evaluation_context
+            if evaluation_context is not None
+            else expected_access_level
+        ),
+        source_match=source_match,
+        minimum_expected_sources=minimum_expected_sources,
+        maximum_top_score=maximum_top_score,
     )
 
 
@@ -93,6 +108,41 @@ questions:
     assert questions[0].expected_sources == (
         "analysis/mobsuite.md",
     )
+    assert questions[0].source_match == "any"
+    assert questions[0].evaluation_context == "standard"
+    assert questions[0].forbidden_terms == ()
+
+
+def test_loads_extended_question_fields(tmp_path: Path) -> None:
+    """Extended source, access, forbidden-term, and score fields load."""
+    path = tmp_path / "questions.yaml"
+    path.write_text(
+        """
+questions:
+  - id: comparison
+    question: Compare two tools.
+    source_match: all
+    expected_sources:
+      - analysis/first.md
+      - analysis/second.md
+    forbidden_terms:
+      - retired.example.invalid
+  - id: abstention
+    question: Is this unsupported?
+    expected_sources: []
+    should_abstain: true
+    maximum_top_score: 0.5
+""",
+        encoding="utf-8",
+    )
+
+    questions = load_evaluation_questions(path)
+
+    assert questions[0].source_match == "all"
+    assert questions[0].forbidden_terms == (
+        "retired.example.invalid",
+    )
+    assert questions[1].maximum_top_score == pytest.approx(0.5)
 
 
 def test_duplicate_ids_are_rejected(tmp_path: Path) -> None:
@@ -142,6 +192,55 @@ questions:
         load_evaluation_questions(path)
 
 
+def test_all_source_match_requires_multiple_sources(
+    tmp_path: Path,
+) -> None:
+    """All-source matching requires at least two expected sources."""
+    path = tmp_path / "questions.yaml"
+    path.write_text(
+        """
+questions:
+  - id: invalid-all
+    question: Compare tools.
+    source_match: all
+    expected_sources:
+      - only-one.md
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        EvaluationError,
+        match="at least two sources",
+    ):
+        load_evaluation_questions(path)
+
+
+def test_at_least_source_match_requires_minimum(
+    tmp_path: Path,
+) -> None:
+    """At-least matching requires a valid minimum source count."""
+    path = tmp_path / "questions.yaml"
+    path.write_text(
+        """
+questions:
+  - id: invalid-minimum
+    question: Select tools.
+    source_match: at_least
+    expected_sources:
+      - first.md
+      - second.md
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        EvaluationError,
+        match="minimum_expected_sources",
+    ):
+        load_evaluation_questions(path)
+
+
 def test_contains_all_terms_is_case_insensitive() -> None:
     """Expected-term matching ignores case."""
     assert contains_all_terms(
@@ -151,7 +250,7 @@ def test_contains_all_terms_is_case_insensitive() -> None:
 
 
 def test_source_hit_uses_any_expected_source() -> None:
-    """Any listed expected source can satisfy the metric."""
+    """Any listed expected source can satisfy the compatibility metric."""
     results = [
         search_result(
             source_path="index.md",
@@ -174,6 +273,61 @@ def test_source_hit_uses_any_expected_source() -> None:
     )
 
 
+def test_source_requirement_hit_supports_all() -> None:
+    """All-source matching requires every expected source."""
+    results = [
+        search_result(source_path="analysis/first.md"),
+        search_result(rank=2, source_path="analysis/second.md"),
+    ]
+    expected = (
+        "analysis/first.md",
+        "analysis/second.md",
+    )
+
+    assert not source_requirement_hit(
+        results,
+        expected,
+        1,
+        "all",
+        None,
+    )
+    assert source_requirement_hit(
+        results,
+        expected,
+        2,
+        "all",
+        None,
+    )
+
+
+def test_source_requirement_hit_supports_at_least() -> None:
+    """At-least matching uses the configured minimum source count."""
+    results = [
+        search_result(source_path="analysis/first.md"),
+        search_result(rank=2, source_path="analysis/second.md"),
+    ]
+    expected = (
+        "analysis/first.md",
+        "analysis/second.md",
+        "analysis/third.md",
+    )
+
+    assert source_requirement_hit(
+        results,
+        expected,
+        2,
+        "at_least",
+        2,
+    )
+    assert not source_requirement_hit(
+        results,
+        expected,
+        2,
+        "at_least",
+        3,
+    )
+
+
 def test_evaluate_question_calculates_hits() -> None:
     """Per-question source and content metrics are calculated."""
     def fake_retriever(**kwargs):
@@ -192,8 +346,62 @@ def test_evaluate_question_calculates_hits() -> None:
     assert result.source_hit_at_1 is True
     assert result.source_hit_at_3 is True
     assert result.source_hit_at_5 is True
+    assert result.source_requirement_at_5 is True
     assert result.content_terms_hit is True
     assert result.internal_leakage is False
+
+
+def test_expected_terms_are_scoped_to_expected_sources() -> None:
+    """Expected terms must occur in retrieved expected-source chunks."""
+
+    def fake_retriever(**kwargs):
+        return [
+            search_result(
+                source_path="analysis/unrelated.md",
+                heading_path="Unrelated > Results",
+                content=("The unrelated result contains exclusive-marker-term."),
+            ),
+            search_result(
+                rank=2,
+                source_path="analysis/mobsuite.md",
+                heading_path="MobSuite > Results",
+                content=("This expected source does not contain the exclusive marker."),
+            ),
+        ]
+
+    result = evaluate_question(
+        question=evaluation_question(
+            expected_terms=("exclusive-marker-term",),
+        ),
+        top_k=5,
+        retriever=fake_retriever,
+    )
+
+    assert result.source_hit_at_5 is True
+    assert result.content_terms_hit is False
+
+
+def test_forbidden_terms_are_detected() -> None:
+    """Forbidden terms found anywhere in retrieved content are reported."""
+    def fake_retriever(**kwargs):
+        return [
+            search_result(
+                content="Use retired.example.invalid for this service.",
+            )
+        ]
+
+    result = evaluate_question(
+        question=evaluation_question(
+            forbidden_terms=("retired.example.invalid",),
+        ),
+        top_k=5,
+        retriever=fake_retriever,
+    )
+
+    assert result.forbidden_terms_absent is False
+    assert result.matched_forbidden_terms == (
+        "retired.example.invalid",
+    )
 
 
 def test_internal_question_checks_both_access_modes() -> None:
@@ -224,6 +432,7 @@ def test_internal_question_checks_both_access_modes() -> None:
             expected_sources=("internal_only/merge.md",),
             expected_terms=(),
             expected_access_level="internal",
+            evaluation_context="internal",
         ),
         top_k=5,
         retriever=fake_retriever,
@@ -275,6 +484,37 @@ def test_no_answer_question_records_score() -> None:
     assert result.top_score == pytest.approx(0.51)
     assert result.source_hit_at_1 is None
     assert result.source_hit_at_5 is None
+    assert result.abstention_pass is None
+
+
+def test_no_answer_question_uses_score_threshold() -> None:
+    """An abstention score threshold produces a pass/fail result."""
+    def fake_retriever(**kwargs):
+        return [search_result(score=0.51)]
+
+    question = evaluation_question(
+        identifier="unsupported",
+        question="Can it fold proteins?",
+        expected_sources=(),
+        expected_terms=(),
+        should_abstain=True,
+    )
+
+    passing = evaluate_question(
+        question=question,
+        top_k=5,
+        retriever=fake_retriever,
+        default_abstention_max_score=0.60,
+    )
+    failing = evaluate_question(
+        question=question,
+        top_k=5,
+        retriever=fake_retriever,
+        default_abstention_max_score=0.50,
+    )
+
+    assert passing.abstention_pass is True
+    assert failing.abstention_pass is False
 
 
 def test_evaluate_questions_calculates_rates(
@@ -308,6 +548,7 @@ def test_evaluate_questions_calculates_rates(
     assert summary.source_hit_at_1_count == 1
     assert summary.source_hit_at_1_rate == pytest.approx(0.5)
     assert summary.source_hit_at_5_rate == pytest.approx(0.5)
+    assert summary.source_requirement_at_5_rate == pytest.approx(0.5)
 
 
 def test_evaluation_requires_top_five() -> None:

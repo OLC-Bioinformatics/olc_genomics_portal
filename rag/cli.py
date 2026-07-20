@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 import argparse
 import logging
+import os
 import statistics
 import sys
 import time
@@ -396,6 +397,11 @@ def evaluate_retrieval(
     category: str | None = None,
     output_json: str | None = None,
     show_failures: bool = True,
+    abstention_max_score: float | None = None,
+    minimum_hit_at_5: float | None = None,
+    minimum_requirement_at_5: float | None = None,
+    minimum_term_hit_rate: float | None = None,
+    minimum_heading_hit_rate: float | None = None,
 ) -> int:
     """
     Evaluate semantic retrieval against a YAML question set.
@@ -421,6 +427,7 @@ def evaluate_retrieval(
         evaluation_path=evaluation_path,
         top_k=top_k,
         category=category,
+        default_abstention_max_score=abstention_max_score,
     )
 
     print_evaluation_summary(
@@ -444,6 +451,26 @@ def evaluate_retrieval(
 
     if summary.internal_leakage_count:
         return 1
+
+    if summary.forbidden_terms_absent_count < summary.forbidden_term_questions:
+        return 1
+
+    if (
+        summary.abstention_questions_scored
+        and summary.abstention_pass_count < summary.abstention_questions_scored
+    ):
+        return 1
+
+    quality_gates = (
+        (minimum_hit_at_5, summary.source_hit_at_5_rate),
+        (minimum_requirement_at_5, summary.source_requirement_at_5_rate),
+        (minimum_term_hit_rate, summary.term_hit_rate),
+        (minimum_heading_hit_rate, summary.heading_hit_rate),
+    )
+
+    for minimum, actual in quality_gates:
+        if minimum is not None and (actual is None or actual < minimum):
+            return 1
 
     return 0
 
@@ -579,13 +606,39 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate_parser.add_argument(
         "--no-show-failures",
         action="store_true",
-        help="Do not print failed Hit@5 question details",
+        help="Do not print failed evaluation details",
+    )
+    evaluate_parser.add_argument(
+        "--abstention-max-score",
+        type=float,
+        help="Default maximum top score for should_abstain questions",
+    )
+    evaluate_parser.add_argument(
+        "--minimum-hit-at-5",
+        type=float,
+        help="Fail when any-source Hit@5 is below this fraction",
+    )
+    evaluate_parser.add_argument(
+        "--minimum-requirement-at-5",
+        type=float,
+        help="Fail when source-requirement Pass@5 is below this fraction",
+    )
+    evaluate_parser.add_argument(
+        "--minimum-term-hit-rate",
+        type=float,
+        help="Fail when expected-content term hit rate is below this fraction",
+    )
+    evaluate_parser.add_argument(
+        "--minimum-heading-hit-rate",
+        type=float,
+        help="Fail when expected-heading term hit rate is below this fraction",
     )
     return parser
 
 
 def main() -> int:
     """Run the selected administrative command."""
+    os.umask(0o002)
     parser = build_parser()
     arguments = parser.parse_args()
 
@@ -629,6 +682,11 @@ def main() -> int:
                 category=arguments.category,
                 output_json=arguments.output_json,
                 show_failures=not arguments.no_show_failures,
+                abstention_max_score=arguments.abstention_max_score,
+                minimum_hit_at_5=arguments.minimum_hit_at_5,
+                minimum_requirement_at_5=arguments.minimum_requirement_at_5,
+                minimum_term_hit_rate=arguments.minimum_term_hit_rate,
+                minimum_heading_hit_rate=arguments.minimum_heading_hit_rate,
             )
         parser.error(f"Unknown command: {arguments.command}")
         return 2

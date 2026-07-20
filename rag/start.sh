@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 0002
 
 echo "[rag] Starting RedmineAssistant retrieval service"
 echo "[rag] Python: $(python --version)"
