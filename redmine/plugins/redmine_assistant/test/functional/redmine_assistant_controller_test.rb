@@ -26,12 +26,18 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
     @member_roles.each do |role|
       role.add_permission!(:view_redmine_assistant)
+      role.remove_permission!(
+        :view_internal_assistant_documentation
+      )
     end
   end
 
   def teardown
     @member_roles.each do |role|
       role.remove_permission!(:view_redmine_assistant)
+      role.remove_permission!(
+        :view_internal_assistant_documentation
+      )
     end
   end
 
@@ -54,7 +60,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def test_administrator_can_open_assistant
-    @request.session[:user_id] = @administrator.id
+    sign_in(@administrator)
 
     get(
       :index,
@@ -74,7 +80,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def test_authorized_project_member_can_open_assistant
-    @request.session[:user_id] = @project_member.id
+    sign_in(@project_member)
 
     get(
       :index,
@@ -92,7 +98,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       role.remove_permission!(:view_redmine_assistant)
     end
 
-    @request.session[:user_id] = @project_member.id
+    sign_in(@project_member)
 
     get(
       :index,
@@ -105,7 +111,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def test_blank_query_is_rejected
-    @request.session[:user_id] = @administrator.id
+    sign_in(@project_member)
 
     post(
       :search,
@@ -121,7 +127,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def test_query_longer_than_limit_is_rejected
-    @request.session[:user_id] = @administrator.id
+    sign_in(@project_member)
 
     post(
       :search,
@@ -136,29 +142,53 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     assert_select '.redmine-assistant-result', count: 0
   end
 
+  def test_invalid_result_limit_is_rejected
+    sign_in(@project_member)
+
+    post(
+      :search,
+      params: {
+        project_id: @project.identifier,
+        query: 'How do I run ConFindr?',
+        limit: 11
+      }
+    )
+
+    assert_response :unprocessable_content
+    assert_select '.flash.error'
+    assert_select '.redmine-assistant-result', count: 0
+  end
+
   def test_successful_search_renders_standard_results
-    @request.session[:user_id] = @administrator.id
+    sign_in(@project_member)
 
     ENV.stubs(:fetch)
-      .with(
-        'REDMINE_ASSISTANT_DOCS_BASE_URL',
-        ''
-      )
-      .returns(
-        'https://docs.example.gc.ca/redmine'
-      )
+       .with(
+         'REDMINE_ASSISTANT_DOCS_BASE_URL',
+         ''
+       )
+       .returns(
+         'https://docs.example.gc.ca/redmine'
+       )
 
-    rag_response = {
-      'status' => 'ok',
-      'results' => [
-        standard_result
-      ]
-    }
+    client = mock
+
+    client.expects(:retrieve)
+          .with(
+            query: 'Which automator detects plasmids?',
+            limit: nil,
+            access_context: 'standard'
+          )
+          .returns(
+            rag_response(
+              access_context: 'standard',
+              sources: [standard_result]
+            )
+          )
 
     @controller
-      .stubs(:call_rag_service)
-      .with('Which automator detects plasmids?')
-      .returns(rag_response)
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :search,
@@ -169,7 +199,6 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     )
 
     assert_response :success
-
     assert_select '.redmine-assistant-result', count: 1
     assert_select '.redmine-assistant-score', text: '91.0%'
     assert_select(
@@ -180,26 +209,21 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       '.redmine-assistant-content',
       text: /detects plasmids/
     )
-  assert_select(
-    '.redmine-assistant-result-footer a',
-    text: 'analysis/mobsuite.md',
-    count: 1
-  ) do |links|
-    assert_equal(
-      'https://docs.example.gc.ca/redmine/analysis/mobsuite/',
-      links.first['href']
-    )
-
-    assert_equal(
-      '_blank',
-      links.first['target']
-    )
-
-    assert_equal(
-      'noopener noreferrer',
-      links.first['rel']
-    )
-  end
+    assert_select(
+      '.redmine-assistant-result-footer a',
+      text: 'analysis/mobsuite.md',
+      count: 1
+    ) do |links|
+      assert_equal(
+        'https://docs.example.gc.ca/redmine/analysis/mobsuite/',
+        links.first['href']
+      )
+      assert_equal('_blank', links.first['target'])
+      assert_equal(
+        'noopener noreferrer',
+        links.first['rel']
+      )
+    end
 
     assert_includes(
       response.body,
@@ -207,21 +231,30 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     )
   end
 
-  def test_internal_results_are_discarded
-    @request.session[:user_id] = @administrator.id
+  def test_standard_user_discards_unexpected_internal_results
+    sign_in(@project_member)
 
-    rag_response = {
-      'status' => 'ok',
-      'results' => [
-        standard_result,
-        internal_result
-      ]
-    }
+    client = mock
+
+    client.expects(:retrieve)
+          .with(
+            query: 'How do I use the merge workflow?',
+            limit: nil,
+            access_context: 'standard'
+          )
+          .returns(
+            rag_response(
+              access_context: 'standard',
+              sources: [
+                standard_result,
+                internal_result
+              ]
+            )
+          )
 
     @controller
-      .stubs(:call_rag_service)
-      .with('How do I use the merge workflow?')
-      .returns(rag_response)
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :search,
@@ -230,39 +263,129 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
         query: 'How do I use the merge workflow?'
       }
     )
+
     assert_response :success
     assert_select '.redmine-assistant-result', count: 1
-
-    assert_includes(
-      response.body,
-      'analysis/mobsuite.md'
-    )
-
-    refute_includes(
-      response.body,
-      'internal_only/merge.md'
-    )
-
+    assert_includes(response.body, 'analysis/mobsuite.md')
+    refute_includes(response.body, 'internal_only/merge.md')
     refute_includes(
       response.body,
       'Internal merge instructions'
     )
   end
 
-  def test_rag_connection_failure_returns_safe_error
-    @request.session[:user_id] = @administrator.id
+  def test_user_with_internal_permission_receives_internal_results
+    grant_internal_permission
+    sign_in(@project_member)
 
-    error_class = RedmineAssistantController.const_get(
-      :RedmineAssistantError
-    )
+    client = mock
+
+    client.expects(:retrieve)
+          .with(
+            query: 'How do I use the merge workflow?',
+            limit: nil,
+            access_context: 'internal'
+          )
+          .returns(
+            rag_response(
+              access_context: 'internal',
+              sources: [internal_result]
+            )
+          )
 
     @controller
-      .stubs(:call_rag_service)
-      .with('Which automator detects plasmids?')
-      .raises(
-        error_class,
-        'Sensitive internal RAG connection details'
-      )
+      .stubs(:rag_client)
+      .returns(client)
+
+    post(
+      :search,
+      params: {
+        project_id: @project.identifier,
+        query: 'How do I use the merge workflow?'
+      }
+    )
+
+    assert_response :success
+    assert_select '.redmine-assistant-result', count: 1
+    assert_includes(response.body, 'internal_only/merge.md')
+    assert_includes(
+      response.body,
+      'Internal merge instructions'
+    )
+
+    # Internal documentation must not link to the public docs site.
+    assert_select(
+      '.redmine-assistant-result-footer a',
+      count: 0
+    )
+    assert_select(
+      '.redmine-assistant-result-footer code',
+      text: 'internal_only/merge.md',
+      count: 1
+    )
+  end
+
+  def test_browser_access_context_is_rejected
+    sign_in(@project_member)
+
+    @controller
+      .expects(:rag_client)
+      .never
+
+    post(
+      :search,
+      params: {
+        project_id: @project.identifier,
+        query: 'How do I use Merge?',
+        access_context: 'internal'
+      }
+    )
+
+    assert_response :unprocessable_content
+    assert_select '.flash.error'
+  end
+
+  def test_browser_include_internal_is_rejected
+    sign_in(@project_member)
+
+    @controller
+      .expects(:rag_client)
+      .never
+
+    post(
+      :search,
+      params: {
+        project_id: @project.identifier,
+        query: 'How do I use Merge?',
+        include_internal: true
+      }
+    )
+
+    assert_response :unprocessable_content
+    assert_select '.flash.error'
+  end
+
+  def test_rag_connection_failure_returns_safe_error
+    sign_in(@project_member)
+
+    client = mock
+
+    client.expects(:retrieve)
+          .with(
+            query: 'Which automator detects plasmids?',
+            limit: nil,
+            access_context: 'standard'
+          )
+          .raises(
+            RedmineAssistant::ServiceError.new(
+              'Sensitive internal RAG connection details',
+              request_id: 'rag-request-789'
+            )
+          )
+
+    @controller
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :search,
@@ -274,12 +397,10 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
     assert_response :service_unavailable
     assert_select '.flash.error'
-
     assert_includes(
       response.body,
       'temporarily unavailable'
     )
-
     refute_includes(
       response.body,
       'Sensitive internal RAG connection details'
@@ -287,17 +408,28 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def test_invalid_results_structure_returns_safe_error
-    @request.session[:user_id] = @administrator.id
+    sign_in(@project_member)
 
-    rag_response = {
-      'status' => 'ok',
-      'results' => 'not-an-array'
-    }
+    client = mock
+
+    client.expects(:retrieve)
+          .with(
+            query: 'Which automator detects plasmids?',
+            limit: nil,
+            access_context: 'standard'
+          )
+          .returns(
+            {
+              'status' => 'ok',
+              'request_id' => 'rag-request-123',
+              'access_context' => 'standard',
+              'sources' => 'not-an-array'
+            }
+          )
 
     @controller
-      .stubs(:call_rag_service)
-      .with('Which automator detects plasmids?')
-      .returns(rag_response)
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :search,
@@ -309,20 +441,15 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
     assert_response :service_unavailable
     assert_select '.flash.error'
-
     assert_includes(
       response.body,
       'temporarily unavailable'
     )
-
-    refute_includes(
-      response.body,
-      'not-an-array'
-    )
+    refute_includes(response.body, 'not-an-array')
   end
 
   def test_missing_project_returns_not_found
-    @request.session[:user_id] = @administrator.id
+    sign_in(@administrator)
 
     get(
       :index,
@@ -336,6 +463,27 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
   private
 
+  def sign_in(user)
+    @request.session[:user_id] = user.id
+  end
+
+  def grant_internal_permission
+    @member_roles.each do |role|
+      role.add_permission!(
+        :view_internal_assistant_documentation
+      )
+    end
+  end
+
+  def rag_response(access_context:, sources:)
+    {
+      'status' => 'ok',
+      'request_id' => 'rag-request-123',
+      'access_context' => access_context,
+      'sources' => sources
+    }
+  end
+
   def standard_result
     {
       'rank' => 1,
@@ -347,7 +495,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       'heading_path' => (
         'MobSuite &gt; What does it do?'
       ),
-      'content' => (
+      'excerpt' => (
         'MobSuite detects plasmids in draft genome assemblies.'
       ),
       'access_level' => 'standard'
@@ -365,7 +513,7 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       'heading_path' => (
         'Merge &gt; How do I use it?'
       ),
-      'content' => 'Internal merge instructions.',
+      'excerpt' => 'Internal merge instructions.',
       'access_level' => 'internal'
     }
   end

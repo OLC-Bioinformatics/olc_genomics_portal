@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'net/http'
-require 'uri'
+require_relative '../../lib/redmine_assistant/rag_client'
 
 class RedmineAssistantController < ApplicationController
   before_action :require_login
@@ -11,67 +9,43 @@ class RedmineAssistantController < ApplicationController
 
   helper :redmine_assistant
 
-  DEFAULT_RAG_URL = 'http://rag:8001'
-  DEFAULT_TIMEOUT_SECONDS = 15
-  DEFAULT_RESULT_LIMIT = 5
   MAX_QUERY_LENGTH = 2_000
 
   def index
     @query = ''
     @results = []
+    @access_context = assistant_access_context
   end
 
   def search
     @query = params[:query].to_s.strip
     @results = []
+    @access_context = assistant_access_context
 
-    validation_error = validate_query(@query)
-
-    if validation_error
-      flash.now[:error] = validation_error
-
-      return render(
-        :index,
-        status: :unprocessable_content
-      )
+    if (message = validation_error)
+      flash.now[:error] = message
+      return render :index, status: :unprocessable_content
     end
 
-    begin
-      response_body = call_rag_service(@query)
-      @results = standard_results(response_body.fetch('results', []))
-    rescue RedmineAssistantError => e
-      Rails.logger.warn(
-        'Redmine Assistant search unavailable: ' \
-        "#{e.class}: #{e.message}"
-      )
-
-      flash.now[:error] = l(:error_redmine_assistant_unavailable)
-
-      return render(
-        :index,
-        status: :service_unavailable
-      )
-    rescue StandardError => e
-      Rails.logger.error(
-        'Unexpected Redmine Assistant failure: ' \
-        "#{e.class}: #{e.message}"
-      )
-
-      flash.now[:error] = l(:error_redmine_assistant_unexpected)
-
-      return render(
-        :index,
-        status: :internal_server_error
-      )
-    end
-
+    body = rag_client.retrieve(
+      query: @query,
+      limit: requested_limit,
+      access_context: @access_context
+    )
+    @rag_request_id = body['request_id'].to_s.presence
+    @results = normalized_results(body.fetch('sources'))
     render :index
+  rescue RedmineAssistant::Error => e
+    log_assistant_error('Redmine Assistant search unavailable', e, :warn)
+    flash.now[:error] = l(:error_redmine_assistant_unavailable)
+    render :index, status: :service_unavailable
+  rescue StandardError => e
+    log_assistant_error('Unexpected Redmine Assistant failure', e, :error)
+    flash.now[:error] = l(:error_redmine_assistant_unexpected)
+    render :index, status: :internal_server_error
   end
 
   private
-
-  class RedmineAssistantError < StandardError
-  end
 
   def find_project
     @project = Project.find(params[:project_id])
@@ -79,164 +53,84 @@ class RedmineAssistantController < ApplicationController
     render_404
   end
 
-  def validate_query(query)
-    if query.empty?
-      return l(:error_redmine_assistant_blank_query)
+  def assistant_access_context
+    if User.current.allowed_to?(:view_internal_assistant_documentation, @project)
+      'internal'
+    else
+      'standard'
     end
-
-    if query.length > MAX_QUERY_LENGTH
-      return l(
-        :error_redmine_assistant_query_too_long,
-        maximum: MAX_QUERY_LENGTH
-      )
-    end
-
-    nil
   end
 
-  def call_rag_service(query)
-    uri = search_uri
-    timeout_seconds = configured_timeout_seconds
-
-    request = Net::HTTP::Post.new(uri)
-    request['Accept'] = 'application/json'
-    request['Content-Type'] = 'application/json'
-    request.body = {
-      query: query,
-      limit: configured_result_limit
-    }.to_json
-
-    response = Net::HTTP.start(
-      uri.hostname,
-      uri.port,
-      use_ssl: uri.scheme == 'https',
-      open_timeout: timeout_seconds,
-      read_timeout: timeout_seconds,
-      write_timeout: timeout_seconds
-    ) do |http|
-      http.request(request)
+  def validation_error
+    if params.key?(:include_internal) || params.key?(:access_context)
+      return l(:error_redmine_assistant_invalid_access_context)
     end
-
-    unless response.is_a?(Net::HTTPSuccess)
-      raise RedmineAssistantError,
-            "RAG service returned HTTP #{response.code}"
+    return l(:error_redmine_assistant_blank_query) if @query.empty?
+    if @query.length > MAX_QUERY_LENGTH
+      return l(:error_redmine_assistant_query_too_long, maximum: MAX_QUERY_LENGTH)
     end
+    return nil if requested_limit.nil?
 
-    parsed_body = JSON.parse(response.body)
+    value = Integer(requested_limit, 10)
+    return nil if value.between?(1, 10)
 
-    unless parsed_body.is_a?(Hash)
-      raise RedmineAssistantError,
-            'RAG service returned an invalid JSON document'
-    end
-
-    unless parsed_body['status'] == 'ok'
-      raise RedmineAssistantError,
-            'RAG service did not return a successful status'
-    end
-
-    parsed_body
-  rescue JSON::ParserError => e
-    raise RedmineAssistantError,
-          "Could not parse RAG response: #{e.message}"
-  rescue SocketError,
-         IOError,
-         SystemCallError,
-         Timeout::Error,
-         Net::OpenTimeout,
-         Net::ReadTimeout => e
-    raise RedmineAssistantError,
-          "Could not connect to RAG service: #{e.message}"
+    l(:error_redmine_assistant_invalid_limit)
+  rescue ArgumentError, TypeError
+    l(:error_redmine_assistant_invalid_limit)
   end
 
-  def search_uri
-    base_url = ENV.fetch(
-      'REDMINE_ASSISTANT_RAG_URL',
-      DEFAULT_RAG_URL
-    ).to_s.strip
-
-    if base_url.empty?
-      raise RedmineAssistantError,
-            'REDMINE_ASSISTANT_RAG_URL is empty'
-    end
-
-    URI.parse("#{base_url.delete_suffix('/')}/search")
-  rescue URI::InvalidURIError => e
-    raise RedmineAssistantError,
-          "Invalid RAG service URL: #{e.message}"
+  def requested_limit
+    params[:limit].presence
   end
 
-  def configured_timeout_seconds
-    integer_environment_value(
-      'REDMINE_ASSISTANT_TIMEOUT_SECONDS',
-      DEFAULT_TIMEOUT_SECONDS,
-      minimum: 1,
-      maximum: 60
-    )
+  def rag_client
+    @rag_client ||= RedmineAssistant::RagClient.new
   end
 
-  def configured_result_limit
-    integer_environment_value(
-      'REDMINE_ASSISTANT_DEFAULT_LIMIT',
-      DEFAULT_RESULT_LIMIT,
-      minimum: 1,
-      maximum: 10
-    )
-  end
-
-  def integer_environment_value(
-    name,
-    default,
-    minimum:,
-    maximum:
-  )
-    raw_value = ENV.fetch(name, default.to_s)
-    value = Integer(raw_value, 10)
-
-    unless value.between?(minimum, maximum)
-      raise RedmineAssistantError,
-            "#{name} must be between #{minimum} and #{maximum}"
-    end
-
-    value
-  rescue ArgumentError
-    raise RedmineAssistantError,
-          "#{name} must be an integer"
-  end
-
-  def standard_results(results)
+  def normalized_results(results)
     unless results.is_a?(Array)
-      raise RedmineAssistantError,
-            'RAG results must be an array'
+      raise RedmineAssistant::ResponseError, 'RAG sources must be an array'
     end
 
     results.filter_map do |result|
       next unless result.is_a?(Hash)
-
-      source_path = result['source_path'].to_s
-      access_level = result['access_level'].to_s
-
-      if access_level != 'standard' ||
-         source_path.start_with?('internal_only/')
-        Rails.logger.error(
-          'Redmine Assistant discarded an internal search result'
-        )
-        next
-      end
-
-      normalized_result(result)
+      normalized = {
+        'rank' => result['rank'].to_i,
+        'score' => result['score'].to_f,
+        'chunk_key' => result['chunk_key'].to_s,
+        'source_path' => result['source_path'].to_s,
+        'source_url' => result['source_url'].to_s,
+        'document_title' => result['document_title'].to_s,
+        'heading_path' => result['heading_path'].to_s,
+        'content' => result['excerpt'].to_s,
+        'access_level' => result['access_level'].to_s
+      }
+      next unless result_allowed?(normalized)
+      normalized
     end
   end
 
-  def normalized_result(result)
-    {
-      'rank' => result['rank'].to_i,
-      'score' => result['score'].to_f,
-      'chunk_key' => result['chunk_key'].to_s,
-      'source_path' => result['source_path'].to_s,
-      'document_title' => result['document_title'].to_s,
-      'heading_path' => result['heading_path'].to_s,
-      'content' => result['content'].to_s,
-      'access_level' => 'standard'
-    }
+  def result_allowed?(result)
+    internal = result['access_level'] == 'internal' ||
+               result['source_path'].start_with?('internal_only/')
+
+    if @access_context == 'standard' && internal
+      Rails.logger.error(
+        'Redmine Assistant discarded an internal result for a standard user'
+      )
+      return false
+    end
+
+    return true unless internal
+
+    result['access_level'] == 'internal' &&
+      result['source_path'].start_with?('internal_only/')
+  end
+
+  def log_assistant_error(prefix, error, level)
+    request_id = error.respond_to?(:request_id) ? error.request_id : nil
+    message = "#{prefix}: #{error.class}"
+    message += " request_id=#{request_id}" if request_id.present?
+    Rails.logger.public_send(level, message)
   end
 end
