@@ -2,6 +2,8 @@
 
 """Tests for the RedmineAssistant Flask API."""
 
+from dataclasses import replace
+
 import pytest
 
 import api
@@ -17,6 +19,22 @@ def client():
 
     with api.app.test_client() as test_client:
         yield test_client
+
+
+@pytest.fixture
+def trusted_settings(monkeypatch):
+    """Configure a deterministic trusted-service token for one test."""
+    updated_settings = replace(
+        api.settings,
+        trusted_service_token="test-service-token",
+        trusted_access_header="X-Redmine-Assistant-Access",
+    )
+    monkeypatch.setattr(
+        api,
+        "settings",
+        updated_settings,
+    )
+    return updated_settings
 
 
 def search_result(
@@ -54,6 +72,7 @@ def test_health_endpoint_returns_liveness(client) -> None:
         "status": "ok",
         "service": "redmine-assistant-rag",
     }
+    assert response.headers["X-Request-ID"]
 
 
 def test_readiness_endpoint_returns_database_status(
@@ -72,7 +91,7 @@ def test_readiness_endpoint_returns_database_status(
         lambda: {
             "migration_count": 2,
             "documents": 51,
-            "chunks": 404,
+            "chunks": 857,
         },
     )
 
@@ -84,7 +103,7 @@ def test_readiness_endpoint_returns_database_status(
         "database": "connected",
         "schema_migrations": 2,
         "documents": 51,
-        "chunks": 404,
+        "chunks": 857,
     }
 
 
@@ -115,7 +134,7 @@ def test_search_returns_ranked_results(
     client,
     monkeypatch,
 ) -> None:
-    """A valid query returns serialized semantic-search results."""
+    """The legacy endpoint returns complete standard results."""
     received_arguments = {}
 
     def fake_retrieve_chunks(
@@ -130,7 +149,6 @@ def test_search_returns_ranked_results(
                 "include_internal": include_internal,
             }
         )
-
         return [
             search_result(),
             search_result(
@@ -138,10 +156,6 @@ def test_search_returns_ranked_results(
                 source_path="index.md",
                 source_url="index.md",
                 document_title="OLC Redmine Automator",
-                heading_path=(
-                    "OLC Redmine Automator > Possible Analyses "
-                    "> Detect and type plasmids"
-                ),
                 content="Use MobSuite.",
                 score=0.84,
                 chunk_key="index.md::0013",
@@ -162,29 +176,14 @@ def test_search_returns_ranked_results(
         },
     )
 
+    body = response.get_json()
     assert response.status_code == 200
-
-    response_body = response.get_json()
-
-    assert response_body["status"] == "ok"
-    assert response_body["query"] == (
-        "Which automator detects plasmids?"
+    assert body["status"] == "ok"
+    assert body["count"] == 2
+    assert body["limit"] == 2
+    assert body["results"][0]["content"] == (
+        "MobSuite detects plasmids."
     )
-    assert response_body["limit"] == 2
-    assert response_body["count"] == 2
-
-    assert response_body["results"][0] == {
-        "rank": 1,
-        "score": 0.91,
-        "chunk_key": "analysis/mobsuite.md::0000",
-        "source_path": "analysis/mobsuite.md",
-        "source_url": "analysis/mobsuite.md",
-        "document_title": "MobSuite",
-        "heading_path": "MobSuite > What does it do?",
-        "content": "MobSuite detects plasmids.",
-        "access_level": "standard",
-    }
-
     assert received_arguments == {
         "query": "Which automator detects plasmids?",
         "limit": 2,
@@ -196,17 +195,11 @@ def test_search_uses_default_limit(
     client,
     monkeypatch,
 ) -> None:
-    """Omitting limit uses the configured retrieval default."""
-    received_limit = None
+    """Omitting the limit uses the configured default."""
+    received = {}
 
-    def fake_retrieve_chunks(
-        query,
-        limit,
-        include_internal,
-    ):
-        nonlocal received_limit
-        received_limit = limit
-
+    def fake_retrieve_chunks(**kwargs):
+        received.update(kwargs)
         return []
 
     monkeypatch.setattr(
@@ -217,73 +210,59 @@ def test_search_uses_default_limit(
 
     response = client.post(
         "/search",
-        json={
-            "query": "Which automator detects plasmids?",
-        },
+        json={"query": "plasmids"},
     )
 
     assert response.status_code == 200
-    assert response.get_json()["limit"] == 5
-    assert received_limit == 5
+    assert response.get_json()["limit"] == api.settings.top_k
+    assert received["limit"] == api.settings.top_k
 
 
-def test_search_rejects_non_json_request(client) -> None:
-    """The search endpoint only accepts JSON requests."""
+@pytest.mark.parametrize(
+    ("payload", "content_type", "expected_code", "expected_status"),
+    [
+        ("query=plasmids", "application/x-www-form-urlencoded", "unsupported_media_type", 415),
+        ('{"query": ', "application/json", "invalid_json", 400),
+    ],
+)
+def test_search_rejects_invalid_request_encoding(
+    client,
+    payload,
+    content_type,
+    expected_code,
+    expected_status,
+) -> None:
+    """The legacy endpoint requires valid JSON."""
     response = client.post(
         "/search",
-        data="query=plasmids",
-        content_type="application/x-www-form-urlencoded",
+        data=payload,
+        content_type=content_type,
     )
 
-    assert response.status_code == 415
-
-    response_body = response.get_json()
-
-    assert response_body["error"]["code"] == (
-        "unsupported_media_type"
-    )
-
-
-def test_search_rejects_malformed_json(client) -> None:
-    """Malformed JSON receives a safe validation error."""
-    response = client.post(
-        "/search",
-        data='{"query": ',
-        content_type="application/json",
-    )
-
-    assert response.status_code == 400
-    assert response.get_json()["error"]["code"] == "invalid_json"
+    assert response.status_code == expected_status
+    assert response.get_json()["error"]["code"] == expected_code
 
 
 def test_search_rejects_non_object_json(client) -> None:
     """The JSON body must be an object."""
     response = client.post(
         "/search",
-        json=[
-            "Which automator detects plasmids?"
-        ],
+        json=["plasmids"],
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"]["code"] == (
-        "invalid_request"
-    )
+    assert response.get_json()["error"]["code"] == "invalid_request"
 
 
 def test_search_rejects_missing_query(client) -> None:
     """The query field is required."""
     response = client.post(
         "/search",
-        json={
-            "limit": 5,
-        },
+        json={"limit": 5},
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"]["code"] == (
-        "missing_query"
-    )
+    assert response.get_json()["error"]["code"] == "missing_query"
 
 
 @pytest.mark.parametrize(
@@ -305,15 +284,11 @@ def test_search_rejects_invalid_query(
     """Only non-empty string queries are accepted."""
     response = client.post(
         "/search",
-        json={
-            "query": query,
-        },
+        json={"query": query},
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"]["code"] == (
-        "invalid_request"
-    )
+    assert response.get_json()["error"]["code"] == "invalid_request"
 
 
 @pytest.mark.parametrize(
@@ -336,30 +311,22 @@ def test_search_rejects_invalid_limit(
     response = client.post(
         "/search",
         json={
-            "query": "Which automator detects plasmids?",
+            "query": "plasmids",
             "limit": limit,
         },
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"]["code"] == (
-        "invalid_request"
-    )
+    assert response.get_json()["error"]["code"] == "invalid_request"
 
 
-def test_search_returns_503_for_retrieval_error(
+def test_search_returns_safe_retrieval_error(
     client,
     monkeypatch,
 ) -> None:
     """Expected retrieval failures receive a safe 503 response."""
-    def fail_retrieval(
-        query,
-        limit,
-        include_internal,
-    ):
-        raise RetrievalError(
-            "Database credentials and internal details"
-        )
+    def fail_retrieval(**kwargs):
+        raise RetrievalError("Secret database credentials")
 
     monkeypatch.setattr(
         api,
@@ -369,35 +336,22 @@ def test_search_returns_503_for_retrieval_error(
 
     response = client.post(
         "/search",
-        json={
-            "query": "Which automator detects plasmids?",
-        },
+        json={"query": "plasmids"},
     )
 
+    body = response.get_json()
     assert response.status_code == 503
-
-    response_body = response.get_json()
-
-    assert response_body["error"]["code"] == (
-        "search_unavailable"
-    )
-    assert "credentials" not in str(response_body)
-    assert "internal details" not in str(response_body)
+    assert body["error"]["code"] == "search_unavailable"
+    assert "Secret" not in str(body)
 
 
-def test_search_returns_500_for_unexpected_error(
+def test_search_returns_safe_unexpected_error(
     client,
     monkeypatch,
 ) -> None:
-    """Unexpected failures do not expose exception details."""
-    def fail_retrieval(
-        query,
-        limit,
-        include_internal,
-    ):
-        raise RuntimeError(
-            "Sensitive unexpected internal exception"
-        )
+    """Unexpected failures receive a safe 500 response."""
+    def fail_retrieval(**kwargs):
+        raise RuntimeError("Sensitive internal exception")
 
     monkeypatch.setattr(
         api,
@@ -407,34 +361,25 @@ def test_search_returns_500_for_unexpected_error(
 
     response = client.post(
         "/search",
-        json={
-            "query": "Which automator detects plasmids?",
-        },
+        json={"query": "plasmids"},
     )
 
+    body = response.get_json()
     assert response.status_code == 500
-
-    response_body = response.get_json()
-
-    assert response_body["error"]["code"] == "internal_error"
-    assert "Sensitive" not in str(response_body)
+    assert body["error"]["code"] == "internal_error"
+    assert "Sensitive" not in str(body)
 
 
-def test_search_always_disables_internal_retrieval(
+def test_legacy_search_remains_standard_only(
     client,
     monkeypatch,
+    trusted_settings,
 ) -> None:
-    """Request fields cannot enable internal-document retrieval."""
-    received_include_internal = None
+    """Trusted headers cannot enable internal legacy search."""
+    received = {}
 
-    def fake_retrieve_chunks(
-        query,
-        limit,
-        include_internal,
-    ):
-        nonlocal received_include_internal
-        received_include_internal = include_internal
-
+    def fake_retrieve_chunks(**kwargs):
+        received.update(kwargs)
         return []
 
     monkeypatch.setattr(
@@ -445,39 +390,188 @@ def test_search_always_disables_internal_retrieval(
 
     response = client.post(
         "/search",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "internal",
+        },
         json={
-            "query": "How do I use Merge?",
+            "query": "Merge",
             "include_internal": True,
         },
     )
 
     assert response.status_code == 200
-    assert received_include_internal is False
+    assert received["include_internal"] is False
 
 
-def test_search_defensively_removes_internal_results(
+def test_legacy_search_filters_internal_results(
     client,
     monkeypatch,
 ) -> None:
-    """Internal results are omitted even if retrieval returns them."""
-    def fake_retrieve_chunks(
-        query,
-        limit,
-        include_internal,
-    ):
-        return [
+    """Internal chunks are omitted by the legacy endpoint."""
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        lambda **kwargs: [
             search_result(),
             search_result(
                 rank=2,
                 source_path="internal_only/merge.md",
                 source_url="internal_only/merge.md",
-                document_title="Merge",
-                heading_path="Merge > Description",
-                content="Internal merge instructions.",
-                score=0.85,
                 access_level="internal",
-                chunk_key="internal_only/merge.md::0001",
             ),
+        ],
+    )
+
+    response = client.post(
+        "/search",
+        json={"query": "Merge"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["count"] == 1
+    assert body["results"][0]["access_level"] == "standard"
+
+
+def test_v1_returns_retrieval_contract(
+    client,
+    monkeypatch,
+) -> None:
+    """A successful request returns the stable v1 schema."""
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        lambda **kwargs: [search_result()],
+    )
+
+    response = client.post(
+        "/api/v1/retrieve",
+        json={
+            "query": "  plasmids  ",
+            "limit": 1,
+        },
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == body["request_id"]
+    assert body["query"] == "plasmids"
+    assert body["answer_mode"] == "retrieval_only"
+    assert body["answer"] is None
+    assert body["abstained"] is False
+    assert body["access_context"] == "standard"
+    assert body["result_count"] == 1
+    assert body["limit"] == 1
+    assert body["sources"][0]["excerpt"] == (
+        "MobSuite detects plasmids."
+    )
+    assert "content" not in body["sources"][0]
+
+
+def test_v1_anonymous_request_remains_standard(
+    client,
+    monkeypatch,
+) -> None:
+    """Anonymous v1 requests receive standard access."""
+    received = {}
+
+    def fake_retrieve_chunks(**kwargs):
+        received.update(kwargs)
+        return []
+
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        fake_retrieve_chunks,
+    )
+
+    response = client.post(
+        "/api/v1/retrieve",
+        json={"query": "ConFindr"},
+    )
+
+    assert response.status_code == 200
+    assert received["include_internal"] is False
+    assert response.get_json()["access_context"] == "standard"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("include_internal", True),
+        ("access_context", "internal"),
+    ],
+)
+def test_v1_rejects_json_access_escalation(
+    client,
+    field,
+    value,
+) -> None:
+    """JSON request fields cannot select internal access."""
+    response = client.post(
+        "/api/v1/retrieve",
+        json={
+            "query": "Merge",
+            field: value,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == (
+        "forbidden_access_context"
+    )
+
+
+def test_v1_trusted_standard_request_remains_standard(
+    client,
+    monkeypatch,
+    trusted_settings,
+) -> None:
+    """A trusted standard assertion remains standard-only."""
+    received = {}
+
+    def fake_retrieve_chunks(**kwargs):
+        received.update(kwargs)
+        return []
+
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        fake_retrieve_chunks,
+    )
+
+    response = client.post(
+        "/api/v1/retrieve",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "standard",
+        },
+        json={"query": "ConFindr"},
+    )
+
+    assert response.status_code == 200
+    assert received["include_internal"] is False
+    assert response.get_json()["access_context"] == "standard"
+
+
+def test_v1_trusted_internal_request_enables_internal(
+    client,
+    monkeypatch,
+    trusted_settings,
+) -> None:
+    """A trusted internal assertion enables internal retrieval."""
+    received = {}
+
+    def fake_retrieve_chunks(**kwargs):
+        received.update(kwargs)
+        return [
+            search_result(
+                source_path="internal_only/merge.md",
+                source_url="internal_only/merge.md",
+                document_title="Merge",
+                access_level="internal",
+            )
         ]
 
     monkeypatch.setattr(
@@ -487,23 +581,169 @@ def test_search_defensively_removes_internal_results(
     )
 
     response = client.post(
-        "/search",
+        "/api/v1/retrieve",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "internal",
+        },
+        json={"query": "Merge"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert received["include_internal"] is True
+    assert body["access_context"] == "internal"
+    assert body["result_count"] == 1
+    assert body["sources"][0]["access_level"] == "internal"
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [
+        None,
+        "Bearer wrong-token",
+        "Basic wrong-scheme",
+        "Bearer",
+    ],
+)
+def test_v1_rejects_untrusted_internal_context(
+    client,
+    trusted_settings,
+    authorization,
+) -> None:
+    """Internal access requires the trusted service token."""
+    headers = {
+        "X-Redmine-Assistant-Access": "internal",
+    }
+
+    if authorization is not None:
+        headers["Authorization"] = authorization
+
+    response = client.post(
+        "/api/v1/retrieve",
+        headers=headers,
+        json={"query": "Merge"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 403
+    assert body["error"]["code"] == "forbidden_access_context"
+    assert response.headers["X-Request-ID"] == body["request_id"]
+
+
+def test_v1_rejects_invalid_trusted_access_value(
+    client,
+    trusted_settings,
+) -> None:
+    """Only standard and internal trusted contexts are accepted."""
+    response = client.post(
+        "/api/v1/retrieve",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "administrator",
+        },
+        json={"query": "Merge"},
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["error"]["code"] == (
+        "forbidden_access_context"
+    )
+
+
+def test_v1_standard_response_filters_internal_results(
+    client,
+    monkeypatch,
+) -> None:
+    """Internal chunks are removed from standard v1 responses."""
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        lambda **kwargs: [
+            search_result(),
+            search_result(
+                rank=2,
+                source_path="internal_only/merge.md",
+                source_url="internal_only/merge.md",
+                access_level="internal",
+            ),
+        ],
+    )
+
+    response = client.post(
+        "/api/v1/retrieve",
+        json={"query": "Merge"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["result_count"] == 1
+    assert body["sources"][0]["access_level"] == "standard"
+
+
+def test_v1_bounds_excerpts(
+    client,
+    monkeypatch,
+) -> None:
+    """The v1 endpoint does not return unbounded chunk text."""
+    content = "word " * (
+        api.settings.max_excerpt_chars + 10
+    )
+
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        lambda **kwargs: [
+            search_result(content=content)
+        ],
+    )
+
+    response = client.post(
+        "/api/v1/retrieve",
+        json={"query": "plasmids"},
+    )
+
+    excerpt = response.get_json()["sources"][0]["excerpt"]
+    assert excerpt.endswith("…")
+    assert len(excerpt) <= api.settings.max_excerpt_chars + 1
+
+
+def test_v1_rejects_oversized_query(client) -> None:
+    """Queries above the configured maximum receive a 400 response."""
+    response = client.post(
+        "/api/v1/retrieve",
         json={
-            "query": "How do I use Merge?",
+            "query": "x" * (
+                api.settings.max_query_chars + 1
+            ),
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == "invalid_request"
 
-    response_body = response.get_json()
 
-    assert response_body["count"] == 1
-    assert len(response_body["results"]) == 1
-    assert response_body["results"][0]["source_path"] == (
-        "analysis/mobsuite.md"
+def test_v1_returns_safe_retrieval_error(
+    client,
+    monkeypatch,
+) -> None:
+    """Retrieval failures do not expose exception details."""
+    def fail_retrieval(**kwargs):
+        raise RetrievalError("Secret database details")
+
+    monkeypatch.setattr(
+        api,
+        "retrieve_chunks",
+        fail_retrieval,
     )
 
-    assert all(
-        not result["source_path"].startswith("internal_only/")
-        for result in response_body["results"]
+    response = client.post(
+        "/api/v1/retrieve",
+        json={"query": "plasmids"},
     )
+
+    body = response.get_json()
+    assert response.status_code == 503
+    assert body["error"]["code"] == "search_unavailable"
+    assert "Secret" not in str(body)
+    assert response.headers["X-Request-ID"] == body["request_id"]

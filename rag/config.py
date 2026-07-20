@@ -158,6 +158,10 @@ class Settings:
     embedding_normalize: bool
     model_cache_dir: str
 
+    # Trusted service integration
+    trusted_service_token: str
+    trusted_access_header: str
+
     @classmethod
     def from_environment(cls) -> "Settings":
         """
@@ -221,9 +225,25 @@ class Settings:
         ).strip()
 
         if not embedding_model_revision:
-            raise ConfigurationError("EMBEDDING_MODEL_REVISION cannot be empty")
+            raise ConfigurationError(
+                "EMBEDDING_MODEL_REVISION cannot be empty"
+            )
+        trusted_service_token = os.getenv(
+            "RAG_TRUSTED_SERVICE_TOKEN",
+            "",
+        ).strip()
+
+        trusted_access_header = os.getenv(
+            "RAG_TRUSTED_ACCESS_HEADER",
+            "X-Redmine-Assistant-Access",
+        ).strip()
+
+        if not trusted_access_header:
+            raise ConfigurationError("RAG_TRUSTED_ACCESS_HEADER cannot be empty")
 
         return cls(
+            trusted_service_token=trusted_service_token,
+            trusted_access_header=trusted_access_header,
             db_host=os.getenv(
                 "RAG_DB_HOST",
                 "rag-db",
