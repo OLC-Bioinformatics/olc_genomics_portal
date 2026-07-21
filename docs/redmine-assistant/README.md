@@ -62,6 +62,7 @@ curl -sS -H 'Content-Type: application/json' \
 ## Documentation map
 
 - [Configuration](configuration.md)
+- [Project restriction](project-restriction.md)
 - [Deployment and startup](deployment.md)
 - [Operations runbook](operations-runbook.md)
 - [Documentation indexing](indexing.md)
