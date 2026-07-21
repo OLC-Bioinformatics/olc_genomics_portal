@@ -23,13 +23,23 @@ Redmine::Plugin.register :redmine_assistant do
              require: :member
 
   menu :project_menu,
-       :redmine_assistant,
-       { controller: 'redmine_assistant', action: 'index' },
-       caption: :label_redmine_assistant,
-       after: :wiki,
-       param: :project_id,
-       if: proc { |project|
-         User.current.logged? &&
-           User.current.allowed_to?(:view_redmine_assistant, project)
-       }
+      :redmine_assistant,
+      { controller: 'redmine_assistant', action: 'index' },
+      caption: :label_redmine_assistant,
+      after: :wiki,
+      param: :project_id,
+      if: proc { |project|
+        configured_project_identifier = ENV.fetch(
+          'REDMINE_ASSISTANT_PROJECT_IDENTIFIER',
+          ''
+        ).to_s.strip
+
+        configured_project_identifier.present? &&
+          project.identifier == configured_project_identifier &&
+          User.current.logged? &&
+          User.current.allowed_to?(
+            :view_redmine_assistant,
+            project
+          )
+      }
 end

@@ -63,6 +63,7 @@ services:
       - REDMINE_ASSISTANT_RAG_URL=http://rag:8001
       - REDMINE_ASSISTANT_TIMEOUT_SECONDS=15
       - REDMINE_ASSISTANT_DEFAULT_LIMIT=5
+      - REDMINE_ASSISTANT_PROJECT_IDENTIFIER=cfia
     volumes:
       - ./redmine/files:/usr/src/redmine/files
       - ./redmine/log:/usr/src/redmine/log

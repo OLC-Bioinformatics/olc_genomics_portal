@@ -18,6 +18,24 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     @administrator = User.find(1)
     @project_member = User.find(2)
 
+    @original_assistant_project_identifier = ENV[
+      'REDMINE_ASSISTANT_PROJECT_IDENTIFIER'
+    ]
+
+    @original_assistant_docs_base_url = ENV[
+      'REDMINE_ASSISTANT_DOCS_BASE_URL'
+    ]
+
+    ENV[
+      'REDMINE_ASSISTANT_PROJECT_IDENTIFIER'
+    ] = @project.identifier
+
+    @controller.stubs(
+      :assistant_project_identifier
+    ).returns(
+      @project.identifier
+    )
+
     @member_roles = @project_member
                     .memberships
                     .where(project_id: @project.id)
@@ -25,7 +43,10 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
                     .uniq
 
     @member_roles.each do |role|
-      role.add_permission!(:view_redmine_assistant)
+      role.add_permission!(
+        :view_redmine_assistant
+      )
+
       role.remove_permission!(
         :view_internal_assistant_documentation
       )
@@ -33,12 +54,25 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   end
 
   def teardown
-    @member_roles.each do |role|
-      role.remove_permission!(:view_redmine_assistant)
+    Array(@member_roles).each do |role|
+      role.remove_permission!(
+        :view_redmine_assistant
+      )
+
       role.remove_permission!(
         :view_internal_assistant_documentation
       )
     end
+
+    restore_environment_variable(
+      'REDMINE_ASSISTANT_PROJECT_IDENTIFIER',
+      @original_assistant_project_identifier
+    )
+
+    restore_environment_variable(
+      'REDMINE_ASSISTANT_DOCS_BASE_URL',
+      @original_assistant_docs_base_url
+    )
   end
 
   def test_anonymous_user_is_redirected_to_login
@@ -162,14 +196,9 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
   def test_successful_search_renders_standard_results
     sign_in(@project_member)
 
-    ENV.stubs(:fetch)
-       .with(
-         'REDMINE_ASSISTANT_DOCS_BASE_URL',
-         ''
-       )
-       .returns(
-         'https://docs.example.gc.ca/redmine'
-       )
+    ENV[
+      'REDMINE_ASSISTANT_DOCS_BASE_URL'
+    ] = 'https://docs.example.gc.ca/redmine'
 
     client = mock
 
@@ -218,7 +247,10 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
         'https://docs.example.gc.ca/redmine/analysis/mobsuite/',
         links.first['href']
       )
-      assert_equal('_blank', links.first['target'])
+      assert_equal(
+        '_blank',
+        links.first['target']
+      )
       assert_equal(
         'noopener noreferrer',
         links.first['rel']
@@ -266,8 +298,14 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
     assert_response :success
     assert_select '.redmine-assistant-result', count: 1
-    assert_includes(response.body, 'analysis/mobsuite.md')
-    refute_includes(response.body, 'internal_only/merge.md')
+    assert_includes(
+      response.body,
+      'analysis/mobsuite.md'
+    )
+    refute_includes(
+      response.body,
+      'internal_only/merge.md'
+    )
     refute_includes(
       response.body,
       'Internal merge instructions'
@@ -307,13 +345,16 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
     assert_response :success
     assert_select '.redmine-assistant-result', count: 1
-    assert_includes(response.body, 'internal_only/merge.md')
+    assert_includes(
+      response.body,
+      'internal_only/merge.md'
+    )
     assert_includes(
       response.body,
       'Internal merge instructions'
     )
 
-    # Internal documentation must not link to the public docs site.
+    # Internal documentation must not link to the public documentation site.
     assert_select(
       '.redmine-assistant-result-footer a',
       count: 0
@@ -445,7 +486,10 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       response.body,
       'temporarily unavailable'
     )
-    refute_includes(response.body, 'not-an-array')
+    refute_includes(
+      response.body,
+      'not-an-array'
+    )
   end
 
   def test_missing_project_returns_not_found
@@ -463,13 +507,29 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
 
   def test_successful_search_renders_feedback_controls
     sign_in(@project_member)
+
     client = mock
-    client.expects(:retrieve).returns(
-      rag_response(access_context: 'standard', sources: [standard_result]).merge(
-        'request_id' => '11111111-1111-4111-8111-111111111111'
-      )
-    )
-    @controller.stubs(:rag_client).returns(client)
+
+    client.expects(:retrieve)
+          .with(
+            query: 'Which automator detects plasmids?',
+            limit: nil,
+            access_context: 'standard'
+          )
+          .returns(
+            rag_response(
+              access_context: 'standard',
+              sources: [standard_result]
+            ).merge(
+              'request_id' => (
+                '11111111-1111-4111-8111-111111111111'
+              )
+            )
+          )
+
+    @controller
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :search,
@@ -480,22 +540,40 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     )
 
     assert_response :success
-    assert_select '.redmine-assistant-feedback', count: 1
-    assert_select '.redmine-assistant-feedback-helpful', count: 1
-    assert_select '.redmine-assistant-feedback-unhelpful', count: 1
+    assert_select(
+      '.redmine-assistant-feedback',
+      count: 1
+    )
+    assert_select(
+      '.redmine-assistant-feedback-helpful',
+      count: 1
+    )
+    assert_select(
+      '.redmine-assistant-feedback-unhelpful',
+      count: 1
+    )
   end
 
   def test_helpful_feedback_is_forwarded_with_trusted_context
     sign_in(@project_member)
+
     client = mock
-    client.expects(:submit_feedback).with(
-      request_id: '11111111-1111-4111-8111-111111111111',
-      rating: 'helpful',
-      reason: nil,
-      comment: nil,
-      access_context: 'standard'
-    ).returns('status' => 'ok')
-    @controller.stubs(:rag_client).returns(client)
+
+    client.expects(:submit_feedback)
+          .with(
+            request_id: '11111111-1111-4111-8111-111111111111',
+            rating: 'helpful',
+            reason: nil,
+            comment: nil,
+            access_context: 'standard'
+          )
+          .returns(
+            'status' => 'ok'
+          )
+
+    @controller
+      .stubs(:rag_client)
+      .returns(client)
 
     post(
       :feedback,
@@ -507,12 +585,18 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     )
 
     assert_response :success
-    assert_equal('ok', response.parsed_body['status'])
+    assert_equal(
+      'ok',
+      response.parsed_body['status']
+    )
   end
 
   def test_feedback_rejects_browser_access_context
     sign_in(@project_member)
-    @controller.expects(:rag_client).never
+
+    @controller
+      .expects(:rag_client)
+      .never
 
     post(
       :feedback,
@@ -527,8 +611,86 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     assert_response :unprocessable_content
   end
 
+  def test_anonymous_feedback_is_redirected_to_login
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful'
+      }
+    )
+
+    assert_response :redirect
+  end
+
+  def test_feedback_requires_assistant_permission
+    @member_roles.each do |role|
+      role.remove_permission!(:view_redmine_assistant)
+    end
+
+    sign_in(@project_member)
+
+    @controller
+      .expects(:rag_client)
+      .never
+
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful'
+      }
+    )
+
+    assert_response :forbidden
+  end
+
+  def test_assistant_is_not_available_for_another_project
+    other_project = Project.create!(
+      name: 'Other Project',
+      identifier: 'other-project'
+    )
+
+    sign_in(@administrator)
+
+    get(
+      :index,
+      params: {
+        project_id: other_project.identifier
+      }
+    )
+
+    assert_response :not_found
+  end
+
+  def test_assistant_is_unavailable_when_project_is_not_configured
+    @controller.stubs(
+      :assistant_project_identifier
+    ).returns('')
+
+    sign_in(@administrator)
+
+    get(
+      :index,
+      params: {
+        project_id: @project.identifier
+      }
+    )
+
+    assert_response :not_found
+  end
 
   private
+
+  def restore_environment_variable(name, original_value)
+    if original_value.nil?
+      ENV.delete(name)
+    else
+      ENV[name] = original_value
+    end
+  end
 
   def sign_in(user)
     @request.session[:user_id] = user.id
@@ -584,39 +746,4 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       'access_level' => 'internal'
     }
   end
-  def test_anonymous_feedback_is_redirected_to_login
-    post(
-      :feedback,
-      params: {
-        project_id: @project.identifier,
-        request_id: '11111111-1111-4111-8111-111111111111',
-        rating: 'helpful'
-      },
-      as: :json
-    )
-
-    assert_response :redirect
-  end
-  def test_feedback_requires_assistant_permission
-    @member_roles.each do |role|
-      role.remove_permission!(:view_redmine_assistant)
-    end
-
-    sign_in(@project_member)
-
-    @controller.expects(:rag_client).never
-
-    post(
-      :feedback,
-      params: {
-        project_id: @project.identifier,
-        request_id: '11111111-1111-4111-8111-111111111111',
-        rating: 'helpful'
-      },
-      as: :json
-    )
-
-    assert_response :forbidden
-  end
-
 end

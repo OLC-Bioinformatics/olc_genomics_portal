@@ -5,6 +5,7 @@ require_relative '../../lib/redmine_assistant/rag_client'
 class RedmineAssistantController < ApplicationController
   before_action :require_login
   before_action :find_project
+  before_action :require_assistant_project
   before_action :authorize, only: %i[index search]
   before_action :authorize_feedback, only: :feedback
 
@@ -108,6 +109,20 @@ class RedmineAssistantController < ApplicationController
     )
 
     deny_access
+  end
+
+  def require_assistant_project
+    return true if @project.identifier == assistant_project_identifier
+
+    render_404
+    false
+  end
+
+  def assistant_project_identifier
+    ENV.fetch(
+      'REDMINE_ASSISTANT_PROJECT_IDENTIFIER',
+      ''
+    ).to_s.strip
   end
 
   def assistant_access_context
