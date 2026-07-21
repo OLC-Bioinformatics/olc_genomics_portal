@@ -29,7 +29,7 @@ RUN update-ca-certificates && \
 
 # Install gem dependencies in the existing Redmine workdir.
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-RUN bundle config set without 'development test' && \
+RUN bundle config unset without && \
     bundle install && \
     rm -rf /usr/local/bundle/cache && \
     chown -R redmine:redmine /home/redmine
