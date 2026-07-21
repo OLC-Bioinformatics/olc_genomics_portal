@@ -1,12 +1,8 @@
-# Redmine Documentation Assistant: Operations Guide
+# Redmine Documentation Assistant Operations Guide
 
-This directory contains the operational documentation for the retrieval-only Redmine Documentation Assistant.
+This directory is the operator manual for the retrieval-only Redmine Documentation Assistant. The assistant performs permission-aware semantic search over the OLC Redmine Automator Markdown documentation. It does not yet generate answers with a large language model or create Redmine issues.
 
-## System purpose
-
-The assistant provides authenticated Redmine users with semantic search over the OLC Redmine Automator documentation. It is currently retrieval-only: it returns ranked documentation excerpts and links to the hosted documentation; it does not generate answers with a large language model.
-
-## Current production architecture
+## Architecture
 
 ```text
 Authenticated Redmine user
@@ -15,61 +11,74 @@ Authenticated Redmine user
 Redmine Assistant project tab
         |
         v
-Redmine plugin controller
-        |
-        |  POST http://rag:8001/search
+Redmine plugin controller and server-side RagClient
+        |  Bearer service token + trusted access header
         v
-RAG API container
+POST http://rag:8001/api/v1/retrieve
         |
-        +--> BAAI/bge-small-en-v1.5 embedding model
-        |
-        +--> PostgreSQL 16 + pgvector
-        |
-        +--> read-only Markdown documentation mount
+        +--> BAAI/bge-small-en-v1.5 query embedding
+        +--> PostgreSQL 16 + pgvector similarity search
+        +--> standard/internal access filtering
+        +--> minimum-similarity filtering
+        +--> retrieval request and feedback persistence
 ```
 
-## Components
+The browser never receives the trusted RAG service token and never calls the RAG API directly. Redmine derives `standard` or `internal` access from project permissions. The RAG service enforces the access context again.
 
-- **Redmine plugin:** `redmine/plugins/redmine_assistant`
-- **RAG service:** `rag`
-- **Vector database:** `rag-db`, using `pgvector/pgvector:pg16`
-- **Documentation source:** mounted read-only at `/documentation`
-- **Model cache:** Docker volume `rag-model-cache`, mounted at `/models`
-- **Vector data:** Docker volume `rag-db`, mounted at `/var/lib/postgresql/data`
-- **Hosted documentation:** `https://olc-bioinformatics.github.io/redmine-docs/`
+## Durable and rebuildable state
 
-## Validated baseline
+- `rag-db` is durable PostgreSQL state. It stores migrations, indexed documents, chunks, vectors, retrieval requests, and helpfulness feedback.
+- `rag-model-cache` stores the pinned embedding model and can be restored from an approved artifact.
+- Markdown source files are mounted read-only at `/documentation` and remain authoritative.
+- The vector index is rebuildable from Markdown. Retrieval requests and feedback are not rebuildable and must not be deleted by reindexing.
+- `docker compose down -v` deletes named volumes and therefore deletes RAG database and model-cache state.
 
-The documentation-tuned dense retrieval baseline evaluates 142 questions:
+## Current retrieval gate
 
-- 136 answerable questions
-- 6 no-answer questions
-- Hit@1: 90.4%
-- Hit@3: 98.5%
-- Hit@5: 100.0%
-- Expected content-term coverage: 94.7%
-- Internal-document leakage: 0
-- Authorized internal retrieval test: 100%
+`RAG_MINIMUM_SIMILARITY` defaults to `0.60` in this deployment. Results below the threshold are omitted before `LIMIT` is applied. The displayed score is cosine similarity, not a calibrated probability or confidence score.
 
-The baseline report is stored under `rag/evaluation-results/`.
+## Quick health check
 
-## Common operator tasks
+```bash
+docker compose ps redmine rag rag-db mariadb
+curl -sS http://127.0.0.1:8001/health/ready | python3 -m json.tool
+docker compose exec rag python -m cli status
+```
+
+## Quick functional checks
+
+```bash
+# Expected to return useful sources.
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"Which automator detects plasmids?","limit":5}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
+
+# Expected to return result_count 0 and sources [].
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"bacon","limit":5}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
+```
+
+## Documentation map
 
 - [Configuration](configuration.md)
 - [Deployment and startup](deployment.md)
+- [Operations runbook](operations-runbook.md)
 - [Documentation indexing](indexing.md)
-- [Testing and evaluation](testing.md)
+- [Testing](testing.md)
+- [Retrieval evaluation](evaluation.md)
+- [Helpfulness feedback](feedback.md)
+- [Monitoring](monitoring.md)
 - [Backup and restore](backup-and-restore.md)
-- [Monitoring and routine operations](monitoring.md)
-- [Security and access control](security.md)
+- [Security](security.md)
 - [Troubleshooting](troubleshooting.md)
-- [Change and release procedure](release-procedure.md)
+- [Release procedure](release-procedure.md)
 
-## Important safety rules
+## Safety rules
 
-1. Never run Redmine tests against the production `redmine` database. Tests must use `redmine_test`.
-2. Never expose the RAG API directly to users. Browser traffic must go through authenticated Redmine.
-3. Never permit the public Redmine search route to enable internal-document retrieval.
-4. Do not commit the `env` file, passwords, tokens, certificates containing private keys, database dumps, or model-cache contents.
-5. Back up the RAG database before destructive schema or embedding-model changes.
-6. Changing the embedding model, model revision, vector dimension, normalization, or chunking configuration requires a controlled full re-index.
+1. Never run Redmine tests until `RAILS_ENV=test` resolves to `redmine_test`.
+2. Never expose the trusted service token to JavaScript, HTML, logs, or Git.
+3. Never permit browser parameters to select `internal` access.
+4. Back up `rag-db` before destructive database, schema, embedding-model, or volume work.
+5. Treat user queries and feedback comments as potentially sensitive operational data.
+6. Changing the embedding model, revision, dimension, normalization, or material chunking behavior requires a controlled full reindex and evaluation.

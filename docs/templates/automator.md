@@ -1,48 +1,41 @@
 # Automator Name
 
 <!--
-Purpose of this template
-------------------------
-Use this structure for Redmine Automator documentation pages. Remove all
-HTML comments before publishing. Preserve exact command names, parameter
-names, filenames, subject values, capitalization rules, and accepted values.
+Use this template for user-facing Redmine Automator documentation. Remove all
+comments and placeholders before publishing. Preserve exact subjects, parameter
+names, accepted values, filenames, capitalization, and punctuation.
 
-Writing principles
-------------------
-- Lead with the user's task, not the software's history.
-- Make each section understandable when retrieved on its own.
-- Use exact identifiers in backticks.
-- State limitations and boundaries between similar tools explicitly.
-- Do not claim capabilities that are not confirmed by the implementation.
-- Prefer short paragraphs, lists, and fenced examples.
+Each section should make sense when retrieved independently. State whether a
+fact is user guidance, an implementation detail, or upstream-tool behavior.
+Do not copy secrets, credentials, private hostnames, or sensitive paths.
 -->
+
+## Document metadata
+
+<!-- Maintain this metadata as visible prose or repository metadata. -->
+
+- **Automator owner:** Team or role
+- **Last verified:** YYYY-MM-DD
+- **Automator code revision:** Git commit or release
+- **Underlying tool and version:** Tool 1.2.3
+- **Database/reference-data version:** Version or last-updated date
+- **Documentation authority:** Approved user guidance
+- **Access level:** Standard or internal
 
 ## What does it do?
 
-<!--
-Open with a direct, user-oriented statement:
-"Use <Automator> when you need to..."
+Use **Automator Name** when you need to describe the supported user task directly.
 
-Then document:
-- the question or task the automator addresses;
-- supported input types;
-- important limitations;
-- when a related automator may be more appropriate.
--->
-
-Use **Automator Name** when you need to describe the supported task clearly.
-
-Automator Name accepts the following input types:
+Supported inputs:
 
 - `FASTA` assemblies
 - paired-end `FASTQ` reads
 
-<!-- Remove unsupported input types. -->
-
 Important limitations:
 
-- Document any organism, input, analysis, database, or workflow limitations.
-- Explain whether the automator operates on assemblies, raw reads, or both.
+- State organism, input, database, scale, and workflow restrictions.
+- State whether the workflow operates on assemblies, reads, or both.
+- State when a related Automator is more appropriate.
 
 ## How do I use it?
 
@@ -54,19 +47,15 @@ In the **Subject** field, enter:
 automator-subject
 ```
 
-<!-- State whether spelling and case matter. -->
-
-Spelling matters. Matching is/is not case-sensitive.
+State whether spelling and case matter and whether aliases are accepted.
 
 ### Description
 
-<!-- Put required content first. Describe one requirement at a time. -->
-
-The **Description** field must contain:
+The **Description** field must contain the following items in this order:
 
 1. The required analysis declaration.
 2. One `SEQID` per line.
-3. Any other required fields in their required order.
+3. Any required fields or parameters in their exact order.
 
 Minimal request:
 
@@ -77,14 +66,9 @@ analysis=example
 
 ### Attachments
 
-<!-- If there are no attachments, state that explicitly. -->
+State explicitly that no attachment is required, or document every required and optional attachment. Include exact formats, filename rules, and how the description refers to each attachment.
 
-No attachment is required.
-
-<!-- Or document required/optional attachments with exact formats and names. -->
-
-If you use `analysis=custom`, attach a FASTA-formatted target file and reference
-its exact filename in the Description field:
+Example:
 
 ```text
 analysis=custom
@@ -92,33 +76,25 @@ targetsfile=targets.fasta
 2026-SEQ-0001
 ```
 
-### Optional parameters
+### Parameters
 
-<!--
-For each parameter, include:
-- exact spelling;
-- purpose;
-- default value;
-- accepted values or range;
-- an example;
-- interactions or incompatibilities.
--->
+For every user-configurable parameter, provide exact spelling, purpose, default, accepted values/range, example, and interactions.
 
 #### `parameter_name`
 
 Controls what the parameter changes.
 
-- Default: `default_value`
-- Accepted values: `value1`, `value2`
-- Example:
+- **Required:** No
+- **Default:** `default_value`
+- **Accepted values:** `value1`, `value2`
+- **Example:**
 
 ```text
 parameter_name=value1
 ```
 
-Important interactions:
-
-- Explain whether this parameter requires or conflicts with another parameter.
+- **Interactions:** Explain requirements, conflicts, ignored combinations, and whether the Automator or user controls the setting.
+- **Source:** Identify whether this is approved Automator guidance, observed implementation behavior, or upstream-tool guidance.
 
 ### Examples
 
@@ -138,88 +114,93 @@ parameter_name=value1
 2026-SEQ-0002
 ```
 
-Explain in one or two sentences what this request will do.
+Explain the intended effect of each example.
+
+## What happens after submission?
+
+Document visible Redmine behavior:
+
+1. How the request is validated.
+2. What input data are located.
+3. Which broad analysis mode is run.
+4. Which artifacts are uploaded.
+5. Which issue status/note indicates completion.
+6. What the user should do when validation or analysis fails.
+
+Do not expose unnecessary infrastructure details in standard-access documentation.
 
 ## Interpreting results
 
-<!-- Use exact archive and output filenames. -->
-
-When the analysis finishes, the automator uploads:
+When the analysis finishes, the Automator uploads:
 
 ```text
 result_archive.zip
 ```
 
-Important files include:
+Important files:
 
-- `result_file.tsv` — explain what the file contains and how to interpret it.
-- `summary.csv` — explain important columns, thresholds, or caveats.
-- `report.html` — explain what the report is intended to show.
+- `result_file.tsv` — purpose, important columns, units, thresholds, caveats.
+- `summary.csv` — purpose and common interpretation mistakes.
+- `report.html` — intended use.
 
-Important interpretation notes:
-
-- State whether absence of a result means a true negative or may reflect a
-  technical limitation.
-- State important thresholds, units, and quality considerations.
-- Explain any result that users commonly misinterpret.
+State whether absence of a result is a true negative or may reflect input quality, unsupported organisms, database limitations, or technical failure. State important thresholds and whether results require expert review or confirmation.
 
 ## How long does it take?
 
-A typical request takes approximately **time range**.
+A typical request takes approximately **time range**, based on an identified operational baseline.
 
-Runtime depends on:
-
-- the number of samples;
-- input size and type;
-- selected parameters;
-- queue and compute availability.
-
-<!-- Avoid guarantees unless the system enforces them. -->
+Runtime depends on sample count, input size/type, selected options, queue/compute availability, database access, and tool behavior. Avoid guarantees unless the system enforces them. Include the date or release for measured estimates.
 
 ## What can go wrong?
 
 ### Requested `SEQID` is unavailable
 
-**Symptom:** Describe the issue note, warning, or missing output.
+**Symptom:** Describe the Redmine note, missing output, or user-visible error.
 
-**Likely cause:** The requested sequence data could not be found.
+**Likely cause:** The sequence or required input data could not be found.
 
-**What to do:** Verify the `SEQID`, confirm that the required input files are
-available, and submit a corrected request.
+**What to do:** Verify the `SEQID`, confirm required files exist, and submit a corrected request.
 
 ### Required parameter or attachment is missing
 
-**Symptom:** Describe the error shown in the Redmine issue.
+**Symptom:** Quote or accurately describe the user-visible error.
 
 **Likely cause:** A required field, parameter, or file was omitted or misspelled.
 
-**What to do:** Correct the request using the required syntax shown above and
-submit a new issue.
+**What to do:** Correct the request using the documented syntax.
 
 ### Analysis fails after starting
 
-**Symptom:** Describe the failure note and any partial result archive.
+**Symptom:** Describe the issue note and any partial artifacts.
 
-**Likely cause:** Document known tool, pipeline, environment, or input-quality
-causes without exposing sensitive infrastructure details.
+**Likely cause:** List approved, non-sensitive causes supported by evidence.
 
-**What to do:** Provide safe, actionable troubleshooting steps and escalation
-instructions.
+**What to do:** Provide safe diagnostic, retry, and escalation steps. State what information should accompany escalation.
 
-## Related automators
-
-<!--
-Document overlap explicitly. Avoid vague statements such as "similar to".
-Explain the decision boundary.
--->
+## Related Automators
 
 - **Related Automator A** — choose this when the input is raw `FASTQ` reads.
-- **Related Automator B** — choose this when the input is a draft `FASTA`
-  assembly.
+- **Related Automator B** — choose this when the input is a draft `FASTA` assembly.
+
+Explain decision boundaries rather than only saying tools are similar.
+
+## Implementation notes
+
+<!-- Put this section in internal documentation when it exposes internal details. -->
+
+- **Automator source:** `path/to/automator.py` at commit/release
+- **Underlying command:** Describe exact fixed options and which options users can control.
+- **Input retrieval:** Approved operational summary.
+- **Uploaded artifacts:** Exact filenames.
+- **Redmine transition:** Completion/failure status and notes.
+- **Known deployment constraints:** Version-matched, non-secret details.
+
+When code and user documentation disagree, do not silently choose one. Record the discrepancy, identify the deployed revision, and have the owner correct the authoritative documentation or implementation.
 
 ## References
 
-<!-- Include maintained upstream documentation and required citations. -->
+- [Version-matched upstream documentation](https://example.org/)
+- [Open or authorized publication](https://doi.org/example)
+- [Approved validation or database documentation](https://example.org/)
 
-- [Upstream tool documentation](https://example.org/)
-- [Publication](https://doi.org/example)
+Record tool/document versions and licensing/access restrictions. Prefer upstream documentation for operational parameter behavior and publications for scientific rationale, validation, and limitations.

@@ -1,119 +1,75 @@
 # Deployment and Startup
 
-## Build modified services
-
-After RAG application or dependency changes:
+## Pre-deployment checks
 
 ```bash
-docker compose build rag
+git status --short
+docker compose config --quiet
+docker compose exec rag pytest -q
 ```
 
-After Redmine plugin, Redmine Dockerfile, helper, view, locale, or stylesheet changes:
+Before Redmine tests, verify the test database:
 
 ```bash
-docker compose build redmine
+docker compose exec redmine bundle exec rails runner -e test \
+  'puts ActiveRecord::Base.connection_db_config.database'
 ```
 
-## Recreate services
+Expected: `redmine_test`.
+
+## Build and deploy
 
 ```bash
+docker compose build rag redmine
 docker compose up -d --force-recreate rag redmine
 ```
 
-Redmine depends on a healthy RAG service. The RAG service depends on a healthy `rag-db` service.
+The RAG startup script waits for PostgreSQL, runs pending SQL migrations, and starts Gunicorn. Redmine waits for RAG readiness.
 
-## Verify service status
-
-```bash
-docker compose ps redmine rag rag-db
-```
-
-Expected:
-
-- `redmine`: running
-- `rag`: healthy
-- `rag-db`: healthy
-
-## Verify RAG readiness
+## Verify containers and migrations
 
 ```bash
-curl -sS http://127.0.0.1:8001/health/ready
-echo
+docker compose ps redmine rag rag-db mariadb
+docker compose logs --tail 100 rag redmine
+curl -sS http://127.0.0.1:8001/health/ready | python3 -m json.tool
+
+docker compose exec rag-db psql \
+  -U redmine_assistant -d redmine_assistant \
+  -c 'SELECT version, applied_at FROM schema_migrations ORDER BY applied_at;'
 ```
 
-A healthy response includes:
-
-```json
-{
-  "status": "ready",
-  "database": "connected",
-  "schema_migrations": 2,
-  "documents": 51,
-  "chunks": 405
-}
-```
-
-Document and chunk counts can change when documentation changes.
-
-## Verify Redmine-to-RAG connectivity
+## Verify plugin registration and routes
 
 ```bash
-docker compose exec redmine \
-  ruby -rnet/http -rjson -e '
-uri = URI("http://rag:8001/health/ready")
-response = Net::HTTP.get_response(uri)
-puts "HTTP #{response.code}"
-puts JSON.pretty_generate(JSON.parse(response.body))
-'
-```
-
-## Verify plugin registration
-
-```bash
-docker compose exec redmine \
-  bundle exec rails runner \
+docker compose exec redmine bundle exec rails runner \
   'puts Redmine::Plugin.find(:redmine_assistant).name'
+
+docker compose exec redmine bundle exec rails routes | grep redmine_assistant
 ```
 
-Expected:
+Expected routes include index, search, and feedback.
 
-```text
-Redmine Documentation Assistant
-```
-
-## Verify routes
+## Smoke tests
 
 ```bash
-docker compose exec redmine \
-  bundle exec rails routes \
-  | grep redmine_assistant
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"Which automator detects plasmids?","limit":3}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
+
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"bacon","limit":5}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
 ```
 
-Expected routes:
-
-```text
-GET  /projects/:project_id/redmine_assistant
-POST /projects/:project_id/redmine_assistant/search
-```
-
-## Verify plugin stylesheet
-
-```bash
-docker compose exec redmine \
-  bash -lc '
-    find public/assets/plugin_assets/redmine_assistant \
-      -type f \
-      -name "redmine_assistant-*.css" \
-      -print
-  '
-```
-
-The page should load a fingerprinted stylesheet under `/assets/plugin_assets/redmine_assistant/`.
+In Redmine, confirm the Assistant tab, a useful positive result, a no-result query, source links, and helpful/unhelpful submission.
 
 ## Rollback
 
-1. Check out the previous known-good Git commit.
-2. Rebuild the affected service image.
-3. Recreate the service.
-4. Verify health and run smoke tests.
-5. If a database migration must be reversed, restore from a verified backup or follow the migration-specific rollback plan. Do not improvise destructive SQL in production.
+1. Back up `rag-db` if schema or durable data changed.
+2. Check out the previous known-good Git commit.
+3. Rebuild affected images.
+4. Recreate services.
+5. Verify readiness, migrations, retrieval, permissions, and feedback.
+6. Restore the database only when the migration-specific rollback plan requires it.
+
+Never improvise destructive SQL against production.

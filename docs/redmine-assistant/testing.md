@@ -1,129 +1,89 @@
-# Testing and Evaluation
+# Testing
 
-## RAG Python tests
+## RAG test suite
 
 ```bash
-docker compose exec \
-  -w /app \
-  -e PYTHONPYCACHEPREFIX=/tmp/redmine-assistant-pycache \
-  rag \
-  python -m pytest -q
+docker compose exec rag pytest -q
 ```
 
-The current suite contains 92 tests.
+Current verified baseline after feedback and similarity filtering: `125 passed`. Treat this count as descriptive; update it as tests are added.
+
+Targeted suites:
+
+```bash
+docker compose exec rag pytest -q tests/test_retrieval.py
+docker compose exec rag pytest -q tests/test_api.py
+docker compose exec rag pytest -q tests/test_evaluation.py
+```
+
+## Python syntax check
+
+```bash
+docker compose exec rag python -m compileall -q /app
+```
+
+## Redmine test database safety
+
+```bash
+docker compose exec redmine bundle exec rails runner -e test \
+  'db=ActiveRecord::Base.connection_db_config.database; puts db; abort("REFUSING non-test database") unless db == "redmine_test"'
+```
 
 ## Redmine plugin tests
 
-Use the repository script:
+The Redmine image must include test dependencies. Its Dockerfile currently runs `bundle config unset without` followed by `bundle install`.
 
 ```bash
-./scripts/test-redmine-assistant.sh
+docker compose exec redmine bundle exec rake redmine:plugins:test \
+  NAME=redmine_assistant RAILS_ENV=test
 ```
 
-The script:
+Current verified baseline: `44 runs, 123 assertions` for the complete plugin suite after feedback implementation. Update the number when tests change.
 
-- starts a disposable Redmine container;
-- installs Redmine test dependencies only in that disposable container;
-- verifies that the active database is exactly `redmine_test`;
-- runs controller and helper tests;
-- does not run tests against production.
-
-Current plugin baseline:
-
-```text
-24 runs
-0 failures
-0 errors
-0 skips
-```
-
-Counts may increase as tests are added.
-
-## Test database safety
-
-The Redmine `database.yml` must contain a separate test configuration using:
-
-```text
-Database: redmine_test
-Host: mariadb
-```
-
-Before any test execution, verify:
+Targeted tests:
 
 ```bash
-docker compose exec redmine \
-  bash -lc '
-    cd /usr/src/redmine
-    RAILS_ENV=test bundle exec rails runner "
-      config = ActiveRecord::Base.connection_db_config
-      puts config.database
-      abort \"REFUSING production database\" \
-        unless config.database == \"redmine_test\"
-    "
-  '
+docker compose exec redmine bundle exec rails test \
+  plugins/redmine_assistant/test/functional/redmine_assistant_controller_test.rb \
+  RAILS_ENV=test
+
+docker compose exec redmine bundle exec rails test \
+  plugins/redmine_assistant/test/unit/redmine_assistant_rag_client_test.rb \
+  RAILS_ENV=test
 ```
 
-Do not add routine plugin migrations to the test script. The unrelated Entra ID migration is not safely idempotent when its physical schema and plugin migration tracking differ.
-
-## Retrieval evaluation
-
-Run the full evaluation:
+Ruby parse checks catch malformed syntax but not valid bare method calls such as accidental `en`:
 
 ```bash
-docker compose exec \
-  -w /app \
-  rag \
-  python -m cli evaluate \
-  --questions /app/tests/evaluation_questions.yaml \
-  --top-k 5 \
-  --output-json /tmp/evaluation-current.json
+docker compose exec redmine sh -lc '
+  find plugins/redmine_assistant -type f \( -name "*.rb" -o -name "*.rake" \) -print0 |
+  xargs -0 -n1 ruby -c
+'
 ```
 
-Copy the report to the host:
+The actual test suite must still be executed.
+
+## Direct API acceptance tests
 
 ```bash
-docker compose cp \
-  rag:/tmp/evaluation-current.json \
-  rag/evaluation-results/evaluation-current.json
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"Which automator detects plasmids?","limit":5}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
+
+curl -sS -H 'Content-Type: application/json' \
+  -d '{"query":"bacon","limit":5}' \
+  http://127.0.0.1:8001/api/v1/retrieve | python3 -m json.tool
 ```
 
-## Baseline acceptance criteria
+The second response should have `result_count: 0` and `sources: []`.
 
-At minimum, a candidate release should maintain:
+## Browser acceptance checklist
 
-- no evaluation errors;
-- no internal-document leakage;
-- 100% internal-access-control check;
-- no unexpected decline in Hit@1, Hit@3, or Hit@5;
-- no regression in expected heading/content term coverage without explanation.
-
-Current dense baseline:
-
-- Hit@1: 90.4%
-- Hit@3: 98.5%
-- Hit@5: 100.0%
-- Heading-term coverage: 91.7%
-- Content-term coverage: 94.7%
-
-## Live smoke tests
-
-RAG API:
-
-```bash
-curl -sS \
-  -X POST \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"Which automator detects plasmids?","limit":3}' \
-  http://127.0.0.1:8001/search \
-  | python -m json.tool
-```
-
-Redmine UI:
-
-1. Sign in through Entra ID.
-2. Open a project with Assistant permission.
-3. Open the Assistant tab.
-4. Search for `Which SNVPhyl file contains pairwise SNV counts?`.
-5. Confirm the top result contains `snvMatrix.tsv`.
-6. Confirm source links open the hosted documentation.
-7. Search for the internal merge workflow and confirm no `internal_only/` path appears.
+1. Sign in through the normal Redmine authentication flow.
+2. Confirm only authorized roles see the Assistant tab.
+3. Run a documented positive query and inspect source links.
+4. Run `bacon` and confirm the no-results message.
+5. Submit helpful feedback.
+6. Submit unhelpful feedback with a reason and comment.
+7. Verify both records with the queries in [feedback.md](feedback.md).
+8. Confirm a standard user cannot retrieve internal paths.

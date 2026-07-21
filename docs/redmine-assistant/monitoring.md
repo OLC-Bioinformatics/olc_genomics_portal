@@ -1,103 +1,59 @@
 # Monitoring and Routine Operations
 
-## Daily or routine checks
+## Routine service checks
 
 ```bash
 docker compose ps redmine rag rag-db mariadb
-```
-
-```bash
-curl -sS http://127.0.0.1:8001/health/ready
-echo
-```
-
-Check recent errors:
-
-```bash
-docker compose logs \
-  --since 24h \
-  redmine rag rag-db \
-  | grep -Ei 'error|exception|traceback|fatal'
-```
-
-Review matches; expected test or warning messages may not indicate an outage.
-
-## Readiness meaning
-
-The RAG readiness endpoint confirms:
-
-- the Flask/Gunicorn application is running;
-- PostgreSQL is reachable;
-- schema metadata is readable;
-- document and chunk counts can be reported.
-
-It does not guarantee that a user query returns the correct semantic result. Use smoke tests or evaluation for functional validation.
-
-## Logs
-
-Follow live service logs:
-
-```bash
-docker compose logs -f --tail 100 redmine rag
-```
-
-Normal search flow should show:
-
-- an authenticated POST to the Redmine assistant search route;
-- a server-side POST to RAG `/search`;
-- an HTTP 200 response;
-- no internal documentation paths.
-
-## Capacity baseline
-
-The validated VM had:
-
-- x86_64 architecture;
-- 4 CPUs;
-- 15 GiB RAM;
-- no swap;
-- ample disk space;
-- a model cache of approximately 129 MiB.
-
-Keep one RAG worker initially to avoid loading several model copies. Threads can provide concurrency within that process.
-
-## First-request behavior
-
-The first embedding request after a RAG process restart loads the model and will be slower. Later requests in the same worker reuse it.
-
-## Disk checks
-
-```bash
-df -h /var/lib/docker
-```
-
-```bash
-docker system df
-```
-
-Do not use indiscriminate Docker volume pruning. The named volumes contain persistent database and model data.
-
-## Database checks
-
-```bash
+curl -sS http://127.0.0.1:8001/health/ready | python3 -m json.tool
 docker compose exec rag python -m cli status
 ```
 
+## Logs
+
 ```bash
-docker compose exec rag-db \
-  psql \
-  -U redmine_assistant \
-  -d redmine_assistant \
-  -c "SELECT COUNT(*) FROM documents;
-      SELECT COUNT(*) FROM document_chunks;"
+docker compose logs --since 24h redmine rag rag-db \
+  | grep -Ei 'error|exception|traceback|fatal|unavailable|forbidden'
+
+docker compose logs -f --tail 100 redmine rag
 ```
 
-## Suggested alert conditions
+Use `request_id` to correlate Redmine and RAG events. Do not expose raw exception messages or tokens to users.
 
-- `rag` or `rag-db` is unhealthy for more than several health intervals;
-- readiness returns 503;
-- document or chunk count unexpectedly becomes zero;
-- indexing reports failures;
-- Redmine repeatedly reports RAG timeout/unavailable errors;
-- disk usage approaches the organization’s threshold;
-- evaluation reports internal leakage or material retrieval regression.
+## Database state
+
+```bash
+docker compose exec rag-db psql -U redmine_assistant -d redmine_assistant -c "
+SELECT (SELECT COUNT(*) FROM documents) AS documents,
+       (SELECT COUNT(*) FROM document_chunks) AS chunks,
+       (SELECT COUNT(*) FROM retrieval_requests) AS searches,
+       (SELECT COUNT(*) FROM retrieval_feedback) AS feedback;"
+```
+
+## Retrieval behavior
+
+Review these weekly during testing:
+
+- unhelpful ratings and comments;
+- zero-result queries;
+- feedback participation rate;
+- valid queries close to the relevance threshold;
+- access-control and leakage evaluation;
+- index document/chunk counts.
+
+Commands are in [feedback.md](feedback.md) and [evaluation.md](evaluation.md).
+
+## Capacity
+
+Keep one RAG worker initially. Each worker may load its own embedding-model instance. The first query after process restart is slower because the model is loaded lazily. Monitor host memory, CPU, disk, and Docker usage:
+
+```bash
+docker stats --no-stream rag redmine rag-db
+df -h /var/lib/docker
+docker system df
+```
+
+Do not use indiscriminate volume pruning. `rag-db`, `redmine-db`, and `rag-model-cache` contain persistent state.
+
+## Suggested alerts
+
+Alert when readiness returns 503, `rag` or `rag-db` remains unhealthy, document/chunk counts become zero, migrations fail, indexing reports failures, Redmine repeatedly reports RAG timeouts, internal leakage tests fail, or disk usage crosses the organizational threshold.

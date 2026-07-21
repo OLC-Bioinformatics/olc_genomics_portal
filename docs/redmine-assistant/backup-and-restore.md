@@ -1,117 +1,66 @@
 # Backup and Restore
 
-## Data requiring backup
+## Data classification
 
-### RAG PostgreSQL database
+Back up `rag-db` because it contains schema migrations, index state, retrieval requests, and feedback. The vector index can be rebuilt, but request and feedback history cannot. Back up the Markdown repository through normal source control. Preserve the pinned model artifact or `rag-model-cache` according to deployment policy.
 
-The `rag-db` Docker volume stores:
-
-- schema migrations;
-- indexed documents;
-- chunks and metadata;
-- embedding vectors;
-- index metadata.
-
-### Model cache
-
-The `rag-model-cache` volume stores the pinned embedding model. The model can be restored from an approved artifact or downloaded again only when network access and policy permit.
-
-### Source and configuration
-
-Git should contain:
-
-- RAG application code;
-- migrations;
-- Redmine plugin code;
-- tests;
-- evaluation questions and approved baseline reports;
-- non-secret Compose configuration.
-
-The documentation repository must be backed up through its normal source-control process.
-
-## Logical PostgreSQL backup
-
-Create a timestamped dump outside the database container:
+## Create a logical backup
 
 ```bash
 mkdir -p backups/rag-db
-
 backup_file="backups/rag-db/redmine_assistant_$(date -u +%Y%m%dT%H%M%SZ).dump"
-
-docker compose exec -T rag-db \
-  pg_dump \
-  -U redmine_assistant \
-  -d redmine_assistant \
-  -Fc \
-  > "$backup_file"
-
+docker compose exec -T rag-db pg_dump \
+  -U redmine_assistant -d redmine_assistant -Fc > "$backup_file"
 ls -lh "$backup_file"
 ```
 
-Protect backups according to organizational requirements. Do not commit them to Git.
-
-## Verify a backup
+## Verify the backup
 
 ```bash
-pg_restore --list "$backup_file" | head
+docker run --rm -v "$PWD/backups/rag-db:/backup:ro" postgres:16 \
+  pg_restore --list "/backup/$(basename "$backup_file")" | head
+sha256sum "$backup_file" > "$backup_file.sha256"
+sha256sum -c "$backup_file.sha256"
 ```
 
-If `pg_restore` is not installed on the host, use a temporary PostgreSQL 16 container with the backup mounted read-only.
+Protect dumps and checksums according to organizational policy; do not commit them.
 
-## Restore approach
+## Restore procedure
 
-A restore should be tested first in a non-production environment.
+Test restores in a non-production environment first.
 
-High-level sequence:
+1. Stop RAG writes/indexing.
+2. Back up the current database.
+3. Recreate or clean the approved target database.
+4. Restore with PostgreSQL 16-compatible tools.
+5. Start RAG and allow migrations to run.
+6. Verify document, chunk, retrieval-request, feedback, and migration counts.
+7. Run API smoke tests and the retrieval evaluation.
 
-1. Stop writes/indexing.
-2. Create a fresh backup of the current database.
-3. Recreate or clean the target database.
-4. Restore the dump with PostgreSQL 16-compatible tools.
-5. Start the RAG service.
-6. Verify migrations, document count, chunk count, and vector dimensions.
-7. Run semantic smoke tests and the evaluation suite.
-
-Example restore into an empty target database:
+Example destructive restore into an approved empty target:
 
 ```bash
-cat "$backup_file" | docker compose exec -T rag-db \
-  pg_restore \
+cat "$backup_file" | docker compose exec -T rag-db pg_restore \
   -U redmine_assistant \
   -d redmine_assistant \
-  --clean \
-  --if-exists \
-  --no-owner
+  --clean --if-exists --no-owner
 ```
 
-Use `--clean` only when the target and restoration plan have been reviewed. It is destructive.
+Use `--clean` only after review; it drops restored objects.
 
-## Model-cache recovery
-
-Verify cached model contents:
+## Post-restore verification
 
 ```bash
-docker compose exec rag du -sh /models
+docker compose up -d rag
+curl -sS http://127.0.0.1:8001/health/ready | python3 -m json.tool
+
+docker compose exec rag-db psql -U redmine_assistant -d redmine_assistant -c "
+SELECT (SELECT COUNT(*) FROM documents) AS documents,
+       (SELECT COUNT(*) FROM document_chunks) AS chunks,
+       (SELECT COUNT(*) FROM retrieval_requests) AS searches,
+       (SELECT COUNT(*) FROM retrieval_feedback) AS feedback;"
 ```
 
-Verify offline loading:
+## Volume cautions
 
-```bash
-docker compose exec -T -w /app rag python - <<'PY'
-from embeddings import embedding_service
-
-vector = embedding_service.embed_query(
-    "Which automator detects plasmids?"
-)
-
-print(len(vector))
-PY
-```
-
-Expected:
-
-```text
-384
-```
-
-If the model cache is lost while offline mode is enabled, the RAG service cannot load the model. Restore the volume or temporarily perform an approved model download, verify the pinned revision, and re-enable offline mode.
+`docker compose down` preserves named volumes. `docker compose down -v`, `docker volume rm`, and aggressive pruning can destroy database and model-cache state. Docker volumes are persistence mechanisms, not backups.

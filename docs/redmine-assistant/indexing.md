@@ -1,117 +1,88 @@
 # Documentation Indexing
 
-## Source discovery
-
-The RAG container reads Markdown documentation from:
-
-```text
-/documentation
-```
-
-The mount must be read-only. At the current baseline, 51 documents produce approximately 405 chunks.
-
-## Run the indexer
+## Discover source files
 
 ```bash
-docker compose exec \
-  -w /app \
-  rag \
-  python -m cli index
+docker compose exec -w /app rag python -m cli discover --show-paths
 ```
 
-The indexer:
+The source mount is read-only at `/documentation`. Standard and internal documents must carry the intended access metadata; internal source paths are also defensively recognized by the integration.
 
-1. Discovers Markdown files.
-2. Calculates SHA-256 source checksums.
-3. Skips unchanged documents.
-4. Parses changed documents.
-5. Generates stable chunks.
-6. Embeds each chunk's contextual embedding content.
-7. Atomically replaces changed document rows and chunks.
-8. Removes deleted documents after a fully successful run.
-9. Stores index configuration metadata.
+## Inspect parsing and chunking without database writes
 
-## Expected first run
-
-```text
-Documents discovered: 51
-Documents added: 51
-Documents updated: 0
-Documents unchanged: 0
-Documents removed: 0
-Chunks embedded: approximately 405
-Failures: 0
+```bash
+docker compose exec -w /app rag python -m cli dry-run-index
 ```
 
-## Expected unchanged run
+Inspect one document and its generated chunks:
 
-```text
-Documents discovered: 51
-Documents added: 0
-Documents updated: 0
-Documents unchanged: 51
-Documents removed: 0
-Chunks embedded: 0
-Failures: 0
+```bash
+docker compose exec -w /app rag python -m cli dry-run-index \
+  --source analysis/confindr.md \
+  --show-content
 ```
 
-## Verify index status
+Optional chunk-size experiments:
+
+```bash
+docker compose exec -w /app rag python -m cli dry-run-index \
+  --target-chars 1200 \
+  --max-chars 1800
+```
+
+## Back up before risky work
+
+```bash
+mkdir -p backups/rag-db
+backup_file="backups/rag-db/redmine_assistant_$(date -u +%Y%m%dT%H%M%SZ).dump"
+docker compose exec -T rag-db pg_dump \
+  -U redmine_assistant -d redmine_assistant -Fc > "$backup_file"
+pg_restore --list "$backup_file" | head
+```
+
+## Run incremental indexing
+
+```bash
+docker compose exec -w /app rag python -m cli index
+```
+
+Run it again to verify idempotence. With unchanged documentation, added, updated, removed, and embedded counts should be zero while unchanged equals discovered.
+
+## Verify index state
 
 ```bash
 docker compose exec rag python -m cli status
+
+docker compose exec rag-db psql \
+  -U redmine_assistant -d redmine_assistant -tAc \
+  'SELECT COUNT(*), COUNT(embedding) FROM document_chunks;'
+
+docker compose exec rag-db psql \
+  -U redmine_assistant -d redmine_assistant -tAc \
+  'SELECT vector_dims(embedding), COUNT(*) FROM document_chunks GROUP BY vector_dims(embedding);'
 ```
 
-## Verify all chunks have vectors
+All chunks should have embeddings and the vector dimension should be `384` for the current model.
+
+## Search from the CLI
 
 ```bash
-docker compose exec rag-db \
-  psql \
-  -U redmine_assistant \
-  -d redmine_assistant \
-  -tAc \
-  "SELECT COUNT(*), COUNT(embedding) FROM document_chunks;"
+docker compose exec -w /app rag python -m cli search \
+  'How do I check FASTQ files for contamination?' \
+  --limit 5
 ```
 
-Both counts must match.
-
-## Verify vector dimensions
+Maintainer-only diagnostic search:
 
 ```bash
-docker compose exec rag-db \
-  psql \
-  -U redmine_assistant \
-  -d redmine_assistant \
-  -tAc \
-  "SELECT vector_dims(embedding), COUNT(*)
-   FROM document_chunks
-   GROUP BY vector_dims(embedding);"
+docker compose exec -w /app rag python -m cli search \
+  'How does the internal merge workflow work?' \
+  --limit 5 \
+  --include-internal
 ```
 
-Expected vector dimension:
+Do not expose `--include-internal` as a browser option.
 
-```text
-384
-```
+## When reindexing is required
 
-## When to re-index
-
-Run the indexer after:
-
-- adding, editing, moving, or removing documentation;
-- changing chunk-generation logic;
-- changing embedding content construction;
-- restoring an older vector database;
-- intentionally rebuilding with a different embedding configuration.
-
-## Full re-index conditions
-
-A full rebuild is required after changing:
-
-- embedding model name;
-- model revision;
-- vector dimension;
-- embedding normalization;
-- chunk-size settings;
-- material parsing/chunking behaviour.
-
-The index metadata guard is intended to prevent incompatible vectors from being mixed.
+Run incremental indexing after Markdown additions, edits, moves, or removals. Perform a controlled full rebuild after changing the embedding model, revision, vector dimension, normalization, embedding-content construction, or material parsing/chunking behavior. Preserve `retrieval_requests` and `retrieval_feedback`; they are operational history, not rebuildable index tables.

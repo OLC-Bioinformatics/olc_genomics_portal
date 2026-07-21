@@ -1,78 +1,42 @@
 # Security and Access Control
 
-## Trust boundaries
+## Trust boundary
 
-- Users authenticate to Redmine through Entra ID.
-- The browser does not call the RAG API directly.
-- Redmine proxies validated searches to `http://rag:8001/search` on the internal Compose network.
-- The RAG API binds to host loopback and is not intended as a public user endpoint.
+Users authenticate to Redmine. Browser requests go to the plugin. The plugin derives access from current project permissions and sends an authenticated server-to-server request to RAG using a Bearer token and trusted access header. The browser must never receive either value.
 
-## Redmine permission
+Retrieval endpoint: `POST /api/v1/retrieve`.
+Feedback endpoint: `POST /api/v1/feedback`; trusted authentication is required for all writes.
 
-The plugin registers:
+## Permissions
 
-```text
-view_redmine_assistant
+- `view_redmine_assistant`: use the project Assistant.
+- `view_internal_assistant_documentation`: permit internal documentation in a project context.
+
+Do not accept `access_context` or `include_internal` from browser parameters. Authorization occurs before retrieval; an LLM must never receive unauthorized content and then be asked to hide it.
+
+## Defense in depth
+
+1. Redmine derives the current access context.
+2. Trusted headers require the shared service token.
+3. Standard SQL retrieval excludes internal chunks.
+4. The API defensively filters results.
+5. The plugin defensively discards unexpected internal paths.
+6. Automated tests and evaluations check leakage.
+7. Feedback validates that the original retrieval context matches the current trusted context.
+
+## Verify token presence without disclosure
+
+```bash
+docker compose exec redmine sh -lc \
+  'test -n "$RAG_TRUSTED_SERVICE_TOKEN" && echo configured || echo missing'
+docker compose exec rag sh -lc \
+  'test -n "$RAG_TRUSTED_SERVICE_TOKEN" && echo configured || echo missing'
 ```
 
-Grant it only to appropriate Redmine roles under **Administration → Roles and permissions**.
+## Sensitive operational data
 
-## Internal documentation
+Queries and feedback comments may contain sample identifiers or internal details. Restrict database and export access, define retention, avoid logging request bodies, and do not commit CSV exports, dumps, production logs, tokens, credentials, private keys, or `env`.
 
-Internal chunks are tagged with:
+## Source and model updates
 
-```text
-access_level=internal
-```
-
-Protection exists at multiple layers:
-
-1. Standard RAG searches exclude internal chunks in SQL.
-2. The public RAG API always calls retrieval with internal access disabled.
-3. The Redmine controller does not forward an internal-access option.
-4. The RAG API defensively removes internal results.
-5. The Redmine plugin defensively discards internal results and `internal_only/` paths.
-6. Evaluation and automated tests check for leakage.
-
-Do not remove any layer without a formal security review.
-
-## Input controls
-
-- Query must be non-empty.
-- Redmine limits query length to 2,000 characters.
-- RAG limits result count to `RAG_MAX_TOP_K`.
-- Redmine sends only `query` and configured `limit`.
-- Requests are protected by Redmine authentication, authorization, and CSRF controls.
-
-## Output controls
-
-- RAG errors are converted to generic user-facing messages.
-- Raw exception details are logged server-side, not shown to users.
-- Documentation source paths are normalized and restricted.
-- `internal_only/`, absolute paths, null bytes, and parent-directory traversal are rejected.
-- Documentation content is rendered through Redmine’s configured CommonMark formatter and sanitizer.
-- External links use `target="_blank"` with `rel="noopener noreferrer"`.
-
-## Secret handling
-
-Do not commit:
-
-- `env` files containing secrets;
-- database passwords;
-- Entra ID client secrets;
-- SMTP credentials;
-- private keys;
-- database dumps;
-- production logs containing sensitive request context.
-
-## Dependency and model updates
-
-Before updating Python, Ruby, Rails, Redmine, pgvector, model, or transformer dependencies:
-
-1. Review release and security notes.
-2. Build in a non-production environment.
-3. Run all tests.
-4. Run the retrieval evaluation.
-5. Verify offline model loading.
-6. Review access-control tests and live leakage smoke tests.
-7. Back up affected databases.
+Before dependency, model, source-code, or future LLM changes, review licensing and security implications, run all tests and leakage evaluations, verify offline operation, and back up affected durable state.
