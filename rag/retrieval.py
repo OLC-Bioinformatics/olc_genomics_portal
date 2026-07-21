@@ -67,11 +67,14 @@ def validate_query(query: str) -> str:
     normalized_query = query.strip()
 
     if not normalized_query:
-        raise RetrievalError("Search query cannot be blank")
+        raise RetrievalError(
+            "Search query cannot be blank"
+        )
 
     if len(normalized_query) > settings.max_query_chars:
         raise RetrievalError(
-            f"Search query cannot exceed {settings.max_query_chars} characters"
+            "Search query cannot exceed "
+            f"{settings.max_query_chars} characters"
         )
 
     return normalized_query
@@ -153,17 +156,18 @@ def retrieve_chunks(
     """
     Retrieve documentation chunks related to a query.
 
-    Exact cosine-distance search is used. Internal documentation is excluded
+    Exact cosine-distance search is used. Results below the configured
+    minimum similarity are excluded. Internal documentation is excluded
     unless explicitly requested.
 
     Args:
         query: User search question.
-        limit: Maximum number of results.
+        limit: Maximum number of qualifying results.
         include_internal: Include internal-only documentation when True.
         embedding_provider: Service used to generate the query vector.
 
     Returns:
-        Results ordered by decreasing cosine similarity.
+        Qualifying results ordered by decreasing cosine similarity.
 
     Raises:
         RetrievalError: If the query, limit, embedding operation, or
@@ -197,45 +201,60 @@ def retrieve_chunks(
                     """
                     WITH query_vector AS (
                         SELECT %s::vector AS embedding
+                    ),
+                    ranked_chunks AS (
+                        SELECT
+                            dc.id,
+                            dc.chunk_key,
+                            d.source_path,
+                            dc.source_url,
+                            d.title AS document_title,
+                            dc.heading_path,
+                            dc.content,
+                            COALESCE(
+                                dc.metadata->>'access_level',
+                                d.metadata->>'access_level',
+                                'standard'
+                            ) AS access_level,
+                            1 - (
+                                dc.embedding
+                                <=>
+                                query_vector.embedding
+                            ) AS score
+                        FROM document_chunks AS dc
+                        JOIN documents AS d
+                            ON d.id = dc.document_id
+                        CROSS JOIN query_vector
+                        WHERE dc.embedding IS NOT NULL
+                          AND (
+                              %s
+                              OR COALESCE(
+                                  dc.metadata->>'access_level',
+                                  d.metadata->>'access_level',
+                                  'standard'
+                              ) = 'standard'
+                          )
                     )
                     SELECT
-                        dc.chunk_key,
-                        d.source_path,
-                        dc.source_url,
-                        d.title AS document_title,
-                        dc.heading_path,
-                        dc.content,
-                        COALESCE(
-                            dc.metadata->>'access_level',
-                            d.metadata->>'access_level',
-                            'standard'
-                        ) AS access_level,
-                        1 - (
-                            dc.embedding
-                            <=>
-                            query_vector.embedding
-                        ) AS score
-                    FROM document_chunks AS dc
-                    JOIN documents AS d
-                        ON d.id = dc.document_id
-                    CROSS JOIN query_vector
-                    WHERE dc.embedding IS NOT NULL
-                      AND (
-                          %s
-                          OR COALESCE(
-                              dc.metadata->>'access_level',
-                              d.metadata->>'access_level',
-                              'standard'
-                          ) = 'standard'
-                      )
+                        chunk_key,
+                        source_path,
+                        source_url,
+                        document_title,
+                        heading_path,
+                        content,
+                        access_level,
+                        score
+                    FROM ranked_chunks
+                    WHERE score >= %s
                     ORDER BY
-                        dc.embedding <=> query_vector.embedding,
-                        dc.id
+                        score DESC,
+                        id
                     LIMIT %s
                     """,
                     (
                         query_embedding,
                         include_internal,
+                        settings.minimum_similarity,
                         validated_limit,
                     ),
                 )

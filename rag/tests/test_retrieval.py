@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 """Tests for semantic documentation retrieval."""
-
+# Standard library imports
 from contextlib import contextmanager
 
+# Third-party imports
 import pytest
 
+# Local imports
+from config import settings
 import retrieval
 from retrieval import (
     RetrievalError,
@@ -275,7 +278,8 @@ def test_retrieve_chunks_excludes_internal_by_default(
     parameters = connection.cursor_instance.parameters
 
     assert parameters[1] is False
-    assert parameters[2] == 3
+    assert parameters[2] == settings.minimum_similarity
+    assert parameters[3] == 3
 
 
 def test_retrieve_chunks_can_include_internal(

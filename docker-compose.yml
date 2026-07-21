@@ -163,6 +163,7 @@ services:
       - MODEL_CACHE_DIR=/models
       - RAG_TOP_K=5
       - RAG_MAX_TOP_K=10
+      - RAG_MINIMUM_SIMILARITY=0.60
       - RAG_WORKERS=1
       - RAG_THREADS=4
       - RAG_TIMEOUT=60

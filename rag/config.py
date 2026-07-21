@@ -9,6 +9,7 @@ import os
 DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 DEFAULT_EMBEDDING_MODEL_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
 DEFAULT_EMBEDDING_DIMENSION = 384
+DEFAULT_MINIMUM_SIMILARITY = 0.60
 
 
 class ConfigurationError(RuntimeError):
@@ -75,6 +76,52 @@ def integer_environment_variable(
         raise ConfigurationError(
             f"Environment variable {name} must be at least {minimum}"
         )
+
+    return value
+
+
+def float_environment_variable(
+    name: str,
+    default: float,
+    *,
+    minimum: float | None = None,
+    maximum: float | None = None,
+) -> float:
+    """
+    Return an environment variable as a floating-point number.
+
+    Args:
+        name: Environment variable name.
+        default: Default value when the variable is not configured.
+        minimum: Optional minimum accepted value.
+        maximum: Optional maximum accepted value.
+
+    Returns:
+        The configured floating-point value.
+
+    Raises:
+        ConfigurationError: If the value is not a number or falls outside
+            the configured range.
+    """
+    raw_value = os.getenv(name)
+
+    if raw_value is None or not raw_value.strip():
+        value = default
+    else:
+        try:
+            value = float(raw_value)
+        except ValueError as exc:
+            raise ConfigurationError(
+                f"Environment variable {name} must be a number"
+            ) from exc
+
+    if minimum is not None and value < minimum:
+        raise ConfigurationError(
+            f"Environment variable {name} must be at least {minimum}"
+        )
+
+    if maximum is not None and value > maximum:
+        raise ConfigurationError(f"Environment variable {name} cannot exceed {maximum}")
 
     return value
 
@@ -148,6 +195,7 @@ class Settings:
     max_top_k: int
     max_query_chars: int
     max_excerpt_chars: int
+    minimum_similarity: float
 
     # Embedding model settings
     embedding_model: str
@@ -178,6 +226,7 @@ class Settings:
             5,
             minimum=1,
         )
+
         configured_max_top_k = integer_environment_variable(
             "RAG_MAX_TOP_K",
             10,
@@ -186,6 +235,13 @@ class Settings:
 
         if configured_top_k > configured_max_top_k:
             raise ConfigurationError("RAG_TOP_K cannot be greater than RAG_MAX_TOP_K")
+
+        configured_minimum_similarity = float_environment_variable(
+            "RAG_MINIMUM_SIMILARITY",
+            DEFAULT_MINIMUM_SIMILARITY,
+            minimum=-1.0,
+            maximum=1.0,
+        )
 
         embedding_device = os.getenv(
             "EMBEDDING_DEVICE",
@@ -225,9 +281,8 @@ class Settings:
         ).strip()
 
         if not embedding_model_revision:
-            raise ConfigurationError(
-                "EMBEDDING_MODEL_REVISION cannot be empty"
-            )
+            raise ConfigurationError("EMBEDDING_MODEL_REVISION cannot be empty")
+
         trusted_service_token = os.getenv(
             "RAG_TRUSTED_SERVICE_TOKEN",
             "",
@@ -275,6 +330,7 @@ class Settings:
                 1500,
                 minimum=1,
             ),
+            minimum_similarity=configured_minimum_similarity,
             embedding_model=embedding_model,
             embedding_model_revision=embedding_model_revision,
             embedding_dimension=integer_environment_variable(
