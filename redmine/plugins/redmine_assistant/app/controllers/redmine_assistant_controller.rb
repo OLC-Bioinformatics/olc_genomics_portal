@@ -5,11 +5,23 @@ require_relative '../../lib/redmine_assistant/rag_client'
 class RedmineAssistantController < ApplicationController
   before_action :require_login
   before_action :find_project
-  before_action :authorize
+  before_action :authorize, only: %i[index search]
+  before_action :authorize_feedback, only: :feedback
 
   helper :redmine_assistant
 
   MAX_QUERY_LENGTH = 2_000
+  MAX_FEEDBACK_COMMENT_LENGTH = 1_000
+  FEEDBACK_RATINGS = %w[helpful unhelpful].freeze
+  FEEDBACK_REASONS = %w[
+    irrelevant_results
+    missing_documentation
+    unclear_documentation
+    outdated_documentation
+    insufficient_detail
+    other
+  ].freeze
+  REQUEST_ID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
 
   def index
     @query = ''
@@ -45,12 +57,57 @@ class RedmineAssistantController < ApplicationController
     render :index, status: :internal_server_error
   end
 
+  def feedback
+    access_context = assistant_access_context
+    feedback = validated_feedback_params
+
+    rag_client.submit_feedback(
+      request_id: feedback[:request_id],
+      rating: feedback[:rating],
+      reason: feedback[:reason],
+      comment: feedback[:comment],
+      access_context: access_context
+    )
+
+    render json: {
+      status: 'ok',
+      message: l(:notice_redmine_assistant_feedback_recorded)
+    }
+  rescue ActionController::ParameterMissing, ArgumentError => e
+    Rails.logger.info("Invalid Redmine Assistant feedback: #{e.class}")
+    render json: {
+      status: 'error',
+      message: l(:error_redmine_assistant_invalid_feedback)
+    }, status: :unprocessable_content
+  rescue RedmineAssistant::Error => e
+    log_assistant_error('Redmine Assistant feedback unavailable', e, :warn)
+    render json: {
+      status: 'error',
+      message: l(:error_redmine_assistant_feedback_unavailable)
+    }, status: :service_unavailable
+  rescue StandardError => e
+    log_assistant_error('Unexpected Redmine Assistant feedback failure', e, :error)
+    render json: {
+      status: 'error',
+      message: l(:error_redmine_assistant_feedback_unavailable)
+    }, status: :internal_server_error
+  end
+
   private
 
   def find_project
     @project = Project.find(params[:project_id])
   rescue ActiveRecord::RecordNotFound
     render_404
+  end
+
+  def authorize_feedback
+    return true if User.current.allowed_to?(
+      :view_redmine_assistant,
+      @project
+    )
+
+    deny_access
   end
 
   def assistant_access_context
@@ -81,6 +138,32 @@ class RedmineAssistantController < ApplicationController
 
   def requested_limit
     params[:limit].presence
+  end
+
+  def validated_feedback_params
+    request_id = params.require(:request_id).to_s.strip
+    rating = params.require(:rating).to_s.strip.downcase
+    reason = params[:reason].to_s.strip.presence
+    comment = params[:comment].to_s.strip.presence
+
+    raise ArgumentError unless request_id.match?(REQUEST_ID_PATTERN)
+    raise ArgumentError unless FEEDBACK_RATINGS.include?(rating)
+    raise ArgumentError if comment && comment.length > MAX_FEEDBACK_COMMENT_LENGTH
+    if rating == 'helpful'
+      raise ArgumentError if reason
+    else
+      raise ArgumentError unless FEEDBACK_REASONS.include?(reason)
+    end
+    if params.key?(:include_internal) || params.key?(:access_context)
+      raise ArgumentError
+    end
+
+    {
+      request_id: request_id,
+      rating: rating,
+      reason: reason,
+      comment: comment
+    }
   end
 
   def rag_client

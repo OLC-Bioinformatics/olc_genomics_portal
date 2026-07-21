@@ -137,3 +137,41 @@
 .redmine-assistant-result-footer a {
   overflow-wrap: anywhere;
 }
+
+.redmine-assistant-feedback {
+  margin-top: 1.5rem;
+  max-width: 80rem;
+}
+
+.redmine-assistant-feedback-question {
+  font-weight: 600;
+  margin-top: 0;
+}
+
+.redmine-assistant-feedback-actions,
+.redmine-assistant-feedback-details {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.redmine-assistant-feedback-details {
+  align-items: flex-start;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.redmine-assistant-feedback-details select,
+.redmine-assistant-feedback-details textarea {
+  box-sizing: border-box;
+  max-width: 50rem;
+  width: 100%;
+}
+
+.redmine-assistant-feedback-status {
+  margin-bottom: 0;
+  margin-top: 0.75rem;
+}
+
+.redmine-assistant-feedback-status.error {
+  color: #b00020;
+}

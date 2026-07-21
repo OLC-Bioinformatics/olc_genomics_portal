@@ -23,6 +23,16 @@ module RedmineAssistant
     DEFAULT_TIMEOUT_SECONDS = 15
     DEFAULT_RESULT_LIMIT = 5
     MAX_RESULT_LIMIT = 10
+    FEEDBACK_RATINGS = %w[helpful unhelpful].freeze
+    FEEDBACK_REASONS = %w[
+      irrelevant_results
+      missing_documentation
+      unclear_documentation
+      outdated_documentation
+      insufficient_detail
+      other
+    ].freeze
+    MAX_FEEDBACK_COMMENT_LENGTH = 1_000
 
     ACCESS_CONTEXTS = %w[
       standard
@@ -104,6 +114,54 @@ module RedmineAssistant
            Net::ReadTimeout
       raise ServiceError,
             'Could not connect to the RAG service'
+    end
+
+    def submit_feedback(request_id:, rating:, access_context:, reason: nil, comment: nil)
+      context = normalized_access_context(access_context)
+      feedback = validated_feedback(
+        request_id: request_id,
+        rating: rating,
+        reason: reason,
+        comment: comment
+      )
+      uri = feedback_uri
+      request = Net::HTTP::Post.new(uri)
+      request['Accept'] = 'application/json'
+      request['Content-Type'] = 'application/json'
+      request['Authorization'] = "Bearer #{trusted_service_token}"
+      request[trusted_access_header] = context
+      request.body = feedback.to_json
+
+      response = perform_request(uri, request)
+      validate_http_response!(response)
+      header_request_id = response['X-Request-ID'].to_s.presence
+      body = parse_body(response, request_id: header_request_id)
+      response_request_id = body['request_id'].to_s.presence || header_request_id
+
+      unless response.is_a?(Net::HTTPSuccess)
+        error_code = body.dig('error', 'code').to_s.presence
+        message = "RAG service returned HTTP #{response.code}"
+        message += " (#{error_code})" if error_code
+        raise ServiceError.new(message, request_id: response_request_id)
+      end
+
+      unless body['status'] == 'ok' && body['feedback'].is_a?(Hash)
+        raise ResponseError.new(
+          'RAG service returned an invalid feedback response',
+          request_id: response_request_id
+        )
+      end
+
+      body
+    rescue JSON::ParserError
+      raise ResponseError, 'RAG service returned invalid JSON'
+    rescue SocketError,
+           IOError,
+           SystemCallError,
+           Timeout::Error,
+           Net::OpenTimeout,
+           Net::ReadTimeout
+      raise ServiceError, 'Could not connect to the RAG service'
     end
 
     private
@@ -211,32 +269,65 @@ module RedmineAssistant
       end
     end
 
-    def retrieve_uri
+    def validated_feedback(request_id:, rating:, reason:, comment:)
+      normalized_request_id = request_id.to_s.strip
+      unless normalized_request_id.match?(
+        /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
+      )
+        raise ConfigurationError, 'Retrieval request ID is invalid'
+      end
+
+      normalized_rating = rating.to_s.strip.downcase
+      unless FEEDBACK_RATINGS.include?(normalized_rating)
+        raise ConfigurationError, 'Feedback rating is invalid'
+      end
+
+      normalized_reason = reason.to_s.strip.presence
+      if normalized_rating == 'helpful'
+        if normalized_reason
+          raise ConfigurationError, 'Helpful feedback cannot include an unhelpful reason'
+        end
+      elsif !FEEDBACK_REASONS.include?(normalized_reason)
+        raise ConfigurationError, 'Unhelpful feedback reason is invalid'
+      end
+
+      normalized_comment = comment.to_s.strip.presence
+      if normalized_comment && normalized_comment.length > MAX_FEEDBACK_COMMENT_LENGTH
+        raise ConfigurationError, 'Feedback comment is too long'
+      end
+
+      {
+        request_id: normalized_request_id,
+        rating: normalized_rating,
+        reason: normalized_reason,
+        comment: normalized_comment
+      }
+    end
+
+    def feedback_uri
+      service_uri('/api/v1/feedback')
+    end
+
+    def service_uri(path)
       base = ENV.fetch(
         'REDMINE_ASSISTANT_RAG_URL',
         DEFAULT_RAG_URL
       ).to_s.strip
-
       if base.empty?
-        raise ConfigurationError,
-              'REDMINE_ASSISTANT_RAG_URL is empty'
+        raise ConfigurationError, 'REDMINE_ASSISTANT_RAG_URL is empty'
       end
 
-      uri = URI.parse(
-        "#{base.delete_suffix('/')}" \
-        '/api/v1/retrieve'
-      )
-
-      unless uri.is_a?(URI::HTTP) &&
-             uri.host.present?
-        raise ConfigurationError,
-              'REDMINE_ASSISTANT_RAG_URL is invalid'
+      uri = URI.parse("#{base.delete_suffix('/')}#{path}")
+      unless uri.is_a?(URI::HTTP) && uri.host.present?
+        raise ConfigurationError, 'REDMINE_ASSISTANT_RAG_URL is invalid'
       end
-
       uri
     rescue URI::InvalidURIError
-      raise ConfigurationError,
-            'REDMINE_ASSISTANT_RAG_URL is invalid'
+      raise ConfigurationError, 'REDMINE_ASSISTANT_RAG_URL is invalid'
+    end
+
+    def retrieve_uri
+      service_uri('/api/v1/retrieve')
     end
 
     def trusted_service_token

@@ -4,6 +4,9 @@
   <%= stylesheet_link_tag(
         'plugin_assets/redmine_assistant/redmine_assistant'
       ) %>
+  <%= javascript_include_tag(
+        'plugin_assets/redmine_assistant/redmine_assistant_feedback'
+      ) %>
 <% end %>
 
 <div class="contextual">
@@ -138,4 +141,65 @@
       </article>
     <% end %>
   </div>
+
+  <% if @rag_request_id.present? %>
+    <section
+      class="box redmine-assistant-feedback"
+      data-feedback-url="<%= feedback_project_redmine_assistant_path(
+        project_id: @project.identifier
+      ) %>"
+      data-request-id="<%= @rag_request_id %>"
+    >
+      <p class="redmine-assistant-feedback-question">
+        <%= l(:label_redmine_assistant_feedback) %>
+      </p>
+
+      <div class="redmine-assistant-feedback-actions">
+        <button
+          type="button"
+          class="button-positive redmine-assistant-feedback-helpful"
+        >
+          <%= l(:button_redmine_assistant_helpful) %>
+        </button>
+        <button
+          type="button"
+          class="redmine-assistant-feedback-unhelpful"
+        >
+          <%= l(:button_redmine_assistant_unhelpful) %>
+        </button>
+      </div>
+
+      <div class="redmine-assistant-feedback-details" hidden>
+        <label for="redmine-assistant-feedback-reason">
+          <%= l(:label_redmine_assistant_feedback_reason) %>
+        </label>
+        <select id="redmine-assistant-feedback-reason">
+          <option value=""><%= l(:text_redmine_assistant_feedback_choose_reason) %></option>
+          <option value="irrelevant_results"><%= l(:text_redmine_assistant_feedback_irrelevant_results) %></option>
+          <option value="missing_documentation"><%= l(:text_redmine_assistant_feedback_missing_documentation) %></option>
+          <option value="unclear_documentation"><%= l(:text_redmine_assistant_feedback_unclear_documentation) %></option>
+          <option value="outdated_documentation"><%= l(:text_redmine_assistant_feedback_outdated_documentation) %></option>
+          <option value="insufficient_detail"><%= l(:text_redmine_assistant_feedback_insufficient_detail) %></option>
+          <option value="other"><%= l(:text_redmine_assistant_feedback_other) %></option>
+        </select>
+
+        <label for="redmine-assistant-feedback-comment">
+          <%= l(:label_redmine_assistant_feedback_comment) %>
+        </label>
+        <textarea
+          id="redmine-assistant-feedback-comment"
+          maxlength="1000"
+          rows="3"
+        ></textarea>
+        <button
+          type="button"
+          class="redmine-assistant-feedback-submit"
+        >
+          <%= l(:button_redmine_assistant_submit_feedback) %>
+        </button>
+      </div>
+
+      <p class="redmine-assistant-feedback-status" role="status" aria-live="polite"></p>
+    </section>
+  <% end %>
 <% end %>

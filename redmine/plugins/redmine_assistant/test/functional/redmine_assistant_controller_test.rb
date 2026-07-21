@@ -461,6 +461,73 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
     assert_response :not_found
   end
 
+  def test_successful_search_renders_feedback_controls
+    sign_in(@project_member)
+    client = mock
+    client.expects(:retrieve).returns(
+      rag_response(access_context: 'standard', sources: [standard_result]).merge(
+        'request_id' => '11111111-1111-4111-8111-111111111111'
+      )
+    )
+    @controller.stubs(:rag_client).returns(client)
+
+    post(
+      :search,
+      params: {
+        project_id: @project.identifier,
+        query: 'Which automator detects plasmids?'
+      }
+    )
+
+    assert_response :success
+    assert_select '.redmine-assistant-feedback', count: 1
+    assert_select '.redmine-assistant-feedback-helpful', count: 1
+    assert_select '.redmine-assistant-feedback-unhelpful', count: 1
+  end
+
+  def test_helpful_feedback_is_forwarded_with_trusted_context
+    sign_in(@project_member)
+    client = mock
+    client.expects(:submit_feedback).with(
+      request_id: '11111111-1111-4111-8111-111111111111',
+      rating: 'helpful',
+      reason: nil,
+      comment: nil,
+      access_context: 'standard'
+    ).returns('status' => 'ok')
+    @controller.stubs(:rag_client).returns(client)
+
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful'
+      }
+    )
+
+    assert_response :success
+    assert_equal('ok', response.parsed_body['status'])
+  end
+
+  def test_feedback_rejects_browser_access_context
+    sign_in(@project_member)
+    @controller.expects(:rag_client).never
+
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful',
+        access_context: 'internal'
+      }
+    )
+
+    assert_response :unprocessable_content
+  end
+
+
   private
 
   def sign_in(user)
@@ -517,4 +584,39 @@ class RedmineAssistantControllerTest < Redmine::ControllerTest
       'access_level' => 'internal'
     }
   end
+  def test_anonymous_feedback_is_redirected_to_login
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful'
+      },
+      as: :json
+    )
+
+    assert_response :redirect
+  end
+  def test_feedback_requires_assistant_permission
+    @member_roles.each do |role|
+      role.remove_permission!(:view_redmine_assistant)
+    end
+
+    sign_in(@project_member)
+
+    @controller.expects(:rag_client).never
+
+    post(
+      :feedback,
+      params: {
+        project_id: @project.identifier,
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'helpful'
+      },
+      as: :json
+    )
+
+    assert_response :forbidden
+  end
+
 end

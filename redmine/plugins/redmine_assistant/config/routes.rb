@@ -11,3 +11,9 @@ post(
   to: 'redmine_assistant#search',
   as: :search_project_redmine_assistant
 )
+
+post(
+  'projects/:project_id/redmine_assistant/feedback',
+  to: 'redmine_assistant#feedback',
+  as: :feedback_project_redmine_assistant
+)

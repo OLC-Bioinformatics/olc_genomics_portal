@@ -479,4 +479,60 @@ class RedmineAssistantRagClientTest < ActiveSupport::TestCase
             "#{response_class.name}"
     end
   end
+  def test_submit_feedback_sends_trusted_request
+    response = json_response(
+      Net::HTTPOK,
+      {
+        status: 'ok',
+        request_id: '33333333-3333-4333-8333-333333333333',
+        retrieval_request_id: '11111111-1111-4111-8111-111111111111',
+        feedback: {
+          target_type: 'retrieval_response',
+          rating: 'unhelpful',
+          reason: 'missing_documentation'
+        }
+      }
+    )
+    captured_request = nil
+    @client.stubs(:perform_request).with do |uri, request|
+      captured_request = request
+      uri.path == '/api/v1/feedback'
+    end.returns(response)
+
+    @client.submit_feedback(
+      request_id: '11111111-1111-4111-8111-111111111111',
+      rating: 'unhelpful',
+      reason: 'missing_documentation',
+      comment: 'Runtime was missing.',
+      access_context: 'standard'
+    )
+
+    body = JSON.parse(captured_request.body)
+    assert_equal('Bearer test-token', captured_request['Authorization'])
+    assert_equal('standard', captured_request['X-Redmine-Assistant-Access'])
+    assert_equal('unhelpful', body['rating'])
+    assert_equal('missing_documentation', body['reason'])
+  end
+
+  def test_submit_feedback_rejects_invalid_request_id
+    @client.expects(:perform_request).never
+    assert_raises(RedmineAssistant::ConfigurationError) do
+      @client.submit_feedback(
+        request_id: 'not-a-uuid',
+        rating: 'helpful',
+        access_context: 'standard'
+      )
+    end
+  end
+
+  def test_submit_feedback_requires_reason_for_unhelpful_rating
+    @client.expects(:perform_request).never
+    assert_raises(RedmineAssistant::ConfigurationError) do
+      @client.submit_feedback(
+        request_id: '11111111-1111-4111-8111-111111111111',
+        rating: 'unhelpful',
+        access_context: 'standard'
+      )
+    end
+  end
 end

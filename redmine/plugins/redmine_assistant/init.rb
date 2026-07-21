@@ -7,8 +7,14 @@ Redmine::Plugin.register :redmine_assistant do
   version '0.2.0'
 
   permission :view_redmine_assistant,
-             { redmine_assistant: %i[index search] },
-             require: :loggedin
+            {
+              redmine_assistant: [
+                :index,
+                :search,
+                :feedback
+              ]
+            },
+            require: :loggedin
 
   # Checked explicitly by the controller. An empty action mapping prevents
   # this permission from granting access to the assistant by itself.
