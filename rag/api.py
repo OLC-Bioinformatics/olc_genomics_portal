@@ -7,7 +7,7 @@ import hmac
 import logging
 import time
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 # Third-party imports
 from flask import Flask, g, jsonify, request
@@ -17,6 +17,8 @@ from config import ConfigurationError, settings
 from database import (
     check_database_connection,
     get_database_status,
+    record_retrieval_request,
+    save_retrieval_feedback,
 )
 from retrieval import (
     RetrievalError,
@@ -49,6 +51,19 @@ VALID_ACCESS_CONTEXTS = frozenset(
         "internal",
     }
 )
+
+VALID_FEEDBACK_RATINGS = frozenset({"helpful", "unhelpful"})
+VALID_UNHELPFUL_REASONS = frozenset(
+    {
+        "irrelevant_results",
+        "missing_documentation",
+        "unclear_documentation",
+        "outdated_documentation",
+        "insufficient_detail",
+        "other",
+    }
+)
+MAX_FEEDBACK_COMMENT_CHARS = 1_000
 
 
 class APIRequestError(RuntimeError):
@@ -193,6 +208,110 @@ def parse_retrieval_request(
         ) from exc
 
     return query, limit
+
+
+def parse_feedback_request() -> tuple[str, str, str | None, str | None]:
+    """Validate and normalize a JSON retrieval-feedback request."""
+    if not request.is_json:
+        raise APIRequestError(
+            code="unsupported_media_type",
+            message="The request Content-Type must be application/json.",
+            status_code=415,
+        )
+
+    body = request.get_json(silent=True)
+    if body is None:
+        raise APIRequestError(
+            code="invalid_json",
+            message="The request body must contain valid JSON.",
+            status_code=400,
+        )
+    if not isinstance(body, dict):
+        raise APIRequestError(
+            code="invalid_request",
+            message="The JSON request body must be an object.",
+            status_code=400,
+        )
+
+    forbidden = sorted(PROHIBITED_ACCESS_FIELDS.intersection(body))
+    if forbidden:
+        raise APIRequestError(
+            code="forbidden_access_context",
+            message="Access context is assigned by a trusted server integration.",
+            status_code=400,
+        )
+
+    allowed_fields = {"request_id", "rating", "reason", "comment"}
+    unknown_fields = sorted(set(body) - allowed_fields)
+    if unknown_fields:
+        raise APIRequestError(
+            code="invalid_request",
+            message="The feedback request contains unsupported fields.",
+            status_code=400,
+        )
+
+    request_id = body.get("request_id")
+    if not isinstance(request_id, str):
+        raise APIRequestError(
+            code="invalid_request_id",
+            message="A valid retrieval request identifier is required.",
+            status_code=400,
+        )
+    try:
+        normalized_request_id = str(UUID(request_id))
+    except (ValueError, AttributeError) as exc:
+        raise APIRequestError(
+            code="invalid_request_id",
+            message="A valid retrieval request identifier is required.",
+            status_code=400,
+        ) from exc
+
+    rating = body.get("rating")
+    if rating not in VALID_FEEDBACK_RATINGS:
+        raise APIRequestError(
+            code="invalid_rating",
+            message="Feedback rating must be helpful or unhelpful.",
+            status_code=400,
+        )
+
+    reason = body.get("reason")
+    if rating == "helpful":
+        if reason not in (None, ""):
+            raise APIRequestError(
+                code="invalid_reason",
+                message="Helpful feedback must not include an unhelpful reason.",
+                status_code=400,
+            )
+        reason = None
+    elif reason not in VALID_UNHELPFUL_REASONS:
+        raise APIRequestError(
+            code="invalid_reason",
+            message="Unhelpful feedback must include a valid reason.",
+            status_code=400,
+        )
+
+    comment = body.get("comment")
+    if comment is None:
+        normalized_comment = None
+    elif not isinstance(comment, str):
+        raise APIRequestError(
+            code="invalid_comment",
+            message="Feedback comment must be text.",
+            status_code=400,
+        )
+    else:
+        normalized_comment = comment.strip() or None
+        if normalized_comment and len(normalized_comment) > MAX_FEEDBACK_COMMENT_CHARS:
+            raise APIRequestError(
+                code="invalid_comment",
+                message=(
+                    "Feedback comment cannot exceed "
+                    f"{MAX_FEEDBACK_COMMENT_CHARS} characters."
+                ),
+                status_code=400,
+            )
+
+    return normalized_request_id, rating, reason, normalized_comment
 
 
 def serialize_search_result(
@@ -563,6 +682,27 @@ def retrieve_v1():
         for result in results
     ]
 
+    try:
+        record_retrieval_request(
+            request_id=current_request_id(),
+            query=query,
+            access_context=access_context,
+            result_chunk_keys=[result.chunk_key for result in results],
+        )
+    except Exception:
+        LOGGER.exception(
+            "request_id=%s failed to persist retrieval telemetry",
+            current_request_id(),
+        )
+        return error_response(
+            code="telemetry_unavailable",
+            message=(
+                "The documentation search completed, but the response "
+                "could not be recorded. Please try again."
+            ),
+            status_code=503,
+        )
+
     return jsonify(
         {
             "status": "ok",
@@ -575,6 +715,84 @@ def retrieve_v1():
             "result_count": len(sources),
             "limit": limit,
             "sources": sources,
+        }
+    )
+
+
+@app.post("/api/v1/feedback")
+def feedback_v1():
+    """Store feedback for a retrieval response from trusted Redmine."""
+    if not trusted_service_authenticated():
+        return error_response(
+            code="authentication_required",
+            message="Trusted service authentication is required.",
+            status_code=401,
+        )
+
+    try:
+        access_context = determine_access_context()
+    except AccessContextError:
+        LOGGER.warning(
+            "request_id=%s unauthorized feedback access-context request",
+            current_request_id(),
+        )
+        return error_response(
+            code="forbidden_access_context",
+            message="The requested documentation access context is not authorized.",
+            status_code=403,
+        )
+
+    try:
+        retrieval_request_id, rating, reason, comment = parse_feedback_request()
+    except APIRequestError as exc:
+        return error_response(
+            code=exc.code,
+            message=exc.message,
+            status_code=exc.status_code,
+        )
+
+    try:
+        saved = save_retrieval_feedback(
+            request_id=retrieval_request_id,
+            access_context=access_context,
+            rating=rating,
+            reason=reason,
+            comment=comment,
+        )
+    except Exception:
+        LOGGER.exception(
+            "request_id=%s feedback storage failed",
+            current_request_id(),
+        )
+        return error_response(
+            code="feedback_unavailable",
+            message="Feedback could not be recorded. Please try again.",
+            status_code=503,
+        )
+
+    if not saved:
+        return error_response(
+            code="retrieval_not_found",
+            message="The retrieval response could not be found.",
+            status_code=404,
+        )
+
+    LOGGER.info(
+        "request_id=%s endpoint=v1-feedback retrieval_request_id=%s rating=%s",
+        current_request_id(),
+        retrieval_request_id,
+        rating,
+    )
+    return jsonify(
+        {
+            "status": "ok",
+            "request_id": current_request_id(),
+            "retrieval_request_id": retrieval_request_id,
+            "feedback": {
+                "target_type": "retrieval_response",
+                "rating": rating,
+                "reason": reason,
+            },
         }
     )
 

@@ -261,3 +261,87 @@ def get_database_status() -> dict[str, int]:
         "documents": document_count,
         "chunks": chunk_count,
     }
+
+
+def record_retrieval_request(
+    *,
+    request_id: str,
+    query: str,
+    access_context: str,
+    result_chunk_keys: list[str],
+) -> None:
+    """Persist a retrieval event so later feedback can be validated."""
+    with database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO retrieval_requests (
+                    request_id,
+                    query,
+                    access_context,
+                    result_count,
+                    result_chunk_keys
+                )
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (request_id) DO NOTHING
+                """,
+                (
+                    request_id,
+                    query,
+                    access_context,
+                    len(result_chunk_keys),
+                    result_chunk_keys,
+                ),
+            )
+
+
+def save_retrieval_feedback(
+    *,
+    request_id: str,
+    access_context: str,
+    rating: str,
+    reason: str | None,
+    comment: str | None,
+) -> bool:
+    """Create or update feedback for an authorized retrieval event.
+
+    Returns True when the referenced retrieval exists and its access context
+    matches the trusted context supplied by Redmine. Returns False otherwise.
+    """
+    with database_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO retrieval_feedback (
+                    request_id,
+                    target_type,
+                    rating,
+                    reason,
+                    comment
+                )
+                SELECT
+                    request_id,
+                    'retrieval_response',
+                    %s,
+                    %s,
+                    %s
+                FROM retrieval_requests
+                WHERE request_id = %s
+                  AND access_context = %s
+                ON CONFLICT (request_id, target_type)
+                DO UPDATE SET
+                    rating = EXCLUDED.rating,
+                    reason = EXCLUDED.reason,
+                    comment = EXCLUDED.comment,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING id
+                """,
+                (
+                    rating,
+                    reason,
+                    comment,
+                    request_id,
+                    access_context,
+                ),
+            )
+            return cursor.fetchone() is not None

@@ -11,8 +11,13 @@ from retrieval import RetrievalError, SearchResult
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     """Create a Flask test client."""
+    monkeypatch.setattr(
+        api,
+        "record_retrieval_request",
+        lambda **kwargs: None,
+    )
     api.app.config.update(
         TESTING=True,
     )
@@ -747,3 +752,166 @@ def test_v1_returns_safe_retrieval_error(
     assert body["error"]["code"] == "search_unavailable"
     assert "Secret" not in str(body)
     assert response.headers["X-Request-ID"] == body["request_id"]
+
+
+def test_v1_persists_retrieval_event(
+    client,
+    monkeypatch,
+) -> None:
+    """Successful retrieval stores request metadata for later feedback."""
+    captured = {}
+    monkeypatch.setattr(api, "retrieve_chunks", lambda **kwargs: [search_result()])
+    monkeypatch.setattr(
+        api,
+        "record_retrieval_request",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    response = client.post("/api/v1/retrieve", json={"query": "plasmids"})
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert captured == {
+        "request_id": body["request_id"],
+        "query": "plasmids",
+        "access_context": "standard",
+        "result_chunk_keys": ["analysis/mobsuite.md::0000"],
+    }
+
+
+def test_feedback_requires_trusted_authentication(client) -> None:
+    """Feedback cannot be written by an anonymous caller."""
+    response = client.post(
+        "/api/v1/feedback",
+        json={
+            "request_id": "11111111-1111-4111-8111-111111111111",
+            "rating": "helpful",
+        },
+    )
+    assert response.status_code == 401
+    assert response.get_json()["error"]["code"] == "authentication_required"
+
+
+def test_feedback_records_helpful_rating(
+    client,
+    monkeypatch,
+    trusted_settings,
+) -> None:
+    """Trusted Redmine can record helpful retrieval feedback."""
+    captured = {}
+    monkeypatch.setattr(
+        api,
+        "save_retrieval_feedback",
+        lambda **kwargs: captured.update(kwargs) or True,
+    )
+    retrieval_request_id = "11111111-1111-4111-8111-111111111111"
+
+    response = client.post(
+        "/api/v1/feedback",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "standard",
+        },
+        json={
+            "request_id": retrieval_request_id,
+            "rating": "helpful",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured == {
+        "request_id": retrieval_request_id,
+        "access_context": "standard",
+        "rating": "helpful",
+        "reason": None,
+        "comment": None,
+    }
+    assert response.get_json()["retrieval_request_id"] == retrieval_request_id
+
+
+def test_feedback_records_unhelpful_reason_and_comment(
+    client,
+    monkeypatch,
+    trusted_settings,
+) -> None:
+    """Unhelpful feedback retains a controlled reason and bounded comment."""
+    captured = {}
+    monkeypatch.setattr(
+        api,
+        "save_retrieval_feedback",
+        lambda **kwargs: captured.update(kwargs) or True,
+    )
+    response = client.post(
+        "/api/v1/feedback",
+        headers={
+            "Authorization": "Bearer test-service-token",
+            "X-Redmine-Assistant-Access": "internal",
+        },
+        json={
+            "request_id": "22222222-2222-4222-8222-222222222222",
+            "rating": "unhelpful",
+            "reason": "missing_documentation",
+            "comment": "Expected runtime was not documented.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured["access_context"] == "internal"
+    assert captured["reason"] == "missing_documentation"
+    assert captured["comment"] == "Expected runtime was not documented."
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_code"),
+    [
+        ({"request_id": "not-a-uuid", "rating": "helpful"}, "invalid_request_id"),
+        (
+            {
+                "request_id": "11111111-1111-4111-8111-111111111111",
+                "rating": "unhelpful",
+            },
+            "invalid_reason",
+        ),
+        (
+            {
+                "request_id": "11111111-1111-4111-8111-111111111111",
+                "rating": "helpful",
+                "access_context": "internal",
+            },
+            "forbidden_access_context",
+        ),
+    ],
+)
+def test_feedback_rejects_invalid_payloads(
+    client,
+    trusted_settings,
+    payload,
+    expected_code,
+) -> None:
+    """Feedback validation rejects malformed and access-selecting input."""
+    response = client.post(
+        "/api/v1/feedback",
+        headers={"Authorization": "Bearer test-service-token"},
+        json=payload,
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == expected_code
+
+
+def test_feedback_hides_access_mismatch_as_not_found(
+    client,
+    monkeypatch,
+    trusted_settings,
+) -> None:
+    """A request from another access context is not accepted."""
+    monkeypatch.setattr(api, "save_retrieval_feedback", lambda **kwargs: False)
+    response = client.post(
+        "/api/v1/feedback",
+        headers={"Authorization": "Bearer test-service-token"},
+        json={
+            "request_id": "11111111-1111-4111-8111-111111111111",
+            "rating": "helpful",
+        },
+    )
+    assert response.status_code == 404
+    assert response.get_json()["error"]["code"] == "retrieval_not_found"
