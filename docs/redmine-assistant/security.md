@@ -40,3 +40,11 @@ Queries and feedback comments may contain sample identifiers or internal details
 ## Source and model updates
 
 Before dependency, model, source-code, or future LLM changes, review licensing and security implications, run all tests and leakage evaluations, verify offline operation, and back up affected durable state.
+
+## Granting access to internal documentation
+
+Internal Assistant documentation is controlled by the Redmine project-role
+permission:
+
+```text
+view_internal_assistant_documentation
