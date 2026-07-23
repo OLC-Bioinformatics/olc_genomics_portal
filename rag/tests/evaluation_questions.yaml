@@ -2048,3 +2048,492 @@ questions:
   forbidden_terms:
   - redmine.biodiversity.agr.gc.ca
   notes: Useful after a destructive reindex to detect stale chunks from the retired documentation corpus.
+- id: select-quast
+  question: Which automator should I use to evaluate the quality of bacterial genome assemblies?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - QUAST
+  - assembly quality
+
+- id: select-metaquast
+  question: Which automator should I use to evaluate metagenomic assemblies?
+  category: tool_selection
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - MetaQUAST
+  - metagenomic assemblies
+
+- id: compare-quast-metaquast
+  question: Should I use QUAST or MetaQUAST to evaluate my assemblies?
+  category: tool_comparison
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  - analysis/metaquast.md
+  expected_terms:
+  - QUAST
+  - MetaQUAST
+  - metagenomic
+  source_match: all
+
+- id: quast-description-format
+  question: How should I format the description of a QUAST request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - one SEQID per line
+  - commas
+  expected_heading_terms:
+  - Redmine Issue Format
+
+- id: metaquast-description-format
+  question: How should I format the description of a MetaQUAST request?
+  category: issue_format
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - one SEQID per line
+  - commas
+  expected_heading_terms:
+  - Redmine Issue Format
+
+- id: quast-circos-option
+  question: How do I request Circos output from QUAST?
+  category: optional_parameters
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - circos
+  - --circos
+  expected_heading_terms:
+  - circos
+
+- id: metaquast-no-user-arguments
+  question: Can I add custom MetaQUAST command-line arguments to the Redmine description?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - does not currently support
+  - user-supplied
+  - arguments
+  expected_heading_terms:
+  - Arguments
+
+- id: metaquast-reference-argument
+  question: How do I provide a reference genome in a MetaQUAST Redmine request?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - No user-supplied reference argument
+  - reference
+  notes: The retrieved documentation should explain that the automator does not support a user-supplied reference argument rather than inventing reference syntax.
+
+- id: quast-duplicate-seqids
+  question: What happens if I list the same SeqID more than once in a QUAST request?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - Duplicate SEQIDs
+  - removed
+  - order
+
+- id: metaquast-duplicate-seqids
+  question: What happens if I list the same SeqID more than once in a MetaQUAST request?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - Duplicate SEQIDs
+  - removed
+  - order
+
+- id: quast-missing-seqid
+  question: What happens if QUAST cannot find one of my requested SeqIDs on the NAS?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - WARNING
+  - missing
+  - continues
+  expected_heading_terms:
+  - One or more FASTA files could not be found
+
+- id: metaquast-missing-seqid
+  question: What happens if MetaQUAST cannot find one of my requested SeqIDs on the NAS?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - WARNING
+  - missing
+  - continues
+  expected_heading_terms:
+  - One or more FASTA files could not be found
+
+- id: metaquast-no-assemblies
+  question: What happens if MetaQUAST cannot find any of the requested FASTA assemblies?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - None of the requested FASTA assemblies
+  - OLC NAS
+  expected_heading_terms:
+  - No requested FASTA assemblies were found
+
+- id: quast-output-file
+  question: What Excel report does the QUAST automator attach to the Redmine issue?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - Quast_results_redmine
+  - .xlsx
+  expected_heading_terms:
+  - Excel report
+
+- id: metaquast-output-file
+  question: What Excel report does the MetaQUAST automator attach to the Redmine issue?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - MetaQUAST_results_redmine
+  - .xlsx
+  expected_heading_terms:
+  - Excel report
+
+- id: quast-full-output
+  question: Where can I download the complete output from a QUAST analysis?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - Dropbox
+  - quast_output_
+  - zip
+  expected_heading_terms:
+  - Complete output archive
+
+- id: metaquast-full-output
+  question: Where can I download the complete output from a MetaQUAST analysis?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - Dropbox
+  - metaquast_output_
+  - zip
+  expected_heading_terms:
+  - Complete output archive
+
+- id: quast-n50
+  question: What does N50 mean in a QUAST report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - 50%
+  - contig
+  - contiguous
+  expected_heading_terms:
+  - N50
+
+- id: metaquast-n50
+  question: How should I interpret N50 in a MetaQUAST report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - 50%
+  - contig
+  - misassembled
+  expected_heading_terms:
+  - N50
+
+- id: quast-l50
+  question: What does L50 mean in a QUAST report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - minimum number
+  - contigs
+  - 50%
+  expected_heading_terms:
+  - L50
+
+- id: metaquast-gc-content
+  question: How should I interpret GC content in a MetaQUAST report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - mixture
+  - organisms
+  - GC
+  expected_heading_terms:
+  - GC content
+
+- id: metaquast-unaligned-contigs
+  question: Does an unaligned contig in MetaQUAST automatically mean that the contig is incorrect?
+  category: capability_boundary
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - not automatically erroneous
+  - novel sequence
+  - contamination
+  expected_heading_terms:
+  - Unaligned contigs
+
+- id: metaquast-misassemblies
+  question: What kinds of misassemblies can MetaQUAST report?
+  category: results
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - Relocations
+  - Inversions
+  - Translocations
+  - Interspecies misassemblies
+  expected_heading_terms:
+  - Misassemblies
+
+- id: quast-missing-transposed-report
+  question: Why did QUAST finish without producing transposed_report.tsv?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - transposed_report.tsv
+  - failed
+  - output
+  expected_heading_terms:
+  - Excel report was not generated
+
+- id: metaquast-missing-transposed-report
+  question: Why did MetaQUAST not create transposed_report.tsv?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - transposed_report.tsv
+  - output
+  - invalid
+  expected_heading_terms:
+  - Expected transposed report was not generated
+
+- id: quast-excel-conversion-failure
+  question: Why was the QUAST Excel report not generated?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - TSV-to-XLSX
+  - transposed_report.tsv
+  - writable
+  expected_heading_terms:
+  - Excel report was not generated
+
+- id: metaquast-excel-conversion-failure
+  question: Why was the MetaQUAST Excel workbook not generated?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - transposed_report.tsv
+  - pandas
+  - openpyxl
+  expected_heading_terms:
+  - Excel report was not generated
+
+- id: quast-dropbox-failure
+  question: Will I still receive a QUAST report if the Dropbox upload fails?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - Excel
+  - attached
+  - Dropbox
+  expected_heading_terms:
+  - Dropbox upload failed
+
+- id: metaquast-dropbox-failure
+  question: Will I still receive the MetaQUAST Excel report if the full-results Dropbox upload fails?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - Excel
+  - attached
+  - Dropbox
+  expected_heading_terms:
+  - Dropbox upload failed
+
+- id: metaquast-thread-count
+  question: How does the MetaQUAST automator determine how many threads to use?
+  category: resources
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - SLURM_CPUS_PER_TASK
+  - --cpus-per-task
+  - -t
+  expected_heading_terms:
+  - SLURM Resources
+
+- id: metaquast-slurm-task-layout
+  question: Should a MetaQUAST SLURM job use multiple tasks or one multithreaded task?
+  category: resources
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - --ntasks=1
+  - --cpus-per-task
+  - multithreaded
+  expected_heading_terms:
+  - SLURM Resources
+
+- id: metaquast-unexpected-threads
+  question: Why did MetaQUAST use a different number of threads than I expected?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - SLURM_CPUS_PER_TASK
+  - fallback
+  - --cpus-per-task
+  expected_heading_terms:
+  - SLURM job used an unexpected number of threads
+
+- id: metaquast-invalid-thread-allocation
+  question: Why does MetaQUAST say that SLURM_CPUS_PER_TASK must be a positive integer?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - SLURM_CPUS_PER_TASK
+  - positive integer
+  - --cpus-per-task
+  expected_heading_terms:
+  - Invalid SLURM thread allocation
+
+- id: metaquast-retained-error-files
+  question: Are MetaQUAST intermediate files kept when an analysis fails?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - retained
+  - troubleshooting
+  - run_metaquast.sh
+  expected_heading_terms:
+  - Temporary Files and Cleanup
+
+- id: metaquast-success-cleanup
+  question: Which temporary files does the MetaQUAST automator remove after a successful run?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - sequences
+  - metaquast_output_
+  - run_metaquast.sh
+  expected_heading_terms:
+  - Temporary Files and Cleanup
+
+- id: metaquast-version-failure
+  question: What should I check if the MetaQUAST version cannot be determined?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - metaquast.py
+  - --version
+  - Python
+  expected_heading_terms:
+  - MetaQUAST version could not be determined
+
+- id: metaquast-zip-failure
+  question: Why was the MetaQUAST ZIP archive not generated?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - output directory
+  - disk space
+  - writable
+  expected_heading_terms:
+  - ZIP archive was not generated
+
+- id: metaquast-failed-slurm-state
+  question: How is a failed MetaQUAST analysis reported in Redmine and SLURM?
+  category: behavior
+  enabled: true
+  expected_sources:
+  - analysis/metaquast.md
+  expected_terms:
+  - traceback
+  - Sentry
+  - failed
+  expected_heading_terms:
+  - Unexpected automator error
+
+- id: quast-circos-missing
+  question: Why did my QUAST analysis not produce Circos output?
+  category: troubleshooting
+  enabled: true
+  expected_sources:
+  - analysis/quast.md
+  expected_terms:
+  - circos
+  - dependency
+  - output
+  expected_heading_terms:
+  - Circos output is missing
