@@ -5,8 +5,10 @@ Common methods shared between multiple apps
 """
 
 # Standard imports
+from copy import deepcopy
 import json
 import logging
+import re
 from typing import Optional
 
 # Third-party imports
@@ -15,6 +17,49 @@ import requests
 
 # Django-related imports
 from django.conf import settings
+
+
+def _redact_sas_urls(*, value):
+    """
+    Redact query strings from URLs embedded in a logging value.
+
+    The original value submitted to the Batch API is not modified. This
+    helper is intended only for diagnostic logging and console output.
+
+    Args:
+        value (Any): Value that may contain one or more SAS URLs.
+
+    Returns:
+        Any: A logging-safe copy of the supplied value.
+    """
+    if isinstance(value, dict):
+        return {
+            key: _redact_sas_urls(value=item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _redact_sas_urls(value=item)
+            for item in value
+        ]
+
+    if isinstance(value, tuple):
+        return tuple(
+            _redact_sas_urls(value=item)
+            for item in value
+        )
+
+    if not isinstance(value, str):
+        return value
+
+    # Azure SAS URLs contain a query string beginning with "?". Preserve the
+    # container and blob path for diagnostics while removing credentials.
+    return re.sub(
+        r"(https?://[^\s?'\"<>]+)\?[^\s'\"<>]+",
+        r"\1?[REDACTED]",
+        value,
+    )
 
 
 @shared_task
@@ -62,8 +107,9 @@ def generic_api_submit(
     }
 
     # Log the dictionary
-    logging.info(data)
-    print(data)
+    logging_data = _redact_sas_urls(value=deepcopy(data))
+    logging.info(logging_data)
+    print(logging_data)
 
     # Make the POST request with a timeout of 10 minutes
     response = requests.post(
