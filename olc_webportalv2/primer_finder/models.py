@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 # Portal-specific imports
+from olc_webportalv2.common.benchmarks import BENCHMARK_CHOICES
 from olc_webportalv2.users.models import User
 
 
@@ -97,16 +98,7 @@ EXCLUSIVITY = 'bds-exclusivity'
 STX_OPERONS = 'stx'
 
 
-genera = [
-    (CAMPYLOBACTER, "Campylobacter"),
-    (ESCHERICHIA, "Escherichia"),
-    (VTEC, "VTEC"),
-    (LISTERIA, "Listeria"),
-    (BDS_SALMONELLA, "BDS-Salmonella"),
-    (NCBI_SALMONELLA, "NCBI-Salmonella"),
-    (EXCLUSIVITY, "BDS-Exclusivity"),
-    (STX_OPERONS, "STX-Operons"),
-]
+genera = BENCHMARK_CHOICES
 
 
 class VerifierPrimerSet(models.Model):
