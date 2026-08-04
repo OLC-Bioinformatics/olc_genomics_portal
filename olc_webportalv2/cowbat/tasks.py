@@ -50,6 +50,9 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
+from olc_webportalv2.common.benchmarks import (
+    normalise_benchmark_name,
+)
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
     AzureTask,
@@ -2340,7 +2343,10 @@ def get_batch_blast_results(
 
     # Update GeneSeekrDetail objects with BLAST results
     for seqid in geneseekr_task.seqids:
-        GeneSeekrDetail.objects.filter(seqid=seqid).delete()
+        GeneSeekrDetail.objects.filter(
+            geneseekr_request=geneseekr_task,
+            seqid=seqid,
+        ).delete()
         geneseekr_detail = GeneSeekrDetail.objects.create(
             geneseekr_request=geneseekr_task, seqid=seqid
         )
@@ -2399,7 +2405,8 @@ def get_batch_blast_hits(run_folder, geneseekr_task):
 
             # Remove any previously populated versions
             TopBlastHit.objects.filter(
-                contig_name=modified_contig_name
+                geneseekr_request=geneseekr_task,
+                contig_name=modified_contig_name,
             ).delete()
 
             # Create a new TopBlastHit object
@@ -2420,6 +2427,70 @@ def get_batch_blast_hits(run_folder, geneseekr_task):
 
             # Save the hit
             top_blast_hit.save()
+
+
+def _populate_benchmark_seqids(
+    *, blob_client, geneseekr_request, output_container, run_folder
+):
+    """
+    Download benchmark SEQIDs and store them on a GeneSeekr request.
+
+    The Batch task creates the file dynamically from extracted FASTA
+    filenames and copies it to the root of the request container. Reading this
+    generated file avoids maintaining static benchmark-ID files in the source
+    tree and ensures the request reflects the exact archive that was analysed.
+
+    Args:
+        blob_client (BlockBlobService): Azure Blob service client.
+        geneseekr_request (GeneSeekrRequest): Completed benchmark request.
+        output_container (str): Request container containing the SEQID file.
+        run_folder (str): Local folder used while processing results.
+
+    Returns:
+        list: Sorted sequence IDs loaded from the generated file.
+
+    Raises:
+        FileNotFoundError: If the generated SEQID blob is missing.
+        ValueError: If the generated file does not contain any sequence IDs.
+    """
+    benchmark_name = normalise_benchmark_name(
+        benchmark_name=geneseekr_request.benchmark
+    )
+    seqids_name = "{0}_seqids.txt".format(benchmark_name)
+
+    if not blob_client.exists(
+        container_name=output_container,
+        blob_name=seqids_name,
+    ):
+        raise FileNotFoundError(
+            "Generated benchmark SEQID file is missing: {0}/{1}".format(
+                output_container,
+                seqids_name,
+            )
+        )
+
+    os.makedirs(run_folder, exist_ok=True)
+    local_seqids = os.path.join(run_folder, seqids_name)
+    blob_client.get_blob_to_path(
+        container_name=output_container,
+        blob_name=seqids_name,
+        file_path=local_seqids,
+    )
+
+    with open(local_seqids, "r", encoding="utf-8") as seqids_object:
+        sequence_ids = sorted({line.strip() for line in seqids_object if line.strip()})
+
+    if not sequence_ids:
+        raise ValueError(
+            "Generated benchmark SEQID file is empty: {0}/{1}".format(
+                output_container,
+                seqids_name,
+            )
+        )
+
+    geneseekr_request.seqids = sequence_ids
+    geneseekr_request.save(update_fields=["seqids"])
+    return sequence_ids
 
 
 def check_geneseekr_tasks():
@@ -2558,22 +2629,12 @@ def check_geneseekr_tasks():
 
                 # If the GeneSeekr request is a benchmark, update the seqids
                 if geneseekr_request.benchmark:
-                    geneseekr_request.seqids = []
-                    geneseekr_request.save()
-                    benchmark_file = os.path.join(
-                        'olc_webportalv2',
-                        'geneseekr',
-                        geneseekr_request.benchmark.lower() +
-                        '_benchmark_ids.txt'
+                    _populate_benchmark_seqids(
+                        blob_client=blob_client,
+                        geneseekr_request=geneseekr_request,
+                        output_container=output_container,
+                        run_folder=run_folder,
                     )
-                    with open(
-                            benchmark_file,
-                            'r',
-                            encoding='utf-8'
-                            ) as seq_ids:
-                        for line in seq_ids:
-                            geneseekr_request.seqids.append(line.rstrip())
-                    geneseekr_request.save()
 
                 # Get BLAST results and hits
                 get_batch_blast_results(
