@@ -2,8 +2,11 @@
 
 # Standard imports
 from glob import glob
-import shutil
+import datetime
 import os
+import posixpath
+import shutil
+import shlex
 
 # Third-party imports
 from email.mime.multipart import MIMEMultipart
@@ -16,9 +19,14 @@ import smtplib
 from django.conf import settings
 
 # Azure imports
-from azure.storage.blob import BlockBlobService
+from azure.storage.blob import BlockBlobService, BlobPermissions
 
 # Local imports
+from olc_webportalv2.common.benchmarks import (
+    BENCHMARK_CONTAINER_NAME,
+    benchmark_blob_name,
+    normalise_benchmark_name,
+)
 from olc_webportalv2.common.methods import generic_api_submit
 from olc_webportalv2.geneseekr.methods import zip_files
 from olc_webportalv2.geneseekr.models import GeneSeekrAzureRequest, \
@@ -560,187 +568,291 @@ def send_email(subject, body, recipient):
             server.quit()
 
 
+def _create_benchmark_download(*, benchmark_name, expiry_hours=12):
+    """
+    Create a read-only download specification for a benchmark archive.
+
+    Args:
+        benchmark_name (str): Canonical or legacy benchmark identifier.
+        expiry_hours (int): Number of hours for which the SAS URL is valid.
+
+    Returns:
+        dict: Source container, blob name, SAS URL, and content length.
+
+    Raises:
+        FileNotFoundError: If the benchmark ZIP does not exist.
+        ValueError: If the benchmark identifier is unsupported.
+    """
+    canonical_name = normalise_benchmark_name(benchmark_name=benchmark_name)
+    blob_name = benchmark_blob_name(benchmark_name=canonical_name)
+
+    blob_client = BlockBlobService(
+        account_name=settings.AZURE_ACCOUNT_NAME,
+        account_key=settings.AZURE_ACCOUNT_KEY,
+    )
+
+    if not blob_client.exists(
+        container_name=BENCHMARK_CONTAINER_NAME,
+        blob_name=blob_name,
+    ):
+        raise FileNotFoundError(
+            "Benchmark archive does not exist: {0}/{1}".format(
+                BENCHMARK_CONTAINER_NAME,
+                blob_name,
+            )
+        )
+
+    properties = blob_client.get_blob_properties(
+        container_name=BENCHMARK_CONTAINER_NAME,
+        blob_name=blob_name,
+    )
+    content_length = properties.properties.content_length
+
+    sas_token = blob_client.generate_blob_shared_access_signature(
+        container_name=BENCHMARK_CONTAINER_NAME,
+        blob_name=blob_name,
+        permission=BlobPermissions.READ,
+        expiry=(datetime.datetime.utcnow() + datetime.timedelta(hours=expiry_hours)),
+    )
+    sas_url = blob_client.make_blob_url(
+        container_name=BENCHMARK_CONTAINER_NAME,
+        blob_name=blob_name,
+        sas_token=sas_token,
+    )
+
+    return {
+        "benchmark_name": canonical_name,
+        "container_name": BENCHMARK_CONTAINER_NAME,
+        "blob_name": blob_name,
+        "sas_url": sas_url,
+        "content_length": content_length,
+    }
+
+
+def _create_benchmark_geneseekr_command(*, benchmark_download, container_name):
+    """
+    Build the Batch command for a GeneSeekr benchmark analysis.
+
+    The command downloads and extracts the selected benchmark on the Batch
+    node's local SSD. It creates a sorted, unique SEQID file from the
+    root-level FASTA filenames, then copies that file and the reports
+    directory to the
+    BlobFuse-mounted request container.
+
+    Args:
+        benchmark_download (dict): Result from
+            ``_create_benchmark_download``.
+        container_name (str): GeneSeekr request container name.
+
+    Returns:
+        str: Shell command to submit to Azure Batch.
+    """
+    local_run = posixpath.join("/datadrive", container_name)
+    local_sequences = posixpath.join(local_run, "sequences")
+    local_reports = posixpath.join(local_run, "reports")
+    local_archive = posixpath.join(
+        local_run,
+        benchmark_download["blob_name"],
+    )
+    partial_archive = "{0}.part".format(local_archive)
+
+    benchmark_name = benchmark_download["benchmark_name"]
+    seqids_name = "{0}_seqids.txt".format(benchmark_name)
+    local_seqids = posixpath.join(local_run, seqids_name)
+
+    mount_dir = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(container_name)
+    target_dir = "{0}/targets".format(mount_dir)
+    mounted_reports = "{0}/reports".format(mount_dir)
+    mounted_seqids = "{0}/{1}".format(mount_dir, seqids_name)
+
+    expected_size = str(benchmark_download["content_length"])
+
+    command_parts = [
+        "export LC_ALL=C.UTF-8",
+        "export LANG=C.UTF-8",
+        "source $CONDA/activate /envs/cowbat",
+        "set -euo pipefail",
+        # Remove files left by an earlier attempt on the same Batch node.
+        "rm -rf {0}".format(shlex.quote(local_run)),
+        "mkdir -p {0} {1}".format(
+            shlex.quote(local_sequences),
+            shlex.quote(local_reports),
+        ),
+        # Download to a partial path so an interrupted archive is never used.
+        (
+            "curl --fail --location --retry 5 --retry-delay 10 "
+            "--connect-timeout 60 --continue-at - --output {partial} "
+            "{source}"
+        ).format(
+            partial=shlex.quote(partial_archive),
+            source=shlex.quote(benchmark_download["sas_url"]),
+        ),
+        "test -s {0}".format(shlex.quote(partial_archive)),
+        # Validate the exact size without nested shell command substitution.
+        (
+            "find {archive} -maxdepth 0 -type f -size {size}c -print -quit | grep -q ."
+        ).format(
+            archive=shlex.quote(partial_archive),
+            size=shlex.quote(expected_size),
+        ),
+        "mv {0} {1}".format(
+            shlex.quote(partial_archive),
+            shlex.quote(local_archive),
+        ),
+        "unzip -tq {0}".format(shlex.quote(local_archive)),
+        "unzip -q {archive} -d {destination}".format(
+            archive=shlex.quote(local_archive),
+            destination=shlex.quote(local_sequences),
+        ),
+        "rm {0}".format(shlex.quote(local_archive)),
+        # The benchmark contract requires root-level .fasta files.
+        (
+            "find {directory} -maxdepth 1 -type f -name '*.fasta' "
+            "-print -quit | grep -q ."
+        ).format(directory=shlex.quote(local_sequences)),
+        # Convert root-level FASTA basenames to sorted, unique sequence IDs.
+        # The output filename includes the canonical benchmark identifier.
+        (
+            "find {directory} -maxdepth 1 -type f -name '*.fasta' "
+            "-printf '%f\\n' | sed 's/\\.fasta$//' | sort -u > {output}"
+        ).format(
+            directory=shlex.quote(local_sequences),
+            output=shlex.quote(local_seqids),
+        ),
+        "test -s {0}".format(shlex.quote(local_seqids)),
+        ("GeneSeekr blastn -u -s {sequences} -t {targets} -r {reports}").format(
+            sequences=shlex.quote(local_sequences),
+            targets=target_dir,
+            reports=shlex.quote(local_reports),
+        ),
+        # Do not report success unless GeneSeekr created at least one result.
+        ("find {directory} -type f -print -quit | grep -q .").format(
+            directory=shlex.quote(local_reports)
+        ),
+        # Replace only persistent outputs belonging to this analysis.
+        "rm -rf {0}".format(mounted_reports),
+        "rm -f {0}".format(mounted_seqids),
+        "cp -R {0} {1}/".format(
+            shlex.quote(local_reports),
+            mount_dir,
+        ),
+        "cp {0} {1}/".format(
+            shlex.quote(local_seqids),
+            mount_dir,
+        ),
+    ]
+
+    return " && ".join(command_parts)
+
+
 @shared_task
 def run_geneseekr(geneseekr_request_pk):
     """
-    This function is a shared task that runs GeneSeekr
+    Prepare and submit a GeneSeekr request to Azure Batch.
 
-    It retrieves a GeneSeekrRequest object from the database using the
-    provided primary key, prepares the necessary files and environment for
-    running GeneSeekr, and submits the command to the AzureBatch service.
-    If the task encounters an error, it captures the exception and
-    updates the GeneSeekrRequest object's status and error fields.
+    Benchmark requests download their selected archive directly from the
+    shared ``benchmark-datasets`` container using a read-only SAS URL. Normal
+    requests retain the existing processed-data staging workflow.
 
-    Parameters:
-    geneseekr_request_pk (int): The primary key of the GeneSeekrRequest
-        object to process.
-
-    Returns:
-    None
+    Args:
+        geneseekr_request_pk (int): Primary key of the GeneSeekr request.
     """
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
-    try:
-        container_name = 'geneseekr-{pk}'.format(pk=geneseekr_request_pk)
-        run_folder = os.path.join(
-            'olc_webportalv2',
-            'media',
-            '{container}'.format(container=container_name)
-        )
 
+    try:
+        container_name = "geneseekr-{0}".format(geneseekr_request_pk)
+        run_folder = os.path.join(
+            "olc_webportalv2",
+            "media",
+            container_name,
+        )
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
 
-        # Create a name to write the user-supplied sequences to file
-        file_name = 'query.fasta'
+        file_name = "query.fasta"
         target_file = os.path.join(run_folder, file_name)
+        with open(target_file, "w", encoding="utf-8") as target_object:
+            target_object.write(geneseekr_request.query_sequence)
 
-        # Write the sequences to file
-        with open(target_file, 'w', encoding='utf-8') as f:
-            f.write(geneseekr_request.query_sequence)
-
-        # Create the blob client
         blob_client = BlockBlobService(
             account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
+            account_key=settings.AZURE_ACCOUNT_KEY,
         )
-
-        # Create the container
         blob_client.create_container(container_name)
 
-        # Upload user-provided file to the container in the targets subfolder
-        blob_client.create_blob_from_bytes(
-            container_name=container_name,
-            blob_name=os.path.join('targets', file_name),
-            blob=open(target_file, 'rb').read()
-        )
+        with open(target_file, "rb") as target_object:
+            blob_client.create_blob_from_bytes(
+                container_name=container_name,
+                blob_name=posixpath.join("targets", file_name),
+                blob=target_object.read(),
+            )
 
-        # Set the size of the batch VM to use based on the number of sequences
-        # to process
-        if len(geneseekr_request.seqids) < 10:
-            vm_size = 'Standard_D4s_v3'
-        elif len(geneseekr_request.seqids) < 30:
-            vm_size = 'Standard_D8s_v3'
-        elif len(geneseekr_request.seqids) < 150:
-            vm_size = 'Standard_D16s_v3'
+        sequence_count = len(geneseekr_request.seqids)
+        if sequence_count < 10:
+            vm_size = "Standard_D4s_v3"
+        elif sequence_count < 30:
+            vm_size = "Standard_D8s_v3"
+        elif sequence_count < 150:
+            vm_size = "Standard_D16s_v3"
         else:
-            vm_size = 'Standard_D32s_v3'
-        if geneseekr_request.benchmark:
-            vm_size = 'Standard_D32s_v3'
+            vm_size = "Standard_D32s_v3"
 
-        # Initialise a list to store the input files
         input_file_pattern = []
 
-        # click (which geneseekr uses) needs these environment variables set
-        cmd = 'export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && ' \
-              'source $CONDA/activate /envs/cowbat && '
-
-        # Create a variable to store the extremely long path information
-        path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container}'.format(
-            container=container_name
-        )
-
-        # Benchmark datasets are stored in the benchmarks container. These
-        # analyses do not have supplied SEQIDs or other_input_files
         if geneseekr_request.benchmark:
-
-            # Initialise a dictionary to look up the benchmark dataset archives
-            benchmark_lookup = {
-                'Listeria': 'listeria.zip',
-                'VTEC': 'vtec.zip'
-            }
-
-            # Use the geneseekr_request.benchmark to look up the archive name
-            zip_file = benchmark_lookup[geneseekr_request.benchmark]
-
-            # Set the input file information
-            input_file_pattern.append(
-                'benchmarks/{benchmark}'.format(
-                    benchmark=zip_file
-                )
+            vm_size = "Standard_D32s_v3"
+            benchmark_download = _create_benchmark_download(
+                benchmark_name=geneseekr_request.benchmark
             )
-
-            # Update the command with archive decompression, deletion, and
-            # GeneSeekr arguments
-            cmd += (
-                    'mkdir -p /datadrive/{container}/sequences && '
-                    'unzip {path}/{zip_file} '
-                    '-d /datadrive/{container}/sequences && '
-                    'rm {path}/{zip_file} && '
-                    'cp -R {path} /datadrive/ && '
-                    'GeneSeekr blastn -u '
-                    '-s /datadrive/{container}/sequences '
-                    '-t /datadrive/{container}/targets '
-                    '-r /datadrive/{container}/reports && '
-                    'rsync -a /datadrive/{container} $AZ_BATCH_NODE_MOUNTS_DIR'
-                    .format(
-                        container=container_name,
-                        path=path,
-                        zip_file=zip_file
-                    )
+            cmd = _create_benchmark_geneseekr_command(
+                benchmark_download=benchmark_download,
+                container_name=container_name,
             )
-
-        # All other GeneSeekr requests use the same basic command
         else:
+            path = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(container_name)
+            cmd = (
+                "export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && "
+                "source $CONDA/activate /envs/cowbat && "
+            )
 
-            # If there are lots of SEQIDs, they need to be zipped, and uploaded
-            # to the container
-            if len(geneseekr_request.seqids) > 50:
+            if sequence_count > 50:
                 blob_file = zip_files(
                     seqids=geneseekr_request.seqids,
                     target_folder=container_name,
-                    container_name='processed-data'
+                    container_name="processed-data",
                 )
-
-                # Add the zip file to the input files
-                input_file_pattern.append(
-                    'temporary-storage/{blob_file}'.format(
-                        blob_file=blob_file
-                    )
-                )
-                # Update the command with archive decompression, file moving,
-                # and archive deletion
+                input_file_pattern.append("temporary-storage/{0}".format(blob_file))
                 cmd += (
-                    'mkdir -p {path}/sequences && '
-                    'unzip {path}/{blob_file} -d {path}/sequences &&  '
-                    'rm {path}/{blob_file} && '
-                    .format(
-                        blob_file=blob_file,
-                        path=path,
-                    )
-                )
+                    "mkdir -p {path}/sequences && "
+                    "unzip {path}/{blob} -d {path}/sequences && "
+                    "rm {path}/{blob} && "
+                ).format(path=path, blob=blob_file)
             else:
-                # Get all the SEQIDs into the input_file_pattern
                 for seqid in geneseekr_request.seqids:
                     input_file_pattern.append(
-                        'processed-data/{}.fasta sequences'.format(seqid)
+                        "processed-data/{0}.fasta sequences".format(seqid)
                     )
 
-            # Add the GeneSeekr portion of the command
             cmd += (
-                'GeneSeekr blastn -u '
-                '-s {path}/sequences '
-                '-t {path}/targets '
-                '-r {path}/reports'.format(
-                    path=path
-                )
-            )
+                "GeneSeekr blastn -u -s {path}/sequences "
+                "-t {path}/targets -r {path}/reports"
+            ).format(path=path)
 
-        # Submit the command to the AzureBatch service
         generic_api_submit(
             command=cmd,
             container_name=container_name,
             input_file_pattern=input_file_pattern,
             vm_size=vm_size,
-            unique_id='FoodPort'
+            unique_id="FoodPort",
         )
         GeneSeekrAzureRequest.objects.create(
             geneseekr_request=geneseekr_request,
-            exit_code_file='NA'
+            exit_code_file="NA",
         )
-    except Exception as e:
-        capture_exception(e)
-        geneseekr_request.status = 'Error'
-        geneseekr_request.error = e
+    except Exception as exc:
+        capture_exception(exc)
+        geneseekr_request.status = "Error"
+        geneseekr_request.error = str(exc)
         geneseekr_request.save()
 
 
