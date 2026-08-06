@@ -83,7 +83,7 @@ cycler==0.10.0
 defusedxml==0.5.0
 django-bootstrap-form==3.4
 django-compat==1.0.15
-django-debug-toolbar==1.11
+django-debug-toolbar==1.11.1
 django-extensions==2.1.6
 django-multiselectfield==0.1.8
 django-pandas==0.6.0
