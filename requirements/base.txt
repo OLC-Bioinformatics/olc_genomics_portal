@@ -45,7 +45,7 @@ redis==3.2.0
 
 # Task Management and Monitoring
 celery==4.2.1
-flower==0.9.2
+flower==1.2.0
 
 # Testing
 selenium==3.141.0
