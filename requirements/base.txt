@@ -127,7 +127,7 @@ scipy==1.2.1
 seaborn==0.9.0
 sipprverse==0.2.22
 six==1.12.0
-sqlparse==0.2.4
+sqlparse==0.6.0
 termcolor==1.1.0
 tornado==5.1.1
 Unidecode==0.4.21
