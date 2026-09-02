@@ -1,0 +1,8 @@
+{
+  "image": "nanopore",
+  "environment": "development",
+  "image_version": "0.0.1",
+  "operating_system": "Ubuntu 24.04",
+  "purpose": "FoodPort Nanopore Azure Batch image",
+  "build_stage": "connectivity-proof"
+}

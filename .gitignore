@@ -168,3 +168,5 @@ huggingface/
 
 # Redmine backup data
 redmine/holding/
+# Packer build logs
+infrastructure/nanopore-image/packer/*.log
