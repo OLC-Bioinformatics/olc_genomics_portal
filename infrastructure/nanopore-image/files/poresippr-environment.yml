@@ -1,0 +1,16 @@
+name: poresippr
+
+channels:
+  - conda-forge
+  - bioconda
+
+dependencies:
+  - python=3.12
+  - minimap2
+  - samtools
+  - pod5
+  - pysam
+  - pandas
+  - pyyaml
+  - requests
+  - pytest

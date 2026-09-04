@@ -1,8 +1,45 @@
 {
   "image": "nanopore",
   "environment": "development",
-  "image_version": "0.0.1",
+  "image_version": "0.0.4",
   "operating_system": "Ubuntu 24.04",
   "purpose": "FoodPort Nanopore Azure Batch image",
-  "build_stage": "connectivity-proof"
+  "build_stage": "poresippr-runtime",
+  "security": {
+    "security_type": "trustedLaunch",
+    "secure_boot_enabled": false,
+    "vtpm_enabled": false
+  },
+  "nvidia_driver": {
+    "family": "GRID",
+    "vgpu_release": "18.8",
+    "version": "570.237",
+    "target_vm_family": "NVadsA10_v5"
+  },
+  "dorado": {
+    "version": "2.1.2",
+    "platform": "linux-x64",
+    "install_path": "/opt/ont/dorado/2.1.2",
+    "models_path": "/opt/ont/models",
+    "default_model_alias": "fast",
+    "default_model": "dna_r10.4.1_e8.2_400bps_fast@v5.2.0"
+  },
+  "micromamba": {
+    "version": "2.9.0",
+    "binary": "/opt/micromamba/bin/micromamba",
+    "root_prefix": "/opt/micromamba/root"
+  },
+  "poresippr": {
+    "environment_name": "poresippr",
+    "environment_path": "/opt/micromamba/root/envs/poresippr",
+    "runtime_bin_path": "/opt/micromamba/root/envs/poresippr/bin:/opt/micromamba/bin:/opt/ont/dorado/bin:/usr/local/bin:/usr/bin:/bin"
+  },
+  "poresippr_repository": {
+    "repository": "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git",
+    "commit": "691b3a3c2944139cb0093f81909331f7b8d46983",
+    "source_branch": "madhubioinfo-dorado-patch1",
+    "install_path": "/opt/foodport/poresippr",
+    "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
+    "scheduler_test": "/opt/foodport/poresippr/tests/test_poresippr_incremental_dorado_scheduler.py"
+  }
 }

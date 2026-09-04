@@ -1,6 +1,6 @@
 subscription_id = "dcdc7934-5cce-43de-a6ed-22e2e163c2e1"
 location        = "Canada Central"
-image_version   = "0.0.1"
+image_version   = "0.0.4"
 
 build_resource_group = "CFDC-FoodPort-Batch-rg"
 
@@ -12,3 +12,6 @@ gallery_name = "development"
 image_name   = "nanopore"
 
 build_vm_size = "Standard_D4s_v5"
+
+poresippr_repository_url    = "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
+poresippr_repository_commit = "691b3a3c2944139cb0093f81909331f7b8d46983"

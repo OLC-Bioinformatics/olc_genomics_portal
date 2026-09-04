@@ -49,6 +49,25 @@ variable "build_vm_size" {
   type = string
 }
 
+variable "poresippr_repository_url" {
+  type = string
+}
+
+variable "poresippr_repository_commit" {
+  type = string
+
+  validation {
+    condition = can(
+      regex(
+        "^[0-9a-f]{40}$",
+        var.poresippr_repository_commit
+      )
+    )
+
+    error_message = "PoreSippR commit must be a full lowercase SHA-1."
+  }
+}
+
 source "azure-arm" "nanopore" {
   use_azure_cli_auth = true
 
@@ -95,8 +114,38 @@ build {
     destination = "/tmp/foodport-image.json"
   }
 
+  provisioner "file" {
+    source      = "${path.root}/../files/poresippr-environment.yml"
+    destination = "/tmp/poresippr-environment.yml"
+  }
+
   provisioner "shell" {
     script = "${path.root}/../scripts/provision-base.sh"
+  }
+
+  provisioner "shell" {
+    script = "${path.root}/../scripts/install-nvidia-grid.sh"
+  }
+
+  provisioner "shell" {
+    script = "${path.root}/../scripts/install-dorado.sh"
+  }
+
+  provisioner "shell" {
+    script = "${path.root}/../scripts/install-micromamba.sh"
+  }
+
+  provisioner "shell" {
+    script = "${path.root}/../scripts/install-poresippr-environment.sh"
+  }
+
+  provisioner "shell" {
+    environment_vars = [
+      "PORESIPPR_REPOSITORY_URL=${var.poresippr_repository_url}",
+      "PORESIPPR_REPOSITORY_COMMIT=${var.poresippr_repository_commit}",
+    ]
+
+    script = "${path.root}/../scripts/install-poresippr-repository.sh"
   }
 
   provisioner "shell" {
@@ -105,5 +154,16 @@ build {
 
   provisioner "shell" {
     script = "${path.root}/../scripts/deprovision.sh"
+  }
+
+  post-processor "manifest" {
+    output     = "packer-manifest.json"
+    strip_path = true
+
+    custom_data = {
+      image_version = var.image_version
+      image_name    = var.image_name
+      environment   = "development"
+    }
   }
 }

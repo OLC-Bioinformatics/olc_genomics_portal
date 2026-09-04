@@ -7,12 +7,20 @@ export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
 
 sudo apt-get install -y \
+  bzip2 \
   ca-certificates \
   curl \
+  file \
+  git \
+  gzip \
   jq \
   python3 \
   python3-pip \
+  rsync \
+  tar \
+  unzip \
   walinuxagent
+
 
 sudo install \
   -d \
