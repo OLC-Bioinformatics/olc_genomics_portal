@@ -4,6 +4,7 @@ set -euo pipefail
 
 MICROMAMBA="/opt/micromamba/bin/micromamba"
 MAMBA_ROOT_PREFIX="/opt/micromamba/root"
+MICROMAMBA_CONFIGURATION="${MAMBA_ROOT_PREFIX}/.mambarc"
 
 ENVIRONMENT_NAME="poresippr"
 ENVIRONMENT_DIRECTORY="${MAMBA_ROOT_PREFIX}/envs/${ENVIRONMENT_NAME}"
@@ -32,6 +33,13 @@ PY
 
 if [[ ! -x "$MICROMAMBA" ]]; then
   echo "Micromamba is missing: ${MICROMAMBA}" >&2
+  exit 1
+fi
+
+if [[ ! -f "$MICROMAMBA_CONFIGURATION" ]]; then
+  echo \
+    "Micromamba configuration is missing: ${MICROMAMBA_CONFIGURATION}" \
+    >&2
   exit 1
 fi
 
@@ -73,6 +81,7 @@ sudo env \
   "$MICROMAMBA" \
     create \
     --yes \
+    --ssl-verify false \
     --name "$ENVIRONMENT_NAME" \
     --file "$ENVIRONMENT_FILE"
 
@@ -89,6 +98,7 @@ required_commands=(
   minimap2
   samtools
   pod5
+  pytest
 )
 
 for command_name in "${required_commands[@]}"; do
@@ -105,6 +115,7 @@ done
 echo "Validating installed PoreSippR commands"
 
 "${ENVIRONMENT_DIRECTORY}/bin/python" --version
+"${ENVIRONMENT_DIRECTORY}/bin/pytest" --version
 "${ENVIRONMENT_DIRECTORY}/bin/minimap2" --version
 "${ENVIRONMENT_DIRECTORY}/bin/samtools" --version
 
@@ -120,6 +131,7 @@ from importlib.metadata import version
 import pandas
 import pod5
 import pysam
+import pytest
 import requests
 import yaml
 
@@ -129,6 +141,7 @@ for package_name in (
     "pandas",
     "pod5",
     "pysam",
+    "pytest",
     "requests",
     "PyYAML",
 ):
@@ -178,23 +191,22 @@ if [[ ! -s "$EXPLICIT_MANIFEST" ]]; then
 fi
 
 python_version="$(
-  "${ENVIRONMENT_DIRECTORY}/bin/python" \
-    --version \
-    2>&1
+  "${ENVIRONMENT_DIRECTORY}/bin/python" --version 2>&1
+)"
+
+pytest_version="$(
+  "${ENVIRONMENT_DIRECTORY}/bin/pytest" --version 2>&1 |
+    head -n 1
 )"
 
 minimap2_version="$(
-  "${ENVIRONMENT_DIRECTORY}/bin/minimap2" \
-    --version \
-    2>&1 |
-  head -n 1
+  "${ENVIRONMENT_DIRECTORY}/bin/minimap2" --version 2>&1 |
+    head -n 1
 )"
 
 samtools_version="$(
-  "${ENVIRONMENT_DIRECTORY}/bin/samtools" \
-    --version \
-    2>&1 |
-  head -n 1
+  "${ENVIRONMENT_DIRECTORY}/bin/samtools" --version 2>&1 |
+    head -n 1
 )"
 
 pod5_version="$(
@@ -213,6 +225,7 @@ sudo tee "$RUNTIME_MANIFEST" >/dev/null <<EOF
   "environment_source": "${INSTALLED_ENVIRONMENT_FILE}",
   "environment_source_sha256": "${environment_source_sha256}",
   "python": "${python_version}",
+  "pytest": "${pytest_version}",
   "minimap2": "${minimap2_version}",
   "samtools": "${samtools_version}",
   "pod5": "${pod5_version}",
@@ -226,8 +239,6 @@ sudo chmod 0644 \
   "$INSTALLED_ENVIRONMENT_FILE" \
   "$PACKAGE_MANIFEST" \
   "$EXPLICIT_MANIFEST"
-
-echo "Validating PoreSippR runtime metadata"
 
 jq -e \
   --arg expected_name "$ENVIRONMENT_NAME" \
@@ -244,6 +255,7 @@ jq -e \
     and .package_manifest == $expected_package_manifest
     and .explicit_manifest == $expected_explicit_manifest
     and (.python | type == "string" and length > 0)
+    and (.pytest | type == "string" and length > 0)
     and (.minimap2 | type == "string" and length > 0)
     and (.samtools | type == "string" and length > 0)
     and (.pod5 | type == "string" and length > 0)

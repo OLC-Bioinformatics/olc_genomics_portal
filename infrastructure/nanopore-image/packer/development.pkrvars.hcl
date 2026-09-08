@@ -15,3 +15,4 @@ build_vm_size = "Standard_D4s_v5"
 
 poresippr_repository_url    = "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
 poresippr_repository_commit = "691b3a3c2944139cb0093f81909331f7b8d46983"
+poresippr_targets_sha256    = "6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9"

@@ -68,6 +68,26 @@ variable "poresippr_repository_commit" {
   }
 }
 
+variable "poresippr_targets_url" {
+  type      = string
+  sensitive = true
+}
+
+variable "poresippr_targets_sha256" {
+  type = string
+
+  validation {
+    condition = can(
+      regex(
+        "^[0-9a-f]{64}$",
+        var.poresippr_targets_sha256
+      )
+    )
+
+    error_message = "PoreSippR targets checksum must be a SHA-256."
+  }
+}
+
 source "azure-arm" "nanopore" {
   use_azure_cli_auth = true
 
@@ -137,6 +157,15 @@ build {
 
   provisioner "shell" {
     script = "${path.root}/../scripts/install-poresippr-environment.sh"
+  }
+
+  provisioner "shell" {
+    environment_vars = [
+      "PORESIPPR_TARGETS_URL=${var.poresippr_targets_url}",
+      "PORESIPPR_TARGETS_SHA256=${var.poresippr_targets_sha256}",
+    ]
+
+    script = "${path.root}/../scripts/install-poresippr-targets.sh"
   }
 
   provisioner "shell" {

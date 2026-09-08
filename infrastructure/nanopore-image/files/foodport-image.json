@@ -27,7 +27,9 @@
   "micromamba": {
     "version": "2.9.0",
     "binary": "/opt/micromamba/bin/micromamba",
-    "root_prefix": "/opt/micromamba/root"
+    "root_prefix": "/opt/micromamba/root",
+    "configuration": "/opt/micromamba/root/.mambarc",
+    "ssl_verify": false
   },
   "poresippr": {
     "environment_name": "poresippr",
@@ -41,5 +43,10 @@
     "install_path": "/opt/foodport/poresippr",
     "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
     "scheduler_test": "/opt/foodport/poresippr/tests/test_poresippr_incremental_dorado_scheduler.py"
+  },
+  "poresippr_targets": {
+    "name": "PoreSippR_DB_251110.fasta",
+    "path": "/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta",
+    "manifest": "/etc/foodport/poresippr-targets.json"
   }
 }

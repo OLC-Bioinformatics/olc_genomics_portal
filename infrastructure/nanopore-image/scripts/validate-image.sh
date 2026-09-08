@@ -346,6 +346,7 @@ MICROMAMBA_MANIFEST="/etc/foodport/micromamba.json"
 MICROMAMBA_BINARY="/opt/micromamba/bin/micromamba"
 MICROMAMBA_SYMLINK="/usr/local/bin/micromamba"
 MAMBA_ROOT_PREFIX="/opt/micromamba/root"
+MICROMAMBA_CONFIGURATION="${MAMBA_ROOT_PREFIX}/.mambarc"
 
 PORESIPPR_MANIFEST="/etc/foodport/poresippr-runtime.json"
 PORESIPPR_ENVIRONMENT_NAME="poresippr"
@@ -359,6 +360,11 @@ PORESIPPR_REPOSITORY_URL="https://github.com/OLC-Bioinformatics/PoreSippR-GUI.gi
 PORESIPPR_REPOSITORY_COMMIT="691b3a3c2944139cb0093f81909331f7b8d46983"
 PORESIPPR_INSTALL_DIRECTORY="/opt/foodport/poresippr"
 PORESIPPR_SCHEDULER="${PORESIPPR_INSTALL_DIRECTORY}/poresippr_incremental_dorado_scheduler.py"
+PORESIPPR_TARGETS_NAME="PoreSippR_DB_251110.fasta"
+PORESIPPR_TARGETS_DIRECTORY="/opt/foodport/poresippr-data"
+PORESIPPR_TARGETS_PATH="${PORESIPPR_TARGETS_DIRECTORY}/${PORESIPPR_TARGETS_NAME}"
+PORESIPPR_TARGETS_MANIFEST="/etc/foodport/poresippr-targets.json"
+
 PORESIPPR_TEST="$(
   printf '%s' \
     "${PORESIPPR_INSTALL_DIRECTORY}/tests/" \
@@ -376,10 +382,13 @@ jq -e \
   --arg expected_version "$MICROMAMBA_VERSION" \
   --arg expected_binary "$MICROMAMBA_BINARY" \
   --arg expected_root_prefix "$MAMBA_ROOT_PREFIX" \
+  --arg expected_configuration "$MICROMAMBA_CONFIGURATION" \
   '
     .version == $expected_version
     and .binary == $expected_binary
     and .root_prefix == $expected_root_prefix
+    and .configuration == $expected_configuration
+    and .ssl_verify == false
   ' \
   "$MICROMAMBA_MANIFEST" \
   >/dev/null || {
@@ -387,6 +396,27 @@ jq -e \
     cat "$MICROMAMBA_MANIFEST" >&2
     exit 1
   }
+
+echo "Validating Micromamba TLS configuration"
+
+if [[ ! -f "$MICROMAMBA_CONFIGURATION" ]]; then
+  echo \
+    "Micromamba configuration is missing: " \
+    "$MICROMAMBA_CONFIGURATION" \
+    >&2
+  exit 1
+fi
+
+grep -Eq \
+  '^[[:space:]]*ssl_verify:[[:space:]]*false[[:space:]]*$' \
+  "$MICROMAMBA_CONFIGURATION" || {
+    echo \
+      "Micromamba configuration does not disable SSL verification" \
+      >&2
+    cat "$MICROMAMBA_CONFIGURATION" >&2
+    exit 1
+  }
+
 
 if [[ ! -x "$MICROMAMBA_BINARY" ]]; then
   echo \
@@ -475,6 +505,10 @@ jq -e \
     and (
       (.pod5 | type) == "string"
       and (.pod5 | length) > 0
+    )
+    and (
+      (.pytest | type) == "string"
+      and (.pytest | length) > 0
     )
   ' \
   "$PORESIPPR_MANIFEST" \
@@ -996,6 +1030,7 @@ jq -e \
   --arg expected_environment_name "$PORESIPPR_ENVIRONMENT_NAME" \
   --arg expected_environment_path "$PORESIPPR_ENVIRONMENT" \
   --arg expected_runtime_path "$runtime_path" \
+  --arg expected_configuration "$MICROMAMBA_CONFIGURATION" \
   '
     .security.security_type == "trustedLaunch"
     and .security.secure_boot_enabled == false
@@ -1003,6 +1038,8 @@ jq -e \
     and .micromamba.version == $expected_micromamba_version
     and .micromamba.binary == $expected_micromamba_binary
     and .micromamba.root_prefix == $expected_root_prefix
+    and .micromamba.configuration == $expected_configuration
+    and .micromamba.ssl_verify == false
     and .poresippr.environment_name == $expected_environment_name
     and .poresippr.environment_path == $expected_environment_path
     and .poresippr.runtime_bin_path == $expected_runtime_path
@@ -1035,5 +1072,111 @@ echo "PoreSippR environment specification checksum:"
 printf '%s  %s\n' \
   "$actual_environment_sha256" \
   "$PORESIPPR_ENVIRONMENT_FILE"
+
+echo "Validating installed PoreSippR targets"
+
+if [[ ! -s "$PORESIPPR_TARGETS_PATH" ]]; then
+  echo \
+    "PoreSippR targets file is missing or empty: " \
+    "$PORESIPPR_TARGETS_PATH" \
+    >&2
+  exit 1
+fi
+
+if [[ ! -f "$PORESIPPR_TARGETS_MANIFEST" ]]; then
+  echo \
+    "PoreSippR targets metadata is missing: " \
+    "$PORESIPPR_TARGETS_MANIFEST" \
+    >&2
+  exit 1
+fi
+
+expected_targets_sha256="$(
+  jq -r '.sha256 // empty' "$PORESIPPR_TARGETS_MANIFEST"
+)"
+
+actual_targets_sha256="$(
+  sha256sum "$PORESIPPR_TARGETS_PATH" |
+    awk '{print $1}'
+)"
+
+if [[ "$actual_targets_sha256" != "$expected_targets_sha256" ]]; then
+  echo "PoreSippR targets checksum mismatch" >&2
+  echo "Expected: ${expected_targets_sha256}" >&2
+  echo "Actual:   ${actual_targets_sha256}" >&2
+  exit 1
+fi
+
+jq -e \
+  --arg name "$PORESIPPR_TARGETS_NAME" \
+  --arg path "$PORESIPPR_TARGETS_PATH" \
+  --arg sha256 "$actual_targets_sha256" \
+  '
+    .name == $name
+    and .path == $path
+    and .sha256 == $sha256
+    and ((.bytes | type) == "number")
+    and (.bytes > 0)
+    and ((.sequence_count | type) == "number")
+    and (.sequence_count > 0)
+  ' \
+  "$PORESIPPR_TARGETS_MANIFEST" \
+  >/dev/null || {
+    echo "Unexpected PoreSippR targets metadata" >&2
+    cat "$PORESIPPR_TARGETS_MANIFEST" >&2
+    exit 1
+  }
+
+echo "Validating image-level PoreSippR targets metadata"
+
+jq -e \
+  --arg name "$PORESIPPR_TARGETS_NAME" \
+  --arg path "$PORESIPPR_TARGETS_PATH" \
+  --arg manifest "$PORESIPPR_TARGETS_MANIFEST" \
+  '
+    .poresippr_targets.name == $name
+    and .poresippr_targets.path == $path
+    and .poresippr_targets.manifest == $manifest
+  ' \
+  "$IMAGE_MANIFEST" \
+  >/dev/null || {
+    echo "Unexpected image-level PoreSippR targets metadata" >&2
+    cat "$IMAGE_MANIFEST" >&2
+    exit 1
+  }
+
+first_character="$(head -c 1 "$PORESIPPR_TARGETS_PATH")"
+if [[ "$first_character" != ">" ]]; then
+  echo "Installed PoreSippR targets are not FASTA-formatted" >&2
+  exit 1
+fi
+
+expected_sequence_count="$(
+  jq -r \
+    '.sequence_count // 0' \
+    "$PORESIPPR_TARGETS_MANIFEST"
+)"
+
+actual_sequence_count="$(
+  grep -c '^>' \
+    "$PORESIPPR_TARGETS_PATH" || true
+)"
+
+if [[ "$actual_sequence_count" -lt 1 ]]; then
+  echo \
+    "Installed PoreSippR targets contain no FASTA records" \
+    >&2
+  exit 1
+fi
+
+if [[ "$actual_sequence_count" -ne "$expected_sequence_count" ]]; then
+  echo "PoreSippR targets sequence-count mismatch" >&2
+  echo "Expected: ${expected_sequence_count}" >&2
+  echo "Actual:   ${actual_sequence_count}" >&2
+  exit 1
+fi
+
+echo "PoreSippR targets SHA-256: ${actual_targets_sha256}"
+echo "PoreSippR target sequences: ${actual_sequence_count}"
 
 echo "FoodPort Nanopore PoreSippR image validation completed successfully"

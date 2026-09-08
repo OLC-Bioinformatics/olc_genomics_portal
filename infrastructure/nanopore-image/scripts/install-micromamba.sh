@@ -10,14 +10,15 @@ MICROMAMBA_INSTALL_ROOT="/opt/micromamba"
 MICROMAMBA_BIN_DIRECTORY="${MICROMAMBA_INSTALL_ROOT}/bin"
 MAMBA_ROOT_PREFIX="${MICROMAMBA_INSTALL_ROOT}/root"
 MICROMAMBA_BINARY="${MICROMAMBA_BIN_DIRECTORY}/micromamba"
+MICROMAMBA_CONFIGURATION="${MAMBA_ROOT_PREFIX}/.mambarc"
 
 MICROMAMBA_ARCHIVE="micromamba-${MICROMAMBA_ARCHITECTURE}"
 MICROMAMBA_URL="https://github.com/mamba-org/micromamba-releases/releases/download/${MICROMAMBA_RELEASE}/${MICROMAMBA_ARCHIVE}"
-
 MICROMAMBA_SHA256="366cd9cd8be14df1ab8ed50352a82111082a36686b2d389fdb79a92c3fafb3e3"
 
 DOWNLOAD_DIRECTORY="/var/tmp/micromamba"
 DOWNLOAD_PATH="${DOWNLOAD_DIRECTORY}/${MICROMAMBA_ARCHIVE}"
+MICROMAMBA_MANIFEST="/etc/foodport/micromamba.json"
 
 cleanup() {
   local exit_status=$?
@@ -43,19 +44,25 @@ sudo install \
 
 echo "Downloading Micromamba from ${MICROMAMBA_URL}"
 
-sudo curl \
+echo \
+  "TLS certificate verification is disabled for this checksum-pinned " \
+  "Micromamba binary download"
+
+curl \
   --fail \
+  --insecure \
   --location \
   --retry 5 \
   --retry-all-errors \
-  --connect-timeout 30 \
   --output "$DOWNLOAD_PATH" \
   "$MICROMAMBA_URL"
 
-sudo test -s "$DOWNLOAD_PATH"
+test -s "$DOWNLOAD_PATH"
 
 echo "${MICROMAMBA_SHA256}  ${DOWNLOAD_PATH}" |
-  sudo sha256sum --check -
+  sha256sum \
+    --check \
+    --strict
 
 sudo install \
   -m 0755 \
@@ -92,7 +99,22 @@ if [[ "$micromamba_version_output" != "$MICROMAMBA_VERSION" ]]; then
   exit 1
 fi
 
-sudo tee /etc/foodport/micromamba.json >/dev/null <<EOF
+echo "Creating Micromamba root-prefix configuration"
+
+sudo tee \
+  "$MICROMAMBA_CONFIGURATION" \
+  >/dev/null <<'EOF'
+ssl_verify: false
+EOF
+
+sudo chmod 0644 \
+  "$MICROMAMBA_CONFIGURATION"
+
+sudo chown \
+  root:root \
+  "$MICROMAMBA_CONFIGURATION"
+
+sudo tee "$MICROMAMBA_MANIFEST" >/dev/null <<EOF
 {
   "version": "${MICROMAMBA_VERSION}",
   "release": "${MICROMAMBA_RELEASE}",
@@ -100,12 +122,29 @@ sudo tee /etc/foodport/micromamba.json >/dev/null <<EOF
   "source": "${MICROMAMBA_URL}",
   "sha256": "${MICROMAMBA_SHA256}",
   "binary": "${MICROMAMBA_BINARY}",
-  "root_prefix": "${MAMBA_ROOT_PREFIX}"
+  "root_prefix": "${MAMBA_ROOT_PREFIX}",
+  "configuration": "${MICROMAMBA_CONFIGURATION}",
+  "ssl_verify": false
 }
 EOF
 
 sudo chmod 0644 \
-  /etc/foodport/micromamba.json
+  "$MICROMAMBA_MANIFEST"
+
+jq -e \
+  --arg version "$MICROMAMBA_VERSION" \
+  --arg binary "$MICROMAMBA_BINARY" \
+  --arg root_prefix "$MAMBA_ROOT_PREFIX" \
+  --arg configuration "$MICROMAMBA_CONFIGURATION" \
+  '
+    .version == $version
+    and .binary == $binary
+    and .root_prefix == $root_prefix
+    and .configuration == $configuration
+    and .ssl_verify == false
+  ' \
+  "$MICROMAMBA_MANIFEST" \
+  >/dev/null
 
 sudo chown -R \
   root:root \

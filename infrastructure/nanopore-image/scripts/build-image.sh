@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+storage_account_key=""
+targets_sas_token=""
+
+cleanup() {
+  unset storage_account_key
+  unset targets_sas_token
+  unset PKR_VAR_poresippr_targets_url
+  unset PKR_VAR_poresippr_targets_sha256
+}
+
+trap cleanup EXIT
+
 SCRIPT_DIRECTORY="$(
   cd \
     -- "$(dirname -- "${BASH_SOURCE[0]}")" &&
@@ -17,6 +29,13 @@ IMAGE_ROOT="$(
 PACKER_DIRECTORY="${IMAGE_ROOT}/packer"
 PACKER_TEMPLATE="${PACKER_DIRECTORY}/nanopore.pkr.hcl"
 VARIABLE_FILE="${PACKER_DIRECTORY}/development.pkrvars.hcl"
+
+PORESIPPR_TARGETS_STORAGE_ACCOUNT="carlingst01"
+PORESIPPR_TARGETS_STORAGE_RESOURCE_GROUP="CFDC-FoodPort-Batch-rg"
+PORESIPPR_TARGETS_CONTAINER="poresippr-data"
+PORESIPPR_TARGETS_BLOB="PoreSippR_DB_251110.fasta"
+PORESIPPR_TARGETS_SHA256="6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9"
+PORESIPPR_TARGETS_SAS_LIFETIME_HOURS="4"
 
 IMAGE_VERSION="$(
   awk -F'"' \
@@ -63,42 +82,35 @@ IMAGE_NAME="$(
     "$VARIABLE_FILE"
 )"
 
-if [[ -z "$IMAGE_VERSION" ]]; then
+for required_value in \
+  IMAGE_VERSION \
+  SUBSCRIPTION_ID \
+  BUILD_RESOURCE_GROUP \
+  GALLERY_NAME \
+  IMAGE_NAME; do
+  if [[ -z "${!required_value}" ]]; then
+    echo \
+      "Unable to read ${required_value} from ${VARIABLE_FILE}" \
+      >&2
+    exit 1
+  fi
+done
+
+if [[ ! "$PORESIPPR_TARGETS_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
   echo \
-    "Unable to read image_version from ${VARIABLE_FILE}" \
+    "PORESIPPR_TARGETS_SHA256 must be a lowercase SHA-256" \
     >&2
   exit 1
 fi
 
-if [[ -z "$SUBSCRIPTION_ID" ]]; then
+if [[ ! "$PORESIPPR_TARGETS_SAS_LIFETIME_HOURS" =~ ^[1-9][0-9]*$ ]]; then
   echo \
-    "Unable to read subscription_id from ${VARIABLE_FILE}" \
+    "PORESIPPR_TARGETS_SAS_LIFETIME_HOURS must be a positive integer" \
     >&2
   exit 1
 fi
 
-if [[ -z "$BUILD_RESOURCE_GROUP" ]]; then
-  echo \
-    "Unable to read build_resource_group from ${VARIABLE_FILE}" \
-    >&2
-  exit 1
-fi
-
-if [[ -z "$GALLERY_NAME" ]]; then
-  echo \
-    "Unable to read gallery_name from ${VARIABLE_FILE}" \
-    >&2
-  exit 1
-fi
-
-if [[ -z "$IMAGE_NAME" ]]; then
-  echo \
-    "Unable to read image_name from ${VARIABLE_FILE}" \
-    >&2
-  exit 1
-fi
-
-for command_name in az packer; do
+for command_name in az date packer; do
   if ! command -v "$command_name" >/dev/null; then
     echo \
       "Required build command is missing: ${command_name}" \
@@ -106,6 +118,30 @@ for command_name in az packer; do
     exit 1
   fi
 done
+
+BUILD_LOG="${PACKER_DIRECTORY}/packer-build-${IMAGE_VERSION}.log"
+
+if [[ -e "$BUILD_LOG" ]]; then
+  echo \
+    "Build log already exists: ${BUILD_LOG}" \
+    >&2
+  echo \
+    "Move or remove the existing log before starting a new build." \
+    >&2
+  exit 1
+fi
+
+echo "Validating Azure CLI authentication"
+
+if ! az account show \
+    --query id \
+    --output tsv \
+    >/dev/null 2>&1; then
+  echo \
+    "Azure CLI authentication is unavailable. Run az login first." \
+    >&2
+  exit 1
+fi
 
 echo "Selecting Azure subscription: ${SUBSCRIPTION_ID}"
 
@@ -150,6 +186,160 @@ echo \
   "Image version ${GALLERY_NAME}/${IMAGE_NAME}/${IMAGE_VERSION} " \
   "is available."
 
+echo "Validating PoreSippR target storage account"
+
+storage_account_resource_group="$(
+  az storage account show \
+    --name "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    --query resourceGroup \
+    --output tsv
+)"
+
+if [[ -z "$storage_account_resource_group" ]]; then
+  echo \
+    "Could not determine the resource group for storage account " \
+    "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    >&2
+  exit 1
+fi
+
+if [[ "$storage_account_resource_group" != "$PORESIPPR_TARGETS_STORAGE_RESOURCE_GROUP" ]]; then
+  echo "Unexpected PoreSippR target storage resource group" >&2
+  echo "Expected: ${PORESIPPR_TARGETS_STORAGE_RESOURCE_GROUP}" >&2
+  echo "Actual:   ${storage_account_resource_group}" >&2
+  exit 1
+fi
+
+echo "Obtaining PoreSippR target storage account key"
+
+storage_account_key="$(
+  az storage account keys list \
+    --resource-group "$PORESIPPR_TARGETS_STORAGE_RESOURCE_GROUP" \
+    --account-name "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    --query '[0].value' \
+    --output tsv
+)"
+
+if [[ -z "$storage_account_key" ]]; then
+  echo \
+    "Could not obtain an access key for " \
+    "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    >&2
+  exit 1
+fi
+
+echo "Validating PoreSippR target blob"
+
+target_blob_exists="$(
+  az storage blob exists \
+    --account-name "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    --account-key "$storage_account_key" \
+    --container-name "$PORESIPPR_TARGETS_CONTAINER" \
+    --name "$PORESIPPR_TARGETS_BLOB" \
+    --query exists \
+    --output tsv
+)"
+
+if [[ "$target_blob_exists" != "true" ]]; then
+  echo \
+    "PoreSippR target blob is missing or inaccessible" \
+    >&2
+  exit 1
+fi
+
+targets_sas_start="$(
+  date \
+    --utc \
+    --date='5 minutes ago' \
+    '+%Y-%m-%dT%H:%MZ'
+)"
+
+targets_sas_expiry="$(
+  date \
+    --utc \
+    --date="+${PORESIPPR_TARGETS_SAS_LIFETIME_HOURS} hours" \
+    '+%Y-%m-%dT%H:%MZ'
+)"
+
+echo "Generating short-lived PoreSippR target SAS"
+
+targets_sas_token="$(
+  az storage blob generate-sas \
+    --account-name "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    --account-key "$storage_account_key" \
+    --container-name "$PORESIPPR_TARGETS_CONTAINER" \
+    --name "$PORESIPPR_TARGETS_BLOB" \
+    --permissions r \
+    --start "$targets_sas_start" \
+    --expiry "$targets_sas_expiry" \
+    --https-only \
+    --output tsv
+)"
+
+unset storage_account_key
+storage_account_key=""
+
+if [[ -z "$targets_sas_token" ]]; then
+  echo \
+    "Azure CLI returned an empty PoreSippR target SAS token" \
+    >&2
+  exit 1
+fi
+
+PKR_VAR_poresippr_targets_url="$(
+  printf \
+    'https://%s.blob.core.windows.net/%s/%s?%s' \
+    "$PORESIPPR_TARGETS_STORAGE_ACCOUNT" \
+    "$PORESIPPR_TARGETS_CONTAINER" \
+    "$PORESIPPR_TARGETS_BLOB" \
+    "$targets_sas_token"
+)"
+
+unset targets_sas_token
+targets_sas_token=""
+
+PKR_VAR_poresippr_targets_sha256="$PORESIPPR_TARGETS_SHA256"
+
+export PKR_VAR_poresippr_targets_url
+export PKR_VAR_poresippr_targets_sha256
+
+if [[ -z "$PKR_VAR_poresippr_targets_url" ]]; then
+  echo \
+    "Azure CLI returned an empty PoreSippR target SAS URL" \
+    >&2
+  exit 1
+fi
+
+if [[ "$PKR_VAR_poresippr_targets_url" != https://* ]]; then
+  echo \
+    "Generated PoreSippR target SAS URL does not use HTTPS" \
+    >&2
+  exit 1
+fi
+
+targets_url_without_query="${PKR_VAR_poresippr_targets_url%%\?*}"
+
+if [[ "$targets_url_without_query" != */"$PORESIPPR_TARGETS_BLOB" ]]; then
+  echo \
+    "Generated PoreSippR target SAS URL does not identify " \
+    "$PORESIPPR_TARGETS_BLOB" \
+    >&2
+  exit 1
+fi
+
+if [[ ! "$PKR_VAR_poresippr_targets_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo \
+    "Generated Packer target checksum is not a lowercase SHA-256" \
+    >&2
+  exit 1
+fi
+
+echo "PoreSippR target SAS generated successfully"
+echo "PoreSippR target SAS expiry: ${targets_sas_expiry}"
+echo \
+  "PoreSippR target SHA-256: " \
+  "$PKR_VAR_poresippr_targets_sha256"
+
 echo "Initializing Packer plugins"
 
 packer init \
@@ -167,18 +357,6 @@ echo "Validating Packer configuration"
 packer validate \
   -var-file="$VARIABLE_FILE" \
   "$PACKER_TEMPLATE"
-
-BUILD_LOG="${PACKER_DIRECTORY}/packer-build-${IMAGE_VERSION}.log"
-
-if [[ -e "$BUILD_LOG" ]]; then
-  echo \
-    "Build log already exists: ${BUILD_LOG}" \
-    >&2
-  echo \
-    "Move or remove the existing log before starting a new build." \
-    >&2
-  exit 1
-fi
 
 echo "Starting FoodPort Nanopore image build"
 echo "Image version: ${IMAGE_VERSION}"
