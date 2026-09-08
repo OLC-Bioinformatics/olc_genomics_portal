@@ -16,14 +16,20 @@ MICROMAMBA_ARCHIVE="micromamba-${MICROMAMBA_ARCHITECTURE}"
 MICROMAMBA_URL="https://github.com/mamba-org/micromamba-releases/releases/download/${MICROMAMBA_RELEASE}/${MICROMAMBA_ARCHIVE}"
 MICROMAMBA_SHA256="366cd9cd8be14df1ab8ed50352a82111082a36686b2d389fdb79a92c3fafb3e3"
 
-DOWNLOAD_DIRECTORY="/var/tmp/micromamba"
+DOWNLOAD_DIRECTORY="$(
+  mktemp \
+    --directory \
+    /var/tmp/micromamba.XXXXXXXX
+)"
+
 DOWNLOAD_PATH="${DOWNLOAD_DIRECTORY}/${MICROMAMBA_ARCHIVE}"
+
 MICROMAMBA_MANIFEST="/etc/foodport/micromamba.json"
 
 cleanup() {
   local exit_status=$?
 
-  sudo rm -rf \
+  rm -rf \
     "$DOWNLOAD_DIRECTORY" \
     2>/dev/null || true
 
@@ -37,7 +43,6 @@ echo "Installing Micromamba ${MICROMAMBA_VERSION}"
 sudo install \
   -d \
   -m 0755 \
-  "$DOWNLOAD_DIRECTORY" \
   "$MICROMAMBA_BIN_DIRECTORY" \
   "$MAMBA_ROOT_PREFIX" \
   /etc/foodport
