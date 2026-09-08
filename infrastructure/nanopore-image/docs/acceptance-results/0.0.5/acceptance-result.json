@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "accepted": true,
+  "diagnostic_scheduler_override": false,
+  "image_version": "0.0.5",
+  "gpu": {
+    "name": "NVIDIA A10-12Q",
+    "memory_mib": 12288,
+    "driver_version": "570.237"
+  },
+  "dorado": {
+    "version": "2.1.2+8b8fc5d",
+    "model": "dna_r10.4.1_e8.2_400bps_fast@v5.2.0",
+    "barcode_kit": "SQK-RBK114-24"
+  },
+  "input": {
+    "directory": "acceptance-input",
+    "pod5_count": 1,
+    "pod5_bytes": 3095356360
+  },
+  "poresippr": {
+    "python_version": "Python 3.12.14",
+    "minimap2_version": "2.31-r1302",
+    "samtools_version": "samtools 1.24",
+    "repository_commit": "2108b9428c51f2335ed4cd3f0e1c417db3ba0563",
+    "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
+    "targets": "/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta",
+    "targets_sha256": "6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9",
+    "targets_sequence_count": 6663
+  },
+  "scheduler": {
+    "first_exit_status": 0,
+    "second_exit_status": 0,
+    "status": "completed",
+    "reason": "once-complete",
+    "processed_pod5_count": 1,
+    "batch_count": 1,
+    "duplicate_processing_prevented": true,
+    "retained_fastq_count": 4,
+    "result_csv_count": 4,
+    "mapping_bam_count": 4,
+    "mapping_bai_count": 4
+  },
+  "mapping": {
+    "result_row_count": 1,
+    "total_mapped_reads": 1,
+    "targets": {
+      "gntK": 1
+    },
+    "expected": {
+      "barcode": 22,
+      "target": "gntK",
+      "reads": 1
+    },
+    "observed_expected_target_reads": 1
+  },
+  "test": {
+    "started_at": "2026-09-08T19:52:11+00:00",
+    "finished_at": "2026-09-08T19:54:16+00:00",
+    "elapsed_seconds": 125,
+    "read_count": 80356,
+    "classified_reads": 5,
+    "unknown_reads": 80351,
+    "bam_bytes": 276306883,
+    "demux_file_count": 4,
+    "barcode_counts": {
+      "barcode12": 1,
+      "barcode16": 2,
+      "barcode20": 1,
+      "barcode22": 1,
+      "unknown": 80351
+    }
+  }
+}
