@@ -1601,6 +1601,12 @@ Completed:
 - Packer formatting and validation completed successfully for the current
   `0.0.4` definition using safe placeholder target variables; and
 - scoped shell syntax, JSON, and whitespace checks completed successfully.
+- image `0.0.4` built successfully in 19 minutes 46 seconds;
+- all in-image validation checks and 41 scheduler tests passed;
+- the checksum-pinned target FASTA was validated with 6,663 records;
+- gallery version `development/nanopore/0.0.4` was published successfully on
+  2026-09-08; and
+- Packer removed the temporary VM, NIC, disk, and deployment resources.
 
 Accepted image remains:
 
@@ -1626,5 +1632,5 @@ Immediate next steps:
 12. retain the `0.0.4` acceptance evidence; and
 13. update FoodPort to image `0.0.4` only after acceptance succeeds.
 
-Image `0.0.4` is therefore implementation-ready for source control and build
-preparation, but it is not yet accepted for FoodPort use.
+Image `0.0.4` is published as a GPU-acceptance candidate, but it is not yet
+accepted for FoodPort use.
