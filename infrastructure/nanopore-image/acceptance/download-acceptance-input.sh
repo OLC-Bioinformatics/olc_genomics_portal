@@ -2,23 +2,15 @@
 
 set -euo pipefail
 
-if ! command -v base64 >/dev/null 2>&1; then
-  echo "base64 is not installed or is not on PATH" >&2
-  exit 1
-fi
-
-if ! command -v azcopy >/dev/null 2>&1; then
-  echo "AzCopy is not installed or is not on PATH" >&2
-  exit 1
-fi
+for command_name in azcopy base64; do
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "${command_name} is not installed or is not on PATH" >&2
+    exit 1
+  fi
+done
 
 CONTAINER_SAS_URL_BASE64="${CONTAINER_SAS_URL_BASE64:?CONTAINER_SAS_URL_BASE64 is required}"
-
-CONTAINER_SAS_URL="$(
-  printf '%s' "$CONTAINER_SAS_URL_BASE64" |
-    base64 --decode
-)"
-
+CONTAINER_SAS_URL="$(printf '%s' "$CONTAINER_SAS_URL_BASE64" | base64 --decode)"
 unset CONTAINER_SAS_URL_BASE64
 
 if [[ -z "$CONTAINER_SAS_URL" ]]; then
@@ -29,8 +21,7 @@ fi
 ACCEPTANCE_POD5_PATH="${ACCEPTANCE_POD5_PATH:?ACCEPTANCE_POD5_PATH is required}"
 INPUT_DIRECTORY="${INPUT_DIRECTORY:-${AZ_BATCH_TASK_WORKING_DIR:-/mnt/resource}/nanopore-acceptance/input}"
 
-echo "Preparing acceptance input directory: ${INPUT_DIRECTORY}"
-
+rm -rf "$INPUT_DIRECTORY"
 mkdir -p "$INPUT_DIRECTORY"
 
 echo "Downloading acceptance POD5 blob"
@@ -42,42 +33,18 @@ azcopy copy \
   --recursive=true \
   --include-path="$ACCEPTANCE_POD5_PATH"
 
-pod5_file="$(
-  find \
-    "$INPUT_DIRECTORY" \
-    -type f \
-    -iname '*.pod5' \
-    -print \
-    -quit
-)"
+unset CONTAINER_SAS_URL
 
-if [[ -z "$pod5_file" ]]; then
-  echo \
-    "No POD5 file was downloaded beneath ${INPUT_DIRECTORY}" \
-    >&2
+pod5_count="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' | wc -l)"
+pod5_bytes="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' -printf '%s\n' | awk '{total += $1} END {print total + 0}')"
+pod5_file="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' -print -quit)"
+
+if [[ "$pod5_count" -ne 1 ]] || [[ -z "$pod5_file" ]] || [[ "$pod5_bytes" -lt 1 ]]; then
+  echo "Expected exactly one nonempty POD5 file, found ${pod5_count}" >&2
   exit 1
 fi
-
-pod5_count="$(
-  find \
-    "$INPUT_DIRECTORY" \
-    -type f \
-    -iname '*.pod5' |
-  wc -l
-)"
-
-pod5_bytes="$(
-  find \
-    "$INPUT_DIRECTORY" \
-    -type f \
-    -iname '*.pod5' \
-    -printf '%s\n' |
-  awk '{total += $1} END {print total + 0}'
-)"
-
-unset CONTAINER_SAS_URL
 
 echo "Acceptance POD5 download completed"
 echo "POD5 file count: ${pod5_count}"
 echo "POD5 bytes: ${pod5_bytes}"
-echo "First POD5 file: ${pod5_file}"
+echo "POD5 file: ${pod5_file}"

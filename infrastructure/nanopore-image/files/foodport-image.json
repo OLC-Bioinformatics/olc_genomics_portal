@@ -1,7 +1,7 @@
 {
   "image": "nanopore",
   "environment": "development",
-  "image_version": "0.0.4",
+  "image_version": "0.0.5",
   "operating_system": "Ubuntu 24.04",
   "purpose": "FoodPort Nanopore Azure Batch image",
   "build_stage": "poresippr-runtime",
@@ -38,7 +38,7 @@
   },
   "poresippr_repository": {
     "repository": "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git",
-    "commit": "691b3a3c2944139cb0093f81909331f7b8d46983",
+    "commit": "2108b9428c51f2335ed4cd3f0e1c417db3ba0563",
     "source_branch": "madhubioinfo-dorado-patch1",
     "install_path": "/opt/foodport/poresippr",
     "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",

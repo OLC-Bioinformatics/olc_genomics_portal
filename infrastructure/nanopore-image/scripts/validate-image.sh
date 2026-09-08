@@ -30,7 +30,7 @@ jq -e \
   }
 
 jq -e \
-  '.image_version == "0.0.4"' \
+  '.image_version == "0.0.5"' \
   "$IMAGE_MANIFEST" >/dev/null || {
     echo "Unexpected image version" >&2
     cat "$IMAGE_MANIFEST" >&2
@@ -357,7 +357,7 @@ PORESIPPR_EXPLICIT_MANIFEST="/opt/ont/manifests/poresippr-conda-explicit.txt"
 PORESIPPR_ENVIRONMENT_FILE="/opt/ont/manifests/poresippr-environment.yml"
 PORESIPPR_REPOSITORY_MANIFEST="/etc/foodport/poresippr-repository.json"
 PORESIPPR_REPOSITORY_URL="https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
-PORESIPPR_REPOSITORY_COMMIT="691b3a3c2944139cb0093f81909331f7b8d46983"
+PORESIPPR_REPOSITORY_COMMIT="2108b9428c51f2335ed4cd3f0e1c417db3ba0563"
 PORESIPPR_INSTALL_DIRECTORY="/opt/foodport/poresippr"
 PORESIPPR_SCHEDULER="${PORESIPPR_INSTALL_DIRECTORY}/poresippr_incremental_dorado_scheduler.py"
 PORESIPPR_TARGETS_NAME="PoreSippR_DB_251110.fasta"

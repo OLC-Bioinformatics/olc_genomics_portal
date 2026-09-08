@@ -22,7 +22,7 @@ Its resource ID is:
 /subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.3
 ```
 
-Image `0.0.4` is currently under development. It must not be configured as the
+Image `0.0.5` is currently under development. It must not be configured as the
 FoodPort production or accepted development image until its build, publication,
 and GPU acceptance workflow succeed.
 
@@ -33,6 +33,7 @@ Image history:
 0.0.2  NVIDIA GRID driver foundation
 0.0.3  Dorado runtime and pinned basecalling model
 0.0.4  PoreSippR runtime, pinned source, and incremental processing scheduler
+0.0.5  Corrected Samtools indexing and strengthened scheduler acceptance
 0.1.0  Planned first complete development image
 1.0.0  Planned first production-ready image
 ```
@@ -279,14 +280,14 @@ shared_image_gallery_destination {
 
 ---
 
-## Development Variables for `0.0.4`
+## Development Variables for `0.0.5`
 
 The current development variable file is equivalent to:
 
 ```hcl
 subscription_id = "dcdc7934-5cce-43de-a6ed-22e2e163c2e1"
 location        = "Canada Central"
-image_version   = "0.0.4"
+image_version   = "0.0.5"
 
 build_resource_group = "CFDC-FoodPort-Batch-rg"
 
@@ -303,7 +304,7 @@ poresippr_repository_url = \
   "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
 
 poresippr_repository_commit = \
-  "691b3a3c2944139cb0093f81909331f7b8d46983"
+  "2108b9428c51f2335ed4cd3f0e1c417db3ba0563"
 ```
 
 The commit must be the full lowercase 40-character SHA. The Packer template
@@ -343,13 +344,13 @@ URLs, SAS tokens, or storage account keys.
 
 ## Pinned PoreSippR Source
 
-Image `0.0.4` does not install the latest branch tip. It installs this exact
+Image `0.0.5` does not install the latest branch tip. It installs this exact
 PoreSippR-GUI commit:
 
 ```text
 Repository: https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git
 Branch used to prepare commit: madhubioinfo-dorado-patch1
-Commit: 691b3a3c2944139cb0093f81909331f7b8d46983
+Commit: 2108b9428c51f2335ed4cd3f0e1c417db3ba0563
 ```
 
 The branch name is informational. The full commit SHA is authoritative.
@@ -363,7 +364,7 @@ poresippr_incremental_dorado_scheduler.py
 tests/test_poresippr_incremental_dorado_scheduler.py
 ```
 
-The scheduler test suite currently contains 41 tests. The suite passed locally
+The scheduler test suite currently contains 42 tests. The suite passed locally
 under Python 3.12 and is also executed during final Packer image validation
 using the Python interpreter installed inside the image's PoreSippR
 environment.
@@ -399,9 +400,9 @@ Git object database.
 /etc/foodport/image.json
 ```
 
-For `0.0.4`, the manifest identifies:
+For `0.0.5`, the manifest identifies:
 
-- image version `0.0.4`;
+- image version `0.0.5`;
 - build stage `poresippr-runtime`;
 - Trusted Launch with Secure Boot and vTPM disabled;
 - NVIDIA GRID `570.237` for `NVadsA10_v5`;
@@ -421,7 +422,7 @@ The repository section is equivalent to:
 {
   "poresippr_repository": {
     "repository": "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git",
-    "commit": "691b3a3c2944139cb0093f81909331f7b8d46983",
+    "commit": "2108b9428c51f2335ed4cd3f0e1c417db3ba0563",
     "source_branch": "madhubioinfo-dorado-patch1",
     "install_path": "/opt/foodport/poresippr",
     "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
@@ -457,7 +458,7 @@ Retained reproducibility manifests include:
 
 ---
 
-## Provisioner Order for `0.0.4`
+## Provisioner Order for `0.0.5`
 
 The current order is:
 
@@ -775,7 +776,7 @@ The generated repository manifest contains:
 ```json
 {
   "repository": "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git",
-  "commit": "691b3a3c2944139cb0093f81909331f7b8d46983",
+  "commit": "2108b9428c51f2335ed4cd3f0e1c417db3ba0563",
   "source_branch": "madhubioinfo-dorado-patch1",
   "install_path": "/opt/foodport/poresippr",
   "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
@@ -837,11 +838,11 @@ python \
 ```
 
 The Azure Batch task command still needs to be updated and tested against this
-installed path before image `0.0.4` is accepted.
+installed path before image `0.0.5` is accepted.
 
 ---
 
-## Image Validation for `0.0.4`
+## Image Validation for `0.0.5`
 
 `validate-image.sh` verifies all of the following.
 
@@ -899,7 +900,7 @@ installed path before image `0.0.4` is accepted.
 - scheduler checksum match;
 - non-mutating scheduler syntax compilation;
 - scheduler `--help` execution with bytecode disabled;
-- execution of all 41 installed scheduler tests with bytecode and pytest cache
+- execution of all 42 installed scheduler tests with bytecode and pytest cache
   generation disabled; and
 - agreement with the repository section in image metadata.
 
@@ -946,7 +947,7 @@ Deprovisioning must not remove:
 
 ---
 
-## Standard Build Workflow for `0.0.4`
+## Standard Build Workflow for `0.0.5`
 
 Run from the repository root or from the Packer directory using equivalent
 paths.
@@ -1004,7 +1005,7 @@ The placeholder URL is used only to satisfy required-variable validation.
 ### Check that the target version is unused
 
 ```bash
-IMAGE_VERSION=0.0.4
+IMAGE_VERSION=0.0.5
 
 if az sig image-version show \
     --resource-group CFDC-FoodPort-Batch-rg \
@@ -1044,11 +1045,11 @@ attempt before retrying:
 
 ```bash
 mv \
-  infrastructure/nanopore-image/packer/packer-build-0.0.4.log \
-  infrastructure/nanopore-image/packer/packer-build-0.0.4-attempt1.log
+  infrastructure/nanopore-image/packer/packer-build-0.0.5.log \
+  infrastructure/nanopore-image/packer/packer-build-0.0.5-attempt1.log
 ```
 
-Then confirm that gallery version `0.0.4` remains unused before starting the
+Then confirm that gallery version `0.0.5` remains unused before starting the
 next attempt. Retain failed logs locally for diagnosis, but do not commit them.
 
 ### Verify publication
@@ -1058,7 +1059,7 @@ az sig image-version show \
   --resource-group CFDC-FoodPort-Batch-rg \
   --gallery-name development \
   --gallery-image-definition nanopore \
-  --gallery-image-version 0.0.4 \
+  --gallery-image-version 0.0.5 \
   --query \
     '{id:id,state:provisioningState,published:publishingProfile.publishedDate,regions:publishingProfile.targetRegions}' \
   --output yaml
@@ -1102,26 +1103,44 @@ subsequently passed real GPU basecalling and demultiplexing acceptance.
 
 ### `0.0.4`: PoreSippR runtime and incremental scheduler
 
-Current development target. This version adds:
+Published successfully on September 8, 2026. This version added:
 
 - Micromamba `2.9.0`;
 - the retained PoreSippR Conda environment specification;
 - minimap2, samtools, POD5, pytest, and required Python packages;
 - runtime and explicit package manifests;
 - a checksum-pinned static target FASTA containing 6,663 records;
-- a commit-pinned PoreSippR-GUI installation;
-- the incremental Dorado scheduler and its 41-test suite;
+- PoreSippR-GUI commit `691b3a3c2944139cb0093f81909331f7b8d46983`;
+- the incremental Dorado scheduler and its original 42-test suite;
 - source, scheduler, target, and environment provenance metadata;
 - scoped TLS exceptions for the intercepted build network; and
 - expanded final image validation.
 
-It is not yet an accepted image.
+The immutable image failed scheduler GPU acceptance because the installed
+scheduler invoked the unsupported command `samtools index -f`. It must not be
+promoted for FoodPort use.
+
+### `0.0.5`: Corrected scheduler and strengthened acceptance
+
+Current development target. This version retains the runtime components from
+`0.0.4` and adds:
+
+- PoreSippR-GUI commit `2108b9428c51f2335ed4cd3f0e1c417db3ba0563`;
+- corrected Samtools indexing using `samtools index -@ <threads> <bam>`;
+- stale BAM-index removal before retrying an iteration;
+- a mapping-pipeline regression test, increasing the scheduler suite to
+  42 tests; and
+- strengthened GPU acceptance requiring barcode 22 to map exactly one read to
+  target `gntK`.
+
+Image `0.0.5` is not accepted until its immutable build passes the full GPU
+scheduler acceptance workflow without a diagnostic scheduler override.
 
 ---
 
 ## FoodPort and AzureBatch Configuration
 
-Until `0.0.4` passes acceptance, continue to treat `0.0.3` as the accepted
+Until `0.0.5` passes acceptance, continue to treat `0.0.3` as the accepted
 image:
 
 ```dotenv
@@ -1133,8 +1152,8 @@ NANOPORE_SECURE_BOOT_ENABLED=false
 NANOPORE_VTPM_ENABLED=false
 ```
 
-After `0.0.4` passes acceptance, update `NANOPORE_IMAGE` to the immutable
-`0.0.4` gallery resource ID.
+After `0.0.5` passes acceptance, update `NANOPORE_IMAGE` to the immutable
+`0.0.5` gallery resource ID.
 
 The runtime path prepared for the new task is:
 
@@ -1226,9 +1245,9 @@ infrastructure/nanopore-image/docs/acceptance-results/0.0.3
 
 ---
 
-## Required GPU Acceptance for `0.0.4`
+## Required GPU Acceptance for `0.0.5`
 
-Image `0.0.4` must repeat the established GPU checks and add PoreSippR runtime
+Image `0.0.5` must repeat the established GPU checks and add PoreSippR runtime
 validation.
 
 ### Image and repository metadata
@@ -1248,7 +1267,7 @@ cat /etc/foodport/poresippr-repository.json
 Confirm the repository commit:
 
 ```text
-691b3a3c2944139cb0093f81909331f7b8d46983
+2108b9428c51f2335ed4cd3f0e1c417db3ba0563
 ```
 
 ### Runtime paths and versions
@@ -1344,14 +1363,19 @@ The expanded acceptance should verify:
 8. demultiplexed FASTQ fragments are retained;
 9. minimap2 and samtools produce cumulative mapping results;
 10. `state.json` and `status.json` are valid and durable;
-11. the scheduler does not process an unchanged POD5 fingerprint twice;
-12. the completion marker permits an orderly successful exit; and
-13. result files are uploaded according to the Batch task policy.
+11. POD5 fingerprint in durable state;
+12. a second scheduler invocation does not process that unchanged fingerprint
+    again;
+13. barcode 22 produces `acceptance_barcode22_iteration1.csv`;
+14. target `gntK` has exactly one mapped read in that result;
+15. the aggregate mapping summary records `gntK: 1`;
+16. the completion marker permits an orderly successful exit; and
+17. result files are uploaded according to the Batch task policy.
 
 Acceptance results should be retained under:
 
 ```text
-infrastructure/nanopore-image/docs/acceptance-results/0.0.4
+infrastructure/nanopore-image/docs/acceptance-results/0.0.5
 ```
 
 Do not replace the accepted image setting until this acceptance succeeds.
@@ -1400,7 +1424,7 @@ SHA-256 verification. Package retrieval uses
 `--ssl-verify false` explicitly to environment creation. Do not remove the
 binary checksum verification.
 
-### PoreSippR target SAS generation fails
+### PoreSippR target installation fails
 
 The build wrapper uses `az storage account keys list` because the build
 identity does not have Blob data-plane or user-delegation-key permissions on
@@ -1428,7 +1452,7 @@ Confirm outbound GitHub connectivity and verify that the full SHA exists in the
 configured repository:
 
 ```text
-691b3a3c2944139cb0093f81909331f7b8d46983
+2108b9428c51f2335ed4cd3f0e1c417db3ba0563
 ```
 
 Do not silently fall back to the branch tip.
@@ -1507,7 +1531,8 @@ Review the build log before deleting resources manually.
 0.0.1  Connectivity proof
 0.0.2  NVIDIA GRID foundation
 0.0.3  Dorado runtime and pinned model
-0.0.4  PoreSippR runtime, pinned source, and incremental scheduler
+0.0.4  PoreSippR runtime and scheduler candidate, rejected after acceptance
+0.0.5  Corrected Samtools indexing and strengthened scheduler acceptance
 0.1.0  First complete development image
 1.0.0  First production-ready image
 ```
@@ -1581,32 +1606,24 @@ Completed:
 - `0.0.1` connectivity proof published;
 - `0.0.2` NVIDIA GRID foundation published;
 - `0.0.3` Dorado runtime and pinned model published and accepted;
-- Trusted Launch retained with Secure Boot and vTPM disabled;
-- NVIDIA GRID `570.237` validated on NVIDIA A10-12Q;
-- Dorado `2.1.2` validated with real POD5 input;
-- 80,183 reads basecalled successfully in `0.0.3` acceptance;
-- a valid 264 MB BAM created and summarized;
-- all 80,356 records demultiplexed;
-- Micromamba and the PoreSippR environment added for `0.0.4`;
-- minimap2, samtools, POD5, and required Python imports validated;
-- the PoreSippR repository pinned to commit
-  `691b3a3c2944139cb0093f81909331f7b8d46983`;
-- the incremental Dorado scheduler added to the pinned source;
-- repository provenance and scheduler checksum metadata added;
-- all 41 incremental scheduler tests passed locally;
-- Micromamba TLS handling was corrected after the first build attempt
-  exposed the intercepted certificate chain;
-- the checksum-pinned `PoreSippR_DB_251110.fasta` target database and
-  per-build restricted SAS workflow were added;
-- Packer formatting and validation completed successfully for the current
-  `0.0.4` definition using safe placeholder target variables; and
-- scoped shell syntax, JSON, and whitespace checks completed successfully.
-- image `0.0.4` built successfully in 19 minutes 46 seconds;
-- all in-image validation checks and 41 scheduler tests passed;
-- the checksum-pinned target FASTA was validated with 6,663 records;
-- gallery version `development/nanopore/0.0.4` was published successfully on
-  2026-09-08; and
-- Packer removed the temporary VM, NIC, disk, and deployment resources.
+- `0.0.4` built, validated, and published successfully on September 8, 2026;
+- immutable `0.0.4` scheduler acceptance identified the unsupported
+  `samtools index -f` invocation;
+- corrected PoreSippR commit
+  `2108b9428c51f2335ed4cd3f0e1c417db3ba0563` was created and pushed;
+- all 42 scheduler tests passed for the corrected source;
+- a diagnostic GPU run using the corrected scheduler passed downstream
+  basecalling, demultiplexing, mapping, indexing, checkpointing, and
+  duplicate-prevention checks;
+- the diagnostic run processed one 3,095,356,360-byte POD5 file;
+- The Dorado basecaller reported 80,183 simplex reads basecalled and 80,351 records in the retained basecalls summary. The acceptance baseline pins the downstream summary and mapping invariants rather than requiring those two Dorado counters to be equal.
+- barcode 12 and barcode 22 FASTQ fragments were retained;
+- two mapping BAM and BAI pairs and two iteration CSV files were produced;
+- barcode 22 mapped exactly one read to target `gntK`;
+- the second scheduler invocation processed no duplicate POD5 input;
+- diagnostic evidence was retained under
+  `docs/acceptance-results/0.0.4-diagnostic`; and
+- all temporary diagnostic Azure resources were removed.
 
 Accepted image remains:
 
@@ -1616,21 +1633,20 @@ Accepted image remains:
 
 Immediate next steps:
 
-1. commit the Micromamba TLS, target installer, target metadata, validator, and
-   build-wrapper corrections;
-2. preserve the failed first-attempt Packer log as
-   `packer-build-0.0.4-attempt1.log`;
-3. run `build-image.sh`, which creates a fresh target SAS automatically;
-4. verify that the in-image scheduler suite reports all 41 tests passing;
-5. verify gallery publication and temporary-resource cleanup;
-6. update the Azure Batch task command to invoke the installed scheduler;
-7. update GPU acceptance to validate repository and target metadata;
-8. create representative scheduler run and metadata CSV files;
-9. verify the representative run's barcode kit and expected barcodes;
-10. confirm completion-marker and output-upload behavior;
-11. run the expanded GPU and processing acceptance workflow;
-12. retain the `0.0.4` acceptance evidence; and
-13. update FoodPort to image `0.0.4` only after acceptance succeeds.
+1. finish the `0.0.5` image definition with pinned PoreSippR commit
+   `2108b9428c51f2335ed4cd3f0e1c417db3ba0563`;
+2. decide whether `0.0.5` will install the target FASTA from the pinned
+   repository commit or retain the checksum-pinned blob workflow, then keep
+   the Packer template, build wrapper, installers, metadata, validator, and
+   documentation consistent with that single source;
+3. validate all 42 installed scheduler tests;
+4. build and publish immutable gallery version `0.0.5`;
+5. run scheduler GPU acceptance without a diagnostic override;
+6. require barcode 22 to map exactly one read to `gntK`;
+7. retain the `0.0.5` acceptance evidence;
+8. update the Azure Batch task command to invoke the installed scheduler; and
+9. update FoodPort only after immutable image acceptance succeeds.
 
-Image `0.0.4` is published as a GPU-acceptance candidate, but it is not yet
-accepted for FoodPort use.
+Image `0.0.5` is the current development candidate. Image `0.0.4` is a
+published but rejected candidate. Image `0.0.3` remains the accepted FoodPort
+image.
