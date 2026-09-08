@@ -144,6 +144,7 @@ infrastructure/
         ├── install-dorado.sh
         ├── install-micromamba.sh
         ├── install-poresippr-environment.sh
+        ├── install-poresippr-targets.sh
         ├── install-poresippr-repository.sh
         ├── validate-image.sh
         └── deprovision.sh
@@ -249,8 +250,9 @@ build_vm_size = "Standard_D4s_v5"
 
 The Packer VM remains CPU-only. It installs and validates driver files, kernel
 module metadata, Dorado, the basecalling model, Micromamba, the PoreSippR
-environment, and the commit-pinned PoreSippR source. Actual GPU communication
-is tested later on `Standard_NV18ads_A10_v5`.
+environment, the checksum-pinned target database, and the commit-pinned
+PoreSippR source. Actual GPU communication is tested later on
+`Standard_NV18ads_A10_v5`.
 
 ### Private networking
 
@@ -307,7 +309,35 @@ poresippr_repository_commit = \
 The commit must be the full lowercase 40-character SHA. The Packer template
 validates that format before beginning the build.
 
-Do not store secrets in `.pkrvars.hcl` files.
+The template also requires two runtime values for the static PoreSippR target
+FASTA:
+
+```text
+poresippr_targets_url
+poresippr_targets_sha256
+```
+
+`build-image.sh` generates a fresh, four-hour, HTTPS-only, read-only SAS scoped
+to the single target blob and exports it through
+`PKR_VAR_poresippr_targets_url`. The non-secret target checksum is pinned in
+the wrapper and exported through `PKR_VAR_poresippr_targets_sha256`:
+
+```text
+Target blob: poresippr-data/PoreSippR_DB_251110.fasta
+Storage account: carlingst01
+Storage resource group: CFDC-FoodPort-Batch-rg
+SHA-256: 6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9
+FASTA records: 6663
+```
+
+The wrapper uses the same existing storage-account-key mechanism as the POD5
+acceptance tooling, but the generated target SAS is narrower: it is scoped to
+one blob and grants only read permission. The storage account key is held only
+in a local shell variable long enough to sign the SAS. It is never exported to
+Packer, sent to the temporary VM, written to metadata, or printed.
+
+Do not store secrets in `.pkrvars.hcl` files. In particular, never commit SAS
+URLs, SAS tokens, or storage account keys.
 
 ---
 
@@ -330,7 +360,13 @@ The pinned commit contains:
 
 ```text
 poresippr_incremental_dorado_scheduler.py
+tests/test_poresippr_incremental_dorado_scheduler.py
 ```
+
+The scheduler test suite currently contains 41 tests. The suite passed locally
+under Python 3.12 and is also executed during final Packer image validation
+using the Python interpreter installed inside the image's PoreSippR
+environment.
 
 The image installs the repository at:
 
@@ -338,10 +374,11 @@ The image installs the repository at:
 /opt/foodport/poresippr
 ```
 
-The installed scheduler path is:
+The installed scheduler and test paths are:
 
 ```text
 /opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py
+/opt/foodport/poresippr/tests/test_poresippr_incremental_dorado_scheduler.py
 ```
 
 The installer fetches the exact SHA in a temporary Git repository, checks out
@@ -370,9 +407,13 @@ For `0.0.4`, the manifest identifies:
 - NVIDIA GRID `570.237` for `NVadsA10_v5`;
 - Dorado `2.1.2`;
 - the pinned fast model;
-- Micromamba `2.9.0`;
-- the PoreSippR environment name, path, and runtime `PATH`; and
-- the pinned PoreSippR repository URL, commit, installation path, and scheduler.
+- Micromamba `2.9.0`, its root-prefix configuration path, and the scoped
+  `ssl_verify: false` setting required by the intercepted build network;
+- the PoreSippR environment name, path, and runtime `PATH`;
+- the pinned PoreSippR repository URL, commit, installation path, scheduler,
+  and scheduler-test path; and
+- the static PoreSippR target FASTA name, installed path, and generated
+  provenance-manifest path.
 
 The repository section is equivalent to:
 
@@ -383,7 +424,13 @@ The repository section is equivalent to:
     "commit": "691b3a3c2944139cb0093f81909331f7b8d46983",
     "source_branch": "madhubioinfo-dorado-patch1",
     "install_path": "/opt/foodport/poresippr",
-    "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py"
+    "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
+    "scheduler_test": "/opt/foodport/poresippr/tests/test_poresippr_incremental_dorado_scheduler.py"
+  },
+  "poresippr_targets": {
+    "name": "PoreSippR_DB_251110.fasta",
+    "path": "/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta",
+    "manifest": "/etc/foodport/poresippr-targets.json"
   }
 }
 ```
@@ -396,6 +443,7 @@ Additional generated metadata files include:
 /etc/foodport/dna_r10.4.1_e8.2_400bps_fast@v5.2.0.sha256
 /etc/foodport/micromamba.json
 /etc/foodport/poresippr-runtime.json
+/etc/foodport/poresippr-targets.json
 /etc/foodport/poresippr-repository.json
 ```
 
@@ -421,9 +469,10 @@ The current order is:
 5. install-dorado.sh
 6. install-micromamba.sh
 7. install-poresippr-environment.sh
-8. install-poresippr-repository.sh
-9. validate-image.sh
-10. deprovision.sh
+8. install-poresippr-targets.sh
+9. install-poresippr-repository.sh
+10. validate-image.sh
+11. deprovision.sh
 ```
 
 `deprovision.sh` must always remain last. No validation or installation
@@ -576,7 +625,36 @@ The installer records:
 ```
 
 The final validator confirms the metadata, executable, symbolic link target,
-reported version, and root-prefix directory.
+reported version, root-prefix directory, and root-prefix configuration file.
+
+### TLS workaround
+
+The GitHub certificate chain cannot be validated from the intercepted build
+network. The checksum-pinned Micromamba binary is therefore downloaded with
+`curl --insecure`, followed immediately by mandatory verification against this
+pinned SHA-256:
+
+```text
+366cd9cd8be14df1ab8ed50352a82111082a36686b2d389fdb79a92c3fafb3e3
+```
+
+Micromamba package retrieval is configured through:
+
+```text
+/opt/micromamba/root/.mambarc
+```
+
+with:
+
+```yaml
+ssl_verify: false
+```
+
+The same setting is passed explicitly to `micromamba create`. The image records
+this exception in `/etc/foodport/micromamba.json`, and `validate-image.sh`
+verifies both the metadata and the actual configuration file. Installing the
+organizational CA into the operating-system trust store remains the preferred
+long-term replacement for this workaround.
 
 ---
 
@@ -601,6 +679,7 @@ pandas
 pysam
 requests
 PyYAML
+pytest
 ```
 
 The installer retains:
@@ -628,6 +707,41 @@ remain available.
 
 ---
 
+## PoreSippR Target Database Layer
+
+`install-poresippr-targets.sh` installs the versioned static mapping target:
+
+```text
+Blob: poresippr-data/PoreSippR_DB_251110.fasta
+Installed path: /opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta
+Generated metadata: /etc/foodport/poresippr-targets.json
+SHA-256: 6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9
+FASTA records: 6663
+```
+
+The target database is a static, versioned analysis dependency and is captured
+inside the immutable image. This differs from POD5 input, which remains
+run-specific and must continue to arrive through Batch mounts or acceptance
+downloads.
+
+On every build, `build-image.sh`:
+
+1. verifies the active Azure CLI session and expected subscription;
+2. retrieves the `carlingst01` storage account key locally;
+3. verifies that the target blob exists;
+4. creates a four-hour SAS scoped only to the target blob;
+5. grants only read permission and requires HTTPS;
+6. exports only the restricted SAS URL and pinned checksum to Packer; and
+7. clears the storage key, raw SAS token, SAS URL, and Packer variables on exit.
+
+The installer downloads the target with a scoped `curl --insecure` operation,
+verifies the pinned checksum before installation, confirms FASTA structure,
+counts records, installs the file as `root:root` mode `0644`, and writes a
+query-free source URL to the generated provenance manifest. The SAS query is
+never retained.
+
+---
+
 ## PoreSippR Repository Layer
 
 `install-poresippr-repository.sh` requires these Packer-provided environment
@@ -646,14 +760,15 @@ The installer:
 4. fetches only the pinned commit with depth one;
 5. checks out `FETCH_HEAD` in detached mode;
 6. confirms that `HEAD` equals the configured SHA;
-7. confirms that the incremental scheduler exists;
+7. confirms that the incremental scheduler and its test suite exist;
 8. installs the repository under `/opt/foodport/poresippr`;
 9. excludes `.git`, `__pycache__`, and `.pyc` files;
-10. normalizes ownership to `root:root`;
-11. validates scheduler syntax without writing bytecode;
-12. executes scheduler `--help` with bytecode disabled;
-13. calculates the installed scheduler SHA-256; and
-14. writes `/etc/foodport/poresippr-repository.json`.
+10. confirms that both the scheduler and test file exist after installation;
+11. normalizes ownership to `root:root`;
+12. validates scheduler syntax without writing bytecode;
+13. executes scheduler `--help` with bytecode disabled;
+14. calculates the installed scheduler SHA-256; and
+15. writes `/etc/foodport/poresippr-repository.json`.
 
 The generated repository manifest contains:
 
@@ -664,6 +779,7 @@ The generated repository manifest contains:
   "source_branch": "madhubioinfo-dorado-patch1",
   "install_path": "/opt/foodport/poresippr",
   "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
+  "scheduler_test": "/opt/foodport/poresippr/tests/test_poresippr_incremental_dorado_scheduler.py",
   "scheduler_sha256": "generated-at-build-time"
 }
 ```
@@ -765,9 +881,11 @@ installed path before image `0.0.4` is accepted.
 - exact runtime `PATH` from image metadata;
 - exact command resolution;
 - component versions;
-- required Python imports;
+- required Python imports, including pytest;
 - package and explicit manifests;
-- required packages in the retained package manifest.
+- required packages in the retained package manifest;
+- Micromamba TLS-exception metadata; and
+- the actual `ssl_verify: false` root-prefix configuration.
 
 ### PoreSippR repository
 
@@ -780,8 +898,20 @@ installed path before image `0.0.4` is accepted.
 - absence of HTML-escaped Python source;
 - scheduler checksum match;
 - non-mutating scheduler syntax compilation;
-- scheduler `--help` execution with bytecode disabled; and
+- scheduler `--help` execution with bytecode disabled;
+- execution of all 41 installed scheduler tests with bytecode and pytest cache
+  generation disabled; and
 - agreement with the repository section in image metadata.
+
+### PoreSippR targets
+
+- installed target FASTA existence and nonzero size;
+- exact SHA-256 agreement with generated target metadata;
+- positive byte and sequence counts;
+- FASTA header syntax;
+- actual versus recorded sequence count;
+- query-free provenance metadata; and
+- agreement with the target section in image metadata.
 
 The expected final message is:
 
@@ -807,6 +937,10 @@ Deprovisioning must not remove:
 
 ```text
 /opt/foodport/poresippr
+/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta
+/opt/micromamba/root/envs/poresippr
+/etc/foodport/poresippr-runtime.json
+/etc/foodport/poresippr-targets.json
 /etc/foodport/poresippr-repository.json
 ```
 
@@ -821,11 +955,13 @@ paths.
 
 ```bash
 bash -n \
+  infrastructure/nanopore-image/scripts/build-image.sh \
   infrastructure/nanopore-image/scripts/provision-base.sh \
   infrastructure/nanopore-image/scripts/install-nvidia-grid.sh \
   infrastructure/nanopore-image/scripts/install-dorado.sh \
   infrastructure/nanopore-image/scripts/install-micromamba.sh \
   infrastructure/nanopore-image/scripts/install-poresippr-environment.sh \
+  infrastructure/nanopore-image/scripts/install-poresippr-targets.sh \
   infrastructure/nanopore-image/scripts/install-poresippr-repository.sh \
   infrastructure/nanopore-image/scripts/validate-image.sh \
   infrastructure/nanopore-image/scripts/deprovision.sh
@@ -848,6 +984,8 @@ packer fmt \
 packer init \
   infrastructure/nanopore-image/packer/nanopore.pkr.hcl
 
+PKR_VAR_poresippr_targets_url='https://example.invalid/poresippr-data/PoreSippR_DB_251110.fasta?placeholder=true' \
+PKR_VAR_poresippr_targets_sha256='6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9' \
 packer validate \
   -var-file=infrastructure/nanopore-image/packer/development.pkrvars.hcl \
   infrastructure/nanopore-image/packer/nanopore.pkr.hcl
@@ -858,6 +996,10 @@ The expected validation result is:
 ```text
 The configuration is valid.
 ```
+
+The placeholder URL is used only to satisfy required-variable validation.
+`packer validate` does not download the target. The real SAS URL is created by
+`build-image.sh` immediately before validation and build execution.
 
 ### Check that the target version is unused
 
@@ -879,21 +1021,35 @@ fi
 
 ### Build with a log
 
-The repository includes `scripts/build-image.sh`. The equivalent direct Packer
-workflow is:
+Use the repository wrapper from the portal repository root:
 
 ```bash
-cd ~/FoodPort/olc_genomics_portal/infrastructure/nanopore-image/packer
-
-IMAGE_VERSION=0.0.4
-rm -f "packer-build-${IMAGE_VERSION}.log"
-
-PACKER_LOG=1 \
-PACKER_LOG_PATH="packer-build-${IMAGE_VERSION}.log" \
-packer build \
-  -var-file=development.pkrvars.hcl \
-  nanopore.pkr.hcl
+./infrastructure/nanopore-image/scripts/build-image.sh
 ```
+
+The wrapper is the preferred and supported build entry point. It validates the
+Azure CLI login and subscription, refuses existing gallery versions and build
+logs, creates the restricted target SAS, initializes and validates Packer,
+runs the build with `PACKER_LOG=1`, verifies gallery publication, reports
+remaining temporary resources, and clears sensitive variables on exit.
+
+A direct `packer build` is not equivalent unless the caller independently
+generates and exports valid values for both target variables. Do not place a
+SAS URL in `development.pkrvars.hcl` or shell history.
+
+### Retry after a failed build
+
+The wrapper refuses to overwrite an existing build log. Preserve the previous
+attempt before retrying:
+
+```bash
+mv \
+  infrastructure/nanopore-image/packer/packer-build-0.0.4.log \
+  infrastructure/nanopore-image/packer/packer-build-0.0.4-attempt1.log
+```
+
+Then confirm that gallery version `0.0.4` remains unused before starting the
+next attempt. Retain failed logs locally for diagnosis, but do not commit them.
 
 ### Verify publication
 
@@ -950,11 +1106,13 @@ Current development target. This version adds:
 
 - Micromamba `2.9.0`;
 - the retained PoreSippR Conda environment specification;
-- minimap2, samtools, POD5, and required Python packages;
+- minimap2, samtools, POD5, pytest, and required Python packages;
 - runtime and explicit package manifests;
+- a checksum-pinned static target FASTA containing 6,663 records;
 - a commit-pinned PoreSippR-GUI installation;
-- the incremental Dorado scheduler;
-- source and scheduler checksum metadata; and
+- the incremental Dorado scheduler and its 41-test suite;
+- source, scheduler, target, and environment provenance metadata;
+- scoped TLS exceptions for the intercepted build network; and
 - expanded final image validation.
 
 It is not yet an accepted image.
@@ -984,10 +1142,11 @@ The runtime path prepared for the new task is:
 NANOPORE_RUNTIME_BIN_PATH=/opt/micromamba/root/envs/poresippr/bin:/opt/micromamba/bin:/opt/ont/dorado/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
-The scheduler is installed at:
+The scheduler and static target database are installed at:
 
 ```dotenv
 NANOPORE_PORESIPPR_SCHEDULER=/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py
+NANOPORE_PORESIPPR_TARGETS=/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta
 ```
 
 AzureBatch retains Trusted Launch while explicitly disabling Secure Boot and
@@ -1082,6 +1241,7 @@ cat /etc/foodport/nvidia-driver.json
 cat /etc/foodport/dorado.json
 cat /etc/foodport/micromamba.json
 cat /etc/foodport/poresippr-runtime.json
+cat /etc/foodport/poresippr-targets.json
 cat /etc/foodport/poresippr-repository.json
 ```
 
@@ -1099,6 +1259,7 @@ Validate:
 nvidia-smi
 micromamba --version
 python --version
+pytest --version
 minimap2 --version
 samtools --version | head -n 1
 pod5 --version || true
@@ -1116,6 +1277,58 @@ PYTHONDONTWRITEBYTECODE=1 \
   --help
 ```
 
+Validate the installed target database independently against the pinned release
+values and the generated target manifest:
+
+```bash
+PINNED_TARGETS_SHA256="6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9"
+PINNED_TARGETS_RECORDS="6663"
+
+PORESIPPR_TARGETS="$(
+  jq -r \
+    '.poresippr_targets.path' \
+    /etc/foodport/image.json
+)"
+
+EXPECTED_TARGETS_SHA256="$(
+  jq -r \
+    '.sha256' \
+    /etc/foodport/poresippr-targets.json
+)"
+
+EXPECTED_TARGETS_RECORDS="$(
+  jq -r \
+    '.sequence_count' \
+    /etc/foodport/poresippr-targets.json
+)"
+
+test "$EXPECTED_TARGETS_SHA256" = "$PINNED_TARGETS_SHA256"
+test "$EXPECTED_TARGETS_RECORDS" -eq "$PINNED_TARGETS_RECORDS"
+test -s "$PORESIPPR_TARGETS"
+
+echo "${PINNED_TARGETS_SHA256}  ${PORESIPPR_TARGETS}" | \
+  sha256sum \
+    --check \
+    --strict
+
+ACTUAL_TARGETS_RECORDS="$(
+  grep -c '^>' \
+    "$PORESIPPR_TARGETS"
+)"
+
+test "$ACTUAL_TARGETS_RECORDS" -eq "$PINNED_TARGETS_RECORDS"
+
+printf 'PoreSippR target records: %s\n' \
+  "$ACTUAL_TARGETS_RECORDS"
+```
+
+Expected values are:
+
+```text
+SHA-256: 6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9
+FASTA records: 6663
+```
+
 ### Functional acceptance
 
 The expanded acceptance should verify:
@@ -1123,14 +1336,17 @@ The expanded acceptance should verify:
 1. a real POD5 file is readable;
 2. Dorado can access the A10 GPU;
 3. the pinned model loads;
-4. the scheduler discovers only stable POD5 files;
-5. the scheduler processes bounded batches;
-6. demultiplexed FASTQ fragments are retained;
-7. minimap2 and samtools produce cumulative mapping results;
-8. `state.json` and `status.json` are valid and durable;
-9. the scheduler does not process an unchanged POD5 fingerprint twice;
-10. the completion marker permits an orderly successful exit; and
-11. result files are uploaded according to the Batch task policy.
+4. the installed target FASTA matches its pinned checksum and contains
+   6,663 records;
+5. scheduler run configuration uses the installed target FASTA;
+6. the scheduler discovers only stable POD5 files;
+7. the scheduler processes bounded batches;
+8. demultiplexed FASTQ fragments are retained;
+9. minimap2 and samtools produce cumulative mapping results;
+10. `state.json` and `status.json` are valid and durable;
+11. the scheduler does not process an unchanged POD5 fingerprint twice;
+12. the completion marker permits an orderly successful exit; and
+13. result files are uploaded according to the Batch task policy.
 
 Acceptance results should be retained under:
 
@@ -1175,6 +1391,37 @@ the cleanup trap.
 Use `--recursive` when the input directory contains nested blob paths, or point
 Dorado directly at the POD5-containing directory.
 
+### Micromamba binary or package TLS failure
+
+The build network does not trust the intercepted certificate chain. The
+Micromamba binary download uses `curl --insecure` only with mandatory pinned
+SHA-256 verification. Package retrieval uses
+`/opt/micromamba/root/.mambarc` with `ssl_verify: false` and passes
+`--ssl-verify false` explicitly to environment creation. Do not remove the
+binary checksum verification.
+
+### PoreSippR target SAS generation fails
+
+The build wrapper uses `az storage account keys list` because the build
+identity does not have Blob data-plane or user-delegation-key permissions on
+`carlingst01`. Confirm that Azure CLI authentication is active, the expected
+subscription is selected, the storage account remains in
+`CFDC-FoodPort-Batch-rg`, and account-key retrieval succeeds. The generated SAS
+must remain scoped to `PoreSippR_DB_251110.fasta`, read-only, HTTPS-only, and
+short-lived.
+
+### PoreSippR target checksum mismatch
+
+Confirm that the blob still matches:
+
+```text
+6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9
+```
+
+Do not update the checksum merely to make a build pass. First verify that an
+intentional target-database release occurred and update the filename, checksum,
+metadata, documentation, and acceptance expectations together.
+
 ### PoreSippR commit cannot be fetched
 
 Confirm outbound GitHub connectivity and verify that the full SHA exists in the
@@ -1191,12 +1438,13 @@ Do not silently fall back to the branch tip.
 The installer must stop if the checked-out `HEAD` differs from the configured
 commit. Confirm the Packer variable file and provisioner environment variables.
 
-### Scheduler is missing from the installed repository
+### Scheduler or scheduler tests are missing from the installed repository
 
 Confirm that the pinned commit contains:
 
 ```text
 poresippr_incremental_dorado_scheduler.py
+tests/test_poresippr_incremental_dorado_scheduler.py
 ```
 
 and that the installer copies the repository to:
@@ -1345,8 +1593,13 @@ Completed:
   `691b3a3c2944139cb0093f81909331f7b8d46983`;
 - the incremental Dorado scheduler added to the pinned source;
 - repository provenance and scheduler checksum metadata added;
+- all 41 incremental scheduler tests passed locally;
+- Micromamba TLS handling was corrected after the first build attempt
+  exposed the intercepted certificate chain;
+- the checksum-pinned `PoreSippR_DB_251110.fasta` target database and
+  per-build restricted SAS workflow were added;
 - Packer formatting and validation completed successfully for the current
-  `0.0.4` definition; and
+  `0.0.4` definition using safe placeholder target variables; and
 - scoped shell syntax, JSON, and whitespace checks completed successfully.
 
 Accepted image remains:
@@ -1357,17 +1610,21 @@ Accepted image remains:
 
 Immediate next steps:
 
-1. review and commit the complete `infrastructure/nanopore-image` change set;
-2. add focused unit tests for the incremental scheduler;
-3. update the Azure Batch task command to invoke the installed scheduler;
-4. update GPU acceptance to validate repository metadata and the scheduler;
-5. decide how acceptance will create the scheduler run and metadata CSV files;
-6. verify the representative run's actual barcode kit and expected barcodes;
-7. confirm completion-marker and output-upload behavior;
-8. build and publish immutable image `0.0.4`;
-9. run the expanded GPU and processing acceptance workflow;
-10. retain the `0.0.4` acceptance evidence; and
-11. update FoodPort to image `0.0.4` only after acceptance succeeds.
+1. commit the Micromamba TLS, target installer, target metadata, validator, and
+   build-wrapper corrections;
+2. preserve the failed first-attempt Packer log as
+   `packer-build-0.0.4-attempt1.log`;
+3. run `build-image.sh`, which creates a fresh target SAS automatically;
+4. verify that the in-image scheduler suite reports all 41 tests passing;
+5. verify gallery publication and temporary-resource cleanup;
+6. update the Azure Batch task command to invoke the installed scheduler;
+7. update GPU acceptance to validate repository and target metadata;
+8. create representative scheduler run and metadata CSV files;
+9. verify the representative run's barcode kit and expected barcodes;
+10. confirm completion-marker and output-upload behavior;
+11. run the expanded GPU and processing acceptance workflow;
+12. retain the `0.0.4` acceptance evidence; and
+13. update FoodPort to image `0.0.4` only after acceptance succeeds.
 
 Image `0.0.4` is therefore implementation-ready for source control and build
 preparation, but it is not yet accepted for FoodPort use.

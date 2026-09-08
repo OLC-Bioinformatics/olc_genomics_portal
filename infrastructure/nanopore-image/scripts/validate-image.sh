@@ -364,6 +364,8 @@ PORESIPPR_TARGETS_NAME="PoreSippR_DB_251110.fasta"
 PORESIPPR_TARGETS_DIRECTORY="/opt/foodport/poresippr-data"
 PORESIPPR_TARGETS_PATH="${PORESIPPR_TARGETS_DIRECTORY}/${PORESIPPR_TARGETS_NAME}"
 PORESIPPR_TARGETS_MANIFEST="/etc/foodport/poresippr-targets.json"
+PORESIPPR_TARGETS_SHA256="6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9"
+PORESIPPR_TARGETS_SEQUENCE_COUNT="6663"
 
 PORESIPPR_TEST="$(
   printf '%s' \
@@ -1107,12 +1109,23 @@ if [[ "$actual_targets_sha256" != "$expected_targets_sha256" ]]; then
   exit 1
 fi
 
+if [[ "$actual_targets_sha256" != "$PORESIPPR_TARGETS_SHA256" ]]; then
+  echo "PoreSippR targets do not match the pinned SHA-256" >&2
+  echo "Expected: ${PORESIPPR_TARGETS_SHA256}" >&2
+  echo "Actual:   ${actual_targets_sha256}" >&2
+  exit 1
+fi
+
 jq -e \
   --arg name "$PORESIPPR_TARGETS_NAME" \
+  --arg expected_source \
+    "https://carlingst01.blob.core.windows.net/poresippr-data/PoreSippR_DB_251110.fasta" \
   --arg path "$PORESIPPR_TARGETS_PATH" \
   --arg sha256 "$actual_targets_sha256" \
   '
     .name == $name
+    and .source == $expected_source
+    and (.source | contains("?") | not)
     and .path == $path
     and .sha256 == $sha256
     and ((.bytes | type) == "number")
@@ -1172,6 +1185,13 @@ fi
 if [[ "$actual_sequence_count" -ne "$expected_sequence_count" ]]; then
   echo "PoreSippR targets sequence-count mismatch" >&2
   echo "Expected: ${expected_sequence_count}" >&2
+  echo "Actual:   ${actual_sequence_count}" >&2
+  exit 1
+fi
+
+if [[ "$actual_sequence_count" -ne "$PORESIPPR_TARGETS_SEQUENCE_COUNT" ]]; then
+  echo "PoreSippR targets do not match the pinned sequence count" >&2
+  echo "Expected: ${PORESIPPR_TARGETS_SEQUENCE_COUNT}" >&2
   echo "Actual:   ${actual_sequence_count}" >&2
   exit 1
 fi
