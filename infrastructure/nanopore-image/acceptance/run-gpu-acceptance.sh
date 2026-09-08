@@ -506,7 +506,7 @@ Test completed: ${FINISHED_AT}
 - Targets SHA-256: \`${actual_targets_sha256}\`
 - Target records: \`${actual_targets_count}\`
 
-- Diagnostic scheduler override: `${DIAGNOSTIC_SCHEDULER_OVERRIDE}`
+- Diagnostic scheduler override: \`${DIAGNOSTIC_SCHEDULER_OVERRIDE}\`
 
 ### Scheduler results
 
@@ -524,8 +524,8 @@ Test completed: ${FINISHED_AT}
 - Total mapped reads: \`${total_mapped_reads}\`
 
 
-- Expected mapping: `barcode${EXPECTED_MAPPING_BARCODE} ${EXPECTED_MAPPING_TARGET}=${EXPECTED_MAPPING_READS}`
-- Observed expected-target reads: `${observed_mapping_reads}`
+- Expected mapping: \`barcode${EXPECTED_MAPPING_BARCODE} ${EXPECTED_MAPPING_TARGET}=${EXPECTED_MAPPING_READS}\`
+- Observed expected-target reads: \`${observed_mapping_reads}\`
 
 ### Basecalling evidence
 
