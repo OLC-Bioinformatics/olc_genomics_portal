@@ -13,4 +13,5 @@ dependencies:
   - pandas
   - pyyaml
   - requests
+  - azure-storage-blob
   - pytest

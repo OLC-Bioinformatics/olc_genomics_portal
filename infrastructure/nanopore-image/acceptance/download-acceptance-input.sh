@@ -19,6 +19,7 @@ if [[ -z "$CONTAINER_SAS_URL" ]]; then
 fi
 
 ACCEPTANCE_POD5_PATH="${ACCEPTANCE_POD5_PATH:?ACCEPTANCE_POD5_PATH is required}"
+EXPECTED_POD5_COUNT="${EXPECTED_POD5_COUNT:-1}"
 INPUT_DIRECTORY="${INPUT_DIRECTORY:-${AZ_BATCH_TASK_WORKING_DIR:-/mnt/resource}/nanopore-acceptance/input}"
 
 rm -rf "$INPUT_DIRECTORY"
@@ -39,8 +40,8 @@ pod5_count="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' | wc -l)"
 pod5_bytes="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' -printf '%s\n' | awk '{total += $1} END {print total + 0}')"
 pod5_file="$(find "$INPUT_DIRECTORY" -type f -iname '*.pod5' -print -quit)"
 
-if [[ "$pod5_count" -ne 1 ]] || [[ -z "$pod5_file" ]] || [[ "$pod5_bytes" -lt 1 ]]; then
-  echo "Expected exactly one nonempty POD5 file, found ${pod5_count}" >&2
+if [[ "$pod5_count" -ne "$EXPECTED_POD5_COUNT" ]] || [[ -z "$pod5_file" ]] || [[ "$pod5_bytes" -lt 1 ]]; then
+  echo "Expected ${EXPECTED_POD5_COUNT} nonempty POD5 files, found ${pod5_count}" >&2
   exit 1
 fi
 

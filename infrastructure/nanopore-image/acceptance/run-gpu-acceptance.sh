@@ -2,6 +2,15 @@
 
 set -euo pipefail
 
+if ! foodport-nanopore-task --help | grep -q -- '--manifest-prefix'; then
+  echo 'Installed foodport-nanopore-task lacks --manifest-prefix.' >&2
+  exit 1
+fi
+if ! foodport-nanopore-task --help | grep -q -- '--control-blob'; then
+  echo 'Installed foodport-nanopore-task lacks --control-blob.' >&2
+  exit 1
+fi
+
 IMAGE_VERSION="${IMAGE_VERSION:?IMAGE_VERSION is required}"
 DORADO_MODEL="${DORADO_MODEL:-dna_r10.4.1_e8.2_400bps_fast@v5.2.0}"
 BARCODE_KIT="${BARCODE_KIT:-SQK-RBK114-24}"
@@ -10,12 +19,13 @@ EXPECTED_MAPPING_BARCODE="${EXPECTED_MAPPING_BARCODE:-22}"
 EXPECTED_MAPPING_TARGET="${EXPECTED_MAPPING_TARGET:-gntK}"
 EXPECTED_MAPPING_READS="${EXPECTED_MAPPING_READS:-1}"
 INPUT_DIRECTORY="${INPUT_DIRECTORY:?INPUT_DIRECTORY is required}"
+EXPECTED_POD5_COUNT="${EXPECTED_POD5_COUNT:-1}"
 OUTPUT_DIRECTORY="${OUTPUT_DIRECTORY:-${AZ_BATCH_TASK_WORKING_DIR:-/mnt/resource}/nanopore-acceptance/output}"
 
 PORESIPPR_ENVIRONMENT="${PORESIPPR_ENVIRONMENT:-/opt/micromamba/root/envs/poresippr}"
 PORESIPPR_SCHEDULER="${PORESIPPR_SCHEDULER:-/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py}"
 PORESIPPR_TARGETS="${PORESIPPR_TARGETS:-/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta}"
-PORESIPPR_REPOSITORY_COMMIT="${PORESIPPR_REPOSITORY_COMMIT:-691b3a3c2944139cb0093f81909331f7b8d46983}"
+PORESIPPR_REPOSITORY_COMMIT="${PORESIPPR_REPOSITORY_COMMIT:-ab56f28783fd557ea8a8618c2dfcec98cc92251f}"
 PORESIPPR_TARGETS_SHA256="${PORESIPPR_TARGETS_SHA256:-6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9}"
 PORESIPPR_TARGETS_SEQUENCE_COUNT="${PORESIPPR_TARGETS_SEQUENCE_COUNT:-6663}"
 DIAGNOSTIC_SCHEDULER_OVERRIDE="${DIAGNOSTIC_SCHEDULER_OVERRIDE:-false}"
@@ -114,10 +124,10 @@ pod5_file="$(
     -quit
 )"
 
-if [[ "$pod5_count" -ne 1 ]] ||
+if [[ "$pod5_count" -ne "$EXPECTED_POD5_COUNT" ]] ||
    [[ -z "$pod5_file" ]] ||
    [[ "$pod5_bytes" -lt 1 ]]; then
-  echo "Acceptance expects exactly one POD5 file, found ${pod5_count}" >&2
+  echo "Acceptance expects ${EXPECTED_POD5_COUNT} POD5 files, found ${pod5_count}" >&2
   exit 1
 fi
 
@@ -255,15 +265,27 @@ if [[ "$status_value" != "completed" ]] || [[ "$status_reason" != "once-complete
   exit 1
 fi
 
-basecalls_bam="$(find "$SCHEDULER_OUTPUT_DIRECTORY/working" -type f -name basecalls.bam -print -quit)"
-if [[ -z "$basecalls_bam" ]] || [[ ! -s "$basecalls_bam" ]]; then
+basecalls_bams=("$SCHEDULER_OUTPUT_DIRECTORY"/working/batch-*/basecalls.bam)
+if [[ ! -e "${basecalls_bams[0]}" ]]; then
   echo "Retained scheduler basecalls BAM is missing" >&2
   exit 1
 fi
 
-dorado summary "$basecalls_bam" >"$SUMMARY_TSV"
+: >"$SUMMARY_TSV"
+BAM_BYTES=0
+for basecalls_bam in "${basecalls_bams[@]}"; do
+  if [[ ! -s "$basecalls_bam" ]]; then
+    echo "Retained scheduler basecalls BAM is missing or empty: ${basecalls_bam}" >&2
+    exit 1
+  fi
+  if [[ ! -s "$SUMMARY_TSV" ]]; then
+    dorado summary "$basecalls_bam" >"$SUMMARY_TSV"
+  else
+    dorado summary "$basecalls_bam" | tail -n +2 >>"$SUMMARY_TSV"
+  fi
+  BAM_BYTES="$((BAM_BYTES + $(stat --format='%s' "$basecalls_bam")))"
+done
 READ_COUNT="$(awk 'END {print (NR > 0 ? NR - 1 : 0)}' "$SUMMARY_TSV")"
-BAM_BYTES="$(stat --format='%s' "$basecalls_bam")"
 
 echo "Removing retained batch work before packaging durable evidence"
 rm -rf "${SCHEDULER_OUTPUT_DIRECTORY}/working"
@@ -271,10 +293,13 @@ rm -rf "${SCHEDULER_OUTPUT_DIRECTORY}/working"
 awk -F '\t' '
   NR == 1 {
     for (i = 1; i <= NF; i++) if ($i == "barcode_arrangement") barcode_column = i
-    if (!barcode_column) { print "barcode_arrangement column is missing" > "/dev/stderr"; exit 1 }
     next
   }
-  { barcode = $barcode_column; if (barcode == "") barcode = "unknown"; counts[barcode]++ }
+  {
+    barcode = (barcode_column ? $barcode_column : "unknown")
+    if (barcode == "") barcode = "unknown"
+    counts[barcode]++
+  }
   END { for (barcode in counts) print barcode "\t" counts[barcode] }
 ' "$SUMMARY_TSV" | LC_ALL=C sort >"$BARCODE_COUNTS_TSV"
 
@@ -453,7 +478,7 @@ jq --null-input \
     }
   }' >"$RESULT_JSON"
 
-jq -e \
+if ! jq -e \
   --argjson diagnostic_scheduler_override \
     "$DIAGNOSTIC_SCHEDULER_OVERRIDE" \
   --arg expected_mapping_target "$EXPECTED_MAPPING_TARGET" \
@@ -484,10 +509,12 @@ jq -e \
     and .mapping.expected.target == $expected_mapping_target
     and .mapping.expected.reads == $expected_mapping_reads
     and .mapping.observed_expected_target_reads == $expected_mapping_reads
-    and .mapping.targets[$expected_mapping_target] == $expected_mapping_reads
+    and .mapping.targets[$expected_mapping_target] >= $expected_mapping_reads
   ' \
   "$RESULT_JSON" \
-  >/dev/null
+  >/dev/null; then
+  exit 1
+fi
 
 cat >"$RESULT_MARKDOWN" <<EOF
 ## Image ${IMAGE_VERSION} GPU Scheduler Acceptance

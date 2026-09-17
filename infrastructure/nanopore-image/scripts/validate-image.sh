@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+: "${FOODPORT_IMAGE_VERSION:?FoodPort image version is required}"
+
 IMAGE_MANIFEST="/etc/foodport/image.json"
 NVIDIA_MANIFEST="/etc/foodport/nvidia-driver.json"
 NOUVEAU_CONFIGURATION="/etc/modprobe.d/disable-nouveau.conf"
@@ -30,7 +32,8 @@ jq -e \
   }
 
 jq -e \
-  '.image_version == "0.0.5"' \
+  --arg expected_version "$FOODPORT_IMAGE_VERSION" \
+  '.image_version == $expected_version' \
   "$IMAGE_MANIFEST" >/dev/null || {
     echo "Unexpected image version" >&2
     cat "$IMAGE_MANIFEST" >&2
@@ -357,9 +360,11 @@ PORESIPPR_EXPLICIT_MANIFEST="/opt/ont/manifests/poresippr-conda-explicit.txt"
 PORESIPPR_ENVIRONMENT_FILE="/opt/ont/manifests/poresippr-environment.yml"
 PORESIPPR_REPOSITORY_MANIFEST="/etc/foodport/poresippr-repository.json"
 PORESIPPR_REPOSITORY_URL="https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
-PORESIPPR_REPOSITORY_COMMIT="2108b9428c51f2335ed4cd3f0e1c417db3ba0563"
+: "${PORESIPPR_REPOSITORY_COMMIT:?PoreSippR repository commit is required}"
 PORESIPPR_INSTALL_DIRECTORY="/opt/foodport/poresippr"
 PORESIPPR_SCHEDULER="${PORESIPPR_INSTALL_DIRECTORY}/poresippr_incremental_dorado_scheduler.py"
+FOODPORT_TASK_WRAPPER="${PORESIPPR_INSTALL_DIRECTORY}/foodport_nanopore_task.py"
+FOODPORT_TASK_COMMAND="/usr/local/bin/foodport-nanopore-task"
 PORESIPPR_TARGETS_NAME="PoreSippR_DB_251110.fasta"
 PORESIPPR_TARGETS_DIRECTORY="/opt/foodport/poresippr-data"
 PORESIPPR_TARGETS_PATH="${PORESIPPR_TARGETS_DIRECTORY}/${PORESIPPR_TARGETS_NAME}"
@@ -848,6 +853,12 @@ if [[ ! -f "$PORESIPPR_TEST" ]]; then
   exit 1
 fi
 
+if [[ ! -x "$FOODPORT_TASK_WRAPPER" ]] ||
+   [[ ! -x "$FOODPORT_TASK_COMMAND" ]]; then
+  echo "FoodPort Nanopore task wrapper is missing or not executable" >&2
+  exit 1
+fi
+
 if grep -Eq \
     '&(amp|gt|lt);' \
     "$PORESIPPR_SCHEDULER"; then
@@ -913,6 +924,14 @@ PYTHONDONTWRITEBYTECODE=1 \
   --help \
   >/dev/null
 
+echo "Validating FoodPort Nanopore task wrapper command-line interface"
+
+PYTHONDONTWRITEBYTECODE=1 \
+  "$PORESIPPR_BIN_DIRECTORY/python" \
+  "$FOODPORT_TASK_WRAPPER" \
+  --help \
+  >/dev/null
+
 echo "Running incremental Dorado scheduler tests"
 
 test_working_directory="$(
@@ -953,12 +972,16 @@ jq -e \
   --arg install_path "$PORESIPPR_INSTALL_DIRECTORY" \
   --arg scheduler "$PORESIPPR_SCHEDULER" \
   --arg scheduler_test "$PORESIPPR_TEST" \
+  --arg task_wrapper "$FOODPORT_TASK_WRAPPER" \
+  --arg task_wrapper_command "$FOODPORT_TASK_COMMAND" \
   '
     .poresippr_repository.repository == $repository
     and .poresippr_repository.commit == $commit
     and .poresippr_repository.install_path == $install_path
     and .poresippr_repository.scheduler == $scheduler
     and .poresippr_repository.scheduler_test == $scheduler_test
+    and .poresippr_repository.task_wrapper == $task_wrapper
+    and .poresippr_repository.task_wrapper_command == $task_wrapper_command
   ' \
   "$IMAGE_MANIFEST" \
   >/dev/null || {

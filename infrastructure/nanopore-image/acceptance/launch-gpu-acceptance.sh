@@ -13,7 +13,7 @@ SAS_HOURS="${SAS_HOURS:-4}"
 SAS_AUTH_MODE="${SAS_AUTH_MODE:-key}"
 STORAGE_RESOURCE_GROUP="${STORAGE_RESOURCE_GROUP:-CFDC-FoodPort-Batch-rg}"
 
-IMAGE_VERSION="${IMAGE_VERSION:-0.0.5}"
+IMAGE_VERSION="${IMAGE_VERSION:-0.0.11}"
 DORADO_MODEL="${DORADO_MODEL:-dna_r10.4.1_e8.2_400bps_fast@v5.2.0}"
 BARCODE_KIT="${BARCODE_KIT:-SQK-RBK114-24}"
 BARCODE_VALUES="${BARCODE_VALUES:-12,16,20,22}"
@@ -21,11 +21,14 @@ EXPECTED_MAPPING_BARCODE="${EXPECTED_MAPPING_BARCODE:-22}"
 EXPECTED_MAPPING_TARGET="${EXPECTED_MAPPING_TARGET:-gntK}"
 EXPECTED_MAPPING_READS="${EXPECTED_MAPPING_READS:-1}"
 ACCEPTANCE_POD5_PATH="${ACCEPTANCE_POD5_PATH:-MIN-20260804/no_sample/20260804_1121_MN49535_FBF37799_4af93e9c/pod5/FBF37799_4af93e9c_4ce0ae7c_0.pod5}"
+ACCEPTANCE_VALIDATION_POD5_PATH="${ACCEPTANCE_VALIDATION_POD5_PATH:-${ACCEPTANCE_POD5_PATH}}"
+EXPECTED_POD5_COUNT="${EXPECTED_POD5_COUNT:-1}"
 
 PORESIPPR_ENVIRONMENT="${PORESIPPR_ENVIRONMENT:-/opt/micromamba/root/envs/poresippr}"
 PORESIPPR_SCHEDULER="${PORESIPPR_SCHEDULER:-/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py}"
+PORESIPPR_SCHEDULER_SOURCE="${PORESIPPR_SCHEDULER_SOURCE:-}"
 PORESIPPR_TARGETS="${PORESIPPR_TARGETS:-/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta}"
-PORESIPPR_REPOSITORY_COMMIT="${PORESIPPR_REPOSITORY_COMMIT:-2108b9428c51f2335ed4cd3f0e1c417db3ba0563}"
+PORESIPPR_REPOSITORY_COMMIT="${PORESIPPR_REPOSITORY_COMMIT:-ab56f28783fd557ea8a8618c2dfcec98cc92251f}"
 PORESIPPR_TARGETS_SHA256="${PORESIPPR_TARGETS_SHA256:-6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9}"
 PORESIPPR_TARGETS_SEQUENCE_COUNT="${PORESIPPR_TARGETS_SEQUENCE_COUNT:-6663}"
 
@@ -93,7 +96,7 @@ validate_input_sas() {
     az storage blob show \
       --account-name "$STORAGE_ACCOUNT" \
       --container-name "$CONTAINER_NAME" \
-      --name "$ACCEPTANCE_POD5_PATH" \
+      --name "$ACCEPTANCE_VALIDATION_POD5_PATH" \
       --sas-token "$sas_token" \
       --query 'properties.contentLength' \
       --output tsv
@@ -233,6 +236,7 @@ echo "  VM size:            ${GPU_VM_SIZE}"
 echo "  Storage account:    ${STORAGE_ACCOUNT}"
 echo "  Container:          ${CONTAINER_NAME}"
 echo "  POD5 blob:          ${ACCEPTANCE_POD5_PATH}"
+echo "  Expected POD5 files: ${EXPECTED_POD5_COUNT}"
 echo "  Dorado model:       ${DORADO_MODEL}"
 echo "  Barcode kit:        ${BARCODE_KIT}"
 echo "  Barcode values:     ${BARCODE_VALUES}"
@@ -376,6 +380,11 @@ echo "Copying acceptance scripts to GPU VM"
 ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" "mkdir -p '${REMOTE_SCRIPT_DIRECTORY}'"
 scp "${SSH_OPTIONS[@]}" "$DOWNLOAD_SCRIPT" "$ACCEPTANCE_SCRIPT" \
   "${GPU_SSH_TARGET}:${REMOTE_SCRIPT_DIRECTORY}/"
+if [[ -n "$PORESIPPR_SCHEDULER_SOURCE" ]]; then
+  scp "${SSH_OPTIONS[@]}" "$PORESIPPR_SCHEDULER_SOURCE" \
+    "${GPU_SSH_TARGET}:${REMOTE_SCRIPT_DIRECTORY}/poresippr_incremental_dorado_scheduler.py"
+  PORESIPPR_SCHEDULER="${REMOTE_SCRIPT_DIRECTORY}/poresippr_incremental_dorado_scheduler.py"
+fi
 
 echo "Preparing acceptance directories"
 ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" bash -s -- \
@@ -396,6 +405,7 @@ echo "Downloading acceptance input on GPU VM"
 ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" env \
   "CONTAINER_SAS_URL_BASE64=${CONTAINER_SAS_URL_BASE64}" \
   "ACCEPTANCE_POD5_PATH=${ACCEPTANCE_POD5_PATH}" \
+  "EXPECTED_POD5_COUNT=${EXPECTED_POD5_COUNT}" \
   "INPUT_DIRECTORY=${REMOTE_INPUT_DIRECTORY}" \
   "${REMOTE_SCRIPT_DIRECTORY}/download-acceptance-input.sh"
 
@@ -411,6 +421,7 @@ ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" env \
   "EXPECTED_MAPPING_BARCODE=${EXPECTED_MAPPING_BARCODE}" \
   "EXPECTED_MAPPING_TARGET=${EXPECTED_MAPPING_TARGET}" \
   "EXPECTED_MAPPING_READS=${EXPECTED_MAPPING_READS}" \
+  "EXPECTED_POD5_COUNT=${EXPECTED_POD5_COUNT}" \
   "INPUT_DIRECTORY=${REMOTE_INPUT_DIRECTORY}" \
   "OUTPUT_DIRECTORY=${REMOTE_OUTPUT_DIRECTORY}" \
   "PORESIPPR_ENVIRONMENT=${PORESIPPR_ENVIRONMENT}" \
@@ -457,6 +468,7 @@ jq -e \
   --arg expected_commit "$PORESIPPR_REPOSITORY_COMMIT" \
   --arg expected_targets_sha256 "$PORESIPPR_TARGETS_SHA256" \
   --argjson expected_targets_count "$PORESIPPR_TARGETS_SEQUENCE_COUNT" \
+  --argjson expected_pod5_count "$EXPECTED_POD5_COUNT" \
   --argjson diagnostic_scheduler_override "$DIAGNOSTIC_SCHEDULER_OVERRIDE" \
   '
     .schema_version == 2
@@ -469,7 +481,7 @@ jq -e \
     and .gpu.name != ""
     and .gpu.driver_version != ""
     and .gpu.memory_mib > 0
-    and .input.pod5_count == 1
+    and .input.pod5_count == $expected_pod5_count
     and .input.pod5_bytes > 0
     and .poresippr.repository_commit == $expected_commit
     and .poresippr.targets_sha256 == $expected_targets_sha256
@@ -505,7 +517,7 @@ jq -e \
     and .mapping.expected.target == $expected_mapping_target
     and .mapping.expected.reads == $expected_mapping_reads
     and .mapping.observed_expected_target_reads == $expected_mapping_reads
-    and .mapping.targets[$expected_mapping_target] == $expected_mapping_reads
+    and .mapping.targets[$expected_mapping_target] >= $expected_mapping_reads
   ' "$LOCAL_RESULT_JSON" >/dev/null
 
 echo

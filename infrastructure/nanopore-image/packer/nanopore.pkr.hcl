@@ -178,6 +178,11 @@ build {
   }
 
   provisioner "shell" {
+    environment_vars = [
+      "FOODPORT_IMAGE_VERSION=${var.image_version}",
+      "PORESIPPR_REPOSITORY_COMMIT=${var.poresippr_repository_commit}",
+    ]
+
     script = "${path.root}/../scripts/validate-image.sh"
   }
 

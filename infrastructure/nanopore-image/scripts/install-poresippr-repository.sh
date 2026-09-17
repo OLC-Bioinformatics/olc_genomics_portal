@@ -8,6 +8,9 @@ set -euo pipefail
 PORESIPPR_INSTALL_DIRECTORY="/opt/foodport/poresippr"
 PORESIPPR_SCHEDULER_NAME="poresippr_incremental_dorado_scheduler.py"
 PORESIPPR_SCHEDULER="${PORESIPPR_INSTALL_DIRECTORY}/${PORESIPPR_SCHEDULER_NAME}"
+FOODPORT_TASK_WRAPPER_NAME="foodport_nanopore_task.py"
+FOODPORT_TASK_WRAPPER="${PORESIPPR_INSTALL_DIRECTORY}/${FOODPORT_TASK_WRAPPER_NAME}"
+FOODPORT_TASK_COMMAND="/usr/local/bin/foodport-nanopore-task"
 
 PORESIPPR_TEST_RELATIVE_PATH="$(
   printf '%s' \
@@ -108,11 +111,38 @@ if [[ "$resolved_commit" != "$PORESIPPR_REPOSITORY_COMMIT" ]]; then
 fi
 
 source_scheduler="${repository_directory}/${PORESIPPR_SCHEDULER_NAME}"
+source_task_wrapper="${repository_directory}/${FOODPORT_TASK_WRAPPER_NAME}"
 
 if [[ ! -f "$source_scheduler" ]]; then
   echo \
     "Incremental Dorado scheduler is missing from the repository: " \
     "$source_scheduler" \
+    >&2
+  exit 1
+fi
+
+if [[ ! -f "$source_task_wrapper" ]]; then
+  echo \
+    "FoodPort Nanopore task wrapper is missing from the repository: " \
+    "$source_task_wrapper" \
+    >&2
+  exit 1
+fi
+
+if ! "$PORESIPPR_PYTHON" "$source_task_wrapper" --help \
+    | grep -q -- '--manifest-prefix'; then
+  echo \
+    "FoodPort Nanopore task wrapper lacks --manifest-prefix: " \
+    "$source_task_wrapper" \
+    >&2
+  exit 1
+fi
+
+if ! "$PORESIPPR_PYTHON" "$source_task_wrapper" --help \
+    | grep -q -- '--control-blob'; then
+  echo \
+    "FoodPort Nanopore task wrapper lacks --control-blob: " \
+    "$source_task_wrapper" \
     >&2
   exit 1
 fi
@@ -160,6 +190,11 @@ sudo rsync \
 
 sudo chmod 0755 \
   "$PORESIPPR_SCHEDULER"
+sudo chmod 0755 \
+  "$FOODPORT_TASK_WRAPPER"
+sudo ln -sfn \
+  "$FOODPORT_TASK_WRAPPER" \
+  "$FOODPORT_TASK_COMMAND"
 
 if [[ ! -f "$PORESIPPR_TEST" ]]; then
   echo \
@@ -186,6 +221,13 @@ echo "Validating installed scheduler command-line interface"
   --help \
   >/dev/null
 
+echo "Validating installed FoodPort task wrapper command-line interface"
+
+"$PORESIPPR_PYTHON" \
+  "$FOODPORT_TASK_WRAPPER" \
+  --help \
+  >/dev/null
+
 sudo find \
   "$PORESIPPR_INSTALL_DIRECTORY" \
   -type d \
@@ -204,6 +246,11 @@ scheduler_sha256="$(
     awk '{print $1}'
 )"
 
+task_wrapper_sha256="$(
+  sha256sum "$FOODPORT_TASK_WRAPPER" |
+    awk '{print $1}'
+)"
+
 echo "Recording PoreSippR repository metadata"
 
 sudo tee "$PORESIPPR_MANIFEST" >/dev/null <<EOF
@@ -214,7 +261,10 @@ sudo tee "$PORESIPPR_MANIFEST" >/dev/null <<EOF
   "install_path": "${PORESIPPR_INSTALL_DIRECTORY}",
   "scheduler": "${PORESIPPR_SCHEDULER}",
   "scheduler_test": "${PORESIPPR_TEST}",
-  "scheduler_sha256": "${scheduler_sha256}"
+  "scheduler_sha256": "${scheduler_sha256}",
+  "task_wrapper": "${FOODPORT_TASK_WRAPPER}",
+  "task_wrapper_command": "${FOODPORT_TASK_COMMAND}",
+  "task_wrapper_sha256": "${task_wrapper_sha256}"
 }
 EOF
 
