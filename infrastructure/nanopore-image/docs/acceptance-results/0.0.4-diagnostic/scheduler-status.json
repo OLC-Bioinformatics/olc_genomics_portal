@@ -1,0 +1,8 @@
+{
+  "batch_count": 1,
+  "processed_pod5_count": 1,
+  "reason": "once-complete",
+  "run_id": "acceptance",
+  "status": "completed",
+  "updated_at": "2026-09-08T18:28:42+00:00"
+}

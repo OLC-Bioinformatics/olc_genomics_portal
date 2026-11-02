@@ -1543,394 +1543,522 @@ def exclusivity_panel_retrieve(inclusivity):
 
 def _upload_summary_excel(blob_client, container_name, request):
     """
-    Create an Excel workbook from request_obj.summary JSON and upload it as:
-    reports/<container_namer>_summary_report.xlsx
+    Create a consolidated Excel report and upload it to Azure Blob Storage.
+
+    The results worksheet contains one row per panel/SEQID combination and
+    one group of result columns per primer set. Mismatch-detail cells contain
+    a three-line, BLAST-like pseudoalignment whenever primer sequences are
+    available from the related primer model.
     """
     if xlsxwriter is None:
-        # xlsxwriter not installed; skip
         return
 
-    summary_text = getattr(request, "summary", None)
     report_text = getattr(request, "report", None)
-    # Require at least one data source (summary or report)
-    if not summary_text and not report_text:
+    if not report_text:
         return
 
     try:
-        summary = json.loads(summary_text) if summary_text else {}
-    except Exception:
+        report = json.loads(report_text)
+    except (TypeError, ValueError):
         return
 
-    try:
-        report = json.loads(report_text) if report_text else {}
-    except Exception:
+    if not isinstance(report, dict):
         return
 
-    # Build a mapping (PANEL, SEQID) -> primer_sets and per-primer seq data
-    entries = {}  # type: Dict[Tuple[str, str], Dict[str, Any]]
-    if isinstance(report, dict):
-        for primer_set_name, primer_data in report.items():
-            if primer_set_name == 'validator_version':
-                continue
-            if not isinstance(primer_data, dict):
-                continue
-            for panel_name, panel_dict in primer_data.items():
-                if not isinstance(panel_dict, dict):
-                    continue
-                for seqid, seq_data in panel_dict.items():
-                    if seqid in ('percent', 'positive', 'total'):
-                        continue
-                    key = (panel_name.upper(), seqid)
-                    ent = entries.setdefault(key, {"primer_sets": [], "per_primer": {}})
-                    if primer_set_name not in ent["primer_sets"]:
-                        ent["primer_sets"].append(primer_set_name)
-                    # Store seq_data per primer (None for empty entries)
-                    ent["per_primer"][primer_set_name] = seq_data if seq_data else None
+    primer_fields = [
+        ("amplicon length", "amplicon_length"),
+        ("contig", "contig"),
+        ("location", "location"),
+        ("direction", "direction"),
+        ("forward mismatch", "forward_mismatch"),
+        ("forward mismatch details", "forward_mismatch_details"),
+        ("reverse mismatch", "reverse_mismatch"),
+        ("reverse mismatch details", "reverse_mismatch_details"),
+        ("pseudoalignment", "pseudoalignment"),
+        ("Total Mismatches", "total_mismatch"),
+    ]
 
-    def _collect_stats_rows(node, path):
-        rows = []
-        if isinstance(node, dict):
-            if (("total" in node) or ("positive" in node) or ("percent" in node)):
-                primer = path[0] if len(path) > 0 else ""
-                panel = path[1] if len(path) > 1 else ""
-                genus = path[2] if len(path) > 2 else ""
-                rows.append((primer, panel, genus, node.get("total"), node.get("positive"), node.get("percent")))
-            for k, v in node.items():
-                rows.extend(_collect_stats_rows(v, path + [str(k)]))
-        elif isinstance(node, list):
-            for i, v in enumerate(node):
-                rows.extend(_collect_stats_rows(v, path + [str(i)]))
-        return rows
+    def _get_field(data, names, default=None):
+        """Return the first available report field."""
+        if not isinstance(data, dict):
+            return default
+        for name in names:
+            if name in data:
+                return data.get(name)
+        return default
 
-    def _emit_flat(ws, node, prefix, row_idx):
+    def _clean_sequence(value):
+        """Remove formatting whitespace from a sequence string."""
+        return "".join(str(value or "").split()).upper()
+
+    def _decode_details(value):
+        """Decode HTML entities such as ``&gt;`` in mismatch details."""
+        try:
+            from html import unescape
+        except ImportError:
+            from HTMLParser import HTMLParser
+
+            unescape = HTMLParser().unescape
+        return unescape(str(value or ""))
+
+    def _primer_direction(header):
+        """Determine whether a primer header is forward or reverse."""
+        header = str(header or "").strip().lower()
+        forward_suffixes = (
+            "-f",
+            "_f",
+            ".f",
+            " forward",
+            "_forward",
+        )
+        reverse_suffixes = (
+            "-r",
+            "_r",
+            ".r",
+            " reverse",
+            "_reverse",
+        )
+
+        if header.endswith(forward_suffixes):
+            return "forward"
+        if header.endswith(reverse_suffixes):
+            return "reverse"
+        return None
+
+    def _target_from_details(primer_sequence, details):
         """
-        Write flattened (path, value) rows to worksheet ws starting at row_idx.
-        Returns next free row index.
+        Reconstruct a target sequence from details such as ``2T>G;17G>A``.
+
+        Positions are treated as one-based. The base following ``>`` is
+        placed in the target sequence. With no mismatches, target and primer
+        are identical, allowing a complete match-line to be displayed.
         """
-        if isinstance(node, dict):
-            # Sort keys for determinism
-            for k in sorted(node.keys()):
-                v = node[k]
-                next_prefix = prefix + ("." if prefix else "") + str(k)
-                row_idx = _emit_flat(ws, v, next_prefix, row_idx)
-        elif isinstance(node, list):
-            for i, v in enumerate(node):
-                next_prefix = prefix + ("/" if prefix else "") + str(i)
-                row_idx = _emit_flat(ws, v, next_prefix, row_idx)
-        else:
-            # Leaf
-            try:
-                val = json.dumps(node)
-            except Exception:
-                val = str(node)
-            ws.write(row_idx, 0, prefix)
-            ws.write(row_idx, 1, val)
-            row_idx += 1
-        return row_idx
+        import re
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
-    tmp_path = tmp.name
-    tmp.close()
+        primer_sequence = _clean_sequence(primer_sequence)
+        if not primer_sequence:
+            return ""
 
-    try:
-        workbook = xlsxwriter.Workbook(tmp_path)
-        header_fmt = workbook.add_format({"bold": True, "bg_color": "#F2F2F2", "border": 1})
-        cell_fmt = workbook.add_format({"border": 1})
-        pct_fmt = workbook.add_format({"num_format": "0.00%", "border": 1})
-        int_fmt = workbook.add_format({"num_format": "0", "border": 1})
+        target = list(primer_sequence)
+        detail_text = _decode_details(details)
+        substitutions = re.findall(
+            r"(\d+)\s*([A-Za-z-])\s*>\s*([A-Za-z-])",
+            detail_text,
+        )
 
-        # PrimerVerifierResults (first sheet)
-        ws0 = workbook.add_worksheet("PrimerVerifierResults")
-        headers0 = [
-            "SEQID",
-            "PANEL",
-            "primer set",
-            "amplicon length",
-            "contig",
-            "location",
-            "direction",
-            "forward mismatch",
-            "forward mismatch details",
-            "reverse mismatch",
-            "reverse mismatch details",
-            "probe mismatches",
-            "probe mismatch details",
-            "Total Mismatches",
-        ]
-        for col, h in enumerate(headers0):
-            ws0.write(0, col, h, header_fmt)
+        for position, primer_base, target_base in substitutions:
+            del primer_base
+            index = int(position) - 1
+            if 0 <= index < len(target):
+                target[index] = target_base.upper()
 
-        # Determine ordering (EXCLUSIVITY first, then INCLUSIVITY), then by seqid
-        panel_order = {"EXCLUSIVITY": 1, "INCLUSIVITY": 0}
-        sorted_keys = sorted(entries.keys(), key=lambda k: (panel_order.get(k[0], 2), k[1]))
+        return "".join(target)
 
-        write_row = 1
+    def _pseudoalignment(primer_sequence, target_sequence, details):
+        """Return a three-line, BLAST-like primer/target alignment."""
+        primer_sequence = _clean_sequence(primer_sequence)
+        target_sequence = _clean_sequence(target_sequence)
 
-        def _get_field(sd, keys):
-            if not sd or not isinstance(sd, dict):
-                return None
-            for k in keys:
-                if k in sd:
-                    return sd.get(k)
-                lk = k.lower()
-                if lk in sd:
-                    return sd.get(lk)
+        if not target_sequence:
+            target_sequence = _target_from_details(
+                primer_sequence,
+                details,
+            )
+
+        if not primer_sequence or not target_sequence:
+            return _decode_details(details) or "ND"
+
+        length = max(len(primer_sequence), len(target_sequence))
+        primer_sequence = primer_sequence.ljust(length, "-")
+        target_sequence = target_sequence.ljust(length, "-")
+        match_line = "".join(
+            "|" if primer_base == target_base else " "
+            for primer_base, target_base in zip(
+                primer_sequence,
+                target_sequence,
+            )
+        )
+
+        return "Primer: {0}\n        {1}\nTarget: {2}".format(
+            primer_sequence,
+            match_line,
+            target_sequence,
+        )
+
+    def _combined_pseudoalignment(
+        forward_query,
+        forward_target,
+        forward_details,
+        reverse_query,
+        reverse_target,
+        reverse_details,
+    ):
+        """Return forward and reverse pseudoalignments in one Excel cell."""
+        forward_alignment = _pseudoalignment(
+            forward_query,
+            forward_target,
+            forward_details,
+        )
+        reverse_alignment = _pseudoalignment(
+            reverse_query,
+            reverse_target,
+            reverse_details,
+        )
+        return "FORWARD\n{0}\n\nREVERSE\n{1}".format(
+            forward_alignment,
+            reverse_alignment,
+        )
+
+    def _parse_mismatch(value):
+        """Convert a mismatch value to an integer when possible."""
+        if value in (None, "", "ND"):
             return None
-
-        for panel, seqid in sorted_keys:
-            ent = entries[(panel, seqid)]
-            primer_list = sorted(ent["primer_sets"])
-            # Primer sets that have seq_data (non-empty)
-            present = [p for p in primer_list if ent["per_primer"].get(p)]
-
-            def _write_row_from_sd(sd, primer_cell):
-                # sd may be a dict or None
-                if not sd:
-                    amplicon_length = "ND"
-                    contig = "ND"
-                    location = "ND"
-                    direction = "ND"
-                    forward_mismatch = "ND"
-                    forward_mismatch_details = ""
-                    reverse_mismatch = "ND"
-                    reverse_mismatch_details = ""
-                    probe_mismatches = "ND"
-                    probe_mismatch_details = ""
-                    total_mismatch = "ND"
-                else:
-                    amplicon_length = _get_field(
-                        sd,
-                        [
-                            "amplicon_size",
-                            "AmpliconSize",
-                            "amplicon_length"
-                        ]
-                    ) or "ND"
-                    contig = _get_field(
-                        sd,
-                        [
-                            "contig",
-                            "Contig"
-                        ]
-                    ) or "ND"
-                    location = _get_field(
-                        sd,
-                        [
-                            "location",
-                            "amplicon_range",
-                            "GenomeLocation"
-                        ]
-                    ) or "ND"
-                    direction = _get_field(
-                        sd,
-                        [
-                            "orientation",
-                            "direction"
-                        ]
-                    ) or "ND"
-                    forward_mismatch = _get_field(
-                        sd,
-                        [
-                            "forward_mismatch",
-                            "ForwardMismatches"
-                        ]
-                    ) or "ND"
-                    forward_mismatch_details = _get_field(
-                        sd,
-                        [
-                            "forward_mismatch_details",
-                            "ForwardMismatchDetails"
-                        ]
-                    ) or ""
-                    reverse_mismatch = _get_field(
-                        sd,
-                        [
-                            "reverse_mismatch",
-                            "ReverseMismatches"
-                        ]
-                    ) or "ND"
-                    reverse_mismatch_details = _get_field(
-                        sd,
-                        [
-                            "reverse_mismatch_details",
-                            "ReverseMismatchDetails"
-                        ]
-                    ) or ""
-
-                    # Probe extraction (handle nested/flat forms)
-                    probe_mismatches = "ND"
-                    probe_mismatch_details = ""
-                    probe_data = sd.get(
-                        "probe"
-                    ) if isinstance(sd, dict) else None
-                    if probe_data and isinstance(probe_data, dict):
-                        try:
-                            if "probe" in probe_data and isinstance(
-                                probe_data["probe"], dict
-                            ):
-                                pinfo = probe_data["probe"]
-                            else:
-                                kprobe = next(iter(probe_data.keys()))
-                                pinfo = probe_data[kprobe] if isinstance(
-                                    probe_data[kprobe], dict
-                                ) else probe_data
-                            probe_mismatches = pinfo.get(
-                                "mismatches",
-                                pinfo.get("mismatch", "ND")
-                            )
-                            probe_mismatch_details = pinfo.get(
-                                "mismatch_details", "")
-                        except Exception:
-                            probe_mismatches = probe_data.get(
-                                "mismatches", "ND"
-                            )
-
-                    # Compute total mismatches
-                    def _parse_mismatch_value(val):
-                        if val is None:
-                            return None
-                        sval = str(val).strip()
-                        if sval == "" or sval.upper() == "ND":
-                            return None
-                        try:
-                            return int(sval)
-                        except Exception:
-                            try:
-                                return int(float(sval))
-                            except Exception:
-                                return None
-
-                    fval = _parse_mismatch_value(forward_mismatch)
-                    rval = _parse_mismatch_value(reverse_mismatch)
-                    pval = _parse_mismatch_value(probe_mismatches)
-                    if fval is None and rval is None and pval is None:
-                        total_mismatch = "ND"
-                    else:
-                        total_mismatch = (fval or 0) + (rval or 0) + (pval or 0)
-
-                ws0.write(write_row, 0, seqid, cell_fmt)
-                ws0.write(write_row, 1, panel, cell_fmt)
-                ws0.write(write_row, 2, primer_cell, cell_fmt)
-                ws0.write(write_row, 3, amplicon_length, cell_fmt)
-                ws0.write(write_row, 4, contig, cell_fmt)
-                ws0.write(write_row, 5, location, cell_fmt)
-                ws0.write(write_row, 6, direction, cell_fmt)
-                ws0.write(write_row, 7, forward_mismatch, cell_fmt)
-                ws0.write(write_row, 8, forward_mismatch_details, cell_fmt)
-                ws0.write(write_row, 9, reverse_mismatch, cell_fmt)
-                ws0.write(write_row, 10, reverse_mismatch_details, cell_fmt)
-                ws0.write(write_row, 11, probe_mismatches, cell_fmt)
-                ws0.write(write_row, 12, probe_mismatch_details, cell_fmt)
-                ws0.write(write_row, 13, total_mismatch, cell_fmt)
-
-            if present:
-                for primer_name in present:
-                    sd = ent["per_primer"][primer_name]
-                    _write_row_from_sd(sd, primer_name)
-                    write_row += 1
-            else:
-                primer_sets = ", ".join(primer_list)
-                sd = None
-                _write_row_from_sd(sd, primer_sets)
-                write_row += 1
-
-        ws0.autofilter(0, 0, max(write_row - 1, 0), len(headers0) - 1)
-        ws0.freeze_panes(1, 0)
-        ws0.set_column(0, 0, 20)
-        ws0.set_column(1, 1, 12)
-        ws0.set_column(2, 2, 30)
-        ws0.set_column(3, 6, 14)
-        ws0.set_column(7, 12, 22)
-        ws0.set_column(13, 13, 16)
-
-        # Overview
-        ws = workbook.add_worksheet("Overview")
-        headers = ["Primer", "Panel", "Genus", "Total", "Positive", "Percent"]
-        for col, h in enumerate(headers):
-            ws.write(0, col, h, header_fmt)
-
-        stats_rows = _collect_stats_rows(summary, [])
-        # dedupe while preserving order
-        seen = set()
-        write_row = 1
-        for r in stats_rows:
-            if r in seen:
-                continue
-            seen.add(r)
-            # r = (primer, panel, genus, total, positive, percent)
-            ws.write(write_row, 0, r[0], cell_fmt)
-            ws.write(write_row, 1, r[1], cell_fmt)
-            ws.write(write_row, 2, r[2], cell_fmt)
-            # numeric cells
-            if r[3] is None:
-                ws.write_blank(write_row, 3, None, cell_fmt)
-            else:
-                ws.write_number(write_row, 3, r[3], int_fmt)
-            if r[4] is None:
-                ws.write_blank(write_row, 4, None, cell_fmt)
-            else:
-                ws.write_number(write_row, 4, r[4], int_fmt)
-            # percent can be 0-100 or 0-1 depending on your JSON; try to normalize
-            percent_val = r[5]
-            if isinstance(percent_val, (int, float)):
-                if percent_val > 1.0:
-                    percent_val = percent_val / 100.0
-                ws.write_number(write_row, 5, percent_val, pct_fmt)
-            elif percent_val is None:
-                ws.write_blank(write_row, 5, None, cell_fmt)
-            else:
-                # fallback as text
-                ws.write(write_row, 5, str(percent_val), cell_fmt)
-            write_row += 1
-
-        ws.autofilter(0, 0, max(write_row - 1, 0), len(headers) - 1)
-        ws.freeze_panes(1, 0)
-        ws.set_column(0, 0, 22)
-        ws.set_column(1, 1, 22)
-        ws.set_column(2, 2, 18)
-        ws.set_column(3, 4, 10)
-        ws.set_column(5, 5, 10)
-
-        # RawSummaryJSON
-        ws2 = workbook.add_worksheet("RawSummaryJSON")
-        ws2.write(0, 0, "Path", header_fmt)
-        ws2.write(0, 1, "Value", header_fmt)
-        end_row = _emit_flat(ws2, summary, "", 1)
-        ws2.autofilter(0, 0, max(end_row - 1, 0), 1)
-        ws2.freeze_panes(1, 0)
-        ws2.set_column(0, 0, 70)
-        ws2.set_column(1, 1, 80)
-
-        # MismatchTotals (if present)
-        totals_text = getattr(request, "totals", None)
-        if totals_text:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
             try:
-                totals_json = json.loads(totals_text)
-                ws3 = workbook.add_worksheet("MismatchTotals")
-                ws3.write(0, 0, "Path", header_fmt)
-                ws3.write(0, 1, "Value", header_fmt)
-                end_row3 = _emit_flat(ws3, totals_json, "", 1)
-                ws3.autofilter(0, 0, max(end_row3 - 1, 0), 1)
-                ws3.freeze_panes(1, 0)
-                ws3.set_column(0, 0, 70)
-                ws3.set_column(1, 1, 80)
-            except Exception:
-                pass
+                return int(float(value))
+            except (TypeError, ValueError):
+                return None
+
+    def _location(data, model_object):
+        """Return the explicit location or construct start-stop coordinates."""
+        value = _get_field(
+            data,
+            ["location", "amplicon_range", "GenomeLocation"],
+        )
+        if value not in (None, ""):
+            return value
+
+        start = _get_field(data, ["start_pos"])
+        stop = _get_field(data, ["stop_pos"])
+        if model_object is not None:
+            start = start or model_object.start_pos
+            stop = stop or model_object.stop_pos
+
+        if start not in (None, "") and stop not in (None, ""):
+            return "{0}-{1}".format(start, stop)
+        return "ND"
+
+    # Collect one worksheet entry per panel/SEQID and retain per-primer data.
+    entries = {}
+    primer_names = set()
+
+    for primer_name, primer_data in report.items():
+        if primer_name == "validator_version":
+            continue
+        if not isinstance(primer_data, dict):
+            continue
+
+        primer_names.add(primer_name)
+        for panel_name, panel_data in primer_data.items():
+            if not isinstance(panel_data, dict):
+                continue
+
+            panel_name = str(panel_name).upper()
+            for seqid, sequence_data in panel_data.items():
+                if seqid in ("percent", "positive", "total"):
+                    continue
+
+                entry = entries.setdefault(
+                    (panel_name, seqid),
+                    {"per_primer": {}},
+                )
+                entry["per_primer"][primer_name] = (
+                    sequence_data if isinstance(sequence_data, dict) else {}
+                )
+
+    primer_names = sorted(primer_names)
+
+    # Load model data because query/ref strings and primer sequences may not
+    # be included in request.report.
+    if isinstance(request, PrimerVerifierRequest):
+        sequence_model = VerifierSEQID
+        primer_set_model = VerifierPrimerSet
+        request_filter = "panel__verifier_request_id"
+        primer_request_filter = "verifier_request_id"
+    else:
+        sequence_model = ValidatorSEQID
+        primer_set_model = ValidatorPrimerSet
+        request_filter = "panel__validator_request_id"
+        primer_request_filter = "validator_request_id"
+
+    sequence_query = (
+        sequence_model.objects.filter(**{request_filter: request.pk})
+        .select_related(
+            "panel",
+            "primer",
+        )
+        .prefetch_related("primer__primer")
+    )
+
+    model_values = {}
+
+    for sequence_object in sequence_query:
+        if sequence_object.primer is None:
+            continue
+
+        primer_name = sequence_object.primer.primer_name
+        model_key = (
+            str(sequence_object.panel.panel).upper(),
+            sequence_object.seqid,
+            primer_name,
+        )
+        model_values[model_key] = sequence_object
+
+    # Load primer sequences independently of sequence hits. This ensures that
+    # perfect matches and primer/SEQID combinations without a SEQID model row
+    # do not prevent other rows from receiving pseudoalignment output.
+    primer_sequences = {}
+    primer_set_query = primer_set_model.objects.filter(
+        **{primer_request_filter: request.pk}
+    ).prefetch_related("primer")
+
+    for primer_set in primer_set_query:
+        directional_sequences = {}
+        unresolved_sequences = []
+
+        for primer_object in primer_set.primer.all():
+            direction = _primer_direction(primer_object.primer_header)
+            if direction is None:
+                unresolved_sequences.append(primer_object.primer_sequence)
+            else:
+                directional_sequences[direction] = primer_object.primer_sequence
+
+        # Some uploaded primer headers do not end with -F/-R. For a standard
+        # two-primer set, use model order as a deterministic fallback.
+        if "forward" not in directional_sequences and unresolved_sequences:
+            directional_sequences["forward"] = unresolved_sequences.pop(0)
+        if "reverse" not in directional_sequences and unresolved_sequences:
+            directional_sequences["reverse"] = unresolved_sequences.pop(0)
+
+        primer_sequences[primer_set.primer_name] = directional_sequences
+
+    def _model_value(model_object, attribute, default=""):
+        """Read an attribute from an optional model object."""
+        if model_object is None:
+            return default
+        return getattr(model_object, attribute, default)
+
+    def _result(panel_name, seqid, primer_name, report_data):
+        """Merge JSON report values with model alignment values."""
+        data = report_data if isinstance(report_data, dict) else {}
+        model_object = model_values.get((panel_name, seqid, primer_name))
+        sequences = primer_sequences.get(primer_name, {})
+
+        forward_mismatch = _get_field(
+            data,
+            ["forward_mismatch", "ForwardMismatches"],
+            _model_value(model_object, "forward_mismatch"),
+        )
+        reverse_mismatch = _get_field(
+            data,
+            ["reverse_mismatch", "ReverseMismatches"],
+            _model_value(model_object, "reverse_mismatch"),
+        )
+        forward_details = _get_field(
+            data,
+            ["forward_mismatch_details", "ForwardMismatchDetails"],
+            _model_value(model_object, "forward_mismatch_details"),
+        )
+        reverse_details = _get_field(
+            data,
+            ["reverse_mismatch_details", "ReverseMismatchDetails"],
+            _model_value(model_object, "reverse_mismatch_details"),
+        )
+        total_mismatch = _get_field(
+            data,
+            ["total_mismatch", "TotalMismatches"],
+            _model_value(model_object, "total_mismatch"),
+        )
+
+        if total_mismatch in (None, ""):
+            forward_value = _parse_mismatch(forward_mismatch)
+            reverse_value = _parse_mismatch(reverse_mismatch)
+            if forward_value is not None or reverse_value is not None:
+                total_mismatch = (forward_value or 0) + (reverse_value or 0)
+
+        forward_primer = sequences.get("forward", "")
+        reverse_primer = sequences.get("reverse", "")
+        forward_target = _model_value(model_object, "forward_ref")
+        reverse_target = _model_value(model_object, "reverse_ref")
+
+        # Prefer stored aligned query strings where available. Otherwise use
+        # the original primer sequence from VerifierPrimers/ValidatorPrimers.
+        forward_query = _model_value(model_object, "forward_query") or forward_primer
+        reverse_query = _model_value(model_object, "reverse_query") or reverse_primer
+
+        return {
+            "amplicon_length": _get_field(
+                data,
+                ["amplicon_length", "amplicon_size", "AmpliconSize"],
+                _model_value(model_object, "amplicon_length"),
+            ),
+            "contig": _get_field(
+                data,
+                ["contig", "Contig"],
+                _model_value(model_object, "contig"),
+            ),
+            "location": _location(data, model_object),
+            "direction": _get_field(
+                data,
+                ["direction", "orientation"],
+                _model_value(model_object, "direction"),
+            ),
+            "forward_mismatch": forward_mismatch,
+            "forward_mismatch_details": _decode_details(forward_details) or "ND",
+            "reverse_mismatch": reverse_mismatch,
+            "reverse_mismatch_details": _decode_details(reverse_details) or "ND",
+            "pseudoalignment": _combined_pseudoalignment(
+                forward_query,
+                forward_target,
+                forward_details,
+                reverse_query,
+                reverse_target,
+                reverse_details,
+            ),
+            "total_mismatch": total_mismatch,
+        }
+
+    temp_file = tempfile.NamedTemporaryFile(
+        suffix=".xlsx",
+        delete=False,
+    )
+    temp_path = temp_file.name
+    temp_file.close()
+
+    try:
+        workbook = xlsxwriter.Workbook(temp_path)
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "bg_color": "#D9EAD3",
+                "border": 1,
+                "align": "center",
+                "valign": "vcenter",
+                "text_wrap": True,
+            }
+        )
+        cell_format = workbook.add_format(
+            {
+                "border": 1,
+                "valign": "vcenter",
+            }
+        )
+        alignment_format = workbook.add_format(
+            {
+                "border": 1,
+                "font_name": "Courier New",
+                "font_size": 9,
+                "valign": "vcenter",
+                "text_wrap": True,
+            }
+        )
+
+        worksheet = workbook.add_worksheet("PrimerVerifierResults")
+        headers = ["SEQID", "PANEL"]
+        for primer_name in primer_names:
+            for field_label, field_name in primer_fields:
+                del field_name
+                headers.append("{0}  {1}".format(field_label, primer_name))
+
+        for column, header in enumerate(headers):
+            worksheet.write(0, column, header, header_format)
+
+        panel_order = {"INCLUSIVITY": 0, "EXCLUSIVITY": 1}
+        sorted_keys = sorted(
+            entries,
+            key=lambda item: (
+                panel_order.get(item[0], 2),
+                item[0],
+                item[1],
+            ),
+        )
+
+        for row, entry_key in enumerate(sorted_keys, start=1):
+            panel_name, seqid = entry_key
+            entry = entries[entry_key]
+            worksheet.write(row, 0, seqid, cell_format)
+            worksheet.write(row, 1, panel_name, cell_format)
+            column = 2
+            row_has_alignment = False
+
+            for primer_name in primer_names:
+                report_data = entry["per_primer"].get(primer_name, {})
+                model_object = model_values.get((panel_name, seqid, primer_name))
+                has_hit = bool(report_data) or model_object is not None
+                result = _result(
+                    panel_name,
+                    seqid,
+                    primer_name,
+                    report_data,
+                )
+
+                for field_label, field_name in primer_fields:
+                    del field_label
+                    value = result.get(field_name) if has_hit else "ND"
+                    if value in (None, ""):
+                        value = "ND"
+
+                    output_format = cell_format
+                    if field_name == "pseudoalignment":
+                        output_format = alignment_format
+                        if isinstance(value, str) and "\n" in value:
+                            row_has_alignment = True
+
+                    worksheet.write(
+                        row,
+                        column,
+                        value,
+                        output_format,
+                    )
+                    column += 1
+
+            worksheet.set_row(row, 105 if row_has_alignment else 20)
+
+        worksheet.autofilter(
+            0,
+            0,
+            max(len(sorted_keys), 1),
+            max(len(headers) - 1, 0),
+        )
+        worksheet.freeze_panes(1, 2)
+        worksheet.set_row(0, 54)
+        worksheet.set_column(0, 0, 22)
+        worksheet.set_column(1, 1, 14)
+
+        column = 2
+        for primer_name in primer_names:
+            del primer_name
+            for field_label, field_name in primer_fields:
+                del field_label
+                if field_name == "pseudoalignment":
+                    worksheet.set_column(column, column, 48)
+                elif field_name == "contig":
+                    worksheet.set_column(column, column, 22)
+                elif field_name == "location":
+                    worksheet.set_column(column, column, 18)
+                else:
+                    worksheet.set_column(column, column, 15)
+                column += 1
 
         workbook.close()
 
-        # Upload next to JSON summary
         blob_name = "reports/{0}_summary_report.xlsx".format(container_name)
         blob_client.create_blob_from_path(
             container_name=container_name,
             blob_name=blob_name,
-            file_path=tmp_path,
-            content_settings=ContentSettings(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            file_path=temp_path,
+            content_settings=ContentSettings(
+                content_type=(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            ),
         )
     finally:
         try:
-            os.remove(tmp_path)
-        except Exception:
+            os.remove(temp_path)
+        except OSError:
             pass
 
 

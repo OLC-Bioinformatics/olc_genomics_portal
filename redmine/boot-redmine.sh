@@ -63,8 +63,38 @@ EOL
   fi
 fi
 
-echo "=== Ensuring Redmine REST API is enabled ==="
-bundle exec rails runner "Setting['rest_api_enabled'] = '1'"
+echo "=== Ensuring Redmine default user email notification option is configured ==="
+bundle exec rails runner - <<'RUBY'
+target_option = 'only_my_events'
+migration_flag_file = '/usr/src/redmine/files/.cfia_mail_notification_migrated_to_only_my_events'
+
+# This controls the default for newly created users.
+previous_default = Setting['default_notification_option']
+Setting['default_notification_option'] = target_option
+
+puts "Default notification option: #{previous_default.inspect} -> #{Setting['default_notification_option'].inspect}"
+
+# One-off migration for existing users.
+#
+# Use a persistent marker file instead of a custom Redmine Setting because
+# Redmine validates Setting.name against a fixed list.
+if File.exist?(migration_flag_file)
+  puts "Existing user notification migration already completed; skipping"
+else
+  scope = User.where(mail_notification: 'only_assigned')
+
+  puts "Updating #{scope.count} existing user(s) from only_assigned to #{target_option}"
+
+  scope.find_each do |user|
+    user.update_column(:mail_notification, target_option)
+  end
+
+  File.write(migration_flag_file, Time.now.utc.iso8601 + "\n")
+
+  puts "Existing user notification migration complete"
+end
+RUBY
+
 
 echo "=== Applying fallback password migration ==="
 bundle exec rails runner - <<'RUBY'

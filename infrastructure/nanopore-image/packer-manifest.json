@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1789665770,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.11",
+      "packer_run_uuid": "f7ace3e0-3158-8bba-759d-8ffd0dc3c4cd",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.11"
+      }
+    }
+  ],
+  "last_run_uuid": "f7ace3e0-3158-8bba-759d-8ffd0dc3c4cd"
+}

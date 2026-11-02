@@ -1,0 +1,1184 @@
+{
+  "evaluation_path": "/app/tests/evaluation_questions.yaml",
+  "top_k": 5,
+  "category_filter": "tool_selection",
+  "started_at": "2026-07-16T13:43:29.745419+00:00",
+  "completed_at": "2026-07-16T13:43:30.794084+00:00",
+  "questions_loaded": 142,
+  "questions_evaluated": 16,
+  "answerable_questions": 16,
+  "no_answer_questions": 0,
+  "internal_questions": 0,
+  "errors": 0,
+  "source_hit_at_1_count": 14,
+  "source_hit_at_3_count": 15,
+  "source_hit_at_5_count": 15,
+  "source_hit_at_1_rate": 0.875,
+  "source_hit_at_3_rate": 0.9375,
+  "source_hit_at_5_rate": 0.9375,
+  "heading_questions": 1,
+  "heading_hit_count": 1,
+  "heading_hit_rate": 1.0,
+  "term_questions": 16,
+  "term_hit_count": 15,
+  "term_hit_rate": 0.9375,
+  "internal_leakage_count": 0,
+  "internal_access_hit_count": 0,
+  "internal_access_hit_rate": null,
+  "no_answer_mean_top_score": null,
+  "no_answer_max_top_score": null,
+  "category_counts": {
+    "tool_selection": 16
+  },
+  "results": [
+    {
+      "identifier": "select-plasmid-detection",
+      "question": "Which tool should I use to detect and type plasmids?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/mobsuite.md"
+      ],
+      "expected_terms": [
+        "MobSuite"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8232778416110387,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect and type plasmids in my sequence assemblies",
+          "score": 0.8232778416110387,
+          "access_level": "standard",
+          "chunk_key": "index.md::0013::olc-redmine-automator-possible-analyses-i-want-to-detect-and-type-plasmids-in-my-sequence-assemblies::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.7561034254904478,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7460557080407678,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/plasmidborneidentity.md",
+          "document_title": "Plasmid-Borne Identity",
+          "heading_path": "Plasmid-Borne Identity > How do I use it? > Optional arguments",
+          "score": 0.7400671398599674,
+          "access_level": "standard",
+          "chunk_key": "analysis/plasmidborneidentity.md::0004::plasmid-borne-identity-how-do-i-use-it-optional-arguments::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/plasmidborneidentity.md",
+          "document_title": "Plasmid-Borne Identity",
+          "heading_path": "Plasmid-Borne Identity > How do I use it? > Interpreting Results",
+          "score": 0.7396971738518983,
+          "access_level": "standard",
+          "chunk_key": "analysis/plasmidborneidentity.md::0006::plasmid-borne-identity-how-do-i-use-it-interpreting-results::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-gene-detection",
+      "question": "I want to look for genes in my assemblies. Which analyses can I use?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/geneseekr.md",
+        "analysis/kma.md"
+      ],
+      "expected_terms": [
+        "GeneSeekr",
+        "KMA"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7827751636505127,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect genes in my sequences",
+          "score": 0.7827751636505127,
+          "access_level": "standard",
+          "chunk_key": "index.md::0004::olc-redmine-automator-possible-analyses-i-want-to-detect-genes-in-my-sequences::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7745918900261112,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > How do I use it? > Attachments",
+          "score": 0.7665411233901978,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0003::primerfinder-how-do-i-use-it-attachments::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Description",
+          "score": 0.7604255819067026,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0002::kma-gene-detection-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/roary.md",
+          "document_title": "RoaryScoary",
+          "heading_path": "RoaryScoary > How do I use it? > Description",
+          "score": 0.752046525478363,
+          "access_level": "standard",
+          "chunk_key": "analysis/roary.md::0002::roaryscoary-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-metagenomic-taxonomy",
+      "question": "Which tools can identify organisms in a metagenomic sample?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/metaphlan.md",
+        "analysis/kraken2.md"
+      ],
+      "expected_terms": [
+        "MetaPhlAn",
+        "Kraken2"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.751497596323782,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine taxonomy in metagenomic sequences",
+          "score": 0.751497596323782,
+          "access_level": "standard",
+          "chunk_key": "index.md::0009::olc-redmine-automator-possible-analyses-i-want-to-determine-taxonomy-in-metagenomic-sequences::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > What does it do?",
+          "score": 0.7440749268397833,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0000::unknownisolate-genus-species-determination-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/autoclark.md",
+          "document_title": "AutoCLARK",
+          "heading_path": "AutoCLARK > What does it do?",
+          "score": 0.7427220055196332,
+          "access_level": "standard",
+          "chunk_key": "analysis/autoclark.md::0000::autoclark-what-does-it-do::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.740226613242637,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/metaphlan.md",
+          "document_title": "MetaPhlAn4",
+          "heading_path": "MetaPhlAn4 > What does it do?",
+          "score": 0.733188660956786,
+          "access_level": "standard",
+          "chunk_key": "analysis/metaphlan.md::0000::metaphlan4-what-does-it-do::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-phylogeny",
+      "question": "What can I use to create a phylogenetic tree?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/mashtree.md",
+        "analysis/bcgtree.md"
+      ],
+      "expected_terms": [
+        "MASHtree",
+        "BCGTree"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8121698740771379,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Create a phylogeny",
+          "score": 0.8121698740771379,
+          "access_level": "standard",
+          "chunk_key": "index.md::0012::olc-redmine-automator-possible-analyses-i-want-to-create-a-phylogeny::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/snvphyl.md",
+          "document_title": "SNVPhyl",
+          "heading_path": "SNVPhyl > Interpreting results > Phylogenetic tree",
+          "score": 0.7623382437926011,
+          "access_level": "standard",
+          "chunk_key": "analysis/snvphyl.md::0010::snvphyl-interpreting-results-phylogenetic-tree::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/diversitree.md",
+          "document_title": "DiversiTree",
+          "heading_path": "DiversiTree > How do I use it? > Description",
+          "score": 0.754171036308141,
+          "access_level": "standard",
+          "chunk_key": "analysis/diversitree.md::0002::diversitree-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/snippy.md",
+          "document_title": "Snippy",
+          "heading_path": "Snippy > How do I use it? > Description",
+          "score": 0.7484376653563284,
+          "access_level": "standard",
+          "chunk_key": "analysis/snippy.md::0002::snippy-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/mashtree.md",
+          "document_title": "MashTree",
+          "heading_path": "MashTree > What does it do?",
+          "score": 0.7444575207097107,
+          "access_level": "standard",
+          "chunk_key": "analysis/mashtree.md::0000::mashtree-what-does-it-do::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-unknown-isolate",
+      "question": "I do not know the genus or species of my isolate. What should I run?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/unknownisolate.md"
+      ],
+      "expected_terms": [
+        "Unknown Isolate"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8010269999504089,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Description",
+          "score": 0.8010269999504089,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0002::unknownisolate-genus-species-determination-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Interpreting GROBI Report",
+          "score": 0.7740197777748108,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0005::unknownisolate-genus-species-determination-how-do-i-use-it-interpreting-grobi-report::0001"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7679937162406837,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > What can go wrong?",
+          "score": 0.7631669640541077,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0008::unknownisolate-genus-species-determination-what-can-go-wrong::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Databases Used by the Automator",
+          "score": 0.7577974200248718,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0006::unknownisolate-genus-species-determination-how-do-i-use-it-databases-used-by-the-automator::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-close-relatives",
+      "question": "How can I find the strains most closely related to a query SeqID?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/neartree.md"
+      ],
+      "expected_terms": [
+        "NearTree"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7923202514648438,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Find sequences closely related to a query sequence",
+          "score": 0.7923202514648438,
+          "access_level": "standard",
+          "chunk_key": "index.md::0008::olc-redmine-automator-possible-analyses-i-want-to-find-sequences-closely-related-to-a-query-sequence::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/closerelatives.md",
+          "document_title": "CloseRelatives",
+          "heading_path": "CloseRelatives > How do I use it? > Description",
+          "score": 0.7889217138290405,
+          "access_level": "standard",
+          "chunk_key": "analysis/closerelatives.md::0002::closerelatives-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/neartree.md",
+          "document_title": "NearTree",
+          "heading_path": "NearTree > How do I use it? > Description",
+          "score": 0.7819695006627156,
+          "access_level": "standard",
+          "chunk_key": "analysis/neartree.md::0002::neartree-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/neartree.md",
+          "document_title": "NearTree",
+          "heading_path": "NearTree > What does it do?",
+          "score": 0.7753182053565979,
+          "access_level": "standard",
+          "chunk_key": "analysis/neartree.md::0000::neartree-what-does-it-do::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/strainmash.md",
+          "document_title": "StrainMash",
+          "heading_path": "StrainMash > How do I use it? > Interpreting Results",
+          "score": 0.7556895017623901,
+          "access_level": "standard",
+          "chunk_key": "analysis/strainmash.md::0004::strainmash-how-do-i-use-it-interpreting-results::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-diverse-sequences",
+      "question": "How can I choose the most diverse genomes from a larger set?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/diversitree.md"
+      ],
+      "expected_terms": [
+        "DiverseTree"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7461416276608941,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Find the most diverse sequences in a set",
+          "score": 0.7461416276608941,
+          "access_level": "standard",
+          "chunk_key": "index.md::0007::olc-redmine-automator-possible-analyses-i-want-to-find-the-most-diverse-sequences-in-a-set::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/mashtree.md",
+          "document_title": "MashTree",
+          "heading_path": "MashTree > How do I use it? > Description",
+          "score": 0.7239796087754019,
+          "access_level": "standard",
+          "chunk_key": "analysis/mashtree.md::0002::mashtree-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/primerfinder.md",
+          "document_title": "PrimerFinder",
+          "heading_path": "PrimerFinder > How do I use it? > Attachments",
+          "score": 0.7000042796134949,
+          "access_level": "standard",
+          "chunk_key": "analysis/primerfinder.md::0003::primerfinder-how-do-i-use-it-attachments::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.6994994640947076,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/diversitree.md",
+          "document_title": "DiversiTree",
+          "heading_path": "DiversiTree > How do I use it? > Description",
+          "score": 0.6936075687408447,
+          "access_level": "standard",
+          "chunk_key": "analysis/diversitree.md::0002::diversitree-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-snp-analysis",
+      "question": "Which automators can find SNPs in my sequences?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/snvphyl.md",
+        "analysis/snippy.md"
+      ],
+      "expected_terms": [
+        "SNVPhyl",
+        "Snippy"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.818760181032425,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Find SNPs in my sequences",
+          "score": 0.818760181032425,
+          "access_level": "standard",
+          "chunk_key": "index.md::0010::olc-redmine-automator-possible-analyses-i-want-to-find-snps-in-my-sequences::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7540122788537575,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Find the most diverse sequences in a set",
+          "score": 0.7372033376335132,
+          "access_level": "standard",
+          "chunk_key": "index.md::0007::olc-redmine-automator-possible-analyses-i-want-to-find-the-most-diverse-sequences-in-a-set::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect genes in my sequences",
+          "score": 0.7320933560160806,
+          "access_level": "standard",
+          "chunk_key": "index.md::0004::olc-redmine-automator-possible-analyses-i-want-to-detect-genes-in-my-sequences::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Run a genome-wide association study",
+          "score": 0.7212668276210678,
+          "access_level": "standard",
+          "chunk_key": "index.md::0014::olc-redmine-automator-possible-analyses-i-want-to-run-a-genome-wide-association-study::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-annotation",
+      "question": "Which automator should I use to annotate a bacterial genome assembly?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/prokka.md"
+      ],
+      "expected_terms": [
+        "Prokka"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8049508681981218,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Annotate my sequence assemblies",
+          "score": 0.8049508681981218,
+          "access_level": "standard",
+          "chunk_key": "index.md::0011::olc-redmine-automator-possible-analyses-i-want-to-annotate-my-sequence-assemblies::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.755201338481584,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Run a genome-wide association study",
+          "score": 0.7482044400925165,
+          "access_level": "standard",
+          "chunk_key": "index.md::0014::olc-redmine-automator-possible-analyses-i-want-to-run-a-genome-wide-association-study::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Create a phylogeny",
+          "score": 0.7300396287394064,
+          "access_level": "standard",
+          "chunk_key": "index.md::0012::olc-redmine-automator-possible-analyses-i-want-to-create-a-phylogeny::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect and type plasmids in my sequence assemblies",
+          "score": 0.7241599292564528,
+          "access_level": "standard",
+          "chunk_key": "index.md::0013::olc-redmine-automator-possible-analyses-i-want-to-detect-and-type-plasmids-in-my-sequence-assemblies::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "select-gwas",
+      "question": "How can I run a microbial genome-wide association study?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "analysis/roary.md",
+        "analysis/pyseer.md"
+      ],
+      "expected_terms": [
+        "Roary",
+        "Pyseer"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.77349454164505,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Run a genome-wide association study",
+          "score": 0.77349454164505,
+          "access_level": "standard",
+          "chunk_key": "index.md::0014::olc-redmine-automator-possible-analyses-i-want-to-run-a-genome-wide-association-study::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/pyseer.md",
+          "document_title": "GWAS-pyseer",
+          "heading_path": "GWAS-pyseer > What does it do?",
+          "score": 0.7411916851997375,
+          "access_level": "standard",
+          "chunk_key": "analysis/pyseer.md::0000::gwas-pyseer-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.7223075197751821,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Description",
+          "score": 0.7209015225289488,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0002::kma-gene-detection-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/metaphlan.md",
+          "document_title": "MetaPhlAn4",
+          "heading_path": "MetaPhlAn4 > How do I use it? > Description",
+          "score": 0.7205470204353333,
+          "access_level": "standard",
+          "chunk_key": "analysis/metaphlan.md::0002::metaphlan4-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "retrieve-sequence-data",
+      "question": "How do I download sequence data to share with a collaborator?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "data/external_retrieve.md"
+      ],
+      "expected_terms": [
+        "External retrieve"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8171116818719114,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Download sequence data or share it with a collaborator",
+          "score": 0.8171116818719114,
+          "access_level": "standard",
+          "chunk_key": "index.md::0002::olc-redmine-automator-possible-analyses-i-want-to-download-sequence-data-or-share-it-with-a-collaborator::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Download COWBAT reports for a list of sequence assemblies",
+          "score": 0.7164482047290692,
+          "access_level": "standard",
+          "chunk_key": "index.md::0003::olc-redmine-automator-possible-analyses-i-want-to-download-cowbat-reports-for-a-list-of-sequence-assemblies::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/metaphlan.md",
+          "document_title": "MetaPhlAn4",
+          "heading_path": "MetaPhlAn4 > How do I use it? > Description",
+          "score": 0.689871985323908,
+          "access_level": "standard",
+          "chunk_key": "analysis/metaphlan.md::0002::metaphlan4-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/sequence_extractor.md",
+          "document_title": "SequenceExtractor",
+          "heading_path": "SequenceExtractor > How do I use it? > Interpreting Results",
+          "score": 0.6797526669649693,
+          "access_level": "standard",
+          "chunk_key": "analysis/sequence_extractor.md::0004::sequenceextractor-how-do-i-use-it-interpreting-results::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "data/sra_download.md",
+          "document_title": "SRA Downloads",
+          "heading_path": "SRA Downloads > How do I use it? > Description",
+          "score": 0.6796015286920633,
+          "access_level": "standard",
+          "chunk_key": "data/sra_download.md::0002::sra-downloads-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "retrieve-cowbat-reports",
+      "question": "How do I download COWBAT reports for several assemblies?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "index.md",
+        "data/report_retrieve.md"
+      ],
+      "expected_terms": [
+        "Report retrieve"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8140838853070819,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Download COWBAT reports for a list of sequence assemblies",
+          "score": 0.8140838853070819,
+          "access_level": "standard",
+          "chunk_key": "index.md::0003::olc-redmine-automator-possible-analyses-i-want-to-download-cowbat-reports-for-a-list-of-sequence-assemblies::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "data/sra_download.md",
+          "document_title": "SRA Downloads",
+          "heading_path": "SRA Downloads > How do I use it? > Description",
+          "score": 0.7351469117227898,
+          "access_level": "standard",
+          "chunk_key": "data/sra_download.md::0002::sra-downloads-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "data/report_retrieve.md",
+          "document_title": "Report Retrieve",
+          "heading_path": "Report Retrieve > What does it do?",
+          "score": 0.7122536644633216,
+          "access_level": "standard",
+          "chunk_key": "data/report_retrieve.md::0000::report-retrieve-what-does-it-do::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Download sequence data or share it with a collaborator",
+          "score": 0.6698073941584006,
+          "access_level": "standard",
+          "chunk_key": "index.md::0002::olc-redmine-automator-possible-analyses-i-want-to-download-sequence-data-or-share-it-with-a-collaborator::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/cowsnphr.md",
+          "document_title": "COWSNPhR",
+          "heading_path": "COWSNPhR > How do I use it? > Interpreting Results",
+          "score": 0.6668486197681069,
+          "access_level": "standard",
+          "chunk_key": "analysis/cowsnphr.md::0004::cowsnphr-how-do-i-use-it-interpreting-results::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "phastest-purpose",
+      "question": "Which automator can identify prophage regions in bacterial genomes?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "analysis/phastest.md"
+      ],
+      "expected_terms": [
+        "PHASTEST",
+        "prophage"
+      ],
+      "expected_heading_terms": [
+        "What does it do?"
+      ],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": true,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7537089137012427,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/phastest.md",
+          "document_title": "PHASTEST",
+          "heading_path": "PHASTEST > What does it do?",
+          "score": 0.7537089137012427,
+          "access_level": "standard",
+          "chunk_key": "analysis/phastest.md::0000::phastest-what-does-it-do::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Annotate my sequence assemblies",
+          "score": 0.7498598247850059,
+          "access_level": "standard",
+          "chunk_key": "index.md::0011::olc-redmine-automator-possible-analyses-i-want-to-annotate-my-sequence-assemblies::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/geneseekr.md",
+          "document_title": "GeneSeekr",
+          "heading_path": "GeneSeekr > How do I use it? > Description",
+          "score": 0.74900008744001,
+          "access_level": "standard",
+          "chunk_key": "analysis/geneseekr.md::0002::geneseekr-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Databases Provided with the Automator",
+          "score": 0.7403807794820811,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0005::kma-gene-detection-how-do-i-use-it-databases-provided-with-the-automator::0001"
+        },
+        {
+          "rank": 5,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Create a phylogeny",
+          "score": 0.7344611883163452,
+          "access_level": "standard",
+          "chunk_key": "index.md::0012::olc-redmine-automator-possible-analyses-i-want-to-create-a-phylogeny::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "sipprverse-purpose",
+      "question": "Which tool detects gene targets directly in raw FASTQ reads?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "analysis/sipprverse.md"
+      ],
+      "expected_terms": [
+        "sipprverse",
+        "raw FASTQ"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": false,
+      "source_hit_at_5": false,
+      "heading_terms_hit": null,
+      "content_terms_hit": false,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.8053362369537411,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Description",
+          "score": 0.8053362369537411,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0002::kma-gene-detection-how-do-i-use-it-description::0001"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Description",
+          "score": 0.7791047227916411,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0002::kma-gene-detection-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Detect genes in my sequences",
+          "score": 0.7642292239802627,
+          "access_level": "standard",
+          "chunk_key": "index.md::0004::olc-redmine-automator-possible-analyses-i-want-to-detect-genes-in-my-sequences::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > What does it do?",
+          "score": 0.7641205051017123,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0000::kma-gene-detection-what-does-it-do::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/metaphlan.md",
+          "document_title": "MetaPhlAn4",
+          "heading_path": "MetaPhlAn4 > How do I use it? > Description",
+          "score": 0.7591732596858312,
+          "access_level": "standard",
+          "chunk_key": "analysis/metaphlan.md::0002::metaphlan4-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "pointfinder-purpose",
+      "question": "Which tool detects chromosomal point mutations associated with antimicrobial resistance?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "analysis/pointfinder.md",
+        "analysis/resfinder.md"
+      ],
+      "expected_terms": [
+        "PointFinder",
+        "point mutations"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": true,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7784965170325938,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "analysis/resfinder.md",
+          "document_title": "ResFinder",
+          "heading_path": "ResFinder > What does it do?",
+          "score": 0.7784965170325938,
+          "access_level": "standard",
+          "chunk_key": "analysis/resfinder.md::0000::resfinder-what-does-it-do::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/pointfinder.md",
+          "document_title": "PointFinder",
+          "heading_path": "PointFinder > What does it do?",
+          "score": 0.7597547912743825,
+          "access_level": "standard",
+          "chunk_key": "analysis/pointfinder.md::0000::pointfinder-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Databases Provided with the Automator",
+          "score": 0.736406417321399,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0005::kma-gene-detection-how-do-i-use-it-databases-provided-with-the-automator::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/amrsummary.md",
+          "document_title": "AMRsummary",
+          "heading_path": "AMRsummary > What does it do?",
+          "score": 0.7243742346763611,
+          "access_level": "standard",
+          "chunk_key": "analysis/amrsummary.md::0000::amrsummary-what-does-it-do::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/kma.md",
+          "document_title": "KMA - Gene Detection",
+          "heading_path": "KMA - Gene Detection > How do I use it? > Description",
+          "score": 0.7117388592077712,
+          "access_level": "standard",
+          "chunk_key": "analysis/kma.md::0002::kma-gene-detection-how-do-i-use-it-description::0000"
+        }
+      ],
+      "error": null
+    },
+    {
+      "identifier": "drep-purpose",
+      "question": "Which automator can compare genomes using average nucleotide identity?",
+      "category": "tool_selection",
+      "expected_sources": [
+        "analysis/drep.md"
+      ],
+      "expected_terms": [
+        "dRep",
+        "average nucleotide identity"
+      ],
+      "expected_heading_terms": [],
+      "should_abstain": false,
+      "expected_access_level": "standard",
+      "source_hit_at_1": false,
+      "source_hit_at_3": true,
+      "source_hit_at_5": true,
+      "heading_terms_hit": null,
+      "content_terms_hit": true,
+      "internal_leakage": false,
+      "internal_access_hit": null,
+      "top_score": 0.7838654646953789,
+      "results": [
+        {
+          "rank": 1,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine the genus or species of a whole-genome sequence assembly",
+          "score": 0.7838654646953789,
+          "access_level": "standard",
+          "chunk_key": "index.md::0006::olc-redmine-automator-possible-analyses-i-want-to-determine-the-genus-or-species-of-a-whole-genome-sequence-assembly::0000"
+        },
+        {
+          "rank": 2,
+          "source_path": "analysis/drep.md",
+          "document_title": "dRep",
+          "heading_path": "dRep > What does it do?",
+          "score": 0.7506734132766777,
+          "access_level": "standard",
+          "chunk_key": "analysis/drep.md::0000::drep-what-does-it-do::0000"
+        },
+        {
+          "rank": 3,
+          "source_path": "index.md",
+          "document_title": "OLC Redmine Automator",
+          "heading_path": "OLC Redmine Automator > Possible Analyses > I want to: > Determine taxonomy in metagenomic sequences",
+          "score": 0.7362882933788487,
+          "access_level": "standard",
+          "chunk_key": "index.md::0009::olc-redmine-automator-possible-analyses-i-want-to-determine-taxonomy-in-metagenomic-sequences::0000"
+        },
+        {
+          "rank": 4,
+          "source_path": "analysis/drep.md",
+          "document_title": "dRep",
+          "heading_path": "dRep > How do I use it? > Description",
+          "score": 0.7329159815857412,
+          "access_level": "standard",
+          "chunk_key": "analysis/drep.md::0002::drep-how-do-i-use-it-description::0000"
+        },
+        {
+          "rank": 5,
+          "source_path": "analysis/unknownisolate.md",
+          "document_title": "Unknownisolate - Genus/species determination",
+          "heading_path": "Unknownisolate - Genus/species determination > How do I use it? > Interpreting GROBI Report",
+          "score": 0.7280743556066976,
+          "access_level": "standard",
+          "chunk_key": "analysis/unknownisolate.md::0005::unknownisolate-genus-species-determination-how-do-i-use-it-interpreting-grobi-report::0003"
+        }
+      ],
+      "error": null
+    }
+  ]
+}

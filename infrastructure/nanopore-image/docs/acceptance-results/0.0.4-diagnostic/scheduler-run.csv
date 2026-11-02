@@ -1,0 +1,2 @@
+run_id,reference,pod5_dir,output_dir,barcode,barcode_values
+acceptance,/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta,/mnt/resource/nanopore-acceptance/input,/mnt/resource/nanopore-acceptance/output/scheduler,SQK-RBK114-24,"12,16,20,22"

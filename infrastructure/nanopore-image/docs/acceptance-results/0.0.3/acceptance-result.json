@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "accepted": true,
+  "image_version": "0.0.3",
+  "gpu": {
+    "name": "NVIDIA A10-12Q",
+    "memory_mib": 12288,
+    "driver_version": "570.237"
+  },
+  "dorado": {
+    "version": "2.1.2+8b8fc5d",
+    "model": "dna_r10.4.1_e8.2_400bps_fast@v5.2.0",
+    "barcode_kit": "SQK-RBK114-24"
+  },
+  "input": {
+    "directory": "/mnt/resource/nanopore-acceptance/input",
+    "pod5_count": 1,
+    "pod5_bytes": 3095356360
+  },
+  "test": {
+    "started_at": "2026-09-03T19:41:34+00:00",
+    "finished_at": "2026-09-03T19:43:32+00:00",
+    "elapsed_seconds": 118,
+    "read_count": 80356,
+    "classified_reads": 5,
+    "unknown_reads": 80351,
+    "classified_percent": 0.006222,
+    "bam_bytes": 276254673,
+    "demux_file_count": 5,
+    "barcode_counts": {
+      "barcode12": 1,
+      "barcode16": 2,
+      "barcode20": 1,
+      "barcode22": 1,
+      "unknown": 80351
+    }
+  }
+}

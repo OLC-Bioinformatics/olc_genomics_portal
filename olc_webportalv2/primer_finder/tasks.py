@@ -7,11 +7,14 @@ requests.
 
 # Standard imports
 import datetime
-import shutil
 import os
+import posixpath
+import shlex
+import shutil
+import time
 from typing import (
     Any,
-    Tuple,
+    Tuple
 )
 
 # Django imports
@@ -45,7 +48,7 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorRequest,
     VerifierAzureRequest,
     VerifierPanel,
-    VerifierPrimerSet,
+    VerifierPrimerSet
 )
 
 
@@ -75,14 +78,9 @@ def run_primer_verifier(
         )
 
 
-def _process_primer_request(
-    *,  # Force the use of keyword arguments
-    panel_model: Any,
-    request_model: Any,
-    request_pk: int
-):
+def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk: int):
     """
-    Process a primer (validator or verifier) request.
+    Process a primer validator or verifier request.
 
     Args:
         panel_model (Any): The model class for the panel.
@@ -90,57 +88,72 @@ def _process_primer_request(
         request_pk (int): The primary key of the request object.
     """
     # Retrieve the primer model object corresponding to the
-    # request primary key
-    primer_request = request_model.objects.get(
-        pk=request_pk
-    )
+    # request primary key.
+    primer_request = request_model.objects.get(pk=request_pk)
 
-    # Upload the primer file to the AzureBatch VM
+    # Upload the primer file to the Azure Blob request container.
     container_name, file_name = upload_primers(request=primer_request)
 
-    # If a probe sequence is provided, upload it
-    if getattr(primer_request, 'probe_sequence', None):
+    input_blob_names = [file_name]
+
+    # If a probe sequence is provided, upload it and add it to the list of
+    # blobs that the Batch node must download.
+    if getattr(primer_request, "probe_sequence", None):
         upload_probe(request=primer_request)
+        input_blob_names.append("probe.fasta")
 
-    # Set the path to the mounted container in the AzureBatch VM
-    path = '$AZ_BATCH_NODE_MOUNTS_DIR/{container}'.format(
-        container=container_name
-    )
-
-    # Create the PrimerValidator system call
-    cmd = _create_primer_cmd(
-        container_name=container_name,
-        file_name=file_name,
-        path=path,
-        request=primer_request
-    )
-
-    # Handle the inclusivity panel files
-    _handle_panel_files(
+    # Handle the inclusivity panel files. This must happen before command
+    # creation because any server-side benchmark copy must finish before its
+    # SAS URL is generated and the Batch task is submitted.
+    inclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=True,
         panel_model=panel_model,
-        request_pk=request_pk
+        request_pk=request_pk,
     )
+    input_blob_names.extend(inclusivity_blob_names)
 
-    # Handle the exclusivity panel files
-    _handle_panel_files(
+    # Handle the exclusivity panel files.
+    exclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=False,
         panel_model=panel_model,
-        request_pk=request_pk
+        request_pk=request_pk,
+    )
+    input_blob_names.extend(exclusivity_blob_names)
+
+    # Generate short-lived read-only SAS URLs for all task input files.
+    # The Batch command uses curl to download these files directly to the
+    # node's local /datadrive filesystem instead of reading them through
+    # the BlobFuse mount.
+    input_blobs = _generate_input_blob_sas_urls(
+        container_name=container_name, blob_names=input_blob_names
     )
 
-    # Submit the command to the AzureBatch service
+    # Set the path to the mounted container in the Azure Batch VM. The mount
+    # remains in use for copying outputs back to Azure Blob Storage.
+    path = "$AZ_BATCH_NODE_MOUNTS_DIR/{container}".format(container=container_name)
+
+    # Create the PrimerValidator system call after all input blobs have been
+    # prepared and their SAS URLs generated.
+    cmd = _create_primer_cmd(
+        container_name=container_name,
+        file_name=file_name,
+        input_blobs=input_blobs,
+        path=path,
+        request=primer_request,
+    )
+
+    # Submit the command to the Azure Batch service.
     generic_api_submit(
         command=cmd,
         container_name=container_name,
         input_file_pattern=None,
-        vm_size='Standard_D4ds_v5',
-        unique_id='FoodPort'
+        vm_size="Standard_D4ds_v5",
+        unique_id="FoodPort",
     )
 
-    # Create the appropriate AzureRequest tracking row
+    # Create the appropriate AzureRequest tracking row.
     if request_model == PrimerVerifierRequest:
         VerifierAzureRequest.objects.create(
             verifier_request=primer_request, exit_code_file="NA"
@@ -152,85 +165,281 @@ def _process_primer_request(
 
 
 def _create_primer_cmd(
-    *,  # Force the use of keyword arguments
-    container_name: str,
-    file_name: str,
-    path: str,
-    request: Any
+    *, container_name: str, file_name: str, input_blobs: list, path: str, request: Any
 ) -> str:
     """
-    Create the system call. The call includes activating the
-    conda environment, copying the input files to a SSD, creating files with
-    the sequence IDs for each zip file, unzipping the zip files, running the
-    primer_validator.py script, and copying the reports folder back to the
-    container mount.
+    Create the system call.
+
+    The call includes activating the conda environment, downloading input
+    files directly from Azure Blob Storage to the node SSD with curl,
+    creating files with the sequence IDs for each ZIP file, unzipping the ZIP
+    files, running the primer_validator.py script, and copying the reports
+    folder back to the container mount.
+
+    Direct curl downloads are used for input files because very large files
+    can fail when read through the BlobFuse mount even when their names,
+    metadata, and sizes remain visible through the mounted filesystem.
+
+    Args:
+        container_name (str): Name of the request's Azure Blob container.
+        file_name (str): Blob name of the uploaded primer file.
+        input_blobs (list): Dictionaries containing blob names and read-only
+            SAS URLs for the required task inputs.
+        path (str): Path to the mounted request container on the Batch node.
+        request (Any): Primer validator or verifier request object.
+
+    Returns:
+        str: The complete shell command submitted to Azure Batch.
     """
-    # fallback defaults for fields that may not exist on ValidatorRequest
+    # Fallback defaults for fields that may not exist on ValidatorRequest.
     mismatches = getattr(request, "mismatches", 2)
     min_amplicon_size = getattr(request, "min_amplicon_size", 0)
     max_amplicon_size = getattr(request, "max_amplicon_size", 1500)
     range_buffer = getattr(request, "range_buffer", 0)
 
-    # Create the PrimerValidator system call using the supplied arguments
-    cmd = (
-        "source $CONDA/activate /envs/primer_validator && "
-        "set -euo pipefail; "
-        "mkdir -p /datadrive/{run_name}/inclusivity /datadrive/{run_name}/exclusivity && "
-        "cp -R {path} /datadrive/ && "
-        "shopt -s nullglob && "
-        # Inclusivity archives
-        "for zip_file in /datadrive/{run_name}/inclusivity/*.zip; do "
-        'archive_name=$(basename "$zip_file" .zip); '
-        'unzip -n -q "$zip_file" -d /datadrive/{run_name}/inclusivity || true; '
-        # List .fasta members, keep full path minus .fasta
-        'unzip -Z1 "$zip_file" | grep -E "\\.fasta$" | sed "s/\\.fasta$//" '
-        "| sort -u > /datadrive/{run_name}/${{archive_name}}_seqids.txt; "
-        "done; "
-        # Exclusivity archives
-        "for zip_file in /datadrive/{run_name}/exclusivity/*.zip; do "
-        'archive_name=$(basename "$zip_file" .zip); '
-        'unzip -n -q "$zip_file" -d /datadrive/{run_name}/exclusivity || true; '
-        'unzip -Z1 "$zip_file" | grep -E "\\.fasta$" | sed "s/\\.fasta$//" '
-        "| sort -u > /datadrive/{run_name}/${{archive_name}}_seqids.txt; "
-        "done; "
-        # Run validator
+    run_directory = "/datadrive/{run_name}".format(run_name=container_name)
+
+    inclusivity_directory = posixpath.join(run_directory, "inclusivity")
+    exclusivity_directory = posixpath.join(run_directory, "exclusivity")
+    reports_directory = posixpath.join(run_directory, "reports")
+
+    # Begin the command by activating the PrimerValidator environment and
+    # enabling strict shell error handling.
+    command_parts = [
+        "source $CONDA/activate /envs/primer_validator",
+        "set -euo pipefail",
+        # Define the output mount in the shell so that the environment
+        # variable is expanded on the Batch node.
+        'mount_dir="{path}"'.format(path=path),
+        # Remove local files from an earlier execution of this request.
+        # This affects only the node's local SSD and does not delete blobs.
+        "rm -rf {run_directory}".format(run_directory=shlex.quote(run_directory)),
+        # Create local directories even when no inclusivity or exclusivity
+        # panel was selected.
+        "mkdir -p {inclusivity} {exclusivity} {reports}".format(
+            inclusivity=shlex.quote(inclusivity_directory),
+            exclusivity=shlex.quote(exclusivity_directory),
+            reports=shlex.quote(reports_directory),
+        ),
+    ]
+
+    # Download every required input blob directly to the node's local SSD.
+    # shlex.quote() is essential because SAS URLs contain shell
+    # metacharacters, including ampersands.
+    for input_blob in input_blobs:
+        blob_name = input_blob["blob_name"]
+        sas_url = input_blob["sas_url"]
+
+        destination_path = posixpath.join(run_directory, blob_name)
+        destination_directory = posixpath.dirname(destination_path)
+        partial_path = "{destination}.part".format(destination=destination_path)
+
+        command_parts.extend(
+            [
+                "mkdir -p {directory}".format(
+                    directory=shlex.quote(destination_directory)
+                ),
+                # Download to a temporary filename. Curl follows redirects,
+                # fails on HTTP errors, and retries transient failures.
+                (
+                    "curl "
+                    "--fail "
+                    "--location "
+                    "--retry 5 "
+                    "--retry-delay 10 "
+                    "--connect-timeout 60 "
+                    "--continue-at - "
+                    "--output {partial} "
+                    "{source}"
+                ).format(
+                    partial=shlex.quote(partial_path), source=shlex.quote(sas_url)
+                ),
+                # Verify that curl produced a nonempty local file before moving
+                # it to its final name.
+                "test -s {partial}".format(partial=shlex.quote(partial_path)),
+                # Rename the completed download to its final name.
+                "mv {partial} {destination}".format(
+                    partial=shlex.quote(partial_path),
+                    destination=shlex.quote(destination_path),
+                ),
+                # Verify the final file as an additional safeguard.
+                "test -s {destination}".format(
+                    destination=shlex.quote(destination_path)
+                ),
+            ]
+        )
+
+    # Process inclusivity ZIP archives. The explicit existence test avoids
+    # passing a literal glob pattern to unzip when the directory is empty.
+    command_parts.append(
+        (
+            "for zip_file in {directory}/*.zip; do "
+            '[ -e "$zip_file" ] || continue; '
+            'archive_name=$(basename "$zip_file" .zip); '
+            'unzip -tq "$zip_file"; '
+            'unzip -n -q "$zip_file" -d {directory}; '
+            'unzip -Z1 "$zip_file" '
+            '| sed -n "s/\\.fasta$//p" '
+            "| sort -u "
+            '> {run_directory}/"${{archive_name}}"_seqids.txt; '
+            "done"
+        ).format(
+            directory=shlex.quote(inclusivity_directory),
+            run_directory=shlex.quote(run_directory),
+        )
+    )
+
+    # Process exclusivity ZIP archives. The guarded loop allows the
+    # exclusivity directory to be empty.
+    command_parts.append(
+        (
+            "for zip_file in {directory}/*.zip; do "
+            '[ -e "$zip_file" ] || continue; '
+            'archive_name=$(basename "$zip_file" .zip); '
+            'unzip -tq "$zip_file"; '
+            'unzip -n -q "$zip_file" -d {directory}; '
+            'unzip -Z1 "$zip_file" '
+            '| sed -n "s/\\.fasta$//p" '
+            "| sort -u "
+            '> {run_directory}/"${{archive_name}}"_seqids.txt; '
+            "done"
+        ).format(
+            directory=shlex.quote(exclusivity_directory),
+            run_directory=shlex.quote(run_directory),
+        )
+    )
+
+    # Create the PrimerValidator system call using the supplied arguments.
+    primer_command = (
         "primer_validator.py "
-        "-i /datadrive/{run_name}/inclusivity "
-        "-e /datadrive/{run_name}/exclusivity "
-        "-pf /datadrive/{run_name}/{primer_file_location} "
-        "-r /datadrive/{run_name}/reports "
+        "-i {inclusivity} "
+        "-e {exclusivity} "
+        "-pf {primer_file_location} "
+        "-r {reports} "
         "-m {mismatches} "
         "-min {min_amplicon_size} "
         "-max {max_amplicon_size} "
-        "-rb {range_buffer} "
+        "-rb {range_buffer}"
     ).format(
-        run_name=container_name,
-        path=path,
-        primer_file_location=file_name,
-        mismatches=mismatches,
-        min_amplicon_size=min_amplicon_size,
-        max_amplicon_size=max_amplicon_size,
-        range_buffer=range_buffer,
+        inclusivity=shlex.quote(inclusivity_directory),
+        exclusivity=shlex.quote(exclusivity_directory),
+        primer_file_location=shlex.quote(posixpath.join(run_directory, file_name)),
+        reports=shlex.quote(reports_directory),
+        mismatches=shlex.quote(str(mismatches)),
+        min_amplicon_size=shlex.quote(str(min_amplicon_size)),
+        max_amplicon_size=shlex.quote(str(max_amplicon_size)),
+        range_buffer=shlex.quote(str(range_buffer)),
     )
 
-    # If contig breaks are to be permitted, add the flag to the command
+    # If contig breaks are to be permitted, add the flag to the command.
     if getattr(request, "contig_breaks", False):
-        cmd += "-cb "
+        primer_command += " -cb"
 
-    # Add the probe sequence (safe: getattr prevents AttributeError)
+    # Add the probe sequence. getattr() prevents AttributeError for request
+    # types that do not define probe_sequence.
     if getattr(request, "probe_sequence", None):
-        cmd += " -p /datadrive/{run_name}/probe.fasta".format(
-            run_name=container_name,
+        primer_command += " -p {probe_path}".format(
+            probe_path=shlex.quote(posixpath.join(run_directory, "probe.fasta"))
         )
 
-    # Copy the reports folder and seqids files to the container mount
-    cmd += (
-        " && cp -R /datadrive/{run_name}/reports {path} && "
-        "cp /datadrive/{run_name}/*_seqids.txt {path}".format(
-            run_name=container_name, path=path
-        )
+    command_parts.append(primer_command)
+
+    # Copy the reports folder back to the BlobFuse-mounted request container.
+    # Input files are no longer read through this mount, but the existing
+    # output workflow is preserved.
+    command_parts.append('rm -rf "$mount_dir/reports"')
+
+    command_parts.append(
+        'cp -R {reports} "$mount_dir/"'.format(reports=shlex.quote(reports_directory))
     )
-    return cmd
+
+    # Copy sequence-ID files back when at least one such file exists. The
+    # guarded loop prevents cp from receiving an unmatched filename pattern
+    # when no panel ZIP archives were selected.
+    command_parts.append(
+        (
+            "for seqids_file in {run_directory}/*_seqids.txt; do "
+            '[ -e "$seqids_file" ] || continue; '
+            'cp "$seqids_file" "$mount_dir/"; '
+            "done"
+        ).format(run_directory=shlex.quote(run_directory))
+    )
+
+    # Join every operation so that the task stops at the first failed
+    # download, archive validation, extraction, analysis, or result copy.
+    return " && ".join(command_parts)
+
+
+def _generate_input_blob_sas_urls(
+    *, container_name: str, blob_names: list, expiry_hours: int = 12
+) -> list:
+    """
+    Generate short-lived, read-only SAS URLs for Batch task input blobs.
+
+    Each returned dictionary contains the source blob name and its complete
+    read-only SAS URL. Blob-level SAS tokens are used because the Batch task
+    only needs access to explicitly selected input files.
+
+    Args:
+        container_name (str): Name of the request's Azure Blob container.
+        blob_names (list): Blob names to make available to the Batch task.
+        expiry_hours (int): Number of hours for which the SAS URLs are valid.
+
+    Returns:
+        list: Dictionaries containing blob_name and sas_url values.
+
+    Raises:
+        FileNotFoundError: If one of the requested blobs does not exist.
+    """
+    blob_client = BlockBlobService(
+        account_name=settings.AZURE_ACCOUNT_NAME,
+        account_key=settings.AZURE_ACCOUNT_KEY
+    )
+
+    input_blobs = []
+    unique_blob_names = []
+    seen_blob_names = set()
+
+    # Remove duplicate blob names while preserving their original order.
+    # A set is used only for membership testing because dictionaries did not
+    # guarantee insertion order in Python 3.5.
+    for blob_name in blob_names:
+        if blob_name not in seen_blob_names:
+            seen_blob_names.add(blob_name)
+            unique_blob_names.append(blob_name)
+
+    for blob_name in unique_blob_names:
+        if not blob_client.exists(
+            container_name=container_name,
+            blob_name=blob_name
+        ):
+            raise FileNotFoundError(
+                "Required Batch input blob does not exist: "
+                "{container}/{blob}".format(
+                    container=container_name, blob=blob_name
+                )
+            )
+
+        sas_token = blob_client.generate_blob_shared_access_signature(
+            container_name=container_name,
+            blob_name=blob_name,
+            permission=BlobPermissions.READ,
+            expiry=(
+                datetime.datetime.utcnow() + datetime.timedelta(
+                    hours=expiry_hours
+                )
+            ),
+        )
+
+        sas_url = blob_client.make_blob_url(
+            container_name=container_name,
+            blob_name=blob_name,
+            sas_token=sas_token
+        )
+
+        input_blobs.append({"blob_name": blob_name, "sas_url": sas_url})
+
+    return input_blobs
 
 
 def _handle_panel_files(
@@ -239,7 +448,7 @@ def _handle_panel_files(
     inclusivity: bool,
     panel_model: Any,
     request_pk: int
-):
+) -> list:
     """
     Handle inclusivity or exclusivity panel files. If the panel is specified,
     copy the benchmark files to the appropriate folder. If the panel is not
@@ -252,9 +461,12 @@ def _handle_panel_files(
         panel_model (Any): The model class for the panel.
         request_pk (int): Primary key of the request.
 
+    Returns:
+        list: Blob names of the benchmark ZIP files required by the Batch
+            task. The list is empty when no panel was selected.
     """
     # Determine the panel type
-    panel_type = 'inclusivity' if inclusivity else 'exclusivity'
+    panel_type = "inclusivity" if inclusivity else "exclusivity"
 
     # Choose the correct FK field name depending on panel_model
     if panel_model == VerifierPanel:
@@ -268,19 +480,21 @@ def _handle_panel_files(
         **{fk_name: request_pk, "panel": panel_type}
     )
 
+    benchmark_blob_names = []
+
     # Copy the benchmark files if the panel is specified
-    if panel_filter:
+    if panel_filter.exists():
         for panel in panel_filter:
-            copy_benchmark_files(
+            benchmark_blob_name = copy_benchmark_files(
                 container_name=container_name,
                 genus=panel.genus.lower(),
-                panel=panel_type
+                panel=panel_type,
             )
+            benchmark_blob_names.append(benchmark_blob_name)
     else:
-        create_empty_folder(
-            container_name=container_name,
-            panel=panel_type
-        )
+        create_empty_folder(container_name=container_name, panel=panel_type)
+
+    return benchmark_blob_names
 
 
 def _handle_primer_error(
@@ -309,37 +523,201 @@ def _handle_primer_error(
     request.save()
 
 
+def _wait_for_blob_copy(
+    *,
+    blob_client: BlockBlobService,
+    container_name: str,
+    blob_name: str,
+    timeout_seconds: int = 3600,
+    poll_interval_seconds: int = 10
+):
+    """
+    Wait for an asynchronous Azure Blob copy operation to complete.
+
+    Azure Blob copy operations may complete asynchronously. This function
+    polls the destination blob until the copy succeeds, fails, is aborted,
+    or reaches the configured timeout.
+
+    Args:
+        blob_client (BlockBlobService): The Azure Blob service client.
+        container_name (str): The destination container name.
+        blob_name (str): The destination blob name.
+        timeout_seconds (int): Maximum number of seconds to wait for the copy.
+        poll_interval_seconds (int): Number of seconds between status checks.
+
+    Raises:
+        RuntimeError: If the copy operation fails or is aborted.
+        TimeoutError: If the copy operation does not finish before timeout.
+    """
+    deadline = time.monotonic() + timeout_seconds
+
+    while True:
+        blob_properties = blob_client.get_blob_properties(
+            container_name=container_name, blob_name=blob_name
+        )
+
+        copy_properties = blob_properties.properties.copy
+        copy_status = getattr(copy_properties, "status", None)
+
+        # A successful copy is ready for the Batch task to download.
+        if copy_status == "success":
+            return
+
+        # Stop immediately if Azure reports a terminal failure.
+        if copy_status in ("failed", "aborted"):
+            status_description = getattr(
+                copy_properties,
+                "status_description",
+                None
+            )
+            raise RuntimeError(
+                "Azure Blob copy failed for {blob}: "
+                "status={status}, description={description}".format(
+                    blob=blob_name,
+                    status=copy_status,
+                    description=status_description
+                )
+            )
+
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                "Timed out waiting for Azure Blob copy of {blob}; "
+                "last copy status was {status}".format(
+                    blob=blob_name, status=copy_status
+                )
+            )
+
+        time.sleep(poll_interval_seconds)
+
+
 def copy_benchmark_files(
     *,  # Force the use of keyword arguments
     container_name: str,
     genus: str,
     panel: str
-):
+) -> str:
     """
-    Copy the benchmark files to the appropriate folder
+    Copy the benchmark files to the appropriate folder.
+
+    If the destination blob already exists and has the same size as the
+    benchmark source blob, the existing destination is reused. If an
+    asynchronous copy is already pending, this function waits for it to
+    complete. A failed, aborted, or mismatched destination is replaced.
 
     Args:
         container_name (str): The name of the container to which the benchmark
-            files are to be copied
-        genus (str): The genus for which the benchmark files are to be copied
+            files are to be copied.
+        genus (str): The genus for which the benchmark files are to be copied.
         panel (str): The panel (inclusivity/exclusivity) for which the
-            benchmark files are to be copied
+            benchmark files are to be copied.
+
+    Returns:
+        str: The blob name of the benchmark archive in the request container.
     """
     # Create the blob service client for manipulating blobs
     blob_client = BlockBlobService(
         account_name=settings.AZURE_ACCOUNT_NAME,
         account_key=settings.AZURE_ACCOUNT_KEY
     )
-    # Copy the benchmark files to the appropriate folder
+
+    source_container_name = "benchmark-datasets"
+    source_blob_name = "{genus}.zip".format(genus=genus)
+    destination_blob_name = posixpath.join(panel, source_blob_name)
+
+    # Retrieve the authoritative size of the benchmark source blob.
+    source_properties = blob_client.get_blob_properties(
+        container_name=source_container_name, blob_name=source_blob_name
+    )
+    source_size = source_properties.properties.content_length
+
+    destination_exists = blob_client.exists(
+        container_name=container_name, blob_name=destination_blob_name
+    )
+
+    if destination_exists:
+        destination_properties = blob_client.get_blob_properties(
+            container_name=container_name, blob_name=destination_blob_name
+        )
+
+        copy_properties = destination_properties.properties.copy
+        copy_status = getattr(copy_properties, "status", None)
+
+        # A previous invocation may already have started the copy. Wait for
+        # that operation rather than starting another copy over the same blob.
+        if copy_status == "pending":
+            _wait_for_blob_copy(
+                blob_client=blob_client,
+                container_name=container_name,
+                blob_name=destination_blob_name,
+            )
+
+            # Refresh the properties after the pending copy finishes.
+            destination_properties = blob_client.get_blob_properties(
+                container_name=container_name, blob_name=destination_blob_name
+            )
+            copy_properties = destination_properties.properties.copy
+            copy_status = getattr(copy_properties, "status", None)
+
+        destination_size = destination_properties.properties.content_length
+
+        # A missing copy status is acceptable because the destination may have
+        # been uploaded directly instead of being created by Copy Blob.
+        if copy_status in (None, "success") and destination_size == source_size:
+            return destination_blob_name
+
+        # The destination is failed, aborted, incomplete, or does not match
+        # the source. Remove it before starting a replacement copy.
+        blob_client.delete_blob(
+            container_name=container_name, blob_name=destination_blob_name
+        )
+
+    # Generate a short-lived read-only SAS URL for the benchmark source.
+    # This allows Copy Blob to read the source even when the benchmark
+    # container is private.
+    source_sas_token = blob_client.generate_blob_shared_access_signature(
+        container_name=source_container_name,
+        blob_name=source_blob_name,
+        permission=BlobPermissions.READ,
+        expiry=(datetime.datetime.utcnow() + datetime.timedelta(hours=12)),
+    )
+
+    source_url = blob_client.make_blob_url(
+        container_name=source_container_name,
+        blob_name=source_blob_name,
+        sas_token=source_sas_token,
+    )
+
+    # Copy the benchmark file into the request-specific container.
     blob_client.copy_blob(
         container_name=container_name,
-        blob_name=os.path.join(panel, '{genus}.zip'.format(genus=genus)),
-        copy_source='https://{account}.blob.core.windows.net/'
-        'benchmark-datasets/{genus}.zip'.format(
-            account=settings.AZURE_ACCOUNT_NAME,
-            genus=genus
-        )
+        blob_name=destination_blob_name,
+        copy_source=source_url,
     )
+
+    # Copy Blob may be asynchronous, particularly for a large archive.
+    _wait_for_blob_copy(
+        blob_client=blob_client,
+        container_name=container_name,
+        blob_name=destination_blob_name,
+    )
+
+    # Perform a final size check after Azure reports a successful copy.
+    destination_properties = blob_client.get_blob_properties(
+        container_name=container_name, blob_name=destination_blob_name
+    )
+    destination_size = destination_properties.properties.content_length
+
+    if destination_size != source_size:
+        raise RuntimeError(
+            "Benchmark copy size mismatch for {blob}: "
+            "source={source_size}, destination={destination_size}".format(
+                blob=destination_blob_name,
+                source_size=source_size,
+                destination_size=destination_size,
+            )
+        )
+
+    return destination_blob_name
 
 
 def create_empty_folder(
