@@ -1,0 +1,697 @@
+{% extends "base.html" %}
+{% load static i18n crispy_forms_tags %}
+{% block content %}
+<style>
+  .research-manager { --ink: #173042; --muted: #607783; --line: #d7e2e5; --wash: #f3f8f7; --accent: #0e7774; color: var(--ink); max-width: 1100px; margin: 2rem auto; }
+  .research-manager__header { border-bottom: 3px solid var(--accent); margin-bottom: 1.5rem; padding-bottom: 1rem; }
+  .research-manager__header a { color: var(--accent); font-weight: 600; }
+  .research-manager__header h1 { font-size: 2rem; margin: .5rem 0 0; }
+  .research-manager__alerts { margin-bottom: 1rem; }
+  .research-manager__alerts .alert { margin-bottom: .5rem; }
+  .research-panel { background: var(--wash); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; margin-bottom: 1rem; }
+  .research-panel h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+  .research-panel__toolbar { align-items: end; display: flex; flex-wrap: wrap; gap: .75rem; }
+  .research-panel__toolbar .form-group { flex: 1 1 22rem; margin: 0; }
+  .research-table { background: #fff; border: 1px solid var(--line); }
+  .research-table th { background: var(--ink); color: #fff; }
+  .research-file-browser { background: #fff; border: 1px solid var(--line); }
+  .research-file-browser__toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: .5rem; padding: .75rem; }
+  .research-file-browser__path { color: var(--muted); font-size: .95rem; }
+  .research-file-browser__entry { align-items: center; display: flex; gap: .5rem; }
+  .research-file-browser__folder { font-weight: 600; }
+  .research-file-browser__folder::before { content: '[folder] '; color: var(--accent); }
+  .research-file-browser__file::before { content: '[file] '; color: var(--muted); }
+  .research-status { color: var(--muted); display: inline-block; margin-left: .5rem; }
+  .research-dropzone { background: #fff; border: 2px dashed var(--accent); border-radius: 6px; cursor: pointer; padding: 1.25rem; text-align: center; transition: background .15s, border-color .15s; }
+  .research-dropzone.is-dragging { background: #e2f2ef; border-color: var(--ink); }
+  .research-dropzone p { margin: 0; }
+  .research-upload-meta { color: var(--muted); margin-top: .75rem; }
+  .research-upload-progress { background: #d7e2e5; border-radius: 4px; height: 10px; margin-top: .75rem; overflow: hidden; }
+  .research-upload-progress__bar { background: var(--accent); height: 100%; transition: width .15s ease; width: 0; }
+  .research-upload-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .75rem; }
+  .research-rename-progress { background: #d7e2e5; border-radius: 4px; height: 8px; margin-top: .75rem; overflow: hidden; }
+  .research-rename-progress__bar { animation: research-rename-progress 1.5s ease-in-out infinite; background: var(--accent); height: 100%; width: 35%; }
+  @keyframes research-rename-progress { 0% { transform: translateX(-100%); } 100% { transform: translateX(285%); } }
+  .research-options { display: grid; gap: .25rem 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .research-danger-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+  @media (max-width: 700px) { .research-manager { margin: 1rem; } .research-options { grid-template-columns: 1fr; } .research-panel__toolbar { display: block; } .research-panel__toolbar .btn { margin-top: .75rem; } }
+</style>
+<div class="research-manager">
+  <header class="research-manager__header">
+    <a href="{% url 'cowbat:research_assembly' %}">{% trans "Research Assembly Home" %}</a>
+    <h1>{% trans "Manage Research Run" %}</h1>
+  </header>
+
+  {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+
+{% if not sequencing_run %}
+<section class="research-panel">
+  <h2>{% trans "Open an existing container" %}</h2>
+  <form method="get" action="{% url 'cowbat:manage_assembly' %}" class="research-panel__toolbar">
+    {{ selection_form.media }}
+    <div class="form-group">{{ selection_form.run_name.label_tag }}{{ selection_form.run_name }}{% if selection_form.run_name.errors %}<div class="text-danger">{{ selection_form.run_name.errors }}</div>{% endif %}</div>
+    <button class="btn btn-primary" type="submit">{% trans "Open run" %}</button>
+  </form>
+</section>
+{% else %}
+<div class="research-manager__alerts" id="research-errors">
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger" role="alert" tabindex="-1">
+    <strong>{% trans "Action could not be completed" %}</strong>
+    <div>{{ form.non_field_errors }}</div>
+  </div>
+  {% endif %}
+  {% if sequencing_run.errors %}
+  <div class="alert alert-danger" role="alert">
+    <strong>{% trans "Previous operation failed" %}</strong>
+    <div>{% for error in sequencing_run.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>
+  </div>
+  {% endif %}
+</div>
+<section class="research-panel">
+  <h2>{{ container_name }}</h2>
+  <p class="text-muted mb-0">{% trans "Shared research run. Changes are visible to authenticated portal users." %}</p>
+</section>
+
+<form id="rename-form" method="post" class="research-panel">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="rename">
+  <h2>{% trans "Container identity" %}</h2>
+  <div class="research-panel__toolbar">
+    <div class="form-group"><label for="rename-run">{% trans "Rename run" %}</label><input class="form-control" id="rename-run" name="run_name" value="{{ sequencing_run.run_name }}" required></div>
+    <button id="rename-button" class="btn btn-secondary" type="submit">{% trans "Queue rename" %}</button>
+  </div>
+</form>
+
+<div id="rename-status" class="alert alert-info" role="status" aria-live="polite" hidden>
+  <div id="rename-status-text"></div>
+  <div class="research-rename-progress" aria-hidden="true"><div class="research-rename-progress__bar"></div></div>
+</div>
+
+<section class="research-panel">
+  <h2>{% trans "Files" %}</h2>
+<form method="post" action="{% url 'cowbat:delete_research_files' sequencing_run_pk=sequencing_run.pk %}">
+  {% csrf_token %}
+  <div id="research-file-browser" class="research-file-browser">
+    <div class="research-file-browser__toolbar">
+      <button id="research-file-back" class="btn btn-outline-secondary btn-sm" type="button" hidden>{% trans "Back" %}</button>
+      <span id="research-file-path" class="research-file-browser__path" aria-live="polite">{% trans "Root folder" %}</span>
+    </div>
+  <table class="table table-hover table-sm research-table mb-0">
+    <thead><tr><th><input type="checkbox" id="select-all"></th><th>{% trans "File" %}</th></tr></thead>
+    <tbody id="research-file-list">
+    {% for blob_name in files %}
+      <tr class="research-file-source" data-blob-name="{{ blob_name }}" hidden><td></td><td>{{ blob_name }}</td></tr>
+    {% empty %}<tr><td colspan="2">{% trans "No files in this container." %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="research-danger-row">
+    <button class="btn btn-danger" type="submit">{% trans "Delete selected files" %}</button>
+    <button class="btn btn-outline-danger" type="submit" name="delete_all" value="1" onclick="return confirm('{% trans 'Delete every file in this container?' %}');">{% trans "Delete all files" %}</button>
+  </div>
+</form>
+</section>
+
+<section class="research-panel">
+  <h2>{% trans "Upload additional files" %}</h2>
+  <div id="upload-dropzone" class="research-dropzone" role="button" tabindex="0" aria-controls="new-files">
+    <p><strong>{% trans "Drop files here" %}</strong> {% trans "or click to choose files" %}</p>
+    <p class="text-muted mb-0">{% trans "Large FASTQ files upload one at a time with automatic retries." %}</p>
+  </div>
+  <input id="new-files" type="file" multiple accept=".gz,.csv,.xml" hidden>
+  <div id="upload-queue" class="research-upload-meta" aria-live="polite">{% trans "No files selected" %}</div>
+  <div class="research-upload-progress" aria-hidden="true"><div id="upload-progress-bar" class="research-upload-progress__bar"></div></div>
+  <div class="research-upload-actions">
+    <button id="upload-files" class="btn btn-primary" type="button" disabled>{% trans "Start upload" %}</button>
+    <button id="refresh-files" class="btn btn-outline-secondary" type="button" hidden>{% trans "Refresh file list" %}</button>
+    <span id="upload-status" class="research-status" role="status" aria-live="polite"></span>
+  </div>
+</section>
+
+<form method="post" class="research-panel">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="submit">
+  <input type="hidden" name="run_name" value="{{ sequencing_run.run_name }}">
+  <h2>{% trans "Run options" %}</h2>
+  <div class="research-options">{{ form.basic_assembly|as_crispy_field }}{{ form.preprocess|as_crispy_field }}{{ form.nextseq|as_crispy_field }}</div>
+  <button class="btn btn-success" type="submit">{% trans "Submit run" %}</button>
+</form>
+
+<script>
+  /* FoodPort large Azure Blob uploader.
+  *
+  * Uploads a browser File as staged Azure Block Blob blocks and commits the
+  * ordered block list. Compatible with the existing per-blob SAS endpoint.
+  */
+  (function(window) {
+  'use strict';
+
+  var DEFAULT_BLOCK_SIZE = 4 * 1024 * 1024;
+  var DEFAULT_MAX_ATTEMPTS = 5;
+  var DEFAULT_FILE_ATTEMPTS = 2;
+
+  var appendQueryParameters = function(url, parameters) {
+  return url + (url.indexOf('?') === -1 ? '?' : '&') + parameters;
+  };
+
+  var encodeBlockId = function(index) {
+  var value = String(index);
+  while (value.length
+  < 8) { value='0' + value; } return window.btoa(value); }; var escapeXml=function(value) { return value
+    .replace(/&/g, '&amp;' ) .replace(/</g, '&lt;' ) .replace( />/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+  };
+
+  var succeeded = function(statusCode) {
+  return statusCode >= 200 && statusCode < 300; }; var retryable=function(statusCode) { return ( statusCode===0 ||
+    statusCode===408 || statusCode===429 || statusCode>= 500
+    );
+    };
+
+    var delay = function(milliseconds) {
+    return new Promise(function(resolve) {
+    window.setTimeout(resolve, milliseconds);
+    });
+    };
+
+    var retryDelay = function(attempt) {
+    var backoff = Math.min(30000, 1000 * Math.pow(2, attempt - 2));
+    return backoff + Math.floor(Math.random() * 1000);
+    };
+
+    var retryableFileError = function(error) {
+    return error.retryable || (
+    error.status === 403 &&
+    (error.phase === 'block' || error.phase === 'commit')
+    );
+    };
+
+    var sendRequest = function(options) {
+    return new Promise(function(resolve, reject) {
+    var request = new XMLHttpRequest();
+    request.open(options.method, options.url);
+    request.timeout = 300000;
+
+    Object.keys(options.headers || {}).forEach(function(headerName) {
+    request.setRequestHeader(headerName, options.headers[headerName]);
+    });
+
+    if (options.onProgress && request.upload) {
+    request.upload.onprogress = options.onProgress;
+    }
+
+    request.onload = function() {
+    if (succeeded(request.status)) {
+    resolve(request);
+    return;
+    }
+    reject({
+    status: request.status,
+    responseText: request.responseText || '',
+    retryable: retryable(request.status),
+    phase: options.phase
+    });
+    };
+
+    request.onerror = function() {
+    reject({
+    status: request.status || 0,
+    responseText: '',
+    retryable: true,
+    phase: options.phase
+    });
+    };
+
+    request.ontimeout = function() {
+    reject({
+    status: request.status || 0,
+    responseText: 'The upload request timed out.',
+    retryable: true,
+    phase: options.phase
+    });
+    };
+
+    request.onabort = function() {
+    reject({
+    status: 0,
+    responseText: 'Request aborted',
+    retryable: false,
+    phase: options.phase
+    });
+    };
+
+    request.send(options.body === undefined ? null : options.body);
+    });
+    };
+
+    var sendRequestWithRetry = function(options, maxAttempts) {
+    var attempt = 1;
+    var runAttempt = function() {
+    return sendRequest(options).catch(function(error) {
+    if (!error.retryable || attempt >= maxAttempts) {
+    throw error;
+    }
+    attempt += 1;
+    return delay(retryDelay(attempt)).then(runAttempt);
+    });
+    };
+    return runAttempt();
+    };
+
+    var prepareUpload = function(prepareUrl, file, maxAttempts) {
+    var url = (
+    prepareUrl +
+    '?filename=' + encodeURIComponent(file.name) +
+    '&size_bytes=' + encodeURIComponent(file.size)
+    );
+
+    return sendRequestWithRetry({
+    method: 'GET',
+    url: url,
+    phase: 'prepare'
+    }, maxAttempts).then(function(request) {
+    try {
+    return JSON.parse(request.responseText);
+    } catch (error) {
+    throw {
+    status: request.status,
+    responseText: 'FoodPort returned invalid upload metadata.',
+    retryable: false,
+    phase: 'prepare'
+    };
+    }
+    });
+    };
+
+    var uploadBlock = function(uploadUrl, chunk, blockId, onProgress, maxAttempts) {
+    var blockUrl = appendQueryParameters(
+    uploadUrl,
+    'comp=block&blockid=' + encodeURIComponent(blockId)
+    );
+    return sendRequestWithRetry({
+    method: 'PUT',
+    url: blockUrl,
+    headers: {
+    'Content-Type': 'application/octet-stream'
+    },
+    body: chunk,
+    onProgress: onProgress,
+    phase: 'block'
+    }, maxAttempts);
+    };
+
+    var commitBlockList = function(uploadUrl, blockIds, maxAttempts) {
+    var blockListUrl = appendQueryParameters(uploadUrl, 'comp=blocklist');
+    var blockListXml = (
+      '<?xml version="1.0" encoding="utf-8"?>' +
+      '<BlockList>' +
+      blockIds.map(function(blockId) {
+        return (
+          '<Latest>' +
+          escapeXml(blockId) +
+          '</Latest>'
+        );
+      }).join('') +
+      '</BlockList>'
+    );
+
+    return sendRequestWithRetry({
+    method: 'PUT',
+    url: blockListUrl,
+    headers: {
+    'Content-Type': 'application/xml; charset=UTF-8'
+    },
+    body: blockListXml,
+    phase: 'commit'
+    }, maxAttempts);
+    };
+
+    var uploadPreparedFile = function(file, uploadUrl, options) {
+    options = options || {};
+    var blockSize = options.blockSize || DEFAULT_BLOCK_SIZE;
+    var blockConcurrency = options.blockConcurrency || 4;
+    var maxAttempts = options.maxAttempts || DEFAULT_MAX_ATTEMPTS;
+    var onProgress = options.onProgress || function() {};
+    var blockCount = Math.ceil(file.size / blockSize);
+    var blockIds = new Array(blockCount);
+    var progressByBlock = new Array(blockCount);
+    var nextBlockIndex = 0;
+    var uploadedBytes = 0;
+    var failure = null;
+
+    if (blockCount > 50000) {
+    return Promise.reject({
+    status: 0,
+    responseText: 'This file requires more than Azure Blob Storage supports.',
+    retryable: false,
+    phase: 'block'
+    });
+    }
+
+    var uploadNextBlock = function() {
+    if (failure || nextBlockIndex >= blockCount) {
+    return Promise.resolve();
+    }
+
+    var blockIndex = nextBlockIndex;
+    nextBlockIndex += 1;
+    var start = blockIndex * blockSize;
+    var chunk = file.slice(start, Math.min(start + blockSize, file.size));
+    var blockId = encodeBlockId(blockIndex);
+    blockIds[blockIndex] = blockId;
+    progressByBlock[blockIndex] = 0;
+
+    return uploadBlock(
+    uploadUrl,
+    chunk,
+    blockId,
+    function(event) {
+    if (event.lengthComputable) {
+    uploadedBytes += event.loaded - progressByBlock[blockIndex];
+    progressByBlock[blockIndex] = event.loaded;
+    onProgress(uploadedBytes, file.size);
+    }
+    },
+    maxAttempts
+    ).then(function() {
+    uploadedBytes += chunk.size - progressByBlock[blockIndex];
+    progressByBlock[blockIndex] = chunk.size;
+    onProgress(uploadedBytes, file.size);
+    return uploadNextBlock();
+    }).catch(function(error) {
+    if (!failure) {
+    failure = error;
+    }
+    });
+    };
+
+    var workers = [];
+    var workerCount = Math.min(blockConcurrency, blockCount);
+    for (var workerIndex = 0; workerIndex < workerCount; workerIndex += 1) {
+    workers.push(uploadNextBlock());
+    }
+
+    return Promise.all(workers).then(function() {
+    if (failure) {
+    throw failure;
+    }
+    return commitBlockList(
+    uploadUrl,
+    blockIds,
+    maxAttempts
+    );
+    });
+    };
+
+    window.FoodPortAzureBlockUploader = {
+    prepareAndUpload: function(file, prepareUrl, options) {
+    options = options || {};
+    var maxAttempts = options.maxAttempts || DEFAULT_MAX_ATTEMPTS;
+    var fileAttempts = options.fileAttempts || DEFAULT_FILE_ATTEMPTS;
+    var attempt = 1;
+    var runAttempt = function() {
+    return prepareUpload(prepareUrl, file, maxAttempts).then(function(details) {
+    return uploadPreparedFile(file, details.upload_url, options).then(function() {
+    return details;
+    });
+    }).catch(function(error) {
+    if (!retryableFileError(error) || attempt >= fileAttempts) {
+    throw error;
+    }
+    attempt += 1;
+    if (options.onRetry) {
+    options.onRetry(file, attempt, error);
+    }
+    if (options.onProgress) {
+    options.onProgress(0, file.size);
+    }
+    return delay(retryDelay(attempt)).then(runAttempt);
+    });
+    };
+    return runAttempt();
+    },
+    uploadPreparedFile: uploadPreparedFile
+    };
+    })(window);
+</script>
+
+<script>
+(function() {
+  var selectAll = document.getElementById('select-all');
+  var fileList = document.getElementById('research-file-list');
+  var fileBack = document.getElementById('research-file-back');
+  var filePathLabel = document.getElementById('research-file-path');
+  var sourceRows = document.querySelectorAll('.research-file-source');
+  var fileEntries = [];
+  var currentFilePath = '';
+  Array.prototype.forEach.call(sourceRows, function(row) {
+    fileEntries.push(row.getAttribute('data-blob-name'));
+  });
+  var makeFileCell = function(text, className) {
+    var cell = document.createElement('td');
+    var entry = document.createElement('span');
+    entry.className = 'research-file-browser__entry ' + className;
+    entry.textContent = text;
+    cell.appendChild(entry);
+    return cell;
+  };
+  var renderFileBrowser = function() {
+    var folders = {};
+    var visibleFiles = [];
+    fileList.innerHTML = '';
+    fileEntries.forEach(function(blobName) {
+      var prefix = currentFilePath ? currentFilePath + '/' : '';
+      if (blobName.indexOf(prefix) !== 0) { return; }
+      var relativeName = blobName.slice(prefix.length);
+      var parts = relativeName.split('/');
+      if (parts.length > 1) {
+        folders[parts[0]] = prefix + parts[0];
+      } else {
+        visibleFiles.push(blobName);
+      }
+    });
+    Object.keys(folders).sort().forEach(function(folderName) {
+      var row = document.createElement('tr');
+      var checkboxCell = document.createElement('td');
+      var nameCell = makeFileCell(folderName, 'research-file-browser__folder');
+      var button = document.createElement('button');
+      button.className = 'btn btn-link p-0 research-file-browser__folder';
+      button.type = 'button';
+      button.textContent = folderName;
+      button.addEventListener('click', function() {
+        currentFilePath = folders[folderName];
+        renderFileBrowser();
+      });
+      nameCell.innerHTML = '';
+      nameCell.appendChild(button);
+      row.appendChild(checkboxCell);
+      row.appendChild(nameCell);
+      fileList.appendChild(row);
+    });
+    visibleFiles.sort().forEach(function(blobName) {
+      var row = document.createElement('tr');
+      var checkboxCell = document.createElement('td');
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'files';
+      checkbox.value = blobName;
+      checkboxCell.appendChild(checkbox);
+      row.appendChild(checkboxCell);
+      row.appendChild(makeFileCell(blobName.split('/').pop(), 'research-file-browser__file'));
+      fileList.appendChild(row);
+    });
+    if (!Object.keys(folders).length && !visibleFiles.length) {
+      var emptyRow = document.createElement('tr');
+      var emptyCell = document.createElement('td');
+      emptyCell.colSpan = 2;
+      emptyCell.textContent = 'No files in this folder.';
+      emptyRow.appendChild(emptyCell);
+      fileList.appendChild(emptyRow);
+    }
+    fileBack.hidden = !currentFilePath;
+    filePathLabel.textContent = currentFilePath ? 'Folder: /' + currentFilePath : 'Root folder';
+    selectAll.checked = false;
+  };
+  fileBack.addEventListener('click', function() {
+    var parts = currentFilePath.split('/');
+    parts.pop();
+    currentFilePath = parts.join('/');
+    renderFileBrowser();
+  });
+  selectAll.addEventListener('change', function() {
+    document.querySelectorAll('#research-file-list input[name="files"]').forEach(function(item) {
+      item.checked = selectAll.checked;
+    });
+  });
+  renderFileBrowser();
+  var fileInput = document.getElementById('new-files');
+  var dropzone = document.getElementById('upload-dropzone');
+  var uploadButton = document.getElementById('upload-files');
+  var refreshButton = document.getElementById('refresh-files');
+  var renameForm = document.getElementById('rename-form');
+  var renameButton = document.getElementById('rename-button');
+  var queueStatus = document.getElementById('upload-queue');
+  var status = document.getElementById('upload-status');
+  var progressBar = document.getElementById('upload-progress-bar');
+  var renameStatus = document.getElementById('rename-status');
+  var renameStatusText = document.getElementById('rename-status-text');
+  var renamePending = false;
+  var selectedFiles = [];
+  var uploading = false;
+  var setFiles = function(fileList) {
+    if (uploading) { return; }
+    selectedFiles = Array.prototype.slice.call(fileList || []);
+    uploadButton.disabled = selectedFiles.length === 0;
+    refreshButton.hidden = true;
+    progressBar.style.width = '0%';
+    queueStatus.textContent = selectedFiles.length ? selectedFiles.length + ' file(s) ready to upload.' : 'No files selected';
+    status.textContent = '';
+  };
+  dropzone.addEventListener('click', function() { fileInput.click(); });
+  dropzone.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
+  });
+  ['dragenter', 'dragover'].forEach(function(eventName) {
+    dropzone.addEventListener(eventName, function(event) {
+      event.preventDefault();
+      dropzone.classList.add('is-dragging');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function(eventName) {
+    dropzone.addEventListener(eventName, function(event) {
+      event.preventDefault();
+      dropzone.classList.remove('is-dragging');
+    });
+  });
+  dropzone.addEventListener('drop', function(event) { setFiles(event.dataTransfer.files); });
+  fileInput.addEventListener('change', function() { setFiles(fileInput.files); });
+  refreshButton.addEventListener('click', function() { window.location.reload(); });
+  renameForm.addEventListener('submit', function() {
+    renameButton.disabled = true;
+    renameStatus.hidden = false;
+    renameStatusText.textContent = 'Rename queued. Container renaming can take a few minutes. This page will reload automatically when it finishes.';
+  });
+  var checkRenameStatus = function() {
+    fetch("{% url 'cowbat:research_assembly_rename_status' sequencing_run_pk=sequencing_run.pk %}", {
+      credentials: 'same-origin'
+    }).then(function(response) {
+      if (!response.ok) { throw new Error('Unable to check rename status.'); }
+      return response.json();
+    }).then(function(data) {
+      if (data.status === 'queued' || data.status === 'running') {
+        renamePending = true;
+        renameButton.disabled = true;
+        renameStatus.hidden = false;
+        renameStatus.className = 'alert alert-info';
+        renameStatusText.textContent = data.status === 'queued' ?
+          'Rename queued. Container renaming can take a few minutes. This page will reload automatically when it finishes.' :
+          'Rename in progress. Container renaming can take a few minutes. This page will reload automatically when it finishes.';
+        window.setTimeout(checkRenameStatus, 2000);
+      } else if (data.complete && renamePending) {
+        renameStatus.hidden = false;
+        renameStatus.className = 'alert alert-info';
+        renameStatusText.textContent = 'Rename complete. Refreshing the run.';
+        window.location.reload();
+      } else if (data.status === 'failed') {
+        renameStatus.hidden = false;
+        renameStatus.className = 'alert alert-danger';
+        renameStatusText.textContent = data.error || 'The run rename failed.';
+      }
+    }).catch(function() {
+      if (renamePending) { window.setTimeout(checkRenameStatus, 2000); }
+    });
+  };
+  checkRenameStatus();
+  uploadButton.addEventListener('click', function () {
+    if (uploading || !selectedFiles.length) {
+      return;
+    }
+
+    var files = selectedFiles.slice();
+    var prepareUrl = "{% url 'cowbat:upload_sequence_blob_sas' sequencing_run_pk=sequencing_run.pk %}";
+    var index = 0;
+    var completed = 0;
+
+    uploading = true;
+    uploadButton.disabled = true;
+    dropzone.setAttribute('aria-disabled', 'true');
+
+    var updateQueue = function (message) {
+      queueStatus.textContent = (
+        'Completed ' + completed + ' of ' + files.length + '. ' + message
+      );
+    };
+
+    var uploadNext = function () {
+      if (index >= files.length) {
+        uploading = false;
+        progressBar.style.width = '100%';
+        updateQueue('All files uploaded.');
+        status.textContent = 'Upload complete. Refresh the file list to verify.';
+        refreshButton.hidden = false;
+        return;
+      }
+
+      var file = files[index];
+      index += 1;
+
+      updateQueue(
+        'Uploading ' + file.name + ' (' + index + ' of ' + files.length + ').'
+      );
+
+      window.FoodPortAzureBlockUploader.prepareAndUpload(
+        file,
+        prepareUrl,
+        {
+          blockSize: 4 * 1024 * 1024,
+          blockConcurrency: 4,
+          maxAttempts: 5,
+          fileAttempts: 2,
+          onRetry: function (retryingFile, attempt) {
+            status.textContent = (
+              'Retrying ' + retryingFile.name + ' (attempt ' +
+              attempt + ' of 2).'
+            );
+          },
+          onProgress: function (uploadedBytes, totalBytes) {
+            var percent = totalBytes ?
+              Math.round(uploadedBytes / totalBytes * 100) : 0;
+            progressBar.style.width = percent + '%';
+            status.textContent = (
+              'Uploading ' + file.name + ': ' + percent + '%'
+            );
+          }
+        }
+      ).then(function () {
+        completed += 1;
+        progressBar.style.width = '0%';
+        status.textContent = 'Uploaded ' + file.name;
+        uploadNext();
+      }).catch(function (error) {
+        uploading = false;
+        uploadButton.disabled = false;
+        dropzone.setAttribute('aria-disabled', 'false');
+        status.textContent = (
+          'Could not upload ' + file.name +
+          (error.phase ? ' during ' + error.phase : '') + ' (HTTP ' +
+          (error.status || 0) + ').'
+        );
+
+        if (window.console && console.error) {
+          console.error('Azure block upload failed:', {
+            status: error.status || 0,
+            responseText: error.responseText || ''
+          });
+        }
+      });
+    };
+
+    uploadNext();
+  });
+
+})();
+</script>
+{% endif %}
+{% endblock %}

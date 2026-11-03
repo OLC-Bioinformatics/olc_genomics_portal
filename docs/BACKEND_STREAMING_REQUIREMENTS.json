@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Backend contract for streaming Nanopore upload, incremental Batch processing, report publication, and graceful run termination.",
+  "current_gui_run_id": 1745,
+  "lifecycle": {
+    "states": [
+      "created",
+      "uploading",
+      "processing",
+      "stopping",
+      "complete",
+      "error"
+    ],
+    "normal_flow": [
+      "created",
+      "uploading",
+      "processing",
+      "stopping",
+      "complete"
+    ]
+  },
+  "upload_behavior": {
+    "trigger": "POST /nanopore/runs/{run_id}/files/{file_id}/complete/",
+    "requirements": [
+      "A completed file must become eligible for processing without waiting for finalize.",
+      "The backend must atomically add completed files to the next processing batch.",
+      "File registration and completion must remain idempotent.",
+      "A file must never be processed more than once unless explicitly retried after failure."
+    ]
+  },
+  "batch_processing": {
+    "requirements": [
+      "Start or wake one long-lived Batch task after the first completed POD5 file.",
+      "Poll for new completed files or manifest generations while the run is open.",
+      "Process bounded batches as files become available.",
+      "Persist batch IDs, input file IDs, state, timestamps, exit code, and error details.",
+      "Do not require a finalized run manifest to process an open run."
+    ],
+    "recommended_status_fields": [
+      "status",
+      "batch_id",
+      "processed_pod5_count",
+      "pod5_count",
+      "active_batch_id",
+      "last_completed_batch_id",
+      "last_completed_at",
+      "retryable",
+      "error"
+    ]
+  },
+  "reports": {
+    "requirements": [
+      "Publish a report after each completed processing batch.",
+      "Retain all prior batch reports.",
+      "Publish reports only after their batch outputs are durable.",
+      "Expose report metadata and URLs without exposing storage credentials."
+    ],
+    "status_shape": {
+      "processing": {
+        "status": "processing",
+        "reports": [
+          {
+            "batch_id": "batch-000001",
+            "iteration": 1,
+            "published_at": "2026-09-15T18:00:00Z",
+            "report": {
+              "gdcs_total": 325,
+              "iterations": []
+            },
+            "report_url": "https://example.invalid/report.json"
+          }
+        ]
+      }
+    },
+    "gui_compatibility": "The GUI also accepts a single processing.report or status.report object containing report.iterations."
+  },
+  "termination": {
+    "endpoint": "POST /nanopore/runs/{run_id}/finalize/",
+    "meaning": "Stop accepting new files, finish or cancel safely any active batch according to backend policy, signal the Batch VM/task to shut down, and publish the final state.",
+    "requirements": [
+      "Reject or clearly mark files completed after termination begins.",
+      "Prevent new batch creation after termination begins.",
+      "Drain or explicitly account for the active batch before shutdown.",
+      "Persist termination_requested_at and terminated_at timestamps.",
+      "Return workflow_state=stopping or complete and processing_status=stopping, submitted, or pending as appropriate.",
+      "Make repeated termination requests idempotent."
+    ]
+  },
+  "observability": {
+    "requirements": [
+      "Return a correlation/request ID on every run, file, batch, and report response.",
+      "Include run ID, batch ID, file IDs, and manifest generation in structured logs.",
+      "Expose safe error details to the GUI while keeping credentials and SAS URLs out of responses and logs."
+    ]
+  },
+  "backward_compatibility": {
+    "legacy_finalize_behavior": "Streaming runs use the existing finalize endpoint. It freezes new intake, writes the stopping control state, and drains visible generations on the single long-lived Batch task.",
+    "recommended_versioning": "No separate streaming endpoint is required. Keep run_mode=streaming in the run model and preserve the finalize endpoint as the operator shutdown signal."
+  }
+}

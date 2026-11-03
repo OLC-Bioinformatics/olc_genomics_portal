@@ -2,6 +2,7 @@
 sequences/*
 sketchomatic*
 postgres-data/*
+postgres-data-test/
 olc_webportal/media/
 olc_webportalv2/media/
 

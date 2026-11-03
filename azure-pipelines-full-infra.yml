@@ -30,6 +30,11 @@ parameters:
 - name: bootstrapRemoteVm
   type: boolean
   default: true
+- name: azureServiceConnection
+  type: string
+  default: CFDC-FoodPort-managed-identity
+  values:
+    - CFDC-FoodPort-managed-identity
 
 variables:
 - name: DEPLOY_ENVIRONMENT
@@ -232,7 +237,7 @@ stages:
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
       inputs:
-        terraformVersion: 'latest'
+        terraformVersion: '1.9.8'
 
     - task: UsePythonVersion@0
       inputs:
@@ -244,20 +249,31 @@ stages:
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
         inputs:
-          azureSubscription: 'CFDC-FoodPort-service-connection'
+          azureSubscription: ${{ parameters.azureServiceConnection }}
+          addSpnToEnvironment: true
           scriptType: bash
           scriptLocation: inlineScript
           inlineScript: |
-            set -e
+            set -euo pipefail
+            if [ -z "${idToken:-}" ] || [ -z "${servicePrincipalId:-}" ] || [ -z "${tenantId:-}" ]; then
+              echo "ERROR: AzureCLI did not expose the workload identity federation credentials required by Terraform." >&2
+              exit 1
+            fi
+            export ARM_USE_OIDC=true
+            export ARM_OIDC_TOKEN="${idToken}"
+            export ARM_CLIENT_ID="${servicePrincipalId}"
+            export ARM_TENANT_ID="${tenantId}"
+            export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
             cd "$(Pipeline.Workspace)/foodport-tf/full-infra"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
             fi
             export TF_VAR_ssh_public_key="${SSH_PUBLIC_KEY}"
-            terraform init
-            terraform plan -out=tfplan
-            terraform apply -auto-approve tfplan
+            terraform init -input=false
+            terraform plan -input=false -out=tfplan
+            terraform apply -input=false -auto-approve tfplan
 
             VM_IP="$(terraform output -raw portal_vm_private_ip)"
             echo "$VM_IP" > vm_ip.txt
@@ -274,19 +290,30 @@ stages:
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
         inputs:
-          azureSubscription: 'CFDC-FoodPort-service-connection'
+          azureSubscription: ${{ parameters.azureServiceConnection }}
+          addSpnToEnvironment: true
           scriptType: bash
           scriptLocation: inlineScript
           inlineScript: |
-            set -e
+            set -euo pipefail
+            if [ -z "${idToken:-}" ] || [ -z "${servicePrincipalId:-}" ] || [ -z "${tenantId:-}" ]; then
+              echo "ERROR: AzureCLI did not expose the workload identity federation credentials required by Terraform." >&2
+              exit 1
+            fi
+            export ARM_USE_OIDC=true
+            export ARM_OIDC_TOKEN="${idToken}"
+            export ARM_CLIENT_ID="${servicePrincipalId}"
+            export ARM_TENANT_ID="${tenantId}"
+            export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
             cd "$(Pipeline.Workspace)/foodport-tf/full-infra"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
               exit 1
             fi
             export TF_VAR_ssh_public_key="${SSH_PUBLIC_KEY}"
-            terraform init
-            terraform destroy -auto-approve
+            terraform init -input=false
+            terraform destroy -input=false -auto-approve
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
@@ -546,31 +573,6 @@ stages:
         echo "##vso[task.setvariable variable=TARGET_HOST]$VM_IP"
       displayName: 'Set target VM IP variable'
 
-    - task: AzureCLI@2
-      name: fetchVmCreds
-      displayName: 'Fetch VM Azure service principal credentials'
-      inputs:
-        azureSubscription: 'CFDC-FoodPort-service-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -euo pipefail
-          vault='FoodPort-key-vault'
-          for secret in vm-client-id vm-secret vm-tenant; do
-            case "$secret" in
-              vm-client-id) var_name='VM_CLIENT_ID' ;;
-              vm-secret) var_name='VM_SECRET' ;;
-              vm-tenant) var_name='VM_TENANT' ;;
-              *) echo "Unexpected secret name: $secret" >&2; exit 1 ;;
-            esac
-            value=$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)
-            if [ -z "$value" ]; then
-              echo "Failed to read Key Vault secret: $secret" >&2
-              exit 1
-            fi
-            echo "##vso[task.setvariable variable=$var_name;isOutput=true;issecret=true]$value"
-          done
-
     - task: DownloadSecureFile@1
       name: sshKey
       inputs:
@@ -587,28 +589,18 @@ stages:
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
-        VM_CLIENT_ID_VAL="$(fetchVmCreds.VM_CLIENT_ID)"
-        VM_SECRET_VAL="$(fetchVmCreds.VM_SECRET)"
-        VM_TENANT_VAL="$(fetchVmCreds.VM_TENANT)"
-        if [ -z "${VM_CLIENT_ID_VAL:-}" ] || [ -z "${VM_SECRET_VAL:-}" ] || [ -z "${VM_TENANT_VAL:-}" ]; then
-          echo 'ERROR: VM Azure service principal credentials are not set. Check the fetchVmCreds task and Key Vault access.' >&2
-          echo "VM_CLIENT_ID set: ${VM_CLIENT_ID_VAL:+yes}"
-          echo "VM_SECRET set: ${VM_SECRET_VAL:+yes}"
-          echo "VM_TENANT set: ${VM_TENANT_VAL:+yes}"
-          exit 1
-        fi
-        safe_VM_CLIENT_ID=$(printf '%q' "$VM_CLIENT_ID_VAL")
-        safe_VM_SECRET=$(printf '%q' "$VM_SECRET_VAL")
-        safe_VM_TENANT=$(printf '%q' "$VM_TENANT_VAL")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR VM_CLIENT_ID=$safe_VM_CLIENT_ID VM_SECRET=$safe_VM_SECRET VM_TENANT=$safe_VM_TENANT TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
-          set -xeuo pipefail
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
+          set -euo pipefail
+          umask 077
 
-          export AZURE_CONFIG_DIR="$REMOTE_DIR/.azure"
+          AZURE_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/foodport-azure-cli.XXXXXX")"
+          export AZURE_CONFIG_DIR
+          trap 'rm -rf -- "$AZURE_CONFIG_DIR"' EXIT
           mkdir -p "$AZURE_CONFIG_DIR"
-          az login --service-principal -u "$VM_CLIENT_ID" -p "$VM_SECRET" --tenant "$VM_TENANT"
+          az login --identity --allow-no-subscriptions --output none
 
           vault='FoodPort-key-vault'
           env_file="$REMOTE_DIR/env"
@@ -632,9 +624,6 @@ stages:
             batch-account-key
             batch-account-subnet
             vm-image
-            vm-client-id
-            vm-secret
-            vm-tenant
             cowbat-node-agent-sku
             ampliseq-image
             ampliseq-node-agent-sku
@@ -685,9 +674,6 @@ stages:
               batch-account-key) var_name='BATCH_ACCOUNT_KEY' ;;
               batch-account-subnet) var_name='BATCH_ACCOUNT_SUBNET' ;;
               vm-image) var_name='VM_IMAGE' ;;
-              vm-client-id) var_name='VM_CLIENT_ID' ;;
-              vm-secret) var_name='VM_SECRET' ;;
-              vm-tenant) var_name='VM_TENANT' ;;
               cowbat-node-agent-sku) var_name='COWBAT_NODE_AGENT_SKU' ;;
               ampliseq-image) var_name='AMPLISEQ_IMAGE' ;;
               ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
@@ -698,7 +684,7 @@ stages:
               ad-app-secret) var_name='AD_APP_SECRET' ;;
               entra-id-client-id) var_name='ENTRA_ID_CLIENT_ID' ;;
               entra-id-client-secret) var_name='ENTRA_ID_CLIENT_SECRET' ;;
-              entra-id-tenant-id) var_name='ENTRA_ID_TENANT_ID' ;;
+              entra-id-tenant-id) var_name='ENTRA_TENANT_ID' ;;
               redmine-default-from) var_name='REDMINE_DEFAULT_FROM' ;;
               email-host-user) var_name='EMAIL_HOST_USER' ;;
               email-host-password) var_name='EMAIL_HOST_PASSWORD' ;;
@@ -727,8 +713,7 @@ stages:
               storage-account-name) var_name='STORAGE_ACCOUNT_NAME' ;;
               *) echo "Unknown secret mapping: $secret" >&2; exit 1 ;;
             esac
-            value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"
-            if [ $? -ne 0 ]; then
+            if ! value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"; then
               echo "Failed to read Key Vault secret: $secret" >&2
               exit 1
             fi

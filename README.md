@@ -51,11 +51,15 @@ BATCH_ACCOUNT_KEY=batchaccountkey
 EMAIL_HOST_USER=youremail@gmail.com
 EMAIL_HOST_PASSWORD=emailpassword
 VM_IMAGE=/subscriptions/subscription_id/resourceGroups/subscription/providers/Microsoft.Compute/images/image_name
-VM_CLIENT_ID=vm_client_id
-VM_SECRET=vm_secret_key
-VM_TENANT=vm_tenant_id
 SENTRY_DSN=your_sentry_dsn
 ```
+
+The portal VM uses its system-assigned managed identity to access Azure Key Vault.
+The active `AzureBatch` submission client also uses that identity; legacy COWBAT
+Batch API paths still use `BATCH_ACCOUNT_KEY`. Do not configure
+`VM_CLIENT_ID`, `VM_SECRET`, or `VM_TENANT`. `ENTRA_TENANT_ID` remains a
+non-secret setting for Microsoft sign-in; it is separate from the removed VM
+service-principal credentials.
 
 #### Task monitoring
 
@@ -150,13 +154,24 @@ The dedicated deploy pipelines do not require a separate repo-specific pipeline 
 repo resource authorization and the agent's OAuth credential.
 
 The new dedicated pipelines accept `sshPublicKey` as a pipeline variable only.
+For a new Dev VM identity, the first Dev pipeline run must set
+`bootstrapRemoteVm=false`; it provisions the VM and publishes
+`vm_principal_id.txt` in the `devVm` artifact. Assign the VM identity
+`Key Vault Secrets User` on the portal Key Vault and
+`Azure Batch Data Contributor` on the Batch account, then rerun with
+`bootstrapRemoteVm=true` to continue bootstrapping and deploying. See [the Dev
+VM Terraform README](../foodport-tf/dev-vm/README.md) for scoped role commands
+and cleanup.
 
 For example, via Azure DevOps CLI:
 
 ```bash
 az pipelines run --name "<your-dev-pipeline-name>" --branch main \
-  --variables sshPublicKey="<public-key>" destroy=false deployEnvironment=dev useHostedAgent=false bootstrapRemoteVm=true
+  --variables sshPublicKey="<public-key>" destroy=false deployEnvironment=dev useHostedAgent=false bootstrapRemoteVm=false
 ```
+
+After assigning the runtime roles to the principal ID in the `devVm` artifact,
+rerun with `bootstrapRemoteVm=true`.
 
 If the repo is in a different Azure DevOps project, ensure the pipeline is authorized to access the external repo from
 Pipeline settings > Resources > Repositories, or via the repo resource permissions dialog.
@@ -265,24 +280,45 @@ git branch -D my-feature-branch
 
 ## Azure DevOps pipeline usage
 
-This repository is currently moving from a legacy dispatcher pipeline to two dedicated end-to-end deploy pipelines.
+The current deployment pipelines are registered in the **FoodPort** Azure
+DevOps project. This inventory was checked on 2026-10-30:
 
-The active pipelines are:
+- `FoodPort-dev-VM` (ID 978) uses this repository's `azure-pipelines-dev.yml`.
+- `FoodPort-full-infra` (ID 979) uses this repository's `azure-pipelines-full-infra.yml`.
+- `FoodPort-update-portal` (ID 968) uses `azure-pipelines-update.yml`.
 
-- `FoodPort-dev-VM` — dev VM-only Terraform pipeline (ID 978)
-- `FoodPort-full-infra` — full infrastructure-only Terraform pipeline (ID 979)
-- `OLC-Bioinformatics.olc_genomics_portal-dev` — dedicated Dev VM provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-dev.yml`)
-- `OLC-Bioinformatics.olc_genomics_portal-full-infra` — dedicated full infra provision + bootstrap + deploy pipeline (`olc_genomics_portal/azure-pipelines-full-infra.yml`)
-- `OLC-Bioinformatics.olc_genomics_portal (968)` — direct app update pipeline (`olc_genomics_portal/azure-pipelines.update.yml`)
+The separate standalone Terraform pipelines remain registered in the
+**Virtool** project and use the `foodport-tf` Azure Repos repository:
+`foodport-tf` (ID 963), `foodport-tf (964)` (ID 964), and
+`foodport-tf (971)` (ID 971). They are documented in the `foodport-tf`
+repository's README.
 
-The old combined dispatcher pipeline, `olc_genomics_portal/azure-pipelines.yml`, is now legacy and can be removed once the new dedicated pipelines are validated.
+### Azure DevOps service connection status
+
+The current FoodPort service connection is
+`CFDC-FoodPort-service-connection`, and it uses service-principal-key
+authentication (`spnKey`). As checked on 2026-10-30, the connection
+`CFDC-FoodPort-managed-identity` does not yet exist in FoodPort.
+The Dev and full-infrastructure YAMLs currently default to that intended
+managed-identity connection name; runs will need the connection created and
+authorized first, or the parameter must be changed to another configured
+connection.
+
+For the migration, create a dedicated user-assigned managed identity and a
+managed-identity/workload-identity-federation service connection in the
+FoodPort project. Authorize only the required pipelines, and keep the existing
+service-principal connection until the new connection has been tested. Do not
+reuse `foodportbatch`, which is the Batch service identity. The portal VM's
+system-assigned identity remains separate and is used for Key Vault access and
+by the active `AzureBatch` client. Legacy COWBAT Batch paths and Blob Storage
+still use separately configured account keys.
 
 ### Pipeline purposes
 
 `olc_genomics_portal/azure-pipelines-dev.yml` is the end-to-end Dev VM deploy pipeline:
 
 - provisions the Dev VM via Terraform
-- publishes the VM IP artifact
+- publishes the VM IP and managed-identity principal ID
 - bootstraps the remote VM via SSH if `bootstrapRemoteVm=true`
 - deploys the portal app using downloaded artifacts and secrets
 
@@ -346,7 +382,7 @@ If you have not configured Azure DevOps CLI defaults yet:
 
 ```bash
 az extension add --name azure-devops
-az devops configure --defaults organization=https://dev.azure.com/CFIA-DevOps-ACIA project=Virtool
+az devops configure --defaults organization=https://dev.azure.com/CFIA-DevOps-ACIA project=FoodPort
 ```
 
 If you need to disable connection verification while installing the extension:
@@ -383,4 +419,3 @@ This is the pipeline to use when you want to push a code update to the portal VM
 - Full infra deploy pipeline: `olc_genomics_portal/azure-pipelines-full-infra.yml`
 - Direct app update pipeline: `olc_genomics_portal/azure-pipelines.update.yml`
 - Legacy dispatcher pipeline: `olc_genomics_portal/azure-pipelines.yml` (deprecated)
-

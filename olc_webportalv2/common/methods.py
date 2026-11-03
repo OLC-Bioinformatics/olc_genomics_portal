@@ -79,8 +79,9 @@ def generic_api_submit(
     }
 
     # Log the dictionary
-    logging.info(data)
-    print(data)
+    logging_data = _redact_sas_urls(value=deepcopy(data))
+    logging.info(logging_data)
+    print(logging_data)
 
     # Make the POST request with a timeout of 10 minutes
     response = requests.post(

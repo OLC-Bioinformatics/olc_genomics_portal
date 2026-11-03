@@ -1,4 +1,10 @@
-from django import forms
+#! /usr/bin/env python
+
+"""
+Forms for the GeneSeekr web portal.
+"""
+
+# Standard library imports
 from io import StringIO
 import re
 
@@ -6,6 +12,12 @@ import re
 from Bio import SeqIO
 from dal import autocomplete
 
+# Django imports
+from django import forms
+from django.utils.translation import gettext_lazy as _
+
+# Local imports
+from olc_webportalv2.common.benchmarks import BENCHMARK_CHOICES
 from olc_webportalv2.metadata.models import (
     Genus,
     SequenceData
@@ -52,9 +64,8 @@ class NearNeighborForm(forms.Form):
 
 class GeneSeekrForm(forms.Form):
     # Options for benchmark database selection
-    benchmark_databases = (
-        ('Listeria', _('Listeria')),
-        ('VTEC', _('VTEC')),
+    benchmark_databases = tuple(
+        (name, _(label)) for name, label in BENCHMARK_CHOICES
     )
     seqids = forms.CharField(
         max_length=100000,
