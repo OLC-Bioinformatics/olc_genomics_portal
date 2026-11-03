@@ -33,6 +33,8 @@ parameters:
 - name: azureServiceConnection
   type: string
   default: CFDC-FoodPort-managed-identity
+  values:
+    - CFDC-FoodPort-managed-identity
 
 variables:
 - name: DEPLOY_ENVIRONMENT
@@ -241,7 +243,7 @@ stages:
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
       inputs:
-        terraformVersion: 'latest'
+        terraformVersion: '1.9.8'
 
     - ${{ if not(parameters.destroy) }}:
       - task: AzureCLI@2
@@ -250,10 +252,21 @@ stages:
           SSH_PUBLIC_KEY: $(sshPublicKey)
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
+          addSpnToEnvironment: true
           scriptType: bash
           scriptLocation: inlineScript
           inlineScript: |
             set -euo pipefail
+            if [ -z "${idToken:-}" ] || [ -z "${servicePrincipalId:-}" ] || [ -z "${tenantId:-}" ]; then
+              echo "ERROR: AzureCLI did not expose the workload identity federation credentials required by Terraform." >&2
+              exit 1
+            fi
+            export ARM_USE_OIDC=true
+            export ARM_OIDC_TOKEN="${idToken}"
+            export ARM_CLIENT_ID="${servicePrincipalId}"
+            export ARM_TENANT_ID="${tenantId}"
+            export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
             repo_root="$(Build.SourcesDirectory)/foodport-tf"
             alt_repo_root="$(Pipeline.Workspace)/foodport-tf"
             if [ -d "$repo_root/dev-vm" ]; then
@@ -281,7 +294,7 @@ stages:
             export TF_VAR_existing_vnet_name="$(existingVnetName)"
             export TF_VAR_existing_subnet_name="$(existingSubnetName)"
 
-            terraform init
+            terraform init -input=false
 
             SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
             NIC_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/CFDC-FoodPort-Portal-rg/providers/Microsoft.Network/networkInterfaces/CFDC-FoodPort-dev-vm-24.04645_z1"
@@ -297,11 +310,13 @@ stages:
               fi
 
               if RESOURCE_RESULT="$(az resource show --ids "$RESOURCE_ID" --query id -o tsv 2>&1)"; then
-                terraform import "$ADDRESS" "$RESOURCE_ID"
-              elif [[ "$RESOURCE_RESULT" == *"(ResourceNotFound)"* ]]; then
-                echo "Resource not found in Azure; skipping import for $ADDRESS."
+                echo "Importing existing Azure resource into Terraform state: $ADDRESS."
+                terraform import -input=false "$ADDRESS" "$RESOURCE_ID"
+              elif grep -Fq "ResourceNotFound" <<< "$RESOURCE_RESULT" || grep -Fq "NotFound" <<< "$RESOURCE_RESULT"; then
+                echo "Azure resource does not exist yet: $RESOURCE_ID."
               else
                 printf '%s\n' "$RESOURCE_RESULT" >&2
+                echo "ERROR: Could not determine whether Azure resource exists: $RESOURCE_ID." >&2
                 return 1
               fi
             }
@@ -309,8 +324,8 @@ stages:
             import_if_present azurerm_network_interface.dev_vm "$NIC_ID"
             import_if_present azurerm_linux_virtual_machine.dev_vm "$VM_ID"
 
-            terraform plan -out=tfplan
-            terraform apply -auto-approve tfplan
+            terraform plan -input=false -out=tfplan
+            terraform apply -input=false -auto-approve tfplan
 
             VM_IP="$(terraform output -raw dev_vm_private_ip)"
             VM_PRINCIPAL_ID="$(terraform output -raw dev_vm_principal_id)"
@@ -332,10 +347,21 @@ stages:
           SSH_PUBLIC_KEY: $(sshPublicKey)
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
+          addSpnToEnvironment: true
           scriptType: bash
           scriptLocation: inlineScript
           inlineScript: |
             set -euo pipefail
+            if [ -z "${idToken:-}" ] || [ -z "${servicePrincipalId:-}" ] || [ -z "${tenantId:-}" ]; then
+              echo "ERROR: AzureCLI did not expose the workload identity federation credentials required by Terraform." >&2
+              exit 1
+            fi
+            export ARM_USE_OIDC=true
+            export ARM_OIDC_TOKEN="${idToken}"
+            export ARM_CLIENT_ID="${servicePrincipalId}"
+            export ARM_TENANT_ID="${tenantId}"
+            export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
             cd "$(Pipeline.Workspace)/foodport-tf/dev-vm"
             if [ -z "${SSH_PUBLIC_KEY:-}" ]; then
               echo "ERROR: sshPublicKey pipeline variable is not defined or is empty."
@@ -346,12 +372,12 @@ stages:
             export TF_VAR_existing_vnet_name="$(existingVnetName)"
             export TF_VAR_existing_subnet_name="$(existingSubnetName)"
 
-            terraform init
+            terraform init -input=false
 
             if [ -n "${subscriptionId:-}" ]; then
               SUBSCRIPTION_ID="${subscriptionId}"
             else
-              SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+              SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
             fi
 
             NIC_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/CFDC-FoodPort-Portal-rg/providers/Microsoft.Network/networkInterfaces/CFDC-FoodPort-dev-vm-24.04645_z1"
@@ -367,11 +393,13 @@ stages:
               fi
 
               if RESOURCE_RESULT="$(az resource show --ids "$RESOURCE_ID" --query id -o tsv 2>&1)"; then
-                terraform import "$ADDRESS" "$RESOURCE_ID"
-              elif [[ "$RESOURCE_RESULT" == *"(ResourceNotFound)"* ]]; then
-                echo "Resource not found in Azure; skipping import for $ADDRESS."
+                echo "Importing existing Azure resource into Terraform state: $ADDRESS."
+                terraform import -input=false "$ADDRESS" "$RESOURCE_ID"
+              elif grep -Fq "ResourceNotFound" <<< "$RESOURCE_RESULT" || grep -Fq "NotFound" <<< "$RESOURCE_RESULT"; then
+                echo "Azure resource does not exist yet: $RESOURCE_ID."
               else
                 printf '%s\n' "$RESOURCE_RESULT" >&2
+                echo "ERROR: Could not determine whether Azure resource exists: $RESOURCE_ID." >&2
                 return 1
               fi
             }
@@ -379,19 +407,17 @@ stages:
             import_if_present azurerm_network_interface.dev_vm "$NIC_ID"
             import_if_present azurerm_linux_virtual_machine.dev_vm "$VM_ID"
 
-            if [ -f terraform.tfstate ]; then
-              STATE_ADDRESSES="$(terraform state list)"
-              for ADDRESS in \
-                azurerm_ssh_public_key.dev_vm \
-                azurerm_role_assignment.dev_vm_key_vault_secrets_user \
-                azurerm_role_assignment.dev_vm_batch_data_contributor; do
-                if grep -Fxq "$ADDRESS" <<<"$STATE_ADDRESSES"; then
-                  terraform state rm "$ADDRESS"
-                fi
-              done
-            fi
+            STATE_ADDRESSES="$(terraform state list)"
+            for ADDRESS in \
+              azurerm_ssh_public_key.dev_vm \
+              azurerm_role_assignment.dev_vm_key_vault_secrets_user \
+              azurerm_role_assignment.dev_vm_batch_data_contributor; do
+              if grep -Fxq "$ADDRESS" <<<"$STATE_ADDRESSES"; then
+                terraform state rm "$ADDRESS"
+              fi
+            done
 
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
