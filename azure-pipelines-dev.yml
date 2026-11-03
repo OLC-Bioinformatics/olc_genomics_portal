@@ -27,6 +27,7 @@ parameters:
 - name: selfHostedPool
   type: string
   default: 'foodport-self-hosted'
+# Set false to redeploy on an already-bootstrapped VM without running host setup again.
 - name: bootstrapRemoteVm
   type: boolean
   default: true
@@ -224,7 +225,12 @@ stages:
 
 - stage: ProvisionDevVm
   displayName: 'Provision Dev VM'
-  condition: succeeded()
+  dependsOn: EnsureSelfHostedAgent
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      in(dependencies.EnsureSelfHostedAgent.result, 'Succeeded', 'SucceededWithIssues', 'Skipped')
+    )
   jobs:
   - job: Terraform
     displayName: Dev VM Terraform
@@ -421,7 +427,13 @@ stages:
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true))
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      eq(${{ parameters.bootstrapRemoteVm }}, true),
+      in(dependencies.EnsureSelfHostedAgent.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues')
+    )
   dependsOn:
     - ProvisionDevVm
     - EnsureSelfHostedAgent
@@ -621,17 +633,21 @@ stages:
           fi
           export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set solver classic
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q --solver=classic mamba -n base
+          CONDA_BIN="/home/${TARGET_SSH_USER}/miniconda/bin/conda"
+          "$CONDA_BIN" config --set always_yes yes --set changeps1 no
+          "$CONDA_BIN" config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+          "$CONDA_BIN" config --prepend channels conda-forge
+          "$CONDA_BIN" config --prepend channels bioconda
+          "$CONDA_BIN" config --prepend channels olcbioinformatics
+          "$CONDA_BIN" config --set channel_priority strict
+          "$CONDA_BIN" config --set solver libmamba
+          if ! command -v mamba >/dev/null 2>&1; then
+            "$CONDA_BIN" install -q -n base --yes --solver=libmamba --override-channels -c conda-forge mamba
+          fi
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
@@ -640,8 +656,17 @@ stages:
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
-  dependsOn: BootstrapRemoteVm
-  condition: succeeded()
+  dependsOn:
+    - EnsureSelfHostedAgent
+    - ProvisionDevVm
+    - BootstrapRemoteVm
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      in(dependencies.EnsureSelfHostedAgent.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.BootstrapRemoteVm.result, 'Succeeded', 'SucceededWithIssues', 'Skipped')
+    )
   jobs:
   - job: Deploy
     displayName: 'Deploy portal'
@@ -883,19 +908,37 @@ stages:
           fi
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
+          MAMBA_BIN="$HOME/miniconda/bin/mamba"
 
           # --- Create conda environment if missing ---
+          environment_created=false
           if ! "$CONDA_BIN" env list | grep -qE '(^|/)\bfoodport\b'; then
             echo "Creating conda environment 'foodport'"
-            "$CONDA_BIN" create -n foodport python=3.14 -y
+            if [ -x "$MAMBA_BIN" ]; then
+              "$MAMBA_BIN" create -n foodport --override-channels -c conda-forge python=3.14 -y
+            else
+              "$CONDA_BIN" config --set solver libmamba
+              "$CONDA_BIN" create --solver=libmamba -n foodport python=3.14 -y
+            fi
+            environment_created=true
           else
             echo "Conda environment 'foodport' already exists"
           fi
 
-          # --- Install/upgrade pip + requirements inside env ---
-          echo "Installing Python dependencies into 'foodport' environment"
-          "$CONDA_BIN" run -n foodport pip install --upgrade pip
-          "$CONDA_BIN" run -n foodport pip install --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+          # --- Refresh the host environment only when its requirements change ---
+          requirements_hash_file="$HOME/miniconda/envs/foodport/.requirements-base.sha256"
+          requirements_hash="$(sha256sum "$REMOTE_DIR/requirements/base.txt" | cut -d ' ' -f1)"
+          if [ "$environment_created" = true ] \
+            || [ ! -f "$requirements_hash_file" ] \
+            || [ "$(cat "$requirements_hash_file")" != "$requirements_hash" ]; then
+            echo "Installing Python dependencies into 'foodport' environment"
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade pip
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+            printf '%s\n' "$requirements_hash" > "${requirements_hash_file}.tmp"
+            mv "${requirements_hash_file}.tmp" "$requirements_hash_file"
+          else
+            echo "Python requirements unchanged; skipping host dependency installation"
+          fi
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
