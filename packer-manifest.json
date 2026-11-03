@@ -1,0 +1,161 @@
+{
+  "builds": [
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1788884114,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.4",
+      "packer_run_uuid": "a6eb5b3f-dc7e-f270-0788-6845bd68a37c",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.4"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1788896341,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.5",
+      "packer_run_uuid": "b40df5c1-65aa-6f2d-d60b-ff6ce588862c",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.5"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1788977337,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.6",
+      "packer_run_uuid": "b85da063-ae8b-567a-9298-56c4396d6e75",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.6"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1788985445,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.7",
+      "packer_run_uuid": "749662d0-1852-9164-8272-3df088d541e7",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.7"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1789058521,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.8",
+      "packer_run_uuid": "0b3af991-65f3-f595-7fb4-a5d9aa2ac3c3",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.8"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1789506375,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.10",
+      "packer_run_uuid": "239a79e9-9245-7b63-e5d7-5c24b169c6bb",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.10"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1789678954,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.12",
+      "packer_run_uuid": "c3de644a-2e4d-36d6-67ec-9a877c2e10ce",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.12"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1789743971,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.13",
+      "packer_run_uuid": "70839c4a-3cc1-ba5c-9d16-8cda252bc0d6",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.13"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1790000170,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.14",
+      "packer_run_uuid": "323f6b2d-cc41-df0b-c7bc-d6b75244a83e",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.14"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1790011194,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.15",
+      "packer_run_uuid": "2404cc07-cb10-b01c-8a0f-da7f211f19ef",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.15"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1790092034,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.16",
+      "packer_run_uuid": "5410cb90-dce0-04a1-cb29-ee0bb2dfb6b2",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.16"
+      }
+    },
+    {
+      "name": "nanopore",
+      "builder_type": "azure-arm",
+      "build_time": 1790267787,
+      "files": null,
+      "artifact_id": "/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.17",
+      "packer_run_uuid": "2c51dc36-4d09-0b15-4935-e10cbedacd84",
+      "custom_data": {
+        "environment": "development",
+        "image_name": "nanopore",
+        "image_version": "0.0.17"
+      }
+    }
+  ],
+  "last_run_uuid": "2c51dc36-4d09-0b15-4935-e10cbedacd84"
+}
