@@ -518,22 +518,22 @@ stages:
           if ! grep -qxF "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" "/home/${TARGET_SSH_USER}/.bashrc"; then
             echo "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" >> "/home/${TARGET_SSH_USER}/.bashrc"
           fi
-          export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+          export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH"
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
           CONDA_BIN="/home/${TARGET_SSH_USER}/miniconda/bin/conda"
-          "$CONDA_BIN" config --set always_yes yes --set changeps1 no
-          "$CONDA_BIN" config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          "$CONDA_BIN" config --prepend channels conda-forge
-          "$CONDA_BIN" config --prepend channels bioconda
-          "$CONDA_BIN" config --prepend channels olcbioinformatics
-          "$CONDA_BIN" config --set channel_priority strict
-          "$CONDA_BIN" config --set solver libmamba
+          "\$CONDA_BIN" config --set always_yes yes --set changeps1 no
+          "\$CONDA_BIN" config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          "\$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          "\$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+          "\$CONDA_BIN" config --prepend channels conda-forge
+          "\$CONDA_BIN" config --prepend channels bioconda
+          "\$CONDA_BIN" config --prepend channels olcbioinformatics
+          "\$CONDA_BIN" config --set channel_priority strict
+          "\$CONDA_BIN" config --set solver libmamba
           if ! command -v mamba >/dev/null 2>&1; then
-            "$CONDA_BIN" install -q -n base --yes --solver=libmamba --override-channels -c conda-forge mamba
+            "\$CONDA_BIN" install -q -n base --yes --solver=libmamba --override-channels -c conda-forge mamba
           fi
         EOF
       env:
