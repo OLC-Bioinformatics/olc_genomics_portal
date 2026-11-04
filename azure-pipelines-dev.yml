@@ -320,6 +320,21 @@ stages:
       ${{ if ne(parameters.useHostedAgent, true) }}:
         name: CFDC-FoodPort-MDP-pool
     steps:
+    - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
+
     - task: DownloadPipelineArtifact@2
       displayName: 'Download dev VM artifact'
       inputs:
@@ -350,11 +365,6 @@ stages:
         echo "Found vm_ip.txt at: ${artifact_file}"
         echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
       displayName: 'Load TARGET_HOST from dev VM artifact'
-
-    - task: DownloadSecureFile@1
-      name: rootCA
-      inputs:
-        secureFile: 'GoC-GdC-Root-A.crt'
 
     - task: DownloadSecureFile@1
       name: tlsCert
@@ -555,6 +565,16 @@ stages:
       name: rootCA
       inputs:
         secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
 
     - script: |
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
