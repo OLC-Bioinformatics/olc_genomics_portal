@@ -543,6 +543,8 @@ stages:
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
+  variables:
+  - group: FoodPort-Dev-Portal-Secrets
   dependsOn:
     - ProvisionDevVm
     - BootstrapRemoteVm
@@ -645,147 +647,162 @@ stages:
         fi
         EOF
 
+        secret_dir="$(mktemp -d)"
+        remote_secret_dir=''
+        cleanup_secret_staging() {
+          if ! rm -rf -- "$secret_dir"; then
+            echo 'WARNING: Could not remove the local temporary secret directory.' >&2
+          fi
+          if [ -n "$remote_secret_dir" ] && \
+             ! ssh -o StrictHostKeyChecking=no \
+                  -o UserKnownHostsFile=/dev/null \
+                  -i "$(sshKey.secureFilePath)" \
+                  -p "${TARGET_SSH_PORT}" \
+                  "${TARGET_SSH_USER}@${TARGET_HOST}" \
+                  "rm -rf -- '$remote_secret_dir'"; then
+            echo 'WARNING: Could not remove the remote temporary secret directory.' >&2
+          fi
+        }
+        trap cleanup_secret_staging EXIT
+        chmod 700 "$secret_dir"
+        python3 - "$secret_dir" "$TARGET_HOST" <<'PY'
+        import os
+        import sys
+        from pathlib import Path
+
+        secret_names = (
+            "SECRET_KEY",
+            "SECRET_KEY_BASE",
+            "REDMINE_DB_PASSWORD",
+            "AZURE_ACCOUNT_NAME",
+            "AZURE_ACCOUNT_KEY",
+            "BATCH_ACCOUNT_NAME",
+            "BATCH_ACCOUNT_URL",
+            "BATCH_ACCOUNT_KEY",
+            "BATCH_ACCOUNT_SUBNET",
+            "VM_IMAGE",
+            "COWBAT_NODE_AGENT_SKU",
+            "AMPLISEQ_IMAGE",
+            "AMPLISEQ_NODE_AGENT_SKU",
+            "COWSNPHR_IMAGE",
+            "COWSNPHR_NODE_AGENT_SKU",
+            "AD_APP_ID",
+            "AD_APP_SECRET_ID",
+            "AD_APP_SECRET",
+            "ENTRA_ID_CLIENT_ID",
+            "ENTRA_ID_CLIENT_SECRET",
+            "ENTRA_TENANT_ID",
+            "REDMINE_DEFAULT_FROM",
+            "EMAIL_HOST_USER",
+            "EMAIL_HOST_PASSWORD",
+            "EMAIL_RELAY_SECRET",
+            "DB_NAME",
+            "DB_USER",
+            "DB_PASS",
+            "DB_SERVICE",
+            "DB_PORT",
+            "DJANGO_EMAIL_BACKEND",
+            "SENTRY_DSN",
+            "ENVIRONMENT",
+            "CONNECTION_STRING",
+            "SITE_URL",
+            "DJANGO_SERVER_NAME",
+            "REDMINE_SERVER_NAME",
+            "API_KEY",
+            "DEV_API_KEY",
+            "MARIA_DB_ROOT_PASSWORD",
+            "MYSQL_PASSWORD",
+            "SUBSCRIPTION_ID",
+            "TENANT_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "RESOURCE_GROUP_NAME",
+            "STORAGE_ACCOUNT_NAME",
+        )
+        dotenv_names = (
+            "SUBSCRIPTION_ID",
+            "TENANT_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "STORAGE_ACCOUNT_NAME",
+            "RESOURCE_GROUP_NAME",
+            "CONNECTION_STRING",
+            "MYSQL_PASSWORD",
+            "MARIA_DB_ROOT_PASSWORD",
+            "DB_PASS",
+            "EMAIL_HOST_USER",
+            "EMAIL_HOST_PASSWORD",
+        )
+
+        if os.environ.get("FOODPORT_SECRET_VARIABLES_READY", "").lower() != "true":
+            raise SystemExit(
+                "Set FOODPORT_SECRET_VARIABLES_READY=true in "
+                "FoodPort-Dev-Portal-Secrets after entering all secret values."
+            )
+
+        missing = [
+            name
+            for name in secret_names
+            if not os.environ.get(name)
+            or os.environ[name] in (f"$({name})", "__REPLACE_ME__")
+        ]
+        if missing:
+            raise SystemExit(
+                "Missing or placeholder variable-group value(s): "
+                + ", ".join(missing)
+            )
+
+        for name in secret_names:
+            if "\n" in os.environ[name] or "\r" in os.environ[name]:
+                raise SystemExit(f"{name} must be a single-line value.")
+
+        output_dir = Path(sys.argv[1])
+        target_host = sys.argv[2]
+        env_lines = [
+            "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
+        ]
+        env_lines.extend(f"{name}={os.environ[name]}" for name in secret_names)
+        (output_dir / "env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+
+        dotenv_lines = [
+            "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
+        ]
+        dotenv_lines.extend(f"{name}={os.environ[name]}" for name in dotenv_names)
+        dotenv_lines.extend(("FLOWER_USER=", "FLOWER_PASSWORD="))
+        (output_dir / ".env").write_text(
+            "\n".join(dotenv_lines) + "\n", encoding="utf-8"
+        )
+        os.chmod(output_dir / "env", 0o600)
+        os.chmod(output_dir / ".env", 0o600)
+        PY
+
+        remote_secret_dir="/tmp/foodport-secrets-$(Build.BuildId)"
+        safe_remote_secret_dir=$(printf '%q' "$remote_secret_dir")
+        tar -C "$secret_dir" -cf - env .env | \
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -i "$(sshKey.secureFilePath)" \
+              -p "${TARGET_SSH_PORT}" \
+              "${TARGET_SSH_USER}@${TARGET_HOST}" \
+              "umask 077; install -d -m 700 $safe_remote_secret_dir; tar -C $safe_remote_secret_dir -xf -"
+
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
+        safe_REMOTE_SECRET_DIR=$(printf '%q' "$remote_secret_dir")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST REMOTE_SECRET_DIR=$safe_REMOTE_SECRET_DIR bash -s" <<'EOF'
           set -euo pipefail
           umask 077
 
-          AZURE_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/foodport-azure-cli.XXXXXX")"
-          export AZURE_CONFIG_DIR
-          trap 'rm -rf -- "$AZURE_CONFIG_DIR"' EXIT
-          mkdir -p "$AZURE_CONFIG_DIR"
-          az login --identity --allow-no-subscriptions --output none
+          trap 'rm -rf -- "$REMOTE_SECRET_DIR"' EXIT
 
-          vault='FoodPort-key-vault'
           env_file="$REMOTE_DIR/env"
           dotenv_file="$REMOTE_DIR/.env"
-          : > "$env_file"
-          : > "$dotenv_file"
-          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
-          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
-          django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
-          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
-          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
-          secrets=(
-            secret-key
-            secret-key-base
-            redmine-database-password
-            azure-account-name
-            azure-account-key
-            batch-account-name
-            batch-account-url
-            batch-account-key
-            batch-account-subnet
-            vm-image
-            cowbat-node-agent-sku
-            ampliseq-image
-            ampliseq-node-agent-sku
-            cowsnphr-image
-            cowsnphr-node-agent-sku
-            ad-app-id
-            ad-app-secret-id
-            ad-app-secret
-            entra-id-client-id
-            entra-id-client-secret
-            entra-id-tenant-id
-            redmine-default-from
-            email-host-user
-            email-host-password
-            email-relay-secret
-            db-name
-            db-user
-            db-pass
-            db-service
-            db-port
-            django-email-backend
-            sentry-dsn
-            environment
-            connection-string
-            site-url
-            django-server-name
-            redmine-server-name
-            api-key
-            dev-api-key
-            maria-db-root-password
-            mysql-password
-            subscription-id
-            tenant-id
-            client-id
-            client-secret
-            resource-group-name
-            storage-account-name
-          )
-          for secret in "${secrets[@]}"; do
-            case "$secret" in
-              secret-key) var_name='SECRET_KEY' ;;
-              secret-key-base) var_name='SECRET_KEY_BASE' ;;
-              redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
-              azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
-              azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
-              batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
-              batch-account-url) var_name='BATCH_ACCOUNT_URL' ;;
-              batch-account-key) var_name='BATCH_ACCOUNT_KEY' ;;
-              batch-account-subnet) var_name='BATCH_ACCOUNT_SUBNET' ;;
-              vm-image) var_name='VM_IMAGE' ;;
-              cowbat-node-agent-sku) var_name='COWBAT_NODE_AGENT_SKU' ;;
-              ampliseq-image) var_name='AMPLISEQ_IMAGE' ;;
-              ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
-              cowsnphr-image) var_name='COWSNPHR_IMAGE' ;;
-              cowsnphr-node-agent-sku) var_name='COWSNPHR_NODE_AGENT_SKU' ;;
-              ad-app-id) var_name='AD_APP_ID' ;;
-              ad-app-secret-id) var_name='AD_APP_SECRET_ID' ;;
-              ad-app-secret) var_name='AD_APP_SECRET' ;;
-              entra-id-client-id) var_name='ENTRA_ID_CLIENT_ID' ;;
-              entra-id-client-secret) var_name='ENTRA_ID_CLIENT_SECRET' ;;
-              entra-id-tenant-id) var_name='ENTRA_TENANT_ID' ;;
-              redmine-default-from) var_name='REDMINE_DEFAULT_FROM' ;;
-              email-host-user) var_name='EMAIL_HOST_USER' ;;
-              email-host-password) var_name='EMAIL_HOST_PASSWORD' ;;
-              email-relay-secret) var_name='EMAIL_RELAY_SECRET' ;;
-              db-name) var_name='DB_NAME' ;;
-              db-user) var_name='DB_USER' ;;
-              db-pass) var_name='DB_PASS' ;;
-              db-service) var_name='DB_SERVICE' ;;
-              db-port) var_name='DB_PORT' ;;
-              django-email-backend) var_name='DJANGO_EMAIL_BACKEND' ;;
-              sentry-dsn) var_name='SENTRY_DSN' ;;
-              environment) var_name='ENVIRONMENT' ;;
-              connection-string) var_name='CONNECTION_STRING' ;;
-              site-url) var_name='SITE_URL' ;;
-              django-server-name) var_name='DJANGO_SERVER_NAME' ;;
-              redmine-server-name) var_name='REDMINE_SERVER_NAME' ;;
-              api-key) var_name='API_KEY' ;;
-              dev-api-key) var_name='DEV_API_KEY' ;;
-              maria-db-root-password) var_name='MARIA_DB_ROOT_PASSWORD' ;;
-              mysql-password) var_name='MYSQL_PASSWORD' ;;
-              subscription-id) var_name='SUBSCRIPTION_ID' ;;
-              tenant-id) var_name='TENANT_ID' ;;
-              client-id) var_name='CLIENT_ID' ;;
-              client-secret) var_name='CLIENT_SECRET' ;;
-              resource-group-name) var_name='RESOURCE_GROUP_NAME' ;;
-              storage-account-name) var_name='STORAGE_ACCOUNT_NAME' ;;
-              *) echo "Unknown secret mapping: $secret" >&2; exit 1 ;;
-            esac
-            if ! value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"; then
-              echo "Failed to read Key Vault secret: $secret" >&2
-              exit 1
-            fi
-            if [ -z "$value" ]; then
-              echo "Key Vault secret $secret is empty" >&2
-              exit 1
-            fi
-            printf '%s=%s\n' "$var_name" "$value" >> "$env_file"
-            case "$var_name" in
-              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
-                printf '%s=%s\n' "$var_name" "$value" >> "$dotenv_file"
-                ;;
-            esac
-          done
-          printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$dotenv_file"
-          chmod 600 "$env_file" "$dotenv_file"
+          install -m 600 "$REMOTE_SECRET_DIR/env" "$env_file"
+          install -m 600 "$REMOTE_SECRET_DIR/.env" "$dotenv_file"
 
           python3 "$REMOTE_DIR/remote_deploy_env.py"
           cd "$REMOTE_DIR"
@@ -857,4 +874,54 @@ stages:
           fi
           exit 1
         EOF
+        remote_secret_dir=''
       displayName: 'Deploy portal on dev VM'
+      env:
+        FOODPORT_SECRET_VARIABLES_READY: $(FOODPORT_SECRET_VARIABLES_READY)
+        SECRET_KEY: $(SECRET_KEY)
+        SECRET_KEY_BASE: $(SECRET_KEY_BASE)
+        REDMINE_DB_PASSWORD: $(REDMINE_DB_PASSWORD)
+        AZURE_ACCOUNT_NAME: $(AZURE_ACCOUNT_NAME)
+        AZURE_ACCOUNT_KEY: $(AZURE_ACCOUNT_KEY)
+        BATCH_ACCOUNT_NAME: $(BATCH_ACCOUNT_NAME)
+        BATCH_ACCOUNT_URL: $(BATCH_ACCOUNT_URL)
+        BATCH_ACCOUNT_KEY: $(BATCH_ACCOUNT_KEY)
+        BATCH_ACCOUNT_SUBNET: $(BATCH_ACCOUNT_SUBNET)
+        VM_IMAGE: $(VM_IMAGE)
+        COWBAT_NODE_AGENT_SKU: $(COWBAT_NODE_AGENT_SKU)
+        AMPLISEQ_IMAGE: $(AMPLISEQ_IMAGE)
+        AMPLISEQ_NODE_AGENT_SKU: $(AMPLISEQ_NODE_AGENT_SKU)
+        COWSNPHR_IMAGE: $(COWSNPHR_IMAGE)
+        COWSNPHR_NODE_AGENT_SKU: $(COWSNPHR_NODE_AGENT_SKU)
+        AD_APP_ID: $(AD_APP_ID)
+        AD_APP_SECRET_ID: $(AD_APP_SECRET_ID)
+        AD_APP_SECRET: $(AD_APP_SECRET)
+        ENTRA_ID_CLIENT_ID: $(ENTRA_ID_CLIENT_ID)
+        ENTRA_ID_CLIENT_SECRET: $(ENTRA_ID_CLIENT_SECRET)
+        ENTRA_TENANT_ID: $(ENTRA_TENANT_ID)
+        REDMINE_DEFAULT_FROM: $(REDMINE_DEFAULT_FROM)
+        EMAIL_HOST_USER: $(EMAIL_HOST_USER)
+        EMAIL_HOST_PASSWORD: $(EMAIL_HOST_PASSWORD)
+        EMAIL_RELAY_SECRET: $(EMAIL_RELAY_SECRET)
+        DB_NAME: $(DB_NAME)
+        DB_USER: $(DB_USER)
+        DB_PASS: $(DB_PASS)
+        DB_SERVICE: $(DB_SERVICE)
+        DB_PORT: $(DB_PORT)
+        DJANGO_EMAIL_BACKEND: $(DJANGO_EMAIL_BACKEND)
+        SENTRY_DSN: $(SENTRY_DSN)
+        ENVIRONMENT: $(ENVIRONMENT)
+        CONNECTION_STRING: $(CONNECTION_STRING)
+        SITE_URL: $(SITE_URL)
+        DJANGO_SERVER_NAME: $(DJANGO_SERVER_NAME)
+        REDMINE_SERVER_NAME: $(REDMINE_SERVER_NAME)
+        API_KEY: $(API_KEY)
+        DEV_API_KEY: $(DEV_API_KEY)
+        MARIA_DB_ROOT_PASSWORD: $(MARIA_DB_ROOT_PASSWORD)
+        MYSQL_PASSWORD: $(MYSQL_PASSWORD)
+        SUBSCRIPTION_ID: $(SUBSCRIPTION_ID)
+        TENANT_ID: $(TENANT_ID)
+        CLIENT_ID: $(CLIENT_ID)
+        CLIENT_SECRET: $(CLIENT_SECRET)
+        RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
+        STORAGE_ACCOUNT_NAME: $(STORAGE_ACCOUNT_NAME)

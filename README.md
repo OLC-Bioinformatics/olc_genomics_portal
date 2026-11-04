@@ -54,9 +54,11 @@ VM_IMAGE=/subscriptions/subscription_id/resourceGroups/subscription/providers/Mi
 SENTRY_DSN=your_sentry_dsn
 ```
 
-The portal VM uses its system-assigned managed identity to access Azure Key Vault.
-The active `AzureBatch` submission client also uses that identity; legacy COWBAT
-Batch API paths still use `BATCH_ACCOUNT_KEY`. Do not configure
+The Dev deployment pipeline receives its environment values from the
+`FoodPort-Dev-Portal-Secrets` Azure DevOps variable group and transfers them to
+the VM over SSH. The VM does not need Key Vault access for deployment. The
+active `AzureBatch` submission client uses the VM's system-assigned managed
+identity; legacy COWBAT Batch API paths still use `BATCH_ACCOUNT_KEY`. Do not configure
 `VM_CLIENT_ID`, `VM_SECRET`, or `VM_TENANT`. `ENTRA_TENANT_ID` remains a
 non-secret setting for Microsoft sign-in; it is separate from the removed VM
 service-principal credentials.
@@ -154,14 +156,10 @@ The dedicated deploy pipelines do not require a separate repo-specific pipeline 
 repo resource authorization and the agent's OAuth credential.
 
 The new dedicated pipelines accept `sshPublicKey` as a pipeline variable only.
-For a new Dev VM identity, the first Dev pipeline run must set
-`bootstrapRemoteVm=false`; it provisions the VM and publishes
-`vm_principal_id.txt` in the `devVm` artifact. Assign the VM identity
-`Key Vault Secrets User` on the portal Key Vault and
-`Azure Batch Data Contributor` on the Batch account, then rerun with
-`bootstrapRemoteVm=true` to continue bootstrapping and deploying. See [the Dev
-VM Terraform README](../foodport-tf/dev-vm/README.md) for scoped role commands
-and cleanup.
+The Dev VM identity still needs `Azure Batch Data Contributor` on the Batch
+account before it submits Batch jobs. It does not need `Key Vault Secrets User`
+for deployment. See [the Dev VM Terraform README](../foodport-tf/dev-vm/README.md)
+for scoped role commands and cleanup.
 
 For example, via Azure DevOps CLI:
 
@@ -309,9 +307,10 @@ managed-identity/workload-identity-federation service connection in the
 FoodPort project. Authorize only the required pipelines, and keep the existing
 service-principal connection until the new connection has been tested. Do not
 reuse `foodportbatch`, which is the Batch service identity. The portal VM's
-system-assigned identity remains separate and is used for Key Vault access and
-by the active `AzureBatch` client. Legacy COWBAT Batch paths and Blob Storage
-still use separately configured account keys.
+system-assigned identity remains separate and is used by the active
+`AzureBatch` client. Legacy COWBAT Batch paths and Blob Storage still use
+separately configured account keys. The Dev deployment's secret values are
+provided by its Azure DevOps variable group.
 
 ### Pipeline purposes
 
@@ -331,6 +330,77 @@ still use separately configured account keys.
 
 `olc_genomics_portal/azure-pipelines.update.yml` is a separate direct app update pipeline.
 It is intended for updates to an existing portal VM and runs a repo pull and compose stack restart.
+
+### Dev VM deployment variable group
+
+The `FoodPort-Dev-VM` pipeline (ID 978) uses the `FoodPort-Dev-Portal-Secrets`
+variable group in the **FoodPort** project. The group is initially created with
+`FOODPORT_SECRET_VARIABLES_READY=false`. The 47 variables below are already
+created, marked secret, and set to the placeholder `__REPLACE_ME__`; leave the
+readiness flag false until all placeholders have been replaced.
+
+In Azure DevOps, open **Pipelines > Library > FoodPort-Dev-Portal-Secrets**.
+Edit each existing variable using the exact name in the first column and enter
+the current value of the corresponding Key Vault secret in the second column.
+Keep every value marked secret using the lock icon. If you cannot read a Key
+Vault value, ask an authorized secret owner to enter it; do not put secret
+values in source control, pipeline logs, or chat.
+
+| Variable name | Existing Key Vault secret |
+|---|---|
+| `SECRET_KEY` | `secret-key` |
+| `SECRET_KEY_BASE` | `secret-key-base` |
+| `REDMINE_DB_PASSWORD` | `redmine-database-password` |
+| `AZURE_ACCOUNT_NAME` | `azure-account-name` |
+| `AZURE_ACCOUNT_KEY` | `azure-account-key` |
+| `BATCH_ACCOUNT_NAME` | `batch-account-name` |
+| `BATCH_ACCOUNT_URL` | `batch-account-url` |
+| `BATCH_ACCOUNT_KEY` | `batch-account-key` |
+| `BATCH_ACCOUNT_SUBNET` | `batch-account-subnet` |
+| `VM_IMAGE` | `vm-image` |
+| `COWBAT_NODE_AGENT_SKU` | `cowbat-node-agent-sku` |
+| `AMPLISEQ_IMAGE` | `ampliseq-image` |
+| `AMPLISEQ_NODE_AGENT_SKU` | `ampliseq-node-agent-sku` |
+| `COWSNPHR_IMAGE` | `cowsnphr-image` |
+| `COWSNPHR_NODE_AGENT_SKU` | `cowsnphr-node-agent-sku` |
+| `AD_APP_ID` | `ad-app-id` |
+| `AD_APP_SECRET_ID` | `ad-app-secret-id` |
+| `AD_APP_SECRET` | `ad-app-secret` |
+| `ENTRA_ID_CLIENT_ID` | `entra-id-client-id` |
+| `ENTRA_ID_CLIENT_SECRET` | `entra-id-client-secret` |
+| `ENTRA_TENANT_ID` | `entra-id-tenant-id` |
+| `REDMINE_DEFAULT_FROM` | `redmine-default-from` |
+| `EMAIL_HOST_USER` | `email-host-user` |
+| `EMAIL_HOST_PASSWORD` | `email-host-password` |
+| `EMAIL_RELAY_SECRET` | `email-relay-secret` |
+| `DB_NAME` | `db-name` |
+| `DB_USER` | `db-user` |
+| `DB_PASS` | `db-pass` |
+| `DB_SERVICE` | `db-service` |
+| `DB_PORT` | `db-port` |
+| `DJANGO_EMAIL_BACKEND` | `django-email-backend` |
+| `SENTRY_DSN` | `sentry-dsn` |
+| `ENVIRONMENT` | `environment` |
+| `CONNECTION_STRING` | `connection-string` |
+| `SITE_URL` | `site-url` |
+| `DJANGO_SERVER_NAME` | `django-server-name` |
+| `REDMINE_SERVER_NAME` | `redmine-server-name` |
+| `API_KEY` | `api-key` |
+| `DEV_API_KEY` | `dev-api-key` |
+| `MARIA_DB_ROOT_PASSWORD` | `maria-db-root-password` |
+| `MYSQL_PASSWORD` | `mysql-password` |
+| `SUBSCRIPTION_ID` | `subscription-id` |
+| `TENANT_ID` | `tenant-id` |
+| `CLIENT_ID` | `client-id` |
+| `CLIENT_SECRET` | `client-secret` |
+| `RESOURCE_GROUP_NAME` | `resource-group-name` |
+| `STORAGE_ACCOUNT_NAME` | `storage-account-name` |
+
+After adding all 47 values, set the existing non-secret
+`FOODPORT_SECRET_VARIABLES_READY` variable to `true`. Under the variable group's
+**Pipeline permissions**, authorize only `FoodPort-dev-VM`; do not enable access
+for all pipelines. The pipeline stages the files with restrictive permissions,
+transfers them over SSH, and removes the temporary remote copy after deployment.
 
 ### Self-hosted agent support
 
