@@ -88,12 +88,16 @@ stages:
 
     - script: |
         set -euo pipefail
-        if ! command -v update-ca-certificates >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ca-certificates curl
+          sudo apt-get install -y --no-install-recommends ca-certificates
         fi
         sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         sudo update-ca-certificates
+        if ! command -v curl >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl unzip
+        fi
         if ! command -v az >/dev/null 2>&1; then
           installer="$(mktemp)"
           trap 'rm -f -- "$installer"' EXIT
