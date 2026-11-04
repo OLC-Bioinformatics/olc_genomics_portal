@@ -9,7 +9,7 @@ trigger:
 pr: none
 
 # This pipeline connects directly to a private portal VM over SSH.
-# It defaults to the self-hosted pool so the agent can reach the private endpoint.
+# It defaults to the Managed DevOps Pool so the agent can reach the private endpoint.
 parameters:
 - name: useHostedAgent
   type: boolean
@@ -17,9 +17,6 @@ parameters:
 - name: hostedVmImage
   type: string
   default: 'ubuntu-latest'
-- name: selfHostedPool
-  type: string
-  default: 'foodport-self-hosted'
 
 variables:
 - name: TARGET_HOST
@@ -30,209 +27,10 @@ variables:
   value: '22'
 - name: REPO_DIR
   value: '/home/cfiaadmin/FoodPort/olc_genomics_portal'
-- name: SELF_HOSTED_POOL
-  value: ${{ parameters.selfHostedPool }}
-- name: SELF_HOSTED_AGENT_NAME
-  value: 'CFDC-FoodPort-self-hosted-agent-vm'
 
 stages:
-- stage: EnsureSelfHostedAgent
-  displayName: 'Ensure self-hosted agent'
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true))
-  jobs:
-  - job: EnsureAgent
-    displayName: 'Ensure self-hosted agent is available'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: none
-    - script: |
-        set -euo pipefail
-
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
-          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
-          exit 1
-        fi
-
-        python3 - <<'PY'
-        import base64
-        import json
-        import os
-        import sys
-        import time
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
-        project = os.environ['SYSTEM_TEAMPROJECT']
-        pool_name = os.environ['SELF_HOSTED_POOL']
-        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
-        interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
-        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
-
-        auth = base64.b64encode(f':{token}'.encode()).decode()
-        headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-Type': 'application/json'
-        }
-
-        def http_request(path, method='GET', body=None):
-            if path.startswith('/_apis/distributedtask'):
-                url = f'{org_uri}{path}'
-            else:
-                url = f'{org_uri}/{project}{path}'
-            print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
-            data = None
-            if body is not None:
-                print('Request body:', json.dumps(body), file=sys.stderr)
-                data = json.dumps(body).encode('utf-8')
-            safe_headers = {
-                k: ('<REDACTED>' if k.lower() == 'authorization' else v)
-                for k, v in headers.items()
-            }
-            print('Request headers:', json.dumps(safe_headers), file=sys.stderr)
-            req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            try:
-                with urllib.request.urlopen(req) as resp:
-                    resp_text = resp.read().decode('utf-8', errors='ignore')
-                    status = resp.getcode()
-                    print(f'HTTP {status} for {url}', file=sys.stderr)
-                    print('Response headers:', dict(resp.getheaders()), file=sys.stderr)
-                    try:
-                        return json.loads(resp_text)
-                    except json.JSONDecodeError:
-                        print('Non-JSON response body:', resp_text, file=sys.stderr)
-                        return {'_raw_response': resp_text, 'status': status, 'headers': dict(resp.getheaders())}
-            except urllib.error.HTTPError as e:
-                body = e.read().decode('utf-8', errors='ignore')
-                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
-                print('Response headers:', dict(e.headers) if e.headers else {}, file=sys.stderr)
-                if body:
-                    print('Response body:', file=sys.stderr)
-                    print(body, file=sys.stderr)
-                if e.code in (401, 403):
-                    print('Unauthorized: pipeline lacks permission to access Azure DevOps resources or the OAuth token is insufficient.', file=sys.stderr)
-                    sys.exit(1)
-                if e.code == 404:
-                    print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
-                    sys.exit(1)
-                raise
-            except urllib.error.URLError as e:
-                print(f'URL error for {url}: {e.reason}', file=sys.stderr)
-                sys.exit(1)
-
-        print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
-        print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
-        print(f'SELF_HOSTED_POOL={pool_name}', file=sys.stderr)
-        print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
-        print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
-        print(f'POLL_INTERVAL={interval}', file=sys.stderr)
-        print('Using SELF_HOSTED_AGENT_PAT' if os.environ.get('SELF_HOSTED_AGENT_PAT') else 'Using SYSTEM_ACCESSTOKEN', file=sys.stderr)
-        try:
-            debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
-            debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
-            print(f'Visible pool count: {len(debug_pool_names)}', file=sys.stderr)
-            print('Visible pool names: ' + ', '.join(debug_pool_names), file=sys.stderr)
-        except Exception as e:
-            print(f'Failed to list pools for debug: {e}', file=sys.stderr)
-
-        def get_pool_id():
-            q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools?{q}')
-            pools = response.get('value', [])
-            if not pools:
-                print(f'No self-hosted pool found with name: {pool_name}. Check pool existence and authorization.', file=sys.stderr)
-                sys.exit(1)
-            return pools[0]['id']
-
-        def get_online_agents(pool_id):
-            q = urllib.parse.urlencode({'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools/{pool_id}/agents?{q}')
-            agents = response.get('value', [])
-            return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
-
-        def active_bootstrap_run_exists():
-            q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            runs = response.get('value', [])
-            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
-            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
-            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
-            for run in in_progress_runs:
-                run_id = run.get('id')
-                run_state = run.get('state')
-                run_result = run.get('result')
-                run_url = run.get('_links', {}).get('web', {}).get('href')
-                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
-            return bool(in_progress_runs)
-
-        def debug_recent_bootstrap_runs():
-            q = urllib.parse.urlencode({'api-version': '7.1-preview.1', '$top': '20'})
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            runs = response.get('value', [])
-            print(f'Recent bootstrap run history for pipeline {pipeline_id}: count={len(runs)}', file=sys.stderr)
-            for run in runs:
-                run_id = run.get('id')
-                run_state = run.get('state')
-                run_result = run.get('result')
-                run_url = run.get('_links', {}).get('web', {}).get('href')
-                run_created = run.get('createdDate')
-                run_updated = run.get('lastUpdatedDate')
-                print(f'Run history: id={run_id} state={run_state} result={run_result} url={run_url} created={run_created} updated={run_updated}', file=sys.stderr)
-            return runs
-
-        pool_id = get_pool_id()
-        print(f'Using pool id: {pool_id}', file=sys.stderr)
-        online = get_online_agents(pool_id)
-        if online:
-            print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
-            for agent in online:
-                print(f'Online agent: {agent.get("name")} status={agent.get("status")} enabled={agent.get("enabled")}', file=sys.stderr)
-            sys.exit(0)
-
-        active_exists = active_bootstrap_run_exists()
-        print(f'Active bootstrap run exists: {active_exists}', file=sys.stderr)
-        if active_exists:
-            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.', file=sys.stderr)
-            debug_recent_bootstrap_runs()
-        else:
-            print('No online self-hosted agent found; queueing bootstrap pipeline.')
-            body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'variables': {'System.Debug': {'value': 'true'}}
-            }
-            print('Queue request body:', json.dumps(body), file=sys.stderr)
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
-            print('Queued bootstrap pipeline run response:', json.dumps(response), file=sys.stderr)
-            print('Queued bootstrap pipeline run id:', response.get('id'))
-
-        deadline = time.time() + wait_seconds
-        while time.time() < deadline:
-            online = get_online_agents(pool_id)
-            if online:
-                print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
-                sys.exit(0)
-            print(f'No agent online yet; sleeping {interval}s...')
-            time.sleep(interval)
-
-        print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
-        sys.exit(1)
-        PY
-      displayName: 'Check self-hosted pool and queue bootstrap if needed'
-      env:
-        SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
-        SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
-
 - stage: UpdateProductionPortal
   displayName: 'Update production portal'
-  dependsOn: EnsureSelfHostedAgent
   condition: succeeded()
   jobs:
   - job: UpdatePortal
@@ -241,9 +39,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
-        demands:
-        - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - checkout: self
 
