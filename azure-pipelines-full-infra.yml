@@ -72,21 +72,47 @@ stages:
     - checkout: foodport-tf
       path: foodport-tf
 
+    - task: DownloadSecureFile@1
+      name: agentRootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
     - script: |
         set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates curl
+        fi
+        sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
         if ! command -v az >/dev/null 2>&1; then
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          installer="$(mktemp)"
+          trap 'rm -f -- "$installer"' EXIT
+          curl --fail --show-error --location --retry 3 --retry-all-errors --output "$installer" https://aka.ms/InstallAzureCLIDeb
+          sudo bash "$installer"
         fi
         az version
       displayName: Ensure Azure CLI is installed
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
 
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         terraformVersion: '1.9.8'
 
     - task: AzureCLI@2
       displayName: Validate private Terraform state access
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         azureSubscription: ${{ parameters.azureServiceConnection }}
         addSpnToEnvironment: true
@@ -127,19 +153,43 @@ stages:
       path: foodport-tf
       persistCredentials: true
 
+    - task: DownloadSecureFile@1
+      name: agentRootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
     - script: |
         set -euo pipefail
-        if ! command -v az >/dev/null 2>&1; then
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        if ! command -v update-ca-certificates >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates curl
         fi
+        sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+        if ! command -v az >/dev/null 2>&1; then
+          installer="$(mktemp)"
+          trap 'rm -f -- "$installer"' EXIT
+          curl --fail --show-error --location --retry 3 --retry-all-errors --output "$installer" https://aka.ms/InstallAzureCLIDeb
+          sudo bash "$installer"
+        fi
+        az version
       displayName: Ensure Azure CLI is installed
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
 
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         terraformVersion: '1.9.8'
 
     - task: UsePythonVersion@0
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         versionSpec: '3.x'
 
@@ -148,6 +198,10 @@ stages:
         displayName: Apply Terraform for full infra
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -189,6 +243,10 @@ stages:
         displayName: Destroy Terraform-managed full infra
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -392,7 +450,10 @@ stages:
           fi
 
           if ! command -v az >/dev/null 2>&1; then
-            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            installer="\$(mktemp)"
+            trap 'rm -f -- "\$installer"' EXIT
+            curl --fail --show-error --location --retry 3 --retry-all-errors --output "\$installer" https://aka.ms/InstallAzureCLIDeb
+            sudo bash "\$installer"
           fi
 
           if [ ! -x "/home/${TARGET_SSH_USER}/miniconda/bin/conda" ]; then
