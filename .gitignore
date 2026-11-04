@@ -170,3 +170,4 @@ huggingface/
 redmine/holding/
 # Packer build logs
 infrastructure/nanopore-image/packer/*.log
+infrastructure/nanopore-image/docs/acceptance-results/

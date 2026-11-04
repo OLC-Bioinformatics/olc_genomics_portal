@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Authorize Nanopore GUI</h1>
+  {% if code %}
+    <p>Enter this one-time code in the Nanopore GUI:</p>
+    <p class="display-4 font-weight-bold" id="pairing-code">{{ code }}</p>
+    <p>This code expires shortly and can be used only once.</p>
+  {% elif already_approved %}
+    <p>This pairing has already been approved. Return to the Nanopore GUI.</p>
+  {% else %}
+    <p>You are authorizing the Nanopore GUI to act as your FoodPort account.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Approve</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

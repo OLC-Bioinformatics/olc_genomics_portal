@@ -24,9 +24,7 @@ parameters:
 - name: hostedVmImage
   type: string
   default: 'ubuntu-latest'
-- name: selfHostedPool
-  type: string
-  default: 'foodport-self-hosted'
+# Set false to redeploy on an already-bootstrapped VM without running host setup again.
 - name: bootstrapRemoteVm
   type: boolean
   default: true
@@ -57,10 +55,6 @@ variables:
   value: 'cfiaadmin'
 - name: TARGET_SSH_PORT
   value: '22'
-- name: SELF_HOSTED_POOL
-  value: ${{ parameters.selfHostedPool }}
-- name: SELF_HOSTED_AGENT_NAME
-  value: 'CFDC-FoodPort-self-hosted-agent-vm'
 - name: existingNetworkRg
   value: 'CFDC-FoodPort-network-rg'
 - name: existingVnetName
@@ -69,159 +63,6 @@ variables:
   value: 'CFDC-FoodPort-Portal-snet'
 
 stages:
-- stage: EnsureSelfHostedAgent
-  displayName: 'Ensure self-hosted agent'
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true), ne(${{ parameters.destroy }}, true))
-  jobs:
-  - job: EnsureAgent
-    displayName: 'Ensure self-hosted agent is available'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: none
-    - script: |
-        set -euo pipefail
-
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
-          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
-          exit 1
-        fi
-
-        python3 - <<'PY'
-        import base64
-        import json
-        import os
-        import sys
-        import time
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
-        project = os.environ['SYSTEM_TEAMPROJECT']
-        pool_name = os.environ['SELF_HOSTED_POOL']
-        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
-        interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
-        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
-
-        auth = base64.b64encode(f':{token}'.encode()).decode()
-        headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-Type': 'application/json'
-        }
-
-        def http_request(path, method='GET', body=None):
-            if path.startswith('/_apis/distributedtask'):
-                url = f'{org_uri}{path}'
-            else:
-                url = f'{org_uri}/{project}{path}'
-            print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
-            data = None
-            if body is not None:
-                data = json.dumps(body).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            try:
-                with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
-            except urllib.error.HTTPError as e:
-                body = e.read().decode('utf-8', errors='ignore')
-                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
-                if body:
-                    print('Response body:', file=sys.stderr)
-                    print(body, file=sys.stderr)
-                if e.code in (401, 403):
-                    print('Unauthorized: pipeline lacks permission to access Azure DevOps resources or the OAuth token is insufficient.', file=sys.stderr)
-                    sys.exit(1)
-                if e.code == 404:
-                    print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
-                    sys.exit(1)
-                raise
-
-        print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
-        print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
-        print(f'SELF_HOSTED_POOL={pool_name}', file=sys.stderr)
-        print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
-        print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
-        print(f'POLL_INTERVAL={interval}', file=sys.stderr)
-        print('Using SELF_HOSTED_AGENT_PAT' if os.environ.get('SELF_HOSTED_AGENT_PAT') else 'Using SYSTEM_ACCESSTOKEN', file=sys.stderr)
-        try:
-            debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
-            debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
-            print(f'Visible pool count: {len(debug_pool_names)}', file=sys.stderr)
-            print('Visible pool names: ' + ', '.join(debug_pool_names), file=sys.stderr)
-        except Exception as e:
-            print(f'Failed to list pools for debug: {e}', file=sys.stderr)
-
-        def get_pool_id():
-            q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools?{q}')
-            pools = response.get('value', [])
-            if not pools:
-                print(f'No self-hosted pool found with name: {pool_name}. Check pool existence and authorization.', file=sys.stderr)
-                sys.exit(1)
-            return pools[0]['id']
-
-        def get_online_agents(pool_id):
-            q = urllib.parse.urlencode({'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools/{pool_id}/agents?{q}')
-            agents = response.get('value', [])
-            return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
-
-        def active_bootstrap_run_exists():
-            q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            runs = response.get('value', [])
-            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
-            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
-            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
-            for run in in_progress_runs:
-                run_id = run.get('id')
-                run_state = run.get('state')
-                run_result = run.get('result')
-                run_url = run.get('_links', {}).get('web', {}).get('href')
-                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
-            return bool(in_progress_runs)
-
-        pool_id = get_pool_id()
-        online = get_online_agents(pool_id)
-        if online:
-            print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
-            sys.exit(0)
-
-        if active_bootstrap_run_exists():
-            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
-        else:
-            print('No online self-hosted agent found; queueing bootstrap pipeline.')
-            body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'variables': {'System.Debug': {'value': 'true'}}
-            }
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
-            print('Queued bootstrap pipeline run id:', response.get('id'))
-
-        deadline = time.time() + wait_seconds
-        while time.time() < deadline:
-            online = get_online_agents(pool_id)
-            if online:
-                print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
-                sys.exit(0)
-            print(f'No agent online yet; sleeping {interval}s...', file=sys.stderr)
-            time.sleep(interval)
-
-        print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
-        sys.exit(1)
-        PY
-      displayName: 'Check self-hosted pool and queue bootstrap if needed'
-      env:
-        SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
-        SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
-
 - stage: ProvisionDevVm
   displayName: 'Provision Dev VM'
   condition: succeeded()
@@ -232,13 +73,20 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - checkout: self
       persistCredentials: true
     - checkout: foodport-tf
       path: foodport-tf
       persistCredentials: true
+
+    - script: |
+        set -euo pipefail
+        if ! command -v az >/dev/null 2>&1; then
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        fi
+      displayName: Ensure Azure CLI is installed
 
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
@@ -421,10 +269,14 @@ stages:
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true))
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      eq(${{ parameters.bootstrapRemoteVm }}, true),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues')
+    )
   dependsOn:
     - ProvisionDevVm
-    - EnsureSelfHostedAgent
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
@@ -432,7 +284,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - task: DownloadPipelineArtifact@2
       displayName: 'Download dev VM artifact'
@@ -621,17 +473,21 @@ stages:
           fi
           export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set solver classic
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q --solver=classic mamba -n base
+          CONDA_BIN="/home/${TARGET_SSH_USER}/miniconda/bin/conda"
+          "$CONDA_BIN" config --set always_yes yes --set changeps1 no
+          "$CONDA_BIN" config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          "$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+          "$CONDA_BIN" config --prepend channels conda-forge
+          "$CONDA_BIN" config --prepend channels bioconda
+          "$CONDA_BIN" config --prepend channels olcbioinformatics
+          "$CONDA_BIN" config --set channel_priority strict
+          "$CONDA_BIN" config --set solver libmamba
+          if ! command -v mamba >/dev/null 2>&1; then
+            "$CONDA_BIN" install -q -n base --yes --solver=libmamba --override-channels -c conda-forge mamba
+          fi
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
@@ -640,8 +496,15 @@ stages:
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
-  dependsOn: BootstrapRemoteVm
-  condition: succeeded()
+  dependsOn:
+    - ProvisionDevVm
+    - BootstrapRemoteVm
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.BootstrapRemoteVm.result, 'Succeeded', 'SucceededWithIssues', 'Skipped')
+    )
   jobs:
   - job: Deploy
     displayName: 'Deploy portal'
@@ -649,9 +512,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
-        demands:
-        - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - task: DownloadSecureFile@1
       name: rootCA
@@ -883,19 +744,37 @@ stages:
           fi
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
+          MAMBA_BIN="$HOME/miniconda/bin/mamba"
 
           # --- Create conda environment if missing ---
+          environment_created=false
           if ! "$CONDA_BIN" env list | grep -qE '(^|/)\bfoodport\b'; then
             echo "Creating conda environment 'foodport'"
-            "$CONDA_BIN" create -n foodport python=3.14 -y
+            if [ -x "$MAMBA_BIN" ]; then
+              "$MAMBA_BIN" create -n foodport --override-channels -c conda-forge python=3.14 -y
+            else
+              "$CONDA_BIN" config --set solver libmamba
+              "$CONDA_BIN" create --solver=libmamba -n foodport python=3.14 -y
+            fi
+            environment_created=true
           else
             echo "Conda environment 'foodport' already exists"
           fi
 
-          # --- Install/upgrade pip + requirements inside env ---
-          echo "Installing Python dependencies into 'foodport' environment"
-          "$CONDA_BIN" run -n foodport pip install --upgrade pip
-          "$CONDA_BIN" run -n foodport pip install --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+          # --- Refresh the host environment only when its requirements change ---
+          requirements_hash_file="$HOME/miniconda/envs/foodport/.requirements-base.sha256"
+          requirements_hash="$(sha256sum "$REMOTE_DIR/requirements/base.txt" | cut -d ' ' -f1)"
+          if [ "$environment_created" = true ] \
+            || [ ! -f "$requirements_hash_file" ] \
+            || [ "$(cat "$requirements_hash_file")" != "$requirements_hash" ]; then
+            echo "Installing Python dependencies into 'foodport' environment"
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade pip
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+            printf '%s\n' "$requirements_hash" > "${requirements_hash_file}.tmp"
+            mv "${requirements_hash_file}.tmp" "$requirements_hash_file"
+          else
+            echo "Python requirements unchanged; skipping host dependency installation"
+          fi
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
