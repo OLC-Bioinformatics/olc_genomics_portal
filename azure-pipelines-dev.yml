@@ -740,16 +740,35 @@ stages:
                 "FoodPort-Dev-Portal-Secrets after entering all secret values."
             )
 
-        missing = [
-            name
-            for name in secret_names
-            if not os.environ.get(name)
-            or os.environ[name] in (f"$({name})", "__REPLACE_ME__")
-        ]
-        if missing:
+        issues = []
+        for name in secret_names:
+            if name not in os.environ:
+                issues.append(
+                    f"{name}: not present in the task environment; check the "
+                    "variable-group reference and task env mapping."
+                )
+                continue
+
+            value = os.environ[name]
+            if not value.strip():
+                issues.append(
+                    f"{name}: present in the task environment but empty or "
+                    "whitespace-only."
+                )
+            elif value == f"$({name})":
+                issues.append(
+                    f"{name}: Azure Pipelines macro was not expanded; check "
+                    "the variable name, group scope, and pipeline authorization."
+                )
+            elif value == "__REPLACE_ME__":
+                issues.append(
+                    f"{name}: still has the __REPLACE_ME__ placeholder value."
+                )
+
+        if issues:
             raise SystemExit(
-                "Missing or placeholder variable-group value(s): "
-                + ", ".join(missing)
+                "Invalid variable-group value(s):\n  - "
+                + "\n  - ".join(issues)
             )
 
         for name in secret_names:
