@@ -9,6 +9,8 @@ from django.utils.translation import gettext_lazy as _
 
 from dal import autocomplete, forward
 
+from olc_webportalv2.cowbat.utils import normalize_research_run_name
+
 
 class RunNameForm(forms.Form):
     run_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': _('YYMMDD_LAB')}),
@@ -104,33 +106,24 @@ class CustomRunForm(ModelForm):
             ),
         }
 
-    def clean(self):
-        super().clean()
-        # Initialise variables to store errors and primer information
-        error_list = list()
-        run_name = str()
+    def clean_run_name(self):
         try:
-            run_name = self.cleaned_data['run_name']
-            if not (re.match('\d{5,6}-[a-z]+', run_name) or re.match('\d{5,6}_M\d+', run_name)):
-                error_list.append(
-                    _('Invalid run name. Format must be YYMMDD-lab'))
-            run_name.upper().replace('-', '_')
-        except (AttributeError, KeyError):
-            error_list.append(
-                _('Please select a run to assemble'))
+            return normalize_research_run_name(self.cleaned_data['run_name'])
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc))
 
-        basic_assembly = self.cleaned_data.get('basic_assembly')
-        preprocess = self.cleaned_data.get('preprocess')
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data:
+            return cleaned_data
+
+        error_list = []
+        basic_assembly = cleaned_data.get('basic_assembly')
+        preprocess = cleaned_data.get('preprocess')
         if basic_assembly and preprocess:
             error_list.append(
                 _('Basic assembly and Preprocess options are mutually exclusive. Please only select one.')
             )
-        nextseq = self.cleaned_data.get('nextseq')
         if error_list:
             raise forms.ValidationError(error_list)
-        return {
-            'run_name': run_name.lower().replace('_', '-'),
-            'basic_assembly': self.cleaned_data['basic_assembly'],
-            'preprocess': self.cleaned_data['preprocess'],
-            'nextseq': nextseq
-        }
+        return cleaned_data

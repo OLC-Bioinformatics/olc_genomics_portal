@@ -76,6 +76,27 @@ urlpatterns = [
         views.custom_run_upload,
         name="upload_assembly_upload",
     ),
+    path(_("manage_assembly/"), views.manage_assembly, name="manage_assembly"),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/"),
+        views.manage_assembly_run,
+        name="manage_assembly_run",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/delete-files/"),
+        views.delete_research_files,
+        name="delete_research_files",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/rename-status/"),
+        views.research_assembly_rename_status,
+        name="research_assembly_rename_status",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/upload-url/"),
+        views.upload_sequence_blob_sas,
+        name="upload_sequence_blob_sas",
+    ),
 
     # Views for autocompletion.
     path(

@@ -24,9 +24,7 @@ parameters:
 - name: hostedVmImage
   type: string
   default: 'ubuntu-latest'
-- name: selfHostedPool
-  type: string
-  default: 'foodport-self-hosted'
+# Set false to redeploy on an already-bootstrapped VM without running host setup again.
 - name: bootstrapRemoteVm
   type: boolean
   default: true
@@ -57,10 +55,6 @@ variables:
   value: 'cfiaadmin'
 - name: TARGET_SSH_PORT
   value: '22'
-- name: SELF_HOSTED_POOL
-  value: ${{ parameters.selfHostedPool }}
-- name: SELF_HOSTED_AGENT_NAME
-  value: 'CFDC-FoodPort-self-hosted-agent-vm'
 - name: existingNetworkRg
   value: 'CFDC-FoodPort-network-rg'
 - name: existingVnetName
@@ -69,159 +63,6 @@ variables:
   value: 'CFDC-FoodPort-Portal-snet'
 
 stages:
-- stage: EnsureSelfHostedAgent
-  displayName: 'Ensure self-hosted agent'
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true), ne(${{ parameters.destroy }}, true))
-  jobs:
-  - job: EnsureAgent
-    displayName: 'Ensure self-hosted agent is available'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: none
-    - script: |
-        set -euo pipefail
-
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
-          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
-          exit 1
-        fi
-
-        python3 - <<'PY'
-        import base64
-        import json
-        import os
-        import sys
-        import time
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
-        project = os.environ['SYSTEM_TEAMPROJECT']
-        pool_name = os.environ['SELF_HOSTED_POOL']
-        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
-        interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
-        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
-
-        auth = base64.b64encode(f':{token}'.encode()).decode()
-        headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-Type': 'application/json'
-        }
-
-        def http_request(path, method='GET', body=None):
-            if path.startswith('/_apis/distributedtask'):
-                url = f'{org_uri}{path}'
-            else:
-                url = f'{org_uri}/{project}{path}'
-            print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
-            data = None
-            if body is not None:
-                data = json.dumps(body).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            try:
-                with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
-            except urllib.error.HTTPError as e:
-                body = e.read().decode('utf-8', errors='ignore')
-                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
-                if body:
-                    print('Response body:', file=sys.stderr)
-                    print(body, file=sys.stderr)
-                if e.code in (401, 403):
-                    print('Unauthorized: pipeline lacks permission to access Azure DevOps resources or the OAuth token is insufficient.', file=sys.stderr)
-                    sys.exit(1)
-                if e.code == 404:
-                    print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
-                    sys.exit(1)
-                raise
-
-        print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
-        print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
-        print(f'SELF_HOSTED_POOL={pool_name}', file=sys.stderr)
-        print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
-        print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
-        print(f'POLL_INTERVAL={interval}', file=sys.stderr)
-        print('Using SELF_HOSTED_AGENT_PAT' if os.environ.get('SELF_HOSTED_AGENT_PAT') else 'Using SYSTEM_ACCESSTOKEN', file=sys.stderr)
-        try:
-            debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
-            debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
-            print(f'Visible pool count: {len(debug_pool_names)}', file=sys.stderr)
-            print('Visible pool names: ' + ', '.join(debug_pool_names), file=sys.stderr)
-        except Exception as e:
-            print(f'Failed to list pools for debug: {e}', file=sys.stderr)
-
-        def get_pool_id():
-            q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools?{q}')
-            pools = response.get('value', [])
-            if not pools:
-                print(f'No self-hosted pool found with name: {pool_name}. Check pool existence and authorization.', file=sys.stderr)
-                sys.exit(1)
-            return pools[0]['id']
-
-        def get_online_agents(pool_id):
-            q = urllib.parse.urlencode({'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools/{pool_id}/agents?{q}')
-            agents = response.get('value', [])
-            return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
-
-        def active_bootstrap_run_exists():
-            q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            runs = response.get('value', [])
-            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
-            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
-            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
-            for run in in_progress_runs:
-                run_id = run.get('id')
-                run_state = run.get('state')
-                run_result = run.get('result')
-                run_url = run.get('_links', {}).get('web', {}).get('href')
-                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
-            return bool(in_progress_runs)
-
-        pool_id = get_pool_id()
-        online = get_online_agents(pool_id)
-        if online:
-            print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
-            sys.exit(0)
-
-        if active_bootstrap_run_exists():
-            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
-        else:
-            print('No online self-hosted agent found; queueing bootstrap pipeline.')
-            body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'variables': {'System.Debug': {'value': 'true'}}
-            }
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
-            print('Queued bootstrap pipeline run id:', response.get('id'))
-
-        deadline = time.time() + wait_seconds
-        while time.time() < deadline:
-            online = get_online_agents(pool_id)
-            if online:
-                print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
-                sys.exit(0)
-            print(f'No agent online yet; sleeping {interval}s...', file=sys.stderr)
-            time.sleep(interval)
-
-        print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
-        sys.exit(1)
-        PY
-      displayName: 'Check self-hosted pool and queue bootstrap if needed'
-      env:
-        SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
-        SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
-
 - stage: ProvisionDevVm
   displayName: 'Provision Dev VM'
   condition: succeeded()
@@ -232,7 +73,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - checkout: self
       persistCredentials: true
@@ -240,8 +81,41 @@ stages:
       path: foodport-tf
       persistCredentials: true
 
+    - task: DownloadSecureFile@1
+      name: agentRootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+        if ! command -v curl >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl unzip
+        fi
+        if ! command -v az >/dev/null 2>&1; then
+          installer="$(mktemp)"
+          trap 'rm -f -- "$installer"' EXIT
+          curl --fail --show-error --location --retry 3 --retry-all-errors --output "$installer" https://aka.ms/InstallAzureCLIDeb
+          sudo bash "$installer"
+        fi
+        az version
+      displayName: Ensure Azure CLI is installed
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         terraformVersion: '1.9.8'
 
@@ -250,6 +124,10 @@ stages:
         displayName: Apply Terraform for Dev VM
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -345,6 +223,10 @@ stages:
         displayName: Destroy Terraform-managed Dev VM
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -421,10 +303,14 @@ stages:
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true))
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      eq(${{ parameters.bootstrapRemoteVm }}, true),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues')
+    )
   dependsOn:
     - ProvisionDevVm
-    - EnsureSelfHostedAgent
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
@@ -432,8 +318,23 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
+        name: CFDC-FoodPort-MDP-pool
     steps:
+    - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
+
     - task: DownloadPipelineArtifact@2
       displayName: 'Download dev VM artifact'
       inputs:
@@ -464,11 +365,6 @@ stages:
         echo "Found vm_ip.txt at: ${artifact_file}"
         echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
       displayName: 'Load TARGET_HOST from dev VM artifact'
-
-    - task: DownloadSecureFile@1
-      name: rootCA
-      inputs:
-        secureFile: 'GoC-GdC-Root-A.crt'
 
     - task: DownloadSecureFile@1
       name: tlsCert
@@ -545,7 +441,7 @@ stages:
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv python3-dev apt-transport-https software-properties-common libpq-dev
           sudo mkdir -p /etc/pip
-          echo -e "[global]\ntrusted-host = pypi.org pypi.python.org files.pythonhosted.org" | sudo tee /etc/pip.conf
+          echo -e "[global]\ncert = /etc/ssl/certs/ca-certificates.crt" | sudo tee /etc/pip.conf
 
           if ! command -v docker >/dev/null 2>&1; then
             echo "DEBUG: docker not installed, entering docker bootstrap block"
@@ -606,7 +502,10 @@ stages:
           fi
 
           if ! command -v az >/dev/null 2>&1; then
-            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            installer="\$(mktemp)"
+            trap 'rm -f -- "\$installer"' EXIT
+            curl --fail --show-error --location --retry 3 --retry-all-errors --output "\$installer" https://aka.ms/InstallAzureCLIDeb
+            sudo bash "\$installer"
           fi
 
           if [ ! -x "/home/${TARGET_SSH_USER}/miniconda/bin/conda" ]; then
@@ -619,19 +518,23 @@ stages:
           if ! grep -qxF "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" "/home/${TARGET_SSH_USER}/.bashrc"; then
             echo "export PATH=\"/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH\"" >> "/home/${TARGET_SSH_USER}/.bashrc"
           fi
-          export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:$PATH"
+          export PATH="/home/${TARGET_SSH_USER}/miniconda/bin:\$PATH"
           /home/${TARGET_SSH_USER}/miniconda/bin/conda init bash || true
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-          /home/${TARGET_SSH_USER}/miniconda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels olcbioinformatics
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set solver classic
-          CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda install -q --solver=classic mamba -n base
+          CONDA_BIN="/home/${TARGET_SSH_USER}/miniconda/bin/conda"
+          "\$CONDA_BIN" config --set always_yes yes --set changeps1 no
+          "\$CONDA_BIN" config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
+          "\$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+          "\$CONDA_BIN" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+          "\$CONDA_BIN" config --prepend channels conda-forge
+          "\$CONDA_BIN" config --prepend channels bioconda
+          "\$CONDA_BIN" config --prepend channels olcbioinformatics
+          "\$CONDA_BIN" config --set channel_priority strict
+          "\$CONDA_BIN" config --set solver libmamba
+          if ! command -v mamba >/dev/null 2>&1; then
+            "\$CONDA_BIN" install -q -n base --yes --solver=libmamba --override-channels -c conda-forge mamba
+          fi
         EOF
       env:
         SSH_PUBLIC_KEY: $(sshPublicKey)
@@ -640,8 +543,17 @@ stages:
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
-  dependsOn: BootstrapRemoteVm
-  condition: succeeded()
+  variables:
+  - group: FoodPort-Dev-Portal-Secrets
+  dependsOn:
+    - ProvisionDevVm
+    - BootstrapRemoteVm
+  condition: >-
+    and(
+      ne(${{ parameters.destroy }}, true),
+      in(dependencies.ProvisionDevVm.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.BootstrapRemoteVm.result, 'Succeeded', 'SucceededWithIssues', 'Skipped')
+    )
   jobs:
   - job: Deploy
     displayName: 'Deploy portal'
@@ -649,9 +561,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
-        demands:
-        - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - task: DownloadSecureFile@1
       name: rootCA
@@ -659,7 +569,18 @@ stages:
         secureFile: 'GoC-GdC-Root-A.crt'
 
     - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
+
+    - script: |
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
+        cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/rag/GoC-GdC-Root-A.crt"
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
       displayName: Copy root CA into Docker build contexts
 
@@ -727,147 +648,190 @@ stages:
         fi
         EOF
 
+        secret_dir="$(mktemp -d)"
+        remote_secret_dir=''
+        cleanup_secret_staging() {
+          if ! rm -rf -- "$secret_dir"; then
+            echo 'WARNING: Could not remove the local temporary secret directory.' >&2
+          fi
+          if [ -n "$remote_secret_dir" ] && \
+             ! ssh -o StrictHostKeyChecking=no \
+                  -o UserKnownHostsFile=/dev/null \
+                  -i "$(sshKey.secureFilePath)" \
+                  -p "${TARGET_SSH_PORT}" \
+                  "${TARGET_SSH_USER}@${TARGET_HOST}" \
+                  "rm -rf -- '$remote_secret_dir'"; then
+            echo 'WARNING: Could not remove the remote temporary secret directory.' >&2
+          fi
+        }
+        trap cleanup_secret_staging EXIT
+        chmod 700 "$secret_dir"
+        python3 - "$secret_dir" "$TARGET_HOST" <<'PY'
+        import os
+        import sys
+        from pathlib import Path
+
+        secret_names = (
+            "FOODPORT_DJANGO_SECRET_KEY",
+            "FOODPORT_DJANGO_SECRET_KEY_BASE",
+            "REDMINE_DB_PASSWORD",
+            "RAG_DB_PASSWORD",
+            "AZURE_ACCOUNT_NAME",
+            "AZURE_ACCOUNT_KEY",
+            "BATCH_ACCOUNT_NAME",
+            "BATCH_ACCOUNT_URL",
+            "BATCH_ACCOUNT_KEY",
+            "BATCH_ACCOUNT_SUBNET",
+            "VM_IMAGE",
+            "COWBAT_NODE_AGENT_SKU",
+            "AMPLISEQ_IMAGE",
+            "AMPLISEQ_NODE_AGENT_SKU",
+            "COWSNPHR_IMAGE",
+            "COWSNPHR_NODE_AGENT_SKU",
+            "AD_APP_ID",
+            "AD_APP_SECRET_ID",
+            "AD_APP_SECRET",
+            "ENTRA_ID_CLIENT_ID",
+            "ENTRA_ID_CLIENT_SECRET",
+            "ENTRA_TENANT_ID",
+            "REDMINE_DEFAULT_FROM",
+            "EMAIL_HOST_USER",
+            "EMAIL_HOST_PASSWORD",
+            "EMAIL_RELAY_SECRET",
+            "DB_NAME",
+            "DB_USER",
+            "DB_PASS",
+            "DB_SERVICE",
+            "DB_PORT",
+            "DJANGO_EMAIL_BACKEND",
+            "SENTRY_DSN",
+            "ENVIRONMENT",
+            "CONNECTION_STRING",
+            "SITE_URL",
+            "DJANGO_SERVER_NAME",
+            "REDMINE_SERVER_NAME",
+            "API_KEY",
+            "DEV_API_KEY",
+            "MARIA_DB_ROOT_PASSWORD",
+            "MYSQL_PASSWORD",
+            "SUBSCRIPTION_ID",
+            "TENANT_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "RESOURCE_GROUP_NAME",
+            "STORAGE_ACCOUNT_NAME",
+        )
+        env_file_names = {
+            "FOODPORT_DJANGO_SECRET_KEY": "SECRET_KEY",
+            "FOODPORT_DJANGO_SECRET_KEY_BASE": "SECRET_KEY_BASE",
+        }
+        dotenv_names = (
+            "SUBSCRIPTION_ID",
+            "TENANT_ID",
+            "CLIENT_ID",
+            "CLIENT_SECRET",
+            "STORAGE_ACCOUNT_NAME",
+            "RESOURCE_GROUP_NAME",
+            "CONNECTION_STRING",
+            "RAG_DB_PASSWORD",
+            "MYSQL_PASSWORD",
+            "MARIA_DB_ROOT_PASSWORD",
+            "DB_PASS",
+            "EMAIL_HOST_USER",
+            "EMAIL_HOST_PASSWORD",
+        )
+
+        if os.environ.get("FOODPORT_SECRET_VARIABLES_READY", "").lower() != "true":
+            raise SystemExit(
+                "Set FOODPORT_SECRET_VARIABLES_READY=true in "
+                "FoodPort-Dev-Portal-Secrets after entering all secret values."
+            )
+
+        issues = []
+        for name in secret_names:
+            if name not in os.environ:
+                issues.append(
+                    f"{name}: not present in the task environment; check the "
+                    "variable-group reference and task env mapping."
+                )
+                continue
+
+            value = os.environ[name]
+            if not value.strip():
+                issues.append(
+                    f"{name}: present in the task environment but empty or "
+                    "whitespace-only."
+                )
+            elif value == f"$({name})":
+                issues.append(
+                    f"{name}: Azure Pipelines macro was not expanded; check "
+                    "the variable name, group scope, and pipeline authorization."
+                )
+            elif value == "__REPLACE_ME__":
+                issues.append(
+                    f"{name}: still has the __REPLACE_ME__ placeholder value."
+                )
+
+        if issues:
+            raise SystemExit(
+                "Invalid variable-group value(s):\n  - "
+                + "\n  - ".join(issues)
+            )
+
+        for name in secret_names:
+            if "\n" in os.environ[name] or "\r" in os.environ[name]:
+                raise SystemExit(f"{name} must be a single-line value.")
+
+        output_dir = Path(sys.argv[1])
+        target_host = sys.argv[2]
+        env_lines = [
+            "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
+        ]
+        env_lines.extend(
+            f"{env_file_names.get(name, name)}={os.environ[name]}"
+            for name in secret_names
+        )
+        (output_dir / "env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+
+        dotenv_lines = [
+            "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
+        ]
+        dotenv_lines.extend(f"{name}={os.environ[name]}" for name in dotenv_names)
+        dotenv_lines.extend(("FLOWER_USER=", "FLOWER_PASSWORD="))
+        (output_dir / ".env").write_text(
+            "\n".join(dotenv_lines) + "\n", encoding="utf-8"
+        )
+        os.chmod(output_dir / "env", 0o600)
+        os.chmod(output_dir / ".env", 0o600)
+        PY
+
+        remote_secret_dir="/tmp/foodport-secrets-$(Build.BuildId)"
+        safe_remote_secret_dir=$(printf '%q' "$remote_secret_dir")
+        tar -C "$secret_dir" -cf - env .env | \
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -i "$(sshKey.secureFilePath)" \
+              -p "${TARGET_SSH_PORT}" \
+              "${TARGET_SSH_USER}@${TARGET_HOST}" \
+              "umask 077; install -d -m 700 $safe_remote_secret_dir; tar -C $safe_remote_secret_dir -xf -"
+
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
+        safe_REMOTE_SECRET_DIR=$(printf '%q' "$remote_secret_dir")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST REMOTE_SECRET_DIR=$safe_REMOTE_SECRET_DIR bash -s" <<'EOF'
           set -euo pipefail
           umask 077
 
-          AZURE_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/foodport-azure-cli.XXXXXX")"
-          export AZURE_CONFIG_DIR
-          trap 'rm -rf -- "$AZURE_CONFIG_DIR"' EXIT
-          mkdir -p "$AZURE_CONFIG_DIR"
-          az login --identity --allow-no-subscriptions --output none
+          trap 'rm -rf -- "$REMOTE_SECRET_DIR"' EXIT
 
-          vault='FoodPort-key-vault'
           env_file="$REMOTE_DIR/env"
           dotenv_file="$REMOTE_DIR/.env"
-          : > "$env_file"
-          : > "$dotenv_file"
-          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
-          printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
-          django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
-          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
-          printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
-          secrets=(
-            secret-key
-            secret-key-base
-            redmine-database-password
-            azure-account-name
-            azure-account-key
-            batch-account-name
-            batch-account-url
-            batch-account-key
-            batch-account-subnet
-            vm-image
-            cowbat-node-agent-sku
-            ampliseq-image
-            ampliseq-node-agent-sku
-            cowsnphr-image
-            cowsnphr-node-agent-sku
-            ad-app-id
-            ad-app-secret-id
-            ad-app-secret
-            entra-id-client-id
-            entra-id-client-secret
-            entra-id-tenant-id
-            redmine-default-from
-            email-host-user
-            email-host-password
-            email-relay-secret
-            db-name
-            db-user
-            db-pass
-            db-service
-            db-port
-            django-email-backend
-            sentry-dsn
-            environment
-            connection-string
-            site-url
-            django-server-name
-            redmine-server-name
-            api-key
-            dev-api-key
-            maria-db-root-password
-            mysql-password
-            subscription-id
-            tenant-id
-            client-id
-            client-secret
-            resource-group-name
-            storage-account-name
-          )
-          for secret in "${secrets[@]}"; do
-            case "$secret" in
-              secret-key) var_name='SECRET_KEY' ;;
-              secret-key-base) var_name='SECRET_KEY_BASE' ;;
-              redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
-              azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
-              azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
-              batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
-              batch-account-url) var_name='BATCH_ACCOUNT_URL' ;;
-              batch-account-key) var_name='BATCH_ACCOUNT_KEY' ;;
-              batch-account-subnet) var_name='BATCH_ACCOUNT_SUBNET' ;;
-              vm-image) var_name='VM_IMAGE' ;;
-              cowbat-node-agent-sku) var_name='COWBAT_NODE_AGENT_SKU' ;;
-              ampliseq-image) var_name='AMPLISEQ_IMAGE' ;;
-              ampliseq-node-agent-sku) var_name='AMPLISEQ_NODE_AGENT_SKU' ;;
-              cowsnphr-image) var_name='COWSNPHR_IMAGE' ;;
-              cowsnphr-node-agent-sku) var_name='COWSNPHR_NODE_AGENT_SKU' ;;
-              ad-app-id) var_name='AD_APP_ID' ;;
-              ad-app-secret-id) var_name='AD_APP_SECRET_ID' ;;
-              ad-app-secret) var_name='AD_APP_SECRET' ;;
-              entra-id-client-id) var_name='ENTRA_ID_CLIENT_ID' ;;
-              entra-id-client-secret) var_name='ENTRA_ID_CLIENT_SECRET' ;;
-              entra-id-tenant-id) var_name='ENTRA_TENANT_ID' ;;
-              redmine-default-from) var_name='REDMINE_DEFAULT_FROM' ;;
-              email-host-user) var_name='EMAIL_HOST_USER' ;;
-              email-host-password) var_name='EMAIL_HOST_PASSWORD' ;;
-              email-relay-secret) var_name='EMAIL_RELAY_SECRET' ;;
-              db-name) var_name='DB_NAME' ;;
-              db-user) var_name='DB_USER' ;;
-              db-pass) var_name='DB_PASS' ;;
-              db-service) var_name='DB_SERVICE' ;;
-              db-port) var_name='DB_PORT' ;;
-              django-email-backend) var_name='DJANGO_EMAIL_BACKEND' ;;
-              sentry-dsn) var_name='SENTRY_DSN' ;;
-              environment) var_name='ENVIRONMENT' ;;
-              connection-string) var_name='CONNECTION_STRING' ;;
-              site-url) var_name='SITE_URL' ;;
-              django-server-name) var_name='DJANGO_SERVER_NAME' ;;
-              redmine-server-name) var_name='REDMINE_SERVER_NAME' ;;
-              api-key) var_name='API_KEY' ;;
-              dev-api-key) var_name='DEV_API_KEY' ;;
-              maria-db-root-password) var_name='MARIA_DB_ROOT_PASSWORD' ;;
-              mysql-password) var_name='MYSQL_PASSWORD' ;;
-              subscription-id) var_name='SUBSCRIPTION_ID' ;;
-              tenant-id) var_name='TENANT_ID' ;;
-              client-id) var_name='CLIENT_ID' ;;
-              client-secret) var_name='CLIENT_SECRET' ;;
-              resource-group-name) var_name='RESOURCE_GROUP_NAME' ;;
-              storage-account-name) var_name='STORAGE_ACCOUNT_NAME' ;;
-              *) echo "Unknown secret mapping: $secret" >&2; exit 1 ;;
-            esac
-            if ! value="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv)"; then
-              echo "Failed to read Key Vault secret: $secret" >&2
-              exit 1
-            fi
-            if [ -z "$value" ]; then
-              echo "Key Vault secret $secret is empty" >&2
-              exit 1
-            fi
-            printf '%s=%s\n' "$var_name" "$value" >> "$env_file"
-            case "$var_name" in
-              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
-                printf '%s=%s\n' "$var_name" "$value" >> "$dotenv_file"
-                ;;
-            esac
-          done
-          printf 'FLOWER_USER=\nFLOWER_PASSWORD=\n' >> "$dotenv_file"
-          chmod 600 "$env_file" "$dotenv_file"
+          install -m 600 "$REMOTE_SECRET_DIR/env" "$env_file"
+          install -m 600 "$REMOTE_SECRET_DIR/.env" "$dotenv_file"
 
           python3 "$REMOTE_DIR/remote_deploy_env.py"
           cd "$REMOTE_DIR"
@@ -883,19 +847,37 @@ stages:
           fi
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
+          MAMBA_BIN="$HOME/miniconda/bin/mamba"
 
           # --- Create conda environment if missing ---
+          environment_created=false
           if ! "$CONDA_BIN" env list | grep -qE '(^|/)\bfoodport\b'; then
             echo "Creating conda environment 'foodport'"
-            "$CONDA_BIN" create -n foodport python=3.14 -y
+            if [ -x "$MAMBA_BIN" ]; then
+              "$MAMBA_BIN" create -n foodport --override-channels -c conda-forge python=3.14 -y
+            else
+              "$CONDA_BIN" config --set solver libmamba
+              "$CONDA_BIN" create --solver=libmamba -n foodport python=3.14 -y
+            fi
+            environment_created=true
           else
             echo "Conda environment 'foodport' already exists"
           fi
 
-          # --- Install/upgrade pip + requirements inside env ---
-          echo "Installing Python dependencies into 'foodport' environment"
-          "$CONDA_BIN" run -n foodport pip install --upgrade pip
-          "$CONDA_BIN" run -n foodport pip install --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+          # --- Refresh the host environment only when its requirements change ---
+          requirements_hash_file="$HOME/miniconda/envs/foodport/.requirements-base.sha256"
+          requirements_hash="$(sha256sum "$REMOTE_DIR/requirements/base.txt" | cut -d ' ' -f1)"
+          if [ "$environment_created" = true ] \
+            || [ ! -f "$requirements_hash_file" ] \
+            || [ "$(cat "$requirements_hash_file")" != "$requirements_hash" ]; then
+            echo "Installing Python dependencies into 'foodport' environment"
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade pip
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+            printf '%s\n' "$requirements_hash" > "${requirements_hash_file}.tmp"
+            mv "${requirements_hash_file}.tmp" "$requirements_hash_file"
+          else
+            echo "Python requirements unchanged; skipping host dependency installation"
+          fi
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
@@ -921,4 +903,55 @@ stages:
           fi
           exit 1
         EOF
+        remote_secret_dir=''
       displayName: 'Deploy portal on dev VM'
+      env:
+        FOODPORT_SECRET_VARIABLES_READY: $(FOODPORT_SECRET_VARIABLES_READY)
+        FOODPORT_DJANGO_SECRET_KEY: $(FOODPORT_DJANGO_SECRET_KEY)
+        FOODPORT_DJANGO_SECRET_KEY_BASE: $(FOODPORT_DJANGO_SECRET_KEY_BASE)
+        REDMINE_DB_PASSWORD: $(REDMINE_DB_PASSWORD)
+        RAG_DB_PASSWORD: $(RAG_DB_PASSWORD)
+        AZURE_ACCOUNT_NAME: $(AZURE_ACCOUNT_NAME)
+        AZURE_ACCOUNT_KEY: $(AZURE_ACCOUNT_KEY)
+        BATCH_ACCOUNT_NAME: $(BATCH_ACCOUNT_NAME)
+        BATCH_ACCOUNT_URL: $(BATCH_ACCOUNT_URL)
+        BATCH_ACCOUNT_KEY: $(BATCH_ACCOUNT_KEY)
+        BATCH_ACCOUNT_SUBNET: $(BATCH_ACCOUNT_SUBNET)
+        VM_IMAGE: $(VM_IMAGE)
+        COWBAT_NODE_AGENT_SKU: $(COWBAT_NODE_AGENT_SKU)
+        AMPLISEQ_IMAGE: $(AMPLISEQ_IMAGE)
+        AMPLISEQ_NODE_AGENT_SKU: $(AMPLISEQ_NODE_AGENT_SKU)
+        COWSNPHR_IMAGE: $(COWSNPHR_IMAGE)
+        COWSNPHR_NODE_AGENT_SKU: $(COWSNPHR_NODE_AGENT_SKU)
+        AD_APP_ID: $(AD_APP_ID)
+        AD_APP_SECRET_ID: $(AD_APP_SECRET_ID)
+        AD_APP_SECRET: $(AD_APP_SECRET)
+        ENTRA_ID_CLIENT_ID: $(ENTRA_ID_CLIENT_ID)
+        ENTRA_ID_CLIENT_SECRET: $(ENTRA_ID_CLIENT_SECRET)
+        ENTRA_TENANT_ID: $(ENTRA_TENANT_ID)
+        REDMINE_DEFAULT_FROM: $(REDMINE_DEFAULT_FROM)
+        EMAIL_HOST_USER: $(EMAIL_HOST_USER)
+        EMAIL_HOST_PASSWORD: $(EMAIL_HOST_PASSWORD)
+        EMAIL_RELAY_SECRET: $(EMAIL_RELAY_SECRET)
+        DB_NAME: $(DB_NAME)
+        DB_USER: $(DB_USER)
+        DB_PASS: $(DB_PASS)
+        DB_SERVICE: $(DB_SERVICE)
+        DB_PORT: $(DB_PORT)
+        DJANGO_EMAIL_BACKEND: $(DJANGO_EMAIL_BACKEND)
+        SENTRY_DSN: $(SENTRY_DSN)
+        ENVIRONMENT: $(ENVIRONMENT)
+        CONNECTION_STRING: $(CONNECTION_STRING)
+        SITE_URL: $(SITE_URL)
+        DJANGO_SERVER_NAME: $(DJANGO_SERVER_NAME)
+        REDMINE_SERVER_NAME: $(REDMINE_SERVER_NAME)
+        API_KEY: $(API_KEY)
+        DEV_API_KEY: $(DEV_API_KEY)
+        MARIA_DB_ROOT_PASSWORD: $(MARIA_DB_ROOT_PASSWORD)
+        MYSQL_PASSWORD: $(MYSQL_PASSWORD)
+        SUBSCRIPTION_ID: $(SUBSCRIPTION_ID)
+        TENANT_ID: $(TENANT_ID)
+        CLIENT_ID: $(CLIENT_ID)
+        CLIENT_SECRET: $(CLIENT_SECRET)
+        RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)
+        STORAGE_ACCOUNT_NAME: $(STORAGE_ACCOUNT_NAME)

@@ -24,12 +24,12 @@ parameters:
 - name: hostedVmImage
   type: string
   default: 'ubuntu-latest'
-- name: selfHostedPool
-  type: string
-  default: 'foodport-self-hosted'
 - name: bootstrapRemoteVm
   type: boolean
   default: true
+- name: validateManagedDevOpsPool
+  type: boolean
+  default: false
 - name: azureServiceConnection
   type: string
   default: CFDC-FoodPort-managed-identity
@@ -57,168 +57,91 @@ variables:
   value: 'cfiaadmin'
 - name: TARGET_SSH_PORT
   value: '22'
-- name: SELF_HOSTED_POOL
-  value: ${{ parameters.selfHostedPool }}
-- name: SELF_HOSTED_AGENT_NAME
-  value: 'CFDC-FoodPort-self-hosted-agent-vm'
 
 stages:
-- stage: EnsureSelfHostedAgent
-  displayName: 'Ensure self-hosted agent'
-  condition: and(succeeded(), ne(${{ parameters.useHostedAgent }}, true), ne(${{ parameters.destroy }}, true))
+- stage: ValidateManagedDevOpsPool
+  displayName: 'Validate Managed DevOps Pool access'
+  dependsOn: []
+  condition: eq(${{ parameters.validateManagedDevOpsPool }}, true)
   jobs:
-  - job: EnsureAgent
-    displayName: 'Ensure self-hosted agent is available'
+  - job: ValidatePool
+    displayName: Validate private Terraform state access
     pool:
-      vmImage: 'ubuntu-latest'
+      name: CFDC-FoodPort-MDP-pool
     steps:
-    - checkout: none
+    - checkout: foodport-tf
+      path: foodport-tf
+
+    - task: DownloadSecureFile@1
+      name: agentRootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
     - script: |
         set -euo pipefail
-
-        if [ -z "${SYSTEM_ACCESSTOKEN:-}" ] && [ -z "${SELF_HOSTED_AGENT_PAT:-}" ]; then
-          echo "##vso[task.logissue type=error]Neither SYSTEM_ACCESSTOKEN nor SELF_HOSTED_AGENT_PAT is available. Set a PAT in the pipeline variable SELF_HOSTED_AGENT_PAT or enable OAuth token access."
-          exit 1
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
         fi
-
-        python3 - <<'PY'
-        import base64
-        import json
-        import os
-        import sys
-        import time
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        org_uri = os.environ['SYSTEM_COLLECTIONURI'].rstrip('/')
-        project = os.environ['SYSTEM_TEAMPROJECT']
-        pool_name = os.environ['SELF_HOSTED_POOL']
-        pipeline_id = os.environ['SELF_HOSTED_BOOTSTRAP_PIPELINE_ID']
-        wait_seconds = int(os.environ.get('SELF_HOSTED_AGENT_WAIT_SECONDS', '450'))
-        interval = int(os.environ.get('SELF_HOSTED_AGENT_POLL_INTERVAL', '30'))
-        token = os.environ.get('SELF_HOSTED_AGENT_PAT') or os.environ['SYSTEM_ACCESSTOKEN']
-
-        auth = base64.b64encode(f':{token}'.encode()).decode()
-        headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-Type': 'application/json'
-        }
-
-        def http_request(path, method='GET', body=None):
-            if path.startswith('/_apis/distributedtask'):
-                url = f'{org_uri}{path}'
-            else:
-                url = f'{org_uri}/{project}{path}'
-            print(f'Calling Azure DevOps REST API: {method} {url}', file=sys.stderr)
-            data = None
-            if body is not None:
-                data = json.dumps(body).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers=headers, method=method)
-            try:
-                with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
-            except urllib.error.HTTPError as e:
-                body = e.read().decode('utf-8', errors='ignore')
-                print(f'HTTP {e.code} {e.reason} for {e.url}', file=sys.stderr)
-                if body:
-                    print('Response body:', file=sys.stderr)
-                    print(body, file=sys.stderr)
-                if e.code in (401, 403):
-                    print('Unauthorized: pipeline lacks permission to access Azure DevOps resources or the OAuth token is insufficient.', file=sys.stderr)
-                    sys.exit(1)
-                if e.code == 404:
-                    print('Not found: the self-hosted pool or another referenced Azure DevOps resource was not found.', file=sys.stderr)
-                    sys.exit(1)
-                raise
-
-        print(f'SYSTEM_COLLECTIONURI={org_uri}', file=sys.stderr)
-        print(f'SYSTEM_TEAMPROJECT={project}', file=sys.stderr)
-        print(f'SELF_HOSTED_POOL={pool_name}', file=sys.stderr)
-        print(f'SELF_HOSTED_BOOTSTRAP_PIPELINE_ID={pipeline_id}', file=sys.stderr)
-        print(f'WAIT_SECONDS={wait_seconds}', file=sys.stderr)
-        print(f'POLL_INTERVAL={interval}', file=sys.stderr)
-        print('Using SELF_HOSTED_AGENT_PAT' if os.environ.get('SELF_HOSTED_AGENT_PAT') else 'Using SYSTEM_ACCESSTOKEN', file=sys.stderr)
-        try:
-            debug_pools = http_request('/_apis/distributedtask/pools?api-version=7.0')
-            debug_pool_names = [p.get('name', '<missing>') for p in debug_pools.get('value', [])]
-            print(f'Visible pool count: {len(debug_pool_names)}', file=sys.stderr)
-            print('Visible pool names: ' + ', '.join(debug_pool_names), file=sys.stderr)
-        except Exception as e:
-            print(f'Failed to list pools for debug: {e}', file=sys.stderr)
-
-        def get_pool_id():
-            q = urllib.parse.urlencode({'poolName': pool_name, 'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools?{q}')
-            pools = response.get('value', [])
-            if not pools:
-                print(f'No self-hosted pool found with name: {pool_name}. Check pool existence and authorization.', file=sys.stderr)
-                sys.exit(1)
-            return pools[0]['id']
-
-        def get_online_agents(pool_id):
-            q = urllib.parse.urlencode({'api-version': '7.0'})
-            response = http_request(f'/_apis/distributedtask/pools/{pool_id}/agents?{q}')
-            agents = response.get('value', [])
-            return [a for a in agents if a.get('status') == 'online' and a.get('enabled', True)]
-
-        def active_bootstrap_run_exists():
-            q = urllib.parse.urlencode({'stateFilter': 'inProgress', 'api-version': '7.1-preview.1'})
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?{q}')
-            runs = response.get('value', [])
-            in_progress_runs = [r for r in runs if r.get('state') == 'inProgress']
-            print(f'Active bootstrap run check response for pipeline {pipeline_id}: {json.dumps(response)}', file=sys.stderr)
-            print(f'Total returned run count: {len(runs)}', file=sys.stderr)
-            print(f'In-progress run count: {len(in_progress_runs)}', file=sys.stderr)
-            for run in in_progress_runs:
-                run_id = run.get('id')
-                run_state = run.get('state')
-                run_result = run.get('result')
-                run_url = run.get('_links', {}).get('web', {}).get('href')
-                print(f'In-progress run: id={run_id} state={run_state} result={run_result} url={run_url}', file=sys.stderr)
-            return bool(in_progress_runs)
-
-        pool_id = get_pool_id()
-        online = get_online_agents(pool_id)
-        if online:
-            print(f'Self-hosted pool "{pool_name}" already has {len(online)} online agent(s).')
-            sys.exit(0)
-
-        if active_bootstrap_run_exists():
-            print('A self-hosted bootstrap pipeline run is already in progress; waiting for the agent to come online.')
-        else:
-            print('No online self-hosted agent found; queueing bootstrap pipeline.')
-            body = {
-                'resources': {'repositories': {'self': {'refName': 'refs/heads/main'}}},
-                'variables': {'System.Debug': {'value': 'true'}}
-            }
-            response = http_request(f'/_apis/pipelines/{pipeline_id}/runs?api-version=7.1-preview.1', method='POST', body=body)
-            print('Queued bootstrap pipeline run id:', response.get('id'))
-
-        deadline = time.time() + wait_seconds
-        while time.time() < deadline:
-            online = get_online_agents(pool_id)
-            if online:
-                print(f'Self-hosted agent is online after waiting {int(time.time() + 0 - (deadline - wait_seconds))} seconds.')
-                sys.exit(0)
-            print(f'No agent online yet; sleeping {interval}s...', file=sys.stderr)
-            time.sleep(interval)
-
-        print(f'Timed out waiting for a self-hosted agent in pool "{pool_name}" after {wait_seconds} seconds.', file=sys.stderr)
-        sys.exit(1)
-        PY
-      displayName: 'Check self-hosted pool and queue bootstrap if needed'
+        sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+        if ! command -v curl >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl unzip
+        fi
+        if ! command -v az >/dev/null 2>&1; then
+          installer="$(mktemp)"
+          trap 'rm -f -- "$installer"' EXIT
+          curl --fail --show-error --location --retry 3 --retry-all-errors --output "$installer" https://aka.ms/InstallAzureCLIDeb
+          sudo bash "$installer"
+        fi
+        az version
+      displayName: Ensure Azure CLI is installed
       env:
-        SELF_HOSTED_POOL: $(selfHostedPool)
-        SELF_HOSTED_BOOTSTRAP_PIPELINE_ID: '974'
-        SELF_HOSTED_AGENT_WAIT_SECONDS: '450'
-        SELF_HOSTED_AGENT_POLL_INTERVAL: '30'
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SELF_HOSTED_AGENT_PAT: $(SELF_HOSTED_AGENT_PAT)
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+      displayName: Install Terraform
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+      inputs:
+        terraformVersion: '1.9.8'
+
+    - task: AzureCLI@2
+      displayName: Validate private Terraform state access
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+      inputs:
+        azureSubscription: ${{ parameters.azureServiceConnection }}
+        addSpnToEnvironment: true
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          if [ -z "${idToken:-}" ] || [ -z "${servicePrincipalId:-}" ] || [ -z "${tenantId:-}" ]; then
+            echo "ERROR: AzureCLI did not expose workload identity federation credentials." >&2
+            exit 1
+          fi
+
+          export ARM_USE_OIDC=true
+          export ARM_OIDC_TOKEN="${idToken}"
+          export ARM_CLIENT_ID="${servicePrincipalId}"
+          export ARM_TENANT_ID="${tenantId}"
+          export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+
+          cd "$(Pipeline.Workspace)/foodport-tf/full-infra"
+          terraform init -input=false -lockfile=readonly
 
 - stage: ProvisionFullInfra
   displayName: 'Provision full infrastructure'
-  condition: succeeded()
+  dependsOn: []
+  condition: and(succeeded(), ne(${{ parameters.validateManagedDevOpsPool }}, true))
   jobs:
   - job: Terraform
     displayName: Full Infra Terraform
@@ -226,7 +149,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: ${{ parameters.selfHostedPool }}
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - checkout: self
       persistCredentials: true
@@ -234,12 +157,47 @@ stages:
       path: foodport-tf
       persistCredentials: true
 
+    - task: DownloadSecureFile@1
+      name: agentRootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(agentRootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+        if ! command -v curl >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl unzip
+        fi
+        if ! command -v az >/dev/null 2>&1; then
+          installer="$(mktemp)"
+          trap 'rm -f -- "$installer"' EXIT
+          curl --fail --show-error --location --retry 3 --retry-all-errors --output "$installer" https://aka.ms/InstallAzureCLIDeb
+          sudo bash "$installer"
+        fi
+        az version
+      displayName: Ensure Azure CLI is installed
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+        SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+
     - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: Install Terraform
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         terraformVersion: '1.9.8'
 
     - task: UsePythonVersion@0
+      env:
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
       inputs:
         versionSpec: '3.x'
 
@@ -248,6 +206,10 @@ stages:
         displayName: Apply Terraform for full infra
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -289,6 +251,10 @@ stages:
         displayName: Destroy Terraform-managed full infra
         env:
           SSH_PUBLIC_KEY: $(sshPublicKey)
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+          NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         inputs:
           azureSubscription: ${{ parameters.azureServiceConnection }}
           addSpnToEnvironment: true
@@ -317,10 +283,9 @@ stages:
 
 - stage: BootstrapRemoteVm
   displayName: 'Bootstrap remote VM'
-  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true))
+  condition: and(succeeded(), eq(${{ parameters.bootstrapRemoteVm }}, true), ne(${{ parameters.destroy }}, true), ne(${{ parameters.validateManagedDevOpsPool }}, true))
   dependsOn:
     - ProvisionFullInfra
-    - EnsureSelfHostedAgent
   jobs:
   - job: Bootstrap
     displayName: 'Bootstrap remote VM'
@@ -328,8 +293,23 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
+        name: CFDC-FoodPort-MDP-pool
     steps:
+    - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
+    - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
+
     - task: DownloadPipelineArtifact@2
       displayName: 'Download full infra artifact'
       inputs:
@@ -358,11 +338,6 @@ stages:
         echo "Found vm_ip.txt at: ${artifact_file}"
         echo "##vso[task.setvariable variable=TARGET_HOST]$TARGET_HOST"
       displayName: 'Load TARGET_HOST from full infra artifact'
-
-    - task: DownloadSecureFile@1
-      name: rootCA
-      inputs:
-        secureFile: 'GoC-GdC-Root-A.crt'
 
     - task: DownloadSecureFile@1
       name: tlsCert
@@ -493,7 +468,10 @@ stages:
           fi
 
           if ! command -v az >/dev/null 2>&1; then
-            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            installer="\$(mktemp)"
+            trap 'rm -f -- "\$installer"' EXIT
+            curl --fail --show-error --location --retry 3 --retry-all-errors --output "\$installer" https://aka.ms/InstallAzureCLIDeb
+            sudo bash "\$installer"
           fi
 
           if [ ! -x "/home/${TARGET_SSH_USER}/miniconda/bin/conda" ]; then
@@ -528,7 +506,7 @@ stages:
 - stage: DeployPortal
   displayName: 'Deploy portal'
   dependsOn: BootstrapRemoteVm
-  condition: succeeded()
+  condition: and(succeeded(), ne(${{ parameters.validateManagedDevOpsPool }}, true))
   jobs:
   - job: Deploy
     displayName: 'Deploy portal'
@@ -536,9 +514,7 @@ stages:
       ${{ if eq(parameters.useHostedAgent, true) }}:
         vmImage: ${{ parameters.hostedVmImage }}
       ${{ if ne(parameters.useHostedAgent, true) }}:
-        name: $(SELF_HOSTED_POOL)
-        demands:
-        - Agent.Name -equals $(SELF_HOSTED_AGENT_NAME)
+        name: CFDC-FoodPort-MDP-pool
     steps:
     - task: DownloadSecureFile@1
       name: rootCA
@@ -546,7 +522,18 @@ stages:
         secureFile: 'GoC-GdC-Root-A.crt'
 
     - script: |
+        set -euo pipefail
+        if ! command -v update-ca-certificates >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ca-certificates
+        fi
+        sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+        sudo update-ca-certificates
+      displayName: Trust GoC root CA before artifact download
+
+    - script: |
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
+        cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/rag/GoC-GdC-Root-A.crt"
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
       displayName: Copy root CA into Docker build contexts
 
@@ -617,6 +604,7 @@ stages:
             secret-key
             secret-key-base
             redmine-database-password
+            rag-db-password
             azure-account-name
             azure-account-key
             batch-account-name
@@ -667,6 +655,7 @@ stages:
               secret-key) var_name='SECRET_KEY' ;;
               secret-key-base) var_name='SECRET_KEY_BASE' ;;
               redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
+              rag-db-password) var_name='RAG_DB_PASSWORD' ;;
               azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
               azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
               batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
@@ -723,7 +712,7 @@ stages:
             fi
             printf '%s=%s\n' "$var_name" "$value" >> "$env_file"
             case "$var_name" in
-              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
+              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|RAG_DB_PASSWORD|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
                 printf '%s=%s\n' "$var_name" "$value" >> "$dotenv_file"
                 ;;
             esac

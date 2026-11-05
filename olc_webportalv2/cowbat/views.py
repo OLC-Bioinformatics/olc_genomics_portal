@@ -1,10 +1,13 @@
 
 # Standard libraries
+import csv
 import json
 import logging
 import fnmatch
 import os
 import re
+import tempfile
+from django.http import HttpResponseNotAllowed, JsonResponse
 
 # Azure
 from azure.storage.blob import BlockBlobService
@@ -40,7 +43,13 @@ from olc_webportalv2.cowbat.forms import (
     RunRequestForm
 )
 from olc_webportalv2.common.methods import create_batch_client
-from olc_webportalv2.cowbat.tasks import escape_ansi, run_cowbat_batch
+from olc_webportalv2.cowbat.tasks import (
+    escape_ansi,
+    rename_research_container_task,
+    run_cowbat_batch,
+)
+from olc_webportalv2.cowbat.utils import normalize_research_run_name
+from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.filezone.methods import calculate_checksum
 from olc_webportalv2.geneseekr.forms import EmailForm
 
@@ -71,7 +80,7 @@ def find_percent_complete(sequencing_run):
 def find_percentage_complete(sequencing_run):
     job_id = sequencing_run.job_id
     batch_client = create_batch_client()
-    
+
     node_files = batch_client.file.list_from_task(
         job_id=job_id,
         task_id=sequencing_run.task_id,
@@ -413,17 +422,16 @@ def retry_sequence_data_upload(request, sequencing_run_pk):
 
 
 def find_research_runs():
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    containers = blob_client.list_containers()
-    # Initialise a set to store all the unique run names
-    run_set = set()
-    for container in containers:
-        if re.match('\d{5,6}-[a-z0-9]', container.name) and '-output' not in container.name:
-            run_set.add(container.name)
-    return sorted(list(run_set))
+    try:
+        container_names = get_research_storage().list_containers()
+    except Exception:
+        log.exception('Could not list research-run containers from Blob Storage.')
+        container_names = ResearchRun.objects.values_list('run_name', flat=True)
+    return sorted({
+        name for name in container_names
+        if re.fullmatch(r'\d{5,6}-[a-z0-9]+(?:-[a-z0-9]+)*', name)
+        and not name.endswith('-output')
+    })
 
 
 class RunAutoCompleter(autocomplete.Select2ListView):
@@ -433,11 +441,492 @@ class RunAutoCompleter(autocomplete.Select2ListView):
         super().__init__(**kwargs)
 
     def get_list(self):
-        qs = ResearchRun.objects.all()
+        run_names = find_research_runs()
         if self.q:
-            qs.filter(run_name__icontains=self.q)
-        #
-        return sorted(list(set(str(result.run_name) for result in qs)))
+            query = self.q.lower()
+            run_names = [name for name in run_names if query in name.lower()]
+        return run_names
+
+
+def _research_run_selection_form():
+    run_names = find_research_runs()
+    for run_name in run_names:
+        ResearchRun.objects.get_or_create(run_name=run_name)
+    form = RunRequestForm()
+    if run_names:
+        form.fields['run_name'].queryset = ResearchRun.objects.filter(
+            run_name__in=run_names
+        )
+    return form
+
+
+def _research_run_file_names(storage, container_name):
+    entries = []
+    list_entries = getattr(storage, 'list_file_entries', None)
+    if list_entries:
+        entries = list(list_entries(container_name) or [])
+    if not entries:
+        return sorted(set(storage.list_files(container_name)))
+
+    names = [entry['name'] for entry in entries]
+    zero_byte_names = {
+        entry['name'].rstrip('/')
+        for entry in entries
+        if entry.get('size') == 0
+    }
+
+    def is_folder_marker(entry):
+        name = entry['name']
+        normalized_name = name.rstrip('/')
+        has_children = any(
+            other.startswith(normalized_name + '/')
+            for other in names
+            if other != name
+        )
+        return (
+            entry.get('size') == 0
+            and (name.endswith('/') or normalized_name in zero_byte_names and has_children)
+        )
+
+    return sorted({
+        entry['name'] for entry in entries if not is_folder_marker(entry)
+    })
+
+
+def validate_research_files(storage, container_name, files):
+    """Return complete sample IDs and validation errors for FASTQ read pairs."""
+    fastq_pattern = re.compile(
+        r'^(?P<sample>.+?)(?:_S\d+)?(?:_L\d{3})?_R(?P<read>[12])'
+        r'(?:_\d+)?\.f(?:ast)?q(?:\.gz)?$',
+        re.IGNORECASE,
+    )
+    reads_by_sample = {}
+    for blob_name in files:
+        filename = blob_name.rsplit('/', 1)[-1]
+        match = fastq_pattern.fullmatch(filename)
+        if not match:
+            continue
+        sample = match.group('sample')
+        read_name = 'R' + match.group('read')
+        reads_by_sample.setdefault(sample, {'R1': [], 'R2': []})[read_name].append(
+            blob_name
+        )
+
+    seqids = []
+    errors = []
+    for sample in sorted(reads_by_sample):
+        sample_reads = reads_by_sample[sample]
+        for read_name in ('R1', 'R2'):
+            if len(sample_reads[read_name]) > 1:
+                errors.append('Duplicate {0} file for {1}.'.format(read_name, sample))
+            elif not sample_reads[read_name]:
+                errors.append('{0} is missing {1}.'.format(sample, read_name))
+        if sample_reads['R1'] and sample_reads['R2']:
+            seqids.append(sample)
+
+    sample_sheet = next(
+        (
+            name for name in files
+            if name.rsplit('/', 1)[-1].lower() == 'samplesheet.csv'
+        ),
+        None,
+    )
+    if sample_sheet:
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as temporary_file:
+                temporary_path = temporary_file.name
+            storage.download_blob(container_name, sample_sheet, temporary_path)
+            with open(temporary_path, 'r', encoding='utf-8-sig', newline='') as sample_sheet_file:
+                rows = list(csv.reader(sample_sheet_file))
+            data_section = next(
+                (
+                    index for index, row in enumerate(rows)
+                    if row and row[0].strip().lower() == '[data]'
+                ),
+                -1,
+            )
+            sample_sheet_rows = rows[data_section + 1:] if data_section >= 0 else rows
+            header_index = next(
+                (
+                    index for index, row in enumerate(sample_sheet_rows)
+                    if any(cell.strip() for cell in row)
+                ),
+                None,
+            )
+            if header_index is None:
+                errors.append('SampleSheet.csv has no data header.')
+            else:
+                header = [
+                    re.sub(r'[^a-z0-9]', '', cell.strip().lower())
+                    for cell in sample_sheet_rows[header_index]
+                ]
+                sample_column = next(
+                    (
+                        index for index, name in enumerate(header)
+                        if name in ('sampleid', 'sample')
+                    ),
+                    None,
+                )
+                if sample_column is None:
+                    sample_column = next(
+                        (
+                            index for index, name in enumerate(header)
+                            if name == 'samplename'
+                        ),
+                        None,
+                    )
+                if sample_column is None:
+                    errors.append(
+                        'SampleSheet.csv must contain a Sample_ID or Sample_Name column.'
+                    )
+                else:
+                    sample_sheet_ids = {
+                        row[sample_column].strip()
+                        for row in sample_sheet_rows[header_index + 1:]
+                        if len(row) > sample_column and row[sample_column].strip()
+                    }
+                    for sample in sorted(sample_sheet_ids - set(seqids)):
+                        errors.append(
+                            '{0} is listed in SampleSheet.csv but has no complete FASTQ pair.'.format(
+                                sample
+                            )
+                        )
+        except Exception as exc:
+            log.exception('Could not validate SampleSheet.csv in %s.', container_name)
+            errors.append('Could not read SampleSheet.csv: {0}'.format(exc))
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+
+    return seqids, errors
+
+
+def _render_manage_assembly_run(request, sequencing_run, storage, form=None):
+    try:
+        files = _research_run_file_names(
+            storage,
+            sequencing_run.container or sequencing_run.run_name,
+        )
+    except Exception:
+        log.exception(
+            'Could not list files for research run %s.',
+            sequencing_run.pk,
+        )
+        files = []
+        messages.error(request, _('Could not list files in this research run.'))
+    return render(
+        request,
+        'cowbat/manage_research_assembly.html',
+        {
+            'sequencing_run': sequencing_run,
+            'container_name': sequencing_run.container or sequencing_run.run_name,
+            'files': files,
+            'form': form or CustomRunForm(instance=sequencing_run),
+        },
+    )
+
+
+@login_required
+def manage_assembly(request):
+    selection_form = _research_run_selection_form()
+    raw_run_name = request.GET.get('run_name', '').strip()
+    if not raw_run_name:
+        return render(
+            request,
+            'cowbat/manage_research_assembly.html',
+            {
+                'selection_form': selection_form,
+                'sequencing_run': None,
+            },
+        )
+
+    try:
+        run_name = normalize_research_run_name(raw_run_name)
+    except ValueError as exc:
+        selection_form.add_error('run_name', str(exc))
+        return render(
+            request,
+            'cowbat/manage_research_assembly.html',
+            {
+                'selection_form': selection_form,
+                'sequencing_run': None,
+            },
+        )
+
+    sequencing_run = SequencingRun.objects.filter(
+        Q(run_name__iexact=run_name) | Q(container__iexact=run_name)
+    ).first()
+    if sequencing_run:
+        return redirect(
+            'cowbat:manage_assembly_run',
+            sequencing_run_pk=sequencing_run.pk,
+        )
+
+    try:
+        container_names = get_research_storage().list_containers()
+    except Exception:
+        log.exception('Could not verify research container %s.', run_name)
+        selection_form.add_error(
+            None,
+            _('Could not verify the run in Blob Storage. Please try again.'),
+        )
+        return render(
+            request,
+            'cowbat/manage_research_assembly.html',
+            {
+                'selection_form': selection_form,
+                'sequencing_run': None,
+            },
+        )
+
+    if run_name not in container_names:
+        selection_form.add_error('run_name', _('No existing research run has that name.'))
+        return render(
+            request,
+            'cowbat/manage_research_assembly.html',
+            {
+                'selection_form': selection_form,
+                'sequencing_run': None,
+            },
+        )
+
+    sequencing_run = SequencingRun.objects.create(
+        user=request.user,
+        run_name=run_name,
+        container=run_name,
+        workflow_state='uploading',
+    )
+    return redirect(
+        'cowbat:manage_assembly_run',
+        sequencing_run_pk=sequencing_run.pk,
+    )
+
+
+@login_required
+def manage_assembly_run(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    storage = get_research_storage()
+    form = CustomRunForm(instance=sequencing_run)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'rename':
+            target_name = ''
+            try:
+                target_name = normalize_research_run_name(
+                    request.POST.get('run_name', '')
+                )
+            except ValueError as exc:
+                form.add_error(None, str(exc))
+
+            if target_name:
+                current_name = sequencing_run.container or sequencing_run.run_name
+                if target_name == current_name:
+                    messages.info(request, _('The research run already has that name.'))
+                    return redirect(
+                        'cowbat:manage_assembly_run',
+                        sequencing_run_pk=sequencing_run.pk,
+                    )
+                if sequencing_run.workflow_state in (
+                    'submitting',
+                    'submitted',
+                    'processing',
+                    'stopping',
+                ) or sequencing_run.status.lower() == 'processing':
+                    form.add_error(
+                        None,
+                        _('A run cannot be renamed after processing has started.'),
+                    )
+                else:
+                    try:
+                        container_names = get_research_storage().list_containers()
+                    except Exception:
+                        log.exception(
+                            'Could not check whether research container %s exists.',
+                            target_name,
+                        )
+                        container_names = None
+
+                    if container_names is not None and target_name in container_names:
+                        form.add_error(
+                            None,
+                            _('That container name is already in use.'),
+                        )
+                    else:
+                        existing_run = SequencingRun.objects.filter(
+                            Q(run_name__iexact=target_name)
+                            | Q(container__iexact=target_name)
+                        ).exclude(pk=sequencing_run.pk).exists()
+                        if existing_run:
+                            form.add_error(
+                                None,
+                                _('That container name is already in use.'),
+                            )
+                        else:
+                            sequencing_run.rename_status = 'queued'
+                            sequencing_run.rename_target = target_name
+                            sequencing_run.save(
+                                update_fields=['rename_status', 'rename_target']
+                            )
+                            try:
+                                rename_research_container_task.apply_async(
+                                    args=[
+                                        sequencing_run.pk,
+                                        current_name,
+                                        target_name,
+                                    ],
+                                    queue='cowbat',
+                                )
+                            except Exception as exc:
+                                log.exception(
+                                    'Could not queue rename for research run %s.',
+                                    sequencing_run.pk,
+                                )
+                                sequencing_run.rename_status = 'failed'
+                                sequencing_run.errors = (
+                                    sequencing_run.errors or []
+                                ) + ['Rename failed: {0}'.format(str(exc)[:220])]
+                                sequencing_run.save(
+                                    update_fields=['rename_status', 'errors']
+                                )
+                                form.add_error(
+                                    None,
+                                    _('Could not queue the research run rename.'),
+                                )
+                            else:
+                                return redirect(
+                                    'cowbat:manage_assembly_run',
+                                    sequencing_run_pk=sequencing_run.pk,
+                                )
+        elif action == 'submit':
+            form = CustomRunForm(request.POST, instance=sequencing_run)
+            if form.is_valid():
+                container_name = sequencing_run.container or sequencing_run.run_name
+                try:
+                    storage_files = storage.list_files(container_name)
+                    seqids, validation_errors = validate_research_files(
+                        storage,
+                        container_name,
+                        storage_files,
+                    )
+                except Exception:
+                    log.exception(
+                        'Could not validate files for research run %s.',
+                        sequencing_run.pk,
+                    )
+                    form.add_error(
+                        None,
+                        _('Could not validate the files in this research run.'),
+                    )
+                else:
+                    for error in validation_errors:
+                        form.add_error(None, error)
+                    if not seqids:
+                        form.add_error(
+                            None,
+                            _('At least one complete R1/R2 FASTQ pair is required.'),
+                        )
+                    if not form.errors:
+                        sequencing_run = form.save(commit=False)
+                        sequencing_run.container = container_name
+                        sequencing_run.seqids = seqids
+                        sequencing_run.status = 'Unprocessed'
+                        sequencing_run.workflow_state = 'uploading'
+                        sequencing_run.save()
+                        return redirect(
+                            'cowbat:cowbat_processing',
+                            sequencing_run_pk=sequencing_run.pk,
+                        )
+        else:
+            form.add_error(None, _('Unknown research-run action.'))
+
+    return _render_manage_assembly_run(
+        request,
+        sequencing_run,
+        storage,
+        form=form,
+    )
+
+
+@login_required
+def delete_research_files(request, sequencing_run_pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    storage = get_research_storage()
+    container_name = sequencing_run.container or sequencing_run.run_name
+    try:
+        available_files = set(storage.list_files(container_name))
+        requested_files = (
+            available_files
+            if request.POST.get('delete_all') == '1'
+            else set(request.POST.getlist('files')) & available_files
+        )
+        for blob_name in sorted(requested_files):
+            storage.delete_file(container_name, blob_name)
+    except Exception:
+        log.exception('Could not delete research-run files for run %s.', sequencing_run.pk)
+        messages.error(request, _('Could not delete the selected research-run files.'))
+    else:
+        messages.success(
+            request,
+            _('Deleted {0} file(s).').format(len(requested_files)),
+        )
+    return redirect(
+        'cowbat:manage_assembly_run',
+        sequencing_run_pk=sequencing_run.pk,
+    )
+
+
+@login_required
+def research_assembly_rename_status(request, sequencing_run_pk):
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    error = next(
+        (
+            value for value in reversed(sequencing_run.errors or [])
+            if value.startswith('Rename failed:')
+        ),
+        '',
+    )
+    return JsonResponse({
+        'status': sequencing_run.rename_status or 'idle',
+        'target_name': sequencing_run.rename_target,
+        'complete': sequencing_run.rename_status == 'complete',
+        'error': error,
+    })
+
+
+@login_required
+def upload_sequence_blob_sas(request, sequencing_run_pk):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
+    filename = request.GET.get('filename', '')
+    if (
+        not filename
+        or filename in ('.', '..')
+        or '/' in filename
+        or '\\' in filename
+        or len(filename) > 255
+        or any(ord(character) < 32 for character in filename)
+    ):
+        return JsonResponse({'error': 'A valid file name is required.'}, status=400)
+    try:
+        upload_url = get_research_storage().upload_url(
+            sequencing_run.container or sequencing_run.run_name,
+            filename,
+        )
+    except Exception:
+        log.exception(
+            'Could not create an upload URL for research run %s.',
+            sequencing_run.pk,
+        )
+        return JsonResponse(
+            {'error': 'Could not prepare the file upload.'},
+            status=503,
+        )
+    return JsonResponse({'upload_url': upload_url, 'blob_name': filename})
 
 
 @login_required
@@ -514,19 +1003,27 @@ def custom_run_request(request):
     if request.method == 'POST':
         custom_form = CustomRunForm(request.POST)
         if custom_form.is_valid():
-            #
-            sequencing_run = custom_form.save()
-            #
-            error_str = str()
-            sequencing_run.basic_assembly = custom_form.cleaned_data.get('basic_assembly')
-            sequencing_run.preprocess = custom_form.cleaned_data.get('preprocess')
-            sequencing_run.run_name = custom_form.cleaned_data.get('run_name')
-            sequencing_run.nextseq = custom_form.cleaned_data.get('nextseq')
-            sequencing_run.save()
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(sequencing_run.run_name)
-            return redirect('cowbat:upload_assembly_upload', sequencing_run_pk=sequencing_run.pk)
+            sequencing_run = custom_form.save(commit=False)
+            sequencing_run.user = request.user
+            sequencing_run.container = sequencing_run.run_name
+            sequencing_run.workflow_state = 'uploading'
+            try:
+                get_research_storage().ensure_container(sequencing_run.container)
+            except Exception:
+                log.exception(
+                    'Could not create research container %s.',
+                    sequencing_run.container,
+                )
+                custom_form.add_error(
+                    None,
+                    _('Could not create the research-run container.'),
+                )
+            else:
+                sequencing_run.save()
+                return redirect(
+                    'cowbat:upload_assembly_upload',
+                    sequencing_run_pk=sequencing_run.pk,
+                )
 
     return render(request,
                   'cowbat/custom_assembly_create.html',

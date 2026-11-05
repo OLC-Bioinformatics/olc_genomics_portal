@@ -64,6 +64,7 @@ from olc_webportalv2.cowbat.models import (
     AzureTask,
     SummaryMetadata,
 )
+from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.cowsnphr.models import COWSNPhRRequest
 from olc_webportalv2.cowsnphr.tasks import (
     check_cowsnphr_tasks,
@@ -96,6 +97,37 @@ from olc_webportalv2.vir_typer.models import (
     VirTyperAzureRequest,
     VirTyperProject,
 )
+
+
+@shared_task
+def rename_research_container_task(sequencing_run_pk, old_name, new_name):
+    """Move a research run's blobs and update its database record."""
+    sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
+    sequencing_run.rename_status = 'running'
+    sequencing_run.rename_target = new_name
+    sequencing_run.save(update_fields=['rename_status', 'rename_target'])
+
+    try:
+        get_research_storage().rename_container(old_name, new_name)
+    except Exception as exc:
+        sequencing_run.rename_status = 'failed'
+        sequencing_run.errors = (sequencing_run.errors or []) + [
+            'Rename failed: {0}'.format(str(exc)[:220])
+        ]
+        sequencing_run.save(update_fields=['rename_status', 'rename_target', 'errors'])
+        raise
+
+    sequencing_run.run_name = new_name
+    sequencing_run.container = new_name
+    sequencing_run.rename_status = 'complete'
+    sequencing_run.rename_target = new_name
+    sequencing_run.save(update_fields=[
+        'run_name',
+        'container',
+        'rename_status',
+        'rename_target',
+    ])
+    return new_name
 
 
 @shared_task
