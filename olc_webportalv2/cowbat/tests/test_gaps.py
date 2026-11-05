@@ -79,11 +79,17 @@ class CowbatFormTests(TestCase):
         self.assertEqual(normalize_research_run_name('260911-vl00772-2'), '260911-vl00772-2')
         self.assertEqual(normalize_research_run_name('260911-vl00772-3'), '260911-vl00772-3')
         self.assertEqual(
+            normalize_research_run_name('260911-' + 'a' * 56),
+            '260911-' + 'a' * 56,
+        )
+        self.assertEqual(
             normalize_research_run_name('261019-vl00772-test'),
             '261019-vl00772-test',
         )
         with self.assertRaises(ValueError):
             normalize_research_run_name('run-without-date')
+        with self.assertRaises(ValueError):
+            normalize_research_run_name('260911-' + 'a' * 57)
 
 
 class CowbatMethodTests(TestCase):
@@ -412,6 +418,24 @@ class CowbatWorkflowTests(TestCase):
             fetch_redirect_response=False,
         )
         self.assertEqual(SequencingRun.objects.filter(run_name='240824-cal').count(), 1)
+
+    @mock.patch('olc_webportalv2.cowbat.views.get_research_storage')
+    def test_manage_research_assembly_creates_run_with_observability_defaults(
+        self, storage_factory
+    ):
+        storage_factory.return_value.list_containers.return_value = ['000000-aac']
+
+        response = self.client.get(
+            reverse('cowbat:manage_assembly'),
+            {'run_name': '000000-aac'},
+        )
+
+        run = SequencingRun.objects.get(run_name='000000-aac')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(run.workflow_state, 'uploading')
+        self.assertEqual(run.failure_stage, '')
+        self.assertEqual(run.task_queue, '')
+        self.assertEqual(run.task_retry_count, 0)
 
     @mock.patch('olc_webportalv2.cowbat.views.get_research_storage')
     def test_delete_research_files_only_deletes_available_files(self, storage_factory):

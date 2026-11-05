@@ -31,6 +31,16 @@
                            href="{% url 'cowbat:upload_assembly' %}">{% trans "Upload and Assemble FASTQ" %}</a>
                     </div>
                 </div>
+                <div class="card mb-4 box-shadow">
+                    <div class="card-header">
+                        <h3>{% trans "Manage Research Runs" %}</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p>{% trans "Browse existing runs, upload or remove FASTQ files, and submit an assembly." %}</p>
+                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                           href="{% url 'cowbat:manage_assembly' %}">{% trans "Upload and Manage FASTQ" %}</a>
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -38,7 +48,6 @@
 </div>
 
 {% endblock %}
-
 
 
 

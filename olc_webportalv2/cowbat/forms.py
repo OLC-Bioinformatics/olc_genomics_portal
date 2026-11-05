@@ -9,6 +9,8 @@ from django.utils.translation import ugettext_lazy as _
 
 from dal import autocomplete, forward
 
+from olc_webportalv2.cowbat.utils import normalize_research_run_name
+
 
 class RunNameForm(forms.Form):
     run_name = forms.CharField(max_length=64, widget=forms.TextInput(attrs={'placeholder': _('YYMMDD_LAB')}),
@@ -104,21 +106,15 @@ class CustomRunForm(ModelForm):
             ),
         }
 
+    def clean_run_name(self):
+        try:
+            return normalize_research_run_name(self.cleaned_data['run_name'])
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc))
+
     def clean(self):
         super().clean()
-        # Initialise variables to store errors and primer information
-        error_list = list()
-        run_name = str()
-        try:
-            run_name = self.cleaned_data['run_name']
-            if not (re.match('\d{5,6}-[a-z]+', run_name) or re.match('\d{5,6}_M\d+', run_name)):
-                error_list.append(
-                    _('Invalid run name. Format must be YYMMDD-lab'))
-            run_name.upper().replace('-', '_')
-        except (AttributeError, KeyError):
-            error_list.append(
-                _('Please select a run to assemble'))
-
+        error_list = []
         basic_assembly = self.cleaned_data.get('basic_assembly')
         preprocess = self.cleaned_data.get('preprocess')
         if basic_assembly and preprocess:

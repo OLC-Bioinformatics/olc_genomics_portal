@@ -105,9 +105,9 @@ class AzureResearchStorage(ResearchStorage):
     def rename_container(self, old_name, new_name):
         if old_name == new_name:
             return
+        if new_name in self.list_containers():
+            raise ValueError('The destination container already exists.')
         self.ensure_container(new_name)
-        if self.list_files(new_name):
-            raise ValueError('The destination container is not empty.')
         blob_names = self.list_files(old_name)
         try:
             for blob_name in blob_names:

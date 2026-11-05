@@ -29,6 +29,19 @@ def get_interop_name(instance, filename):
 
 
 class SequencingRun(models.Model):
+    WORKFLOW_STATE_CHOICES = (
+        ('created', 'Created'),
+        ('uploading', 'Uploading'),
+        ('upload_complete', 'Upload complete'),
+        ('submitting', 'Submitting'),
+        ('submitted', 'Submitted'),
+        ('processing', 'Processing'),
+        ('stopping', 'Stopping'),
+        ('ready', 'Ready'),
+        ('complete', 'Complete'),
+        ('error', 'Error'),
+    )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -52,6 +65,20 @@ class SequencingRun(models.Model):
     download_link = models.CharField(max_length=256, blank=True, default='')
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=list)
     container = models.CharField(max_length=64, blank=True, default='')
+    workflow_state = models.CharField(
+        max_length=32,
+        choices=WORKFLOW_STATE_CHOICES,
+        default='created',
+        db_index=True,
+    )
+    failure_stage = models.CharField(max_length=64, blank=True, default='')
+    task_finished_at = models.DateTimeField(blank=True, null=True)
+    task_queue = models.CharField(max_length=64, blank=True, default='')
+    task_retry_count = models.PositiveIntegerField(default=0)
+    task_started_at = models.DateTimeField(blank=True, null=True)
+    task_submitted_at = models.DateTimeField(blank=True, null=True)
+    rename_status = models.CharField(max_length=16, blank=True, default='')
+    rename_target = models.CharField(max_length=64, blank=True, default='')
     pool_id = models.CharField(max_length=64, blank=True, default='')
     job_id = models.CharField(max_length=64, blank=True, default='')
     task_id = models.CharField(max_length=64, blank=True, default='')
