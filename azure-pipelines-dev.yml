@@ -580,8 +580,9 @@ stages:
 
     - script: |
         cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/redmine/GoC-GdC-Root-A.crt"
-        cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
-      displayName: Copy root CA into Docker build contexts
+      cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/rag/GoC-GdC-Root-A.crt"
+      cp "$(rootCA.secureFilePath)" "$(Build.SourcesDirectory)/GoC-GdC-Root-A.crt"
+    displayName: Copy root CA into Docker build contexts
 
     - script: |
         echo 'Skipping local Key Vault fetch and env validation; this will happen on the target VM.'
