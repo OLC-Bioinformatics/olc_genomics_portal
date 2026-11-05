@@ -604,6 +604,7 @@ stages:
             secret-key
             secret-key-base
             redmine-database-password
+            rag-db-password
             azure-account-name
             azure-account-key
             batch-account-name
@@ -654,6 +655,7 @@ stages:
               secret-key) var_name='SECRET_KEY' ;;
               secret-key-base) var_name='SECRET_KEY_BASE' ;;
               redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
+              rag-db-password) var_name='RAG_DB_PASSWORD' ;;
               azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
               azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
               batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
@@ -710,7 +712,7 @@ stages:
             fi
             printf '%s=%s\n' "$var_name" "$value" >> "$env_file"
             case "$var_name" in
-              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
+              SUBSCRIPTION_ID|TENANT_ID|CLIENT_ID|CLIENT_SECRET|STORAGE_ACCOUNT_NAME|RESOURCE_GROUP_NAME|CONNECTION_STRING|RAG_DB_PASSWORD|MYSQL_PASSWORD|MARIA_DB_ROOT_PASSWORD|DB_PASS|EMAIL_HOST_USER|EMAIL_HOST_PASSWORD)
                 printf '%s=%s\n' "$var_name" "$value" >> "$dotenv_file"
                 ;;
             esac
