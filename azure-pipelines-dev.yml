@@ -671,8 +671,8 @@ stages:
         from pathlib import Path
 
         secret_names = (
-            "SECRET_KEY",
-            "SECRET_KEY_BASE",
+            "FOODPORT_DJANGO_SECRET_KEY",
+            "FOODPORT_DJANGO_SECRET_KEY_BASE",
             "REDMINE_DB_PASSWORD",
             "AZURE_ACCOUNT_NAME",
             "AZURE_ACCOUNT_KEY",
@@ -719,6 +719,10 @@ stages:
             "RESOURCE_GROUP_NAME",
             "STORAGE_ACCOUNT_NAME",
         )
+        env_file_names = {
+            "FOODPORT_DJANGO_SECRET_KEY": "SECRET_KEY",
+            "FOODPORT_DJANGO_SECRET_KEY_BASE": "SECRET_KEY_BASE",
+        }
         dotenv_names = (
             "SUBSCRIPTION_ID",
             "TENANT_ID",
@@ -781,7 +785,10 @@ stages:
             "MICROSOFT_AUTH_ENABLED=False",
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
-        env_lines.extend(f"{name}={os.environ[name]}" for name in secret_names)
+        env_lines.extend(
+            f"{env_file_names.get(name, name)}={os.environ[name]}"
+            for name in secret_names
+        )
         (output_dir / "env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
 
         dotenv_lines = [
@@ -897,8 +904,8 @@ stages:
       displayName: 'Deploy portal on dev VM'
       env:
         FOODPORT_SECRET_VARIABLES_READY: $(FOODPORT_SECRET_VARIABLES_READY)
-        SECRET_KEY: $(SECRET_KEY)
-        SECRET_KEY_BASE: $(SECRET_KEY_BASE)
+        FOODPORT_DJANGO_SECRET_KEY: $(FOODPORT_DJANGO_SECRET_KEY)
+        FOODPORT_DJANGO_SECRET_KEY_BASE: $(FOODPORT_DJANGO_SECRET_KEY_BASE)
         REDMINE_DB_PASSWORD: $(REDMINE_DB_PASSWORD)
         AZURE_ACCOUNT_NAME: $(AZURE_ACCOUNT_NAME)
         AZURE_ACCOUNT_KEY: $(AZURE_ACCOUNT_KEY)
