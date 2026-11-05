@@ -1,7 +1,7 @@
 from django import forms
 from olc_webportalv2.metadata.models import SequenceData
 import re
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 
 class DataRequestForm(forms.Form):

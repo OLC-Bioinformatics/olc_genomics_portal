@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination, views, parsers, response
 from azure.storage.blob import BlockBlobService, BlobPermissions
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 
 # Not sure where to put this - create pagination.py?

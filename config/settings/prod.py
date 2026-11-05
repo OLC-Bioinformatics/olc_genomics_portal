@@ -15,10 +15,7 @@ import sentry_sdk
 # Third-party imports
 from celery.schedules import crontab
 import django
-try:
-    from django.utils.translation import gettext_lazy as language
-except ImportError:
-    from django.utils.translation import ugettext_lazy as language
+from django.utils.translation import gettext_lazy as language
 import environ
 from kombu import Queue
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -95,9 +92,6 @@ LOCAL_APPS = [
     # Need this to get django-multiselectfield to work
     'multiselectfield',
 
-    # Django-bootstrap-forms
-    'bootstrapform',
-
     # Sortable HTML tables
     'django_tables2',
 
@@ -117,14 +111,15 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # MIDDLEWARE CONFIGURATION
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.messages.middleware.MessageMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 REST_FRAMEWORK = {
@@ -212,7 +207,7 @@ DATABASES['default']['ATOMIC_REQUESTS'] = True
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'Canada/Eastern'
+TIME_ZONE = 'America/Toronto'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # LANGUAGE_CODE = 'en-ca'
@@ -273,7 +268,7 @@ TEMPLATES = [
 ]
 
 # http://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # STATIC FILE CONFIGURATION
 # ------------------------------------------------------------------------------

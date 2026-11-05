@@ -5,7 +5,7 @@ import re
 from olc_webportalv2.cowbat.models import SequencingRun, ResearchRun
 from django.forms.widgets import EmailInput
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from dal import autocomplete, forward
 

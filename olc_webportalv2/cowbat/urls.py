@@ -1,51 +1,109 @@
-from olc_webportalv2.cowbat import views
-from django.conf.urls import url, include
+"""
+URL configuration for the COWBAT app.
+"""
+
+# Django imports
+from django.urls import path
 from django.utils.translation import gettext_lazy as _
+
+# Third party imports
 from rest_framework.urlpatterns import format_suffix_patterns
 
-urlpatterns = [
-    url(_(r'^cowbat_processing/(?P<sequencing_run_pk>\d+)/$'), views.cowbat_processing,
-        name='cowbat_processing'),
-    url(_(r'^assembly_home/'), views.assembly_home,
-        name='assembly_home'),
-    url(_(r'^upload_metadata/'), views.upload_metadata,
-        name='upload_metadata'),
-    url(_(r'^verify_realtime/(?P<sequencing_run_pk>\d+)/$'), views.verify_realtime,
-        name='verify_realtime'),
-    url(_(r'^upload_interop/(?P<sequencing_run_pk>\d+)/$'), views.upload_interop,
-        name='upload_interop'),
-    url(_(r'^upload_sequence_data/(?P<sequencing_run_pk>\d+)/$'), views.upload_sequence_data,
-        name='upload_sequence_data'),
-    url(_(r'^retry_sequence_data_upload/(?P<sequencing_run_pk>\d+)/$'), views.retry_sequence_data_upload,
-        name='retry_sequence_data_upload'),
-    url(_(r'^assembly_results/(?P<sequencing_run_pk>\d+)/$'), views.assembly_results,
-        name='assembly_results'),
-    url(_(r'^research_assembly/'), views.research_assembly_home, name='research_assembly'),
-    url(_(r'^blob_assembly/'), views.research_assembly,
-        name='blob_assembly'),
-    url(_(r'^upload_assembly/'), views.custom_run_request,
-        name='upload_assembly'),
-    url(_(r'^upload_assembly_upload/(?P<sequencing_run_pk>\d+)/$'), views.custom_run_upload,
-        name='upload_assembly_upload'),
-    url(r'^manage_assembly/$', views.manage_assembly,
-        name='manage_assembly'),
-    url(r'^manage_assembly/(?P<sequencing_run_pk>\d+)/$',
-        views.manage_assembly_run,
-        name='manage_assembly_run'),
-    url(r'^manage_assembly/(?P<sequencing_run_pk>\d+)/delete-files/$',
-        views.delete_research_files,
-        name='delete_research_files'),
-    url(r'^manage_assembly/(?P<sequencing_run_pk>\d+)/rename-status/$',
-        views.research_assembly_rename_status,
-        name='research_assembly_rename_status'),
-    url(r'^manage_assembly/(?P<sequencing_run_pk>\d+)/upload-url/$',
-        views.upload_sequence_blob_sas,
-        name='upload_sequence_blob_sas'),
+# Local imports
+from olc_webportalv2.cowbat import views
 
-    # Views for autocompletion
-    url(r'^run_autocompleter/$',
+app_name = "cowbat"
+
+# URL patterns for the COWBAT app
+urlpatterns = [
+    path(
+        _("cowbat_processing/<int:sequencing_run_pk>/"),
+        views.cowbat_processing,
+        name="cowbat_processing",
+    ),
+    path(
+        _("assembly_home/"),
+        views.assembly_home,
+        name="assembly_home",
+    ),
+    path(
+        _("upload_metadata/"),
+        views.upload_metadata,
+        name="upload_metadata",
+    ),
+    path(
+        _("verify_realtime/<int:sequencing_run_pk>/"),
+        views.verify_realtime,
+        name="verify_realtime",
+    ),
+    path(
+        _("upload_interop/<int:sequencing_run_pk>/"),
+        views.upload_interop,
+        name="upload_interop",
+    ),
+    path(
+        _("upload_sequence_data/<int:sequencing_run_pk>/"),
+        views.upload_sequence_data,
+        name="upload_sequence_data",
+    ),
+    path(
+        _("retry_sequence_data_upload/<int:sequencing_run_pk>/"),
+        views.retry_sequence_data_upload,
+        name="retry_sequence_data_upload",
+    ),
+    path(
+        _("assembly_results/<int:sequencing_run_pk>/"),
+        views.assembly_results,
+        name="assembly_results",
+    ),
+    path(
+        _("research_assembly/"),
+        views.research_assembly_home,
+        name="research_assembly",
+    ),
+    path(
+        _("blob_assembly/"),
+        views.research_assembly,
+        name="blob_assembly",
+    ),
+    path(
+        _("upload_assembly/"),
+        views.custom_run_request,
+        name="upload_assembly",
+    ),
+    path(
+        _("upload_assembly_upload/<int:sequencing_run_pk>/"),
+        views.custom_run_upload,
+        name="upload_assembly_upload",
+    ),
+    path(_("manage_assembly/"), views.manage_assembly, name="manage_assembly"),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/"),
+        views.manage_assembly_run,
+        name="manage_assembly_run",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/delete-files/"),
+        views.delete_research_files,
+        name="delete_research_files",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/rename-status/"),
+        views.research_assembly_rename_status,
+        name="research_assembly_rename_status",
+    ),
+    path(
+        _("manage_assembly/<int:sequencing_run_pk>/upload-url/"),
+        views.upload_sequence_blob_sas,
+        name="upload_sequence_blob_sas",
+    ),
+
+    # Views for autocompletion.
+    path(
+        _("run_autocompleter/"),
         views.RunAutoCompleter.as_view(),
-        name='run_autocompleter'),
+        name="run_autocompleter",
+    ),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

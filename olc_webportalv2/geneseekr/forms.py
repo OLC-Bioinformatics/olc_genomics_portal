@@ -22,6 +22,11 @@ from olc_webportalv2.metadata.models import (
     Genus,
     SequenceData
 )
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest
+
+from django.forms.widgets import EmailInput
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 
 class NearNeighborForm(forms.Form):

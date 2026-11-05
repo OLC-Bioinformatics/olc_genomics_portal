@@ -1,7 +1,7 @@
 from django import forms
 from dal import autocomplete
 from olc_webportalv2.metadata.models import Genus, Species, Serotype, MLST, RMLST
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 quality_choices = (
     (_('Pass'), _('All sequences except for low quality or contaminated sequences.')),

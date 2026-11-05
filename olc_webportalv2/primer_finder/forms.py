@@ -9,7 +9,7 @@ from io import StringIO
 import re
 
 # Django imports
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.forms import ModelForm
 from django import forms
 

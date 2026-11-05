@@ -21,7 +21,6 @@ from typing import (
 from django.conf import settings
 
 # Third-party imports
-import azure.batch.batch_service_client as batch
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob import BlobPermissions
 from azure.batch import batch_auth
@@ -29,7 +28,10 @@ import azure.batch.models as batchmodels
 from celery import shared_task
 
 # Portal-specific imports
-from olc_webportalv2.common.methods import generic_api_submit
+from olc_webportalv2.common.methods import (
+    create_batch_client,
+    generic_api_submit
+)
 from olc_webportalv2.primer_finder.methods import (
     _archive_reports_and_upload,
     create_details,
@@ -102,10 +104,19 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
         upload_probe(request=primer_request)
         input_blob_names.append("probe.fasta")
 
-    # Handle the inclusivity panel files. This must happen before command
-    # creation because any server-side benchmark copy must finish before its
-    # SAS URL is generated and the Batch task is submitted.
-    inclusivity_blob_names = _handle_panel_files(
+    # Set the path to the mounted container in the AzureBatch VM
+    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
+
+    # Create the PrimerValidator system call
+    cmd = _create_primer_cmd(
+        container_name=container_name,
+        file_name=file_name,
+        path=path,
+        request=primer_request
+    )
+
+    # Handle the inclusivity panel files
+    _handle_panel_files(
         container_name=container_name,
         inclusivity=True,
         panel_model=panel_model,
@@ -338,19 +349,12 @@ def _create_primer_cmd(
     # Add the probe sequence. getattr() prevents AttributeError for request
     # types that do not define probe_sequence.
     if getattr(request, "probe_sequence", None):
-        primer_command += " -p {probe_path}".format(
-            probe_path=shlex.quote(posixpath.join(run_directory, "probe.fasta"))
-        )
+        cmd += f" -p /datadrive/{container_name}/probe.fasta"
 
-    command_parts.append(primer_command)
-
-    # Copy the reports folder back to the BlobFuse-mounted request container.
-    # Input files are no longer read through this mount, but the existing
-    # output workflow is preserved.
-    command_parts.append('rm -rf "$mount_dir/reports"')
-
-    command_parts.append(
-        'cp -R {reports} "$mount_dir/"'.format(reports=shlex.quote(reports_directory))
+    # Copy the reports folder and seqids files to the container mount
+    cmd += (
+        f" && cp -R /datadrive/{container_name}/reports {path} && "
+        f"cp /datadrive/{container_name}/*_seqids.txt {path}"
     )
 
     # Copy sequence-ID files back when at least one such file exists. The
@@ -690,8 +694,9 @@ def copy_benchmark_files(
     # Copy the benchmark file into the request-specific container.
     blob_client.copy_blob(
         container_name=container_name,
-        blob_name=destination_blob_name,
-        copy_source=source_url,
+        blob_name=os.path.join(panel, f'{genus}.zip'),
+        copy_source=f'https://{settings.AZURE_ACCOUNT_NAME}.'
+        f'blob.core.windows.net/benchmark-datasets/{genus}.zip'
     )
 
     # Copy Blob may be asynchronous, particularly for a large archive.
@@ -755,17 +760,8 @@ def check_verifier_tasks():
     # Retrieve all VerifierAzureRequest objects
     verifier_tasks = VerifierAzureRequest.objects.filter()
 
-    # Extract the credentials from the settings
-    credentials = batch_auth.SharedKeyCredentials(
-        settings.BATCH_ACCOUNT_NAME,
-        settings.BATCH_ACCOUNT_KEY
-    )
-
-    # Create the batch client for manipulating batch jobs, and pools
-    batch_client = batch.BatchServiceClient(
-        credentials,
-        base_url=settings.BATCH_ACCOUNT_URL
-    )
+    # Create a batch client
+    batch_client = create_batch_client()
 
     for task in verifier_tasks:
         _process_verifier_task(
@@ -776,14 +772,14 @@ def check_verifier_tasks():
 
 def _process_verifier_task(
     *,  # Force the use of keyword arguments
-    batch_client: batch.BatchServiceClient,
+    batch_client,
     task: VerifierAzureRequest
 ):
     """
     Process an individual verifier task.
 
     Args:
-        batch_client (batch.BatchServiceClient): The Azure Batch client.
+        batch_client: The Azure Batch client.
         task (VerifierAzureRequest): The task to process.
     """
     try:
@@ -823,14 +819,14 @@ def _process_verifier_task(
 
 def _check_tasks_completed(
     *,  # Force the use of keyword arguments
-    batch_client: batch.BatchServiceClient,
+    batch_client,
     batch_job_name: str
 ) -> bool:
     """
     Check if all tasks in the batch job have completed.
 
     Args:
-        batch_client (batch.BatchServiceClient): The Azure Batch client.
+        batch_client: The Azure Batch client.
         batch_job_name (str): The name of the batch job.
 
     Returns:
@@ -847,14 +843,14 @@ def _check_tasks_completed(
 
 def _check_exit_codes(
     *,  # Force the use of keyword arguments
-    batch_client: batch.BatchServiceClient,
+    batch_client,
     batch_job_name: str
 ) -> bool:
     """
     Check if all tasks in the batch job have an exit code of 0.
 
     Args:
-        batch_client (batch.BatchServiceClient): The Azure Batch client.
+        batch_client: The Azure Batch client.
         batch_job_name (str): The name of the batch job.
 
     Returns:
@@ -887,22 +883,17 @@ def _handle_successful_verifier_run(
     )
     email_list = verifier_request.emails_array
     for email in email_list:
-        subject = 'PrimerVerifier Analysis "{name}" Complete'.format(
-            name=str(verifier_request.project_name)
-        )
+        subject = 'PrimerVerifier Analysis ' \
+        f'"{verifier_request.project_name}" Complete'
         body = (
-            'Dear {user},\n'
-            'Your PrimerVerifier analysis, "{name}", is complete.\n'
-            'Raw PrimerVerifier outputs are available here: {report_url}.\n\n'
-            'Summarised outputs are available here: {summary_url}.\n\n'
+            f'Dear {verifier_request.user},\n'
+            f'Your PrimerVerifier analysis, '
+            f'"{verifier_request.project_name}", is complete.\n'
+            f'Raw PrimerVerifier outputs are available here: '
+            f'{report_sas_url}.\n\n'
+            f'Summarised outputs are available here: {summary_sas_url}.\n\n'
             'Best regards,\n'
             'The FoodPort development team'
-            .format(
-                user=verifier_request.user,
-                name=str(verifier_request.project_name),
-                report_url=report_sas_url,
-                summary_url=summary_sas_url
-            )
         )
 
         # Send the email
@@ -924,18 +915,14 @@ def _handle_failed_verifier_run(
     # Extract the email list from the request
     email_list = verifier_request.emails_array
     for email in email_list:
-        subject = 'PrimerVerifier Analysis "{name}" Failed'.format(
-            name=str(verifier_request.project_name)
-        )
+        subject = f'PrimerVerifier Analysis ' \
+                  f'"{verifier_request.project_name}" Failed'
         body = (
-            'Dear {user},\n'
-            'Your PrimerVerifier analysis, "{name}", has failed.\n'
+            f'Dear {verifier_request.user},\n'
+            f'Your PrimerVerifier analysis, '
+            f'"{verifier_request.project_name}", has failed.\n'
             'Sorry for the inconvenience,\n'
             'The FoodPort development team'
-            .format(
-                user=verifier_request.user,
-                name=str(verifier_request.project_name)
-            )
         )
 
         # Send the email
@@ -1068,12 +1055,8 @@ def _generate_sas_urls(
     )
 
     # Create SAS URLs for the Excel summary report archive of reports
-    excel_blob_name = "reports/{name}_summary_report.xlsx".format(
-        name=container_name
-    )
-    archive_blob_name = "{name}_reports.zip".format(
-        name=container_name
-    )
+    excel_blob_name = f"reports/{container_name}_summary_report.xlsx"
+    archive_blob_name = f"{container_name}_reports.zip"
 
     excel_sas_url = blob_client.make_blob_url(
         container_name=container_name,
@@ -1122,16 +1105,8 @@ def check_validator_tasks():
     # Get all active validator tasks
     validator_tasks = PrimerValidatorAzureRequest.objects.filter()
 
-    # Set up the credentials
-    credentials = batch_auth.SharedKeyCredentials(
-        settings.BATCH_ACCOUNT_NAME,
-        settings.BATCH_ACCOUNT_KEY
-    )
-
-    # Create the batch client
-    batch_client = batch.BatchServiceClient(
-        credentials, base_url=settings.BATCH_ACCOUNT_URL
-    )
+    # Create a batch client
+    batch_client = create_batch_client()
 
     # Process each validator task
     for task in validator_tasks:
@@ -1143,14 +1118,14 @@ def check_validator_tasks():
 
 def _process_validator_task(
     *,  # Force the use of keyword arguments
-    batch_client: batch.BatchServiceClient,
+    batch_client,
     task: PrimerValidatorAzureRequest
 ):
     """
     Process an individual validator task.
 
     Args:
-        batch_client (batch.BatchServiceClient): The Azure Batch client.
+        batch_client: The Azure Batch client.
         task (PrimerValidatorAzureRequest): The task to process.
     """
     try:
@@ -1206,21 +1181,17 @@ def _handle_successful_validator_run(
     )
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = 'PrimerValidator Analysis "{name}" Complete'.format(
-            name=str(validator_request.project_name)
-        )
+        subject = f'PrimerValidator Analysis ' \
+            f'"{validator_request.project_name}" Complete'
         body = (
-            "Dear {user},\n"
-            'Your PrimerValidator analysis, "{name}", is complete.\n'
-            "Raw PrimerValidator outputs are available here: {report_url}.\n\n"
-            "Summarised outputs are available here: {summary_url}.\n\n"
+            f"Dear {validator_request.user},\n"
+            f"Your PrimerValidator analysis, "
+            f'"{validator_request.project_name}", is complete.\n'
+            f"Raw PrimerValidator outputs are available "
+            f'here: {report_sas_url}.\n\n'
+            f"Summarised outputs are available here: {summary_sas_url}.\n\n"
             "Best regards,\n"
-            "The FoodPort development team".format(
-                user=validator_request.user,
-                name=str(validator_request.project_name),
-                report_url=report_sas_url,
-                summary_url=summary_sas_url,
-            )
+            "The FoodPort development team"
         )
         send_email(subject=subject, body=body, recipient=email)
     if validator_request.report:
@@ -1236,17 +1207,14 @@ def _handle_failed_validator_run(
     """
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = 'PrimerValidator Analysis "{name}" Failed'.format(
-            name=str(validator_request.project_name)
-        )
+        subject = f'PrimerValidator Analysis ' \
+                  f'"{validator_request.project_name}" Failed'
         body = (
-            "Dear {user},\n"
-            'Your PrimerValidator analysis, "{name}", has failed.\n'
+            f"Dear {validator_request.user},\n"
+            f'Your PrimerValidator analysis, '
+            f'"{validator_request.project_name}", has failed.\n'
             "Sorry for the inconvenience,\n"
-            "The FoodPort development team".format(
-                user=validator_request.user,
-                name=str(validator_request.project_name)
-            )
+            "The FoodPort development team"
         )
         send_email(subject=subject, body=body, recipient=email)
     validator_request.status = "Error"

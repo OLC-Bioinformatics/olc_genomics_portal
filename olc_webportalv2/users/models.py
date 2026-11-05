@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.urls import reverse
 from django.db import models
 from six import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from config.settings import prod as settings
 
 @python_2_unicode_compatible

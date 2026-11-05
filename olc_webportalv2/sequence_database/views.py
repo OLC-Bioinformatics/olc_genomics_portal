@@ -11,7 +11,6 @@ from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination
 from azure.storage.blob import BlockBlobService, BlobPermissions
-# from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
 from django.forms.formsets import formset_factory
 from olc_webportalv2.sequence_database.tables import SequenceDataTable
