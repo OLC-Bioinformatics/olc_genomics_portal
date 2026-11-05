@@ -113,20 +113,17 @@ class CustomRunForm(ModelForm):
             raise forms.ValidationError(str(exc))
 
     def clean(self):
-        super().clean()
+        cleaned_data = super().clean()
+        if not cleaned_data:
+            return cleaned_data
+
         error_list = []
-        basic_assembly = self.cleaned_data.get('basic_assembly')
-        preprocess = self.cleaned_data.get('preprocess')
+        basic_assembly = cleaned_data.get('basic_assembly')
+        preprocess = cleaned_data.get('preprocess')
         if basic_assembly and preprocess:
             error_list.append(
                 _('Basic assembly and Preprocess options are mutually exclusive. Please only select one.')
             )
-        nextseq = self.cleaned_data.get('nextseq')
         if error_list:
             raise forms.ValidationError(error_list)
-        return {
-            'run_name': run_name.lower().replace('_', '-'),
-            'basic_assembly': self.cleaned_data['basic_assembly'],
-            'preprocess': self.cleaned_data['preprocess'],
-            'nextseq': nextseq
-        }
+        return cleaned_data
