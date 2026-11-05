@@ -63,6 +63,15 @@ identity; legacy COWBAT Batch API paths still use `BATCH_ACCOUNT_KEY`. Do not co
 non-secret setting for Microsoft sign-in; it is separate from the removed VM
 service-principal credentials.
 
+#### Research run file management
+
+The Research Assembly page includes **Upload and Manage FASTQ** for containers
+that already exist in Blob Storage. From there, authenticated users can browse
+the run's files, upload additional files, remove selected files, rename the run,
+and submit it for assembly. Submission requires at least one complete R1/R2
+FASTQ pair; any `SampleSheet.csv` is also checked against the uploaded samples.
+Container renames run asynchronously, and the page reports their status.
+
 #### Task monitoring
 
 Tasks run on the portal are executed via celery. You can use the nice interface provided
