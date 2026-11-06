@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
     <h2>{% trans "Upload Sequence Files and Run COWSNPhR Analyses"%}</h2>
@@ -21,7 +20,7 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
 <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
 <script src="{% static 'js/dropzone.js' %}"></script>
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script type="text/javascript">
     function progressSpinner() {
         var spinnerdiv = document.getElementById('upload-div');

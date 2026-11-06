@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load staticfiles %}
-{% load bootstrap %}
 {% load widget_tweaks %}
 {% load i18n %}
 {% block content %}
@@ -12,7 +11,7 @@
 
 <div class="h-100 justify-content-center">
     <div class="container">
-        <div class="card-deck mb-3 text-center">
+        <div class="card-grid mb-3 text-center">
             <div class="row mx-auto">
                 <div class="card mb-4 box-shadow">
                     <div class="card-header">
@@ -22,7 +21,7 @@
                         <p id="article1">
                             {% trans "Select an existing container in blob storage" %}
                         </p>
-                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                        <a class="btn btn-primary btn-lg w-100 mt-auto"
                            href="{% url 'filezone:container_select' %}">{% trans "Select Container" %}</a>
                     </div>
                 </div>
@@ -32,7 +31,7 @@
                     </div>
                     <div class="card-body d-flex flex-column">
                         <p id="article2">{% trans "Create a new container in blob storage" %}</p>
-                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                        <a class="btn btn-primary btn-lg w-100 mt-auto"
                            href="{% url 'filezone:container_create' %}">{% trans "Create Container" %}</a>
                     </div>
                 </div>
@@ -42,7 +41,7 @@
                     </div>
                     <div class="card-body d-flex flex-column">
                         <p id="article3">{% trans "Locate files in blob storage" %}</p>
-                        <a class="btn btn-primary btn-lg btn-block mt-auto"
+                        <a class="btn btn-primary btn-lg w-100 mt-auto"
                            href="{% url 'filezone:file_select' %}">{% trans "Locate Files" %}</a>
                     </div>
                 </div>
@@ -71,15 +70,15 @@
         {% if project.status == 'Complete' %}
         <td>
             <a href="{% url 'filezone:filezone_processing' filezone_pk=project.pk %}"
-               class="btn btn-success btn-block" role="button"> {% trans "Complete" %}
+               class="btn btn-success w-100" role="button"> {% trans "Complete" %}
             <i class="fas fa-check-circle"></i>
             </a>
         </td>
 
         {% elif project.status == 'Processing' %}
         <td>
-            <a href="{% url 'filezone:filezone_processing' filezone_pk=project.pk %}" 
-                class="btn progress-bar-striped progress-bar-animated bg-info btn-block"
+            <a href="{% url 'filezone:filezone_processing' filezone_pk=project.pk %}"
+                class="btn progress-bar-striped progress-bar-animated bg-info w-100"
                     style="color:white;" role="button"> {% trans "Processing" %}
             </a>
         </td>
@@ -87,25 +86,25 @@
         {% elif project.status == 'Error' %}
         <td>
             <a href="{% url 'filezone:filezone_processing' filezone_pk=project.pk %}"
-               class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %}
+               class="btn btn-outline-danger w-100" role="button"> {% trans "Error" %}
             </a>
         </td>
 
         {% elif project.status == 'Unprocessed' %}
         <td>
-            <button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button>
+            <button class="btn btn-secondary w-100" disabled> {% trans "Unprocessed" %} </button>
         </td>
         {% endif %}
 
         {% if project.status == 'Complete' %}
         <td>
             <a href="{% url 'filezone:file_view' filezone_pk=project.pk %}"
-               class="btn btn-dark btn-block"  role="button">{% trans "File Outputs" %}
+               class="btn btn-dark w-100"  role="button">{% trans "File Outputs" %}
             </a>
         </td>
         {% else %}
         <td>
-            <button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button>
+            <button class="btn btn-dark w-100" disabled>{% trans "Not Available" %}</button>
         </td>
         {% endif %}
 
@@ -113,7 +112,7 @@
         <form id="form{{project.pk}}" method="post">
             <td align="center">
                 <button
-                        class="btn btn-danger btn-block" type="submit" id="btn{{project.pk}}"
+                        class="btn btn-danger w-100" type="submit" id="btn{{project.pk}}"
                         name="delBtn" value={{project.pk}}>{%  trans "Delete " %}
                     <i class="fas fa-trash-alt"></i>
                 </button>
@@ -131,7 +130,7 @@
     </tbody>
 </table>
 
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script src="{% static 'js/datatables.min.js' %}"></script>
 <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
 <script type="text/javascript">
@@ -204,7 +203,6 @@ $(".btn-danger").click(function(e) {
 </script>
 
 {% endblock %}
-
 
 
 

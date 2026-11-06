@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
     {# Mostly done - need to: Not show the highchart if there's nothing there, and change size of chart based on number of blast hits#}
@@ -9,16 +8,16 @@
     <br>
     {% if geneseekr_request.status == 'Complete' %}
         <ul class="nav nav-tabs nav-justified">
-            <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% {%trans "Sequences Query Found"%}</a></li>
-            <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">{%trans "Sequence By Sequence"%}</a></li>
-            <li><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top BLAST Hits"%}</a></li>
+            <li><a data-bs-toggle="tab" style="margin-right:10px;" class="btn btn-outline-primary" href="#overall">% {%trans "Sequences Query Found"%}</a></li>
+            <li><a data-bs-toggle="tab" style="margin-right:10px;" class="btn btn-outline-secondary" href="#sequence-by-sequence">{%trans "Sequence By Sequence"%}</a></li>
+            <li><a data-bs-toggle="tab" style="margin-right:10px;" class="btn btn-outline-dark" href="#top-hits">{%trans "Top BLAST Hits"%}</a></li>
         </ul>
         <div class="tab-content">
             <div id="overall" class="tab-pane active">
                 <br>
                 <p>{%trans "This graph shows the percentage of sequences in which each query gene was found."%}</p>
                 <div id="container" style="height: 500px;"></div>
-                <button type="button" class="btn btn-outline-primary btn-block" data-toggle="collapse" data-target="#geneseekr-results"><strong>{%trans "View Table"%}</strong></button>
+                <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="collapse" data-bs-target="#geneseekr-results"><strong>{%trans "View Table"%}</strong></button>
                 <div id="geneseekr-results" class="collapse">
                     <table id="datatable" class="table table-hover compact">
                         <thead>
@@ -86,7 +85,7 @@
                 <br>
                 <ul class="nav nav-tabs nav-justified">
                     {% for gene in geneseekr_request.gene_targets %}
-                        <li class='gene'><a data-toggle="tab" style="margin-right:10px;" class="btn btn-outline-info" href="#{{ gene|slugify }}">{{ gene }}</a></li>
+                        <li class='gene'><a data-bs-toggle="tab" style="margin-right:10px;" class="btn btn-outline-info" href="#{{ gene|slugify }}">{{ gene }}</a></li>
                     {% endfor %}
                 </ul>
                 <div class="tab-content">
@@ -100,12 +99,12 @@
                             <table id="{{ gene|slugify }}-table" class="table table-hover compact display">
                                 <thead>
                                 <tr>
-                                    <th data-toggle="tooltip" title='{%trans "Contig name"%}'>{%trans "Contig"%}</th>
-                                    <th data-toggle="tooltip" title='{%trans "Percentage of the query sequence that was found"%}'>{%trans "Query Coverage"%}</th>
-                                    <th data-toggle="tooltip" title='{%trans "Percent Identity"%}'>{%trans "Percent Identity"%}</th>
-                                    <th data-toggle="tooltip" title='{%trans "Subject start position"%}'>{%trans "Subject Start Position"%}</th>
-                                    <th data-toggle="tooltip" title='{%trans "Subject end position"%}'>{%trans "Subject End Position"%}</th>
-                                    <th data-toggle="tooltip" title='{%trans "E Value"%}'>{%trans "E Value"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "Contig name"%}'>{%trans "Contig"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "Percentage of the query sequence that was found"%}'>{%trans "Query Coverage"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "Percent Identity"%}'>{%trans "Percent Identity"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "Subject start position"%}'>{%trans "Subject Start Position"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "Subject end position"%}'>{%trans "Subject End Position"%}</th>
+                                    <th data-bs-toggle="tooltip" title='{%trans "E Value"%}'>{%trans "E Value"%}</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -137,7 +136,7 @@
     {% else %}
         <h2>{%trans "GeneSeekr request not completed."%}</h2>
     {% endif %}
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'js/datatables.min.js' %}"></script>
     <script src="{% static 'js/highcharts.js' %}"></script>
     <script src="{% static 'js/highcharts-more.js' %}"></script>

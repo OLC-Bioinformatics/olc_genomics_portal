@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% load display_filters %}
 {% block content %}
@@ -52,12 +51,12 @@
             {% if detail_dict.combined.keys %}
             {% if panel == 'inclusivity' %}
 
-            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}Modal" style="color: green">
+            <a href="#" data-bs-toggle="modal" data-bs-target="#{{ clean_primer }}{{ panel }}Modal" style="color: green">
                 <strong>{{ panel }}</strong>
             </a>
 
             {% else %}
-            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}Modal" style="color: red">
+            <a href="#" data-bs-toggle="modal" data-bs-target="#{{ clean_primer }}{{ panel }}Modal" style="color: red">
                 <strong>{{ panel }}</strong>
             </a>
             {% endif %}
@@ -72,9 +71,7 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">{{primer}} {{panel}} details</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <table class="table table-hover display nowrap" style="width:100%">
@@ -166,7 +163,7 @@
     <!-- style="display: none"-->
     <tr id="{{ clean_primer }}{{ panel }}{{ genus }}Row" style="display: none">
 
-        <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+        <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
         <script type="text/javascript">
 
             function {{ clean_primer }}{{ panel }}hideList() {
@@ -206,7 +203,7 @@
             {% if hit_dict.forward_details or hit_dict.forward_mismatch_details or hit_dict.reverse_details or hit_dict.reverse_mismatch_details %}
             <!-- Button trigger modal -->
             {% if panel == 'inclusivity' %}
-            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
+            <a href="#" data-bs-toggle="modal" data-bs-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
                style="color: green">
                 {% with disp=genus|display_name %}
                     {% if disp|upper == disp %}
@@ -217,7 +214,7 @@
                 {% endwith %}
             </a>
             {% else %}
-            <a href="#" data-toggle="modal" data-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
+            <a href="#" data-bs-toggle="modal" data-bs-target="#{{ clean_primer }}{{ panel }}{{ genus }}Modal"
                style="color: red">
                 {% with disp=genus|display_name %}
                     {% if disp|upper == disp %}
@@ -254,9 +251,7 @@
                                     {% endif %}
                                 {% endwith %}
                             details</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <table class="table table-hover display nowrap" style="width:100%">

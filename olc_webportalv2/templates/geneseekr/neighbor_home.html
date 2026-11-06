@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 <br>
-  <a href="{% url 'geneseekr:neighbor_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {%trans "Create A Neighbor Query"%}</strong></a>
+  <a href="{% url 'geneseekr:neighbor_request' %}" class="btn btn-primary w-100" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {%trans "Create A Neighbor Query"%}</strong></a>
   <br>
   <h2>{%trans "Neighbor Home" %}</h2>
   <br>
@@ -30,25 +29,25 @@
        {% endif %}
 
       {% if neighbor_request.status == 'Complete' %}
-         <td><a href="{% url 'geneseekr:neighbor_result' neighbor_request_pk=neighbor_request.pk %}" class="btn btn-success btn-block" role="button">{%trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
+         <td><a href="{% url 'geneseekr:neighbor_result' neighbor_request_pk=neighbor_request.pk %}" class="btn btn-success w-100" role="button">{%trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
       {% elif neighbor_request.status == 'Processing' %}
-         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button">{%trans "Processing" %}</a></td>
+         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn progress-bar-striped progress-bar-animated bg-info w-100" style="color:white;" role="button">{%trans "Processing" %}</a></td>
       {% elif neighbor_request.status == 'Error' %}
-         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn btn-outline-danger btn-block" role="button">{%trans "Error" %}</a></td>
+         <td><a href="{% url 'geneseekr:neighbor_result'  neighbor_request_pk=neighbor_request.pk %}" class="btn btn-outline-danger w-100" role="button">{%trans "Error" %}</a></td>
       {% elif neighbor_request.status == 'Unprocessed' %}
-         <td><button class="btn btn-secondary btn-block" disabled>{%trans "Unprocessed" %}</button></td>
+         <td><button class="btn btn-secondary w-100" disabled>{%trans "Unprocessed" %}</button></td>
       {% endif %}
 
       {% if neighbor_request.status == 'Complete' %}
-        <td><a href="{{ neighbor_request.download_link }}" class="btn btn-dark btn-block"  role="button">{%trans "Download" %} <i class="fas fa-download"></i></a></td>
+        <td><a href="{{ neighbor_request.download_link }}" class="btn btn-dark w-100"  role="button">{%trans "Download" %} <i class="fas fa-download"></i></a></td>
       {% else %}
-        <td><button class="btn btn-dark btn-block" disabled>{%trans "Not Available" %}</button></td>
+        <td><button class="btn btn-dark w-100" disabled>{%trans "Not Available" %}</button></td>
       {% endif %}
 
         <td>{{ neighbor_request.created_at }}</td>
         {% if neighborr_request.status != 'Processing' and 'Unprocessed' %}
           <form id="form{{neighbor_request.pk}}" method="post">
-          <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{neighbor_request.pk}}" name="delBtn" value={{neighbor_request.pk}}> {%trans "Delete" %}  <i class="fas fa-trash-alt"></i></button></td>
+          <td align="center"><button class="btn btn-danger w-100" type="submit" id="btn{{neighbor_request.pk}}" name="delBtn" value={{neighbor_request.pk}}> {%trans "Delete" %}  <i class="fas fa-trash-alt"></i></button></td>
           <input type='hidden' id="delete{{neighbor_request.pk}}" name="delete" value={{neighbor_request.pk}}>
           </form>
         {% else %}
@@ -60,7 +59,7 @@
   </tbody>
   </table>
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">

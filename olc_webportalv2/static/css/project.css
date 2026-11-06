@@ -65,9 +65,23 @@ label.col-sm-2.control-label {
 }
 
 /*Home Page Cards*/
-.card-deck { 
+.card-grid {
   display: flex;
-  }
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-grid > .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+}
+
+.card-grid > .row > .card {
+  flex: 1 1 16rem;
+  margin: 0;
+}
  
 .card:hover{ 
     box-shadow: 1px 8px 20px grey;
@@ -86,9 +100,16 @@ margin-left: -5%;
 }
 
 /* select styling on Metadata */
-.form-control{
+.form-control,
+.form-select {
   border-color: black;
   color:black;
+}
+.form-group {
+  margin-bottom: 1rem;
+}
+.navbar .form-group {
+  margin-bottom: 0;
 }
 .form-control > .option{
   color:black;
@@ -142,11 +163,11 @@ margin-left: -5%;
   .navbar .navbar-nav .nav-item.active .nav-link, .navbar .navbar-nav .nav-item.active .nav-link:hover, .navbar .navbar-nav .nav-item.active .nav-link:focus, .navbar .navbar-nav .nav-item.show .nav-link, .navbar .navbar-nav .nav-item.show .nav-link:hover, .navbar .navbar-nav .nav-item.show .nav-link:focus {
     color: #ffffff;
   }
-  .navbar .navbar-toggle {
+  .navbar .navbar-toggler {
     border-color: #193451; }
-    .navbar .navbar-toggle:hover, .navbar .navbar-toggle:focus {
+    .navbar .navbar-toggler:hover, .navbar .navbar-toggler:focus {
       background-color: #193451; }
-    .navbar .navbar-toggle .navbar-toggler-icon {
+    .navbar .navbar-toggler .navbar-toggler-icon {
       color: #fbfcff; }
   .navbar .navbar-collapse,
   .navbar .navbar-form {

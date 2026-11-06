@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
     <h2>{% trans "Step 2 of 2: Upload Sequence Files and Begin Typing" %}</h2>
@@ -42,7 +41,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
     <script src={% static 'js/dropzone.js' %}></script>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
         Dropzone.options.myDropzone = {
             // Prevents Dropzone from uploading dropped files immediately
@@ -156,7 +155,7 @@
             }
         };
     </script>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             // Add tooltips

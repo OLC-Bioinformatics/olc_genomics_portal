@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
@@ -15,7 +14,7 @@
 {% endif %} 
 
 {% if amr_request.status == 'Processing' %}
-<button class="btn btn-info btn-block progress-bar-striped progress-bar-animated"disabled>{% trans "Processing"%}</button>
+<button class="btn btn-info w-100 progress-bar-striped progress-bar-animated"disabled>{% trans "Processing"%}</button>
 <br>
 <p>{% blocktrans %} This page will automatically refresh. Your AMR request should be complete in 5 to 10 minutes (more if you requested many SeqIDs). {%endblocktrans%} </p>
 <p>{% trans "You don't have to remain on this page - this AMR request will be visible on "%}<a href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
@@ -56,7 +55,7 @@
   }
 </script>
 
-<button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i
+<button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#emails-button"><i
     class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
 <div id="emails-button" class="collapse">
   <br>
@@ -71,21 +70,21 @@
 <!-- End Email Block-->
 
 {% elif amr_request.status == 'Unprocessed' %}
-<button class="btn btn-info btn-block progress-bar-striped" disabled>{% trans "Unprocessed"%}</button>
+<button class="btn btn-info w-100 progress-bar-striped" disabled>{% trans "Unprocessed"%}</button>
 <br>
 {% elif amr_request.status == 'Error' %}
-<button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
+<button class="btn btn-danger w-100" disabled>{% trans "Error"%}</button>
 <br>
 <p>{% trans "Return to"%}<a href="{% url 'geneseekr:amr_home' %}"> {% trans "AMR Home"%}</a> </p>
 
 <!--                   REQUEST IS COMPLETE                              -->
 {% elif amr_request.status == 'Complete' %}
-<button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+<button class="btn btn-success w-100" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
 <br>
 <p>{% trans "These results will be available for 7 days."%}</p>
 <br>
   <div class="dropdown">
-     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
        {% trans "Select Sequence to View Results"%}
      </button>
   <br>
@@ -103,7 +102,7 @@
 {#  #}
 {#  <ul class="nav">#}
 {#    {% for seq in amr_request.seqids %}#}
-{#    <li style='padding:5px;'><a data-toggle="tab" class="btn btn-outline-primary#}
+{#    <li style='padding:5px;'><a data-bs-toggle="tab" class="btn btn-outline-primary#}
 {#      {% if selectedSeq == seq %}#}
 {#        active#}
 {#      {% endif%} " onclick="Func('{{seq}}');" id="{{seq}}">#}
@@ -160,7 +159,7 @@
 </div>
 {% endif %}
 
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script type="text/javascript">  
   setInterval(function () {
     {% if amr_request.status == 'Processing' %}

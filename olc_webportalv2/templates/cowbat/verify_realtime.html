@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% load crispy_forms_tags %}
 {% block content %}
@@ -33,7 +32,7 @@
   </form>
 
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script type="text/javascript">
   // Check that at least one strain is checked off. If none are checked off, send an 'Are you sure' alert to
   // the user to make sure that they haven't missed anything.

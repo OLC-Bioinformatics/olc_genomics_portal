@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
@@ -17,16 +16,16 @@
 <h2>{%trans "COWBAT Status for"%} {{ sequencing_run.run_name }}</h2>
 <br>
 {% if sequencing_run.status == 'Unprocessed' %}
-    <button class="btn btn-primary btn-block" disabled>{%trans "Unprocessed"%}</button>
+    <button class="btn btn-primary w-100" disabled>{%trans "Unprocessed"%}</button>
 
 {% elif sequencing_run.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
+    <button class="btn btn-danger w-100" disabled>{%trans "Error"%}</button>
     <br>
     <h5>{%trans "Last processed step:"%} {{sequencing_run.progress}}</h5>
     <p>{%trans "Return to"%} <a href="{% url 'cowbat:assembly_home' %}">{%trans "Assembly Home"%}</a> </p>
 
 {% elif sequencing_run.status == 'UploadError' %}
-  <button class="btn btn-warning btn-block" disabled>{%trans "Upload Error"%}</button>
+  <button class="btn btn-warning w-100" disabled>{%trans "Upload Error"%}</button>
   <br>
   <p>{% blocktrans %} It looks like one or more of your files did not upload successfully. Click the button below to retry upload of
   your sequence data. You'll only have to upload files that did not successfully upload. {%endblocktrans%}</p>
@@ -38,7 +37,7 @@
   </div>
 
 {% elif sequencing_run.status == 'Processing' %}
-  <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
+  <button class="btn btn-info w-100 progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
   <br><br>
   <div style="text-align: center">
       <h4>{%trans "Run Progress"%}</h4>
@@ -87,7 +86,7 @@
           }
     </script>
     
-  <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
+  <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>
   <div id="emails-button" class="collapse">
     <br>
     {% if geneseekr_request.emails_array|length == 0 %}
@@ -101,7 +100,7 @@
   <!--End Email Block--> 
 
 {% elif sequencing_run.status == 'Complete' %}
-  <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+  <button class="btn btn-success w-100" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
   <br>
   <div style="text-align: center">
     <h4>{%trans "Run Progress"%}</h4>

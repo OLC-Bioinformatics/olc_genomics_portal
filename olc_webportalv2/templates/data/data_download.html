@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
@@ -15,12 +14,12 @@
     </div>
   {% endif %}
   {% if data_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{% trans "Processing"%}</button>
+      <button class="btn btn-info w-100 progress-bar-striped progress-bar-animated" disabled>{% trans "Processing"%}</button>
       <br>
       <p>{% trans "This page will automatically refresh."%}</p>
       <p>{% trans "You don't have to remain on this page - this request will be visible on"%} <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
   {% elif data_request.status == 'Complete' %}
-    <button class="btn btn-success btn-block" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+    <button class="btn btn-success w-100" disabled>{% trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br>
     <p>{% trans "These files will be available for 7 days."%}</p>
     <br>
@@ -32,7 +31,7 @@
         <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {% trans "Shareable link:"%}</b> {{ data_request.download_link }} </p>
     </div>
   {% elif data_request.status == 'Warning' %}
-    <button class="btn btn-warning btn-block" disabled>{% trans "Warning"%}</button>
+    <button class="btn btn-warning w-100" disabled>{% trans "Warning"%}</button>
     <br>
     <p>{% trans "These files will be available for 7 days."%}</p>
     <br>
@@ -44,7 +43,7 @@
       <p style="word-wrap:break-word;"><b>{% trans "Shareable link:"%}</b> {{ data_request.download_link }}</p>
     </div>
   {% elif data_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{% trans "Error"%}</button>
+    <button class="btn btn-danger w-100" disabled>{% trans "Error"%}</button>
     <br>
     <p>{% trans "Return to "%} <a href="{% url 'data:data_home' %}">{% trans "Data Home"%}</a> </p>
     <br>

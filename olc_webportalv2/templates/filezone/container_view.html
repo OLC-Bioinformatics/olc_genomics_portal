@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load bootstrap %}
 {% load i18n %}
 {% load widget_tweaks %}
 {% load crispy_forms_tags %}
@@ -57,7 +56,7 @@
 
 <div id='archive-div'>
     {% if sas_url %}
-        <a href="{{ sas_url }}" class="btn btn-info btn-block"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
+        <a href="{{ sas_url }}" class="btn btn-info w-100"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
         <br><br>
     {% endif %}
 </div>
@@ -129,7 +128,7 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
 <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
 <script src="{% static 'js/dropzone.js' %}"></script>
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script type="text/javascript">
     function progressSpinner() {
       var spinnerdiv = document.getElementById('upload-div');

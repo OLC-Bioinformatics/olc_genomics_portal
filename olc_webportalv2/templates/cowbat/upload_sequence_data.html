@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
     <h2>{% trans "Step 3 of 3: Upload Sequence Files and Begin Assembly"%}</h2>
@@ -16,7 +15,7 @@
     </form>
     <br>
     <button id="validate" class="btn btn-primary">{% trans "Validate Sequence Files"%}</button>
-    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#files-required-button">{% trans "Required Files"%}</button>
+    <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#files-required-button">{% trans "Required Files"%}</button>
     <br>
     <br>
     <button id="submit" class="btn btn-lg btn-success" disabled>{% trans "Upload Sequence Files and Begin Assembly"%}</button>
@@ -80,7 +79,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
     <script src="{% static 'js/dropzone.js' %}"></script>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
     function progressSpinner() {
         var spinnerdiv = document.getElementById('upload-div');

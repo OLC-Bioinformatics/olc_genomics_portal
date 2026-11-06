@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
   <h2>{% trans 'Metadata Browse'%}</h2>
@@ -34,7 +33,7 @@
     </tbody>
   </table>
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
   <script type="text/javascript">

@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -22,7 +21,7 @@
   <button type="submit" class="btn btn-primary btn-lg">{%trans "Create Summary"%}</button>
   </form>
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script type="text/javascript">
   $(document).ready(function () { 
   // adds tool tips 

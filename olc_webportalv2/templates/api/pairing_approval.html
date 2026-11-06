@@ -5,7 +5,7 @@
   <h1>Authorize Nanopore GUI</h1>
   {% if code %}
     <p>Enter this one-time code in the Nanopore GUI:</p>
-    <p class="display-4 font-weight-bold" id="pairing-code">{{ code }}</p>
+    <p class="display-4 fw-bold" id="pairing-code">{{ code }}</p>
     <p>This code expires shortly and can be used only once.</p>
   {% elif already_approved %}
     <p>This pairing has already been approved. Return to the Nanopore GUI.</p>

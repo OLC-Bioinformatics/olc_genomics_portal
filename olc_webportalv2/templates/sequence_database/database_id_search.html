@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% load render_table from django_tables2 %}
@@ -15,11 +14,11 @@
         {% endif %}
         {% csrf_token %}
         <div class="accordion" id="accordionExample">
-            <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose SeqIDs to Search"%}'
-                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            <button class="btn collapsed w-100 btn-secondary" type="button" data-bs-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose SeqIDs to Search"%}'
+                    data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                 {%trans "Choose SeqIDs to Search"%}
             </button>
-            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Search the following SeqIDs:"%}</p>
                     {{ form.seqids }}
@@ -29,11 +28,11 @@
         </div>
         <br>
         <div class="accordion" id="accordionExample">
-            <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose CFIA IDs to Search"%}'
-                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            <button class="btn collapsed w-100 btn-secondary" type="button" data-bs-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose CFIA IDs to Search"%}'
+                    data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                 {%trans "Choose CFIA IDs to Search"%}
             </button>
-            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Search the following CFIA IDs:"%}</p>
                     {{ form.cfiaids }}
@@ -61,7 +60,7 @@
     {% endfor %}
     <br>
     {% render_table query_table %}
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             document.getElementsByTagName("table")[0].classList.add("table");

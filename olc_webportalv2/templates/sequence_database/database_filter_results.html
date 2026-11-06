@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% load render_table from django_tables2 %}
 {% block content %}
@@ -71,7 +70,7 @@
     </tbody>
 </table>
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
     <script type="text/javascript"> 

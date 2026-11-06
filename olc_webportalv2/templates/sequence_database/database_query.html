@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% load render_table from django_tables2 %}
@@ -13,7 +12,7 @@
         {{ form_set.management_form }}
         {% for query in form_set %}
             <div class="sample_formset">
-                <div class="form-row">
+                <div class="row g-2">
                     <div class="form-group col-md-3 mb-0" data-tooltip='tooltip' title="{% trans 'Sample name e.g. VI0639' %}">
                         {{ query.database_fields|as_crispy_field }}
                     </div> 
@@ -85,7 +84,7 @@
 {% render_table database_result %}
 </body>
 
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="{% static '/js/bootstrap-datepicker.min.js' %}"></script>

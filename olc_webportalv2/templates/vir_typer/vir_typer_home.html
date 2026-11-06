@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load widget_tweaks %}
 {% load i18n %}
 {% block content %}
 <br>
-    <a href="{% url 'vir_typer:vir_typer_request' %}" class="btn btn-primary btn-block" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Virus Typer Query" %}</strong></a>
+    <a href="{% url 'vir_typer:vir_typer_request' %}" class="btn btn-primary w-100" role="button" aria-pressed="true"><i class="fas fa-plus"></i><strong> {% trans "Create A Virus Typer Query" %}</strong></a>
     <br>
     <h2>Virus Typer</h2>
     <br>
@@ -26,23 +25,23 @@
             <tr id="row{{vir_typer_project.pk}}" style="text-align:center">
                 <td><p style="text-align:center">{{ vir_typer_project }}</p></td>
                 {% if vir_typer_project.status == 'Complete' %}
-                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success btn-block" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
+                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-success w-100" role="button"> {% trans "Complete" %} <i class="fas fa-check-circle"></i></a></td>
                 {% elif vir_typer_project.status == 'Processing' %}
-                    <td><button class="btn progress-bar-striped progress-bar-animated bg-info btn-block" style="color:white;" role="button"> {% trans "Processing" %} </button></td>
+                    <td><button class="btn progress-bar-striped progress-bar-animated bg-info w-100" style="color:white;" role="button"> {% trans "Processing" %} </button></td>
                 {% elif vir_typer_project.status == 'Error' %}
-                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger btn-block" role="button"> {% trans "Error" %} </a></td>
+                    <td><a href="{% url 'vir_typer:vir_typer_results' vir_typer_pk=vir_typer_project.pk %}" class="btn btn-outline-danger w-100" role="button"> {% trans "Error" %} </a></td>
                 {% elif vir_typer_project.status == 'Unprocessed' %}
-                    <td><button class="btn btn-secondary btn-block" disabled> {% trans "Unprocessed" %} </button></td>
+                    <td><button class="btn btn-secondary w-100" disabled> {% trans "Unprocessed" %} </button></td>
                 {% endif %}
                 {% if vir_typer_project.status == 'Complete' %}
-                    <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark btn-block"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
+                    <td><a href="{{ vir_typer_project.download_link }}" class="btn btn-dark w-100"  role="button">{% trans "Download" %} <i class="fas fa-download"></i></a></td>
                 {% else %}
-                    <td><button class="btn btn-dark btn-block" disabled>{% trans "Not Available" %}</button></td>
+                    <td><button class="btn btn-dark w-100" disabled>{% trans "Not Available" %}</button></td>
                 {% endif %}
                 <td>{{ vir_typer_project.created_at }}</td>
                 {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
                     <form id="form{{vir_typer_project.pk}}" method="post">
-                        <td align="center"><button class="btn btn-danger btn-block" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
+                        <td align="center"><button class="btn btn-danger w-100" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
                         <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
                     </form>
                 {% else %}
@@ -53,7 +52,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'js/datatables.min.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
     <script type="text/javascript">

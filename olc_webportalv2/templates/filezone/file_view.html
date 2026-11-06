@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load bootstrap %}
 {% load i18n %}
 {% load widget_tweaks %}
 {% load crispy_forms_tags %}
@@ -11,7 +10,7 @@
 
 <div id='archive-div'>
     {% if sas_url %}
-        <a href="{{ sas_url }}" class="btn btn-info btn-block"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
+        <a href="{{ sas_url }}" class="btn btn-info w-100"  id="archive-button" role="button">{% trans "Download Archive" %} </a>
         <br><br>
     {% endif %}
     </div>

@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
   <h2>{% trans 'Database Results'%}</h2>
   <br>
-  <button class="btn btn-dark" data-toggle="collapse" data-target="#criteria">{% trans 'View Search Criteria'%}</button>
+  <button class="btn btn-dark" data-bs-toggle="collapse" data-bs-target="#criteria">{% trans 'View Search Criteria'%}</button>
   <div id="criteria" class="collapse">
   <br>
   {% for criteria, value in database_result.criteria.items %}
@@ -47,7 +46,7 @@
   </tbody>
   </table>
 
-  <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
   <!--function for copying SeqIDs to Clipboard -->

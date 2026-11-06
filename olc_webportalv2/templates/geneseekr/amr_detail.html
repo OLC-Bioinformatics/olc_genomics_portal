@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
@@ -10,7 +9,7 @@
 <br>
 
   <div class="dropdown">
-     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown">
+     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
        {%trans "Select Sequence to View Results"%}
      </button>
      <div class="dropdown-menu">
@@ -54,7 +53,7 @@
   </div>
 </div>
 
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script type="text/javascript">
   setInterval(function () {
     {% if amr_request.status == 'Processing' %}

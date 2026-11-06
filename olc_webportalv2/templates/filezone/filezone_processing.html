@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load i18n widget_tweaks %}
 {% block content %}
 
@@ -14,17 +13,17 @@
   {% endif %}
 
   {% if filezone_request.status == 'Processing' %}
-      <button class="btn btn-info btn-block progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
+      <button class="btn btn-info w-100 progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
       <br>
       <p>{%trans "This page will automatically refresh. Your FileZone filezone_request will be complete in a seconds to minutes, depending on the complexity of the query."%}</p>
       <p>{%trans "You don't have to remain on this page - this FileZone filezone_request will be visible on"%} <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a> </p>
    
     
   {% elif filezone_request.status == 'Unprocessed' %}
-    <button class="btn btn-info btn-block progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
+    <button class="btn btn-info w-100 progress-bar-striped" disabled>{%trans "Unprocessed"%}</button>
     <br>
   {% elif filezone_request.status == 'Error' %}
-    <button class="btn btn-danger btn-block" disabled>{%trans "Error"%}</button>
+    <button class="btn btn-danger w-100" disabled>{%trans "Error"%}</button>
     <br>
     <p>{%trans "Return to "%} <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a> </p>
 
@@ -33,7 +32,7 @@
       <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a>
       <br><br>
     </div>
-    <button class="btn btn-success btn-block" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
+    <button class="btn btn-success w-100" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br><br>
     <div style="text-align: center">
       <a href="{% url 'filezone:file_view' filezone_pk=filezone_request.pk %}" class="btn btn-primary" role="button"><i ></i> {%trans "View Files"%}</a>

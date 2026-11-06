@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
 {% load static %}
-{% load bootstrap %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -23,11 +22,11 @@
         <br>
         <br>
         <div class="accordion" id="accordionExample">
-            <button class="btn btn-block btn-secondary" type="button" data-toggle="collapse" data-target="#collapseOne" data-tooltip='tooltip' title='{%trans "Choose Genus to Search"%}'
+            <button class="btn w-100 btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" data-tooltip='tooltip' title='{%trans "Choose Genus to Search"%}'
                     aria-expanded="true" aria-controls="collapseOne">
                 {%trans "Choose Genus to Search"%}
             </button>
-            <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
+            <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Enter the genus you want to search. If you want to search all sequences, leave this blank."%}</p>
                     <p>{%trans "Enter your genus of interest: "%}{{ form.genus }}</p>
@@ -35,11 +34,11 @@
                 </div>
             </div>
             <br>
-            <button class="btn collapsed btn-block btn-secondary" type="button" data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose SeqIDs to Search"%}'
-                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            <button class="btn collapsed w-100 btn-secondary" type="button" data-bs-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Choose SeqIDs to Search"%}'
+                    data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                 {%trans "Choose SeqIDs to Search"%}
             </button>
-            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Search the following SeqIDs:"%}</p>
                     {{ form.seqids }}
@@ -47,12 +46,12 @@
                 </div>
             </div>
             <br>
-            <button class="btn collapsed btn-block btn-secondary" type="button" 
-                data-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Select a Benchmark Dataset"%}'
-                    data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+            <button class="btn collapsed w-100 btn-secondary" type="button"
+                data-bs-toggle="collapse"  data-tooltip='tooltip' title='{%trans "Select a Benchmark Dataset"%}'
+                    data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
                 {%trans "Select Benchmark Dataset"%}
             </button>
-            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+            <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
                 <div class="card-body">
                     <p>{%trans "Search a benchmark database:"%}</p>
                     {{ form.benchmark_db|as_crispy_field }}
@@ -65,7 +64,7 @@
     </form>
     {{ form.media }}
     
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     
