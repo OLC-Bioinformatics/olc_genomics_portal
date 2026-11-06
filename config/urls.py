@@ -27,7 +27,7 @@ from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.utils.translation import gettext_lazy as _
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
@@ -46,7 +46,7 @@ urlpatterns = [
     ),
 
     # Django Admin, use {% url 'admin:index' %}
-    path(settings.ADMIN_URL, admin.site.urls),
+    re_path(settings.ADMIN_URL, admin.site.urls),
 ]
 
 
