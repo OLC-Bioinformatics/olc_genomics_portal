@@ -9,11 +9,19 @@ WORKDIR /data/web
 RUN apt-get update --fix-missing && \
     apt-get clean && \
     apt-get autoclean && \
-    apt-get install -y python3 python3-pip python3-dev python3-venv postgresql-client postgresql-server-dev-all gettext ncbi-blast+ xvfb docker.io firefox xvfb
+    apt-get install -y ca-certificates python3 python3-pip python3-dev python3-venv postgresql-client postgresql-server-dev-all gettext ncbi-blast+ xvfb docker.io firefox xvfb
+
+# Trust the Dev VM's corporate TLS-inspection CA for Sentry and other HTTPS clients.
+COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+RUN update-ca-certificates
 
 # Create and use virtual environment
 RUN python3 -m venv /venv
-ENV PATH="/venv/bin:$PATH"
+ENV PATH="/venv/bin:$PATH" \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 COPY requirements/base.txt /data/web/
 
