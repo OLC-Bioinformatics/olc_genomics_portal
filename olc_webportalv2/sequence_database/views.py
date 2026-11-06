@@ -10,7 +10,7 @@ import datetime
 from django.contrib.auth.decorators import login_required
 from dal import autocomplete
 from rest_framework import generics, permissions, pagination
-from azure.storage.blob import BlockBlobService, BlobPermissions
+from olc_webportalv2.common.storage_client import get_storage_client
 from django.db.models import Q
 from django.forms.formsets import formset_factory
 from olc_webportalv2.sequence_database.tables import SequenceDataTable
@@ -68,16 +68,12 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
     def retrieve(self, request, *args, **kwargs):
         primary_key = kwargs['pk']
         seqid = SequenceData.objects.get(pk=primary_key).seqid
-        blob_service = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                        account_name=settings.AZURE_ACCOUNT_NAME)
-        sas_token = blob_service \
-            .generate_blob_shared_access_signature(container_name='processed-data',
-                                                   blob_name=seqid + '.fasta',
-                                                   permission=BlobPermissions.READ,
-                                                   expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=1))
-        sas_url = blob_service.make_blob_url(container_name='processed-data',
-                                             blob_name=seqid + '.fasta',
-                                             sas_token=sas_token)
+        sas_url = get_storage_client().create_transfer_url(
+            'processed-data',
+            'download',
+            name=seqid + '.fasta',
+            expires_in_seconds=3600,
+        )
         return JsonResponse({'id': primary_key,
                              'seqid': seqid,
                              'download_link': sas_url})

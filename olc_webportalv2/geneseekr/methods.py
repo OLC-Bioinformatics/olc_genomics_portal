@@ -6,11 +6,7 @@ General methods for the GeneSeekr app
 import os
 import shutil
 
-# Django imports
-from django.conf import settings
-
-# Azure imports
-from azure.storage.blob import BlockBlobService
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def zip_files(
@@ -25,13 +21,9 @@ def zip_files(
     job_dir = os.path.join('olc_webportalv2', 'media',  target_folder, 'tmp')
     # Create the folder if required
     os.makedirs(job_dir, exist_ok=True)
-    # Create a blob client to allow manipulation of files in blob storage
-    blob_client = BlockBlobService(
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        account_name=settings.AZURE_ACCOUNT_NAME
-    )
+    blob_client = get_storage_client()
     # Create a generator of all the blobs in the container
-    blobs = blob_client.list_blobs(container_name=container_name)
+    blobs = blob_client.list_objects(container_name)
     # Create a list of all the blob names
     blob_names = [blob.name for blob in blobs]
     for blob_name in blob_names:
@@ -39,13 +31,10 @@ def zip_files(
             # Ensure that we're looking at the correct blob file
             if seqid in blob_name:
                 # Download the file
-                blob_client.get_blob_to_path(
-                    container_name=container_name,
-                    blob_name=blob_name,
-                    file_path=os.path.join(
-                        job_dir,
-                        os.path.basename(blob_name)
-                    )
+                blob_client.download_file(
+                    container_name,
+                    blob_name,
+                    os.path.join(job_dir, os.path.basename(blob_name)),
                 )
                 continue
     # Create an archive of the downloaded files
@@ -55,15 +44,11 @@ def zip_files(
     # Set the name of the target container
     target_container = 'temporary-storage'
     # Create the target container if necessary
-    blob_client.create_container(target_container)
+    blob_client.ensure_container(target_container)
     # Set the name of the blob file
     blob_file = target_folder + '.zip'
     # Upload the archive to the destination container
-    blob_client.create_blob_from_path(
-        container_name=target_container,
-        blob_name=blob_file,
-        file_path=archive
-    )
+    blob_client.upload_file(target_container, blob_file, archive)
     # Remove the archive
     os.remove(archive)
     # Remove the temporary folder

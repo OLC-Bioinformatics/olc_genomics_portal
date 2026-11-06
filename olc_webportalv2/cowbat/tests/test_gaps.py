@@ -104,7 +104,7 @@ class CowbatMethodTests(TestCase):
 
 
 class CowbatUploadStateTests(TestCase):
-    @mock.patch('olc_webportalv2.cowbat.views.BlockBlobService')
+    @mock.patch('olc_webportalv2.cowbat.views.get_storage_client')
     def test_check_uploaded_seqids_separates_present_and_missing_reads(
         self, blob_service_class
     ):
@@ -114,14 +114,14 @@ class CowbatUploadStateTests(TestCase):
             run_name='191218_CAL',
             seqids=['SEQ-1', 'SEQ-2'],
         )
-        blob_service_class.return_value.list_blobs.return_value = [
+        blob_service_class.return_value.list_objects.return_value = [
             mock.Mock(name='SEQ-1_R1.fastq'),
             mock.Mock(name='SEQ-1_R2.fastq'),
             mock.Mock(name='SEQ-2_R1.fastq'),
         ]
-        blob_service_class.return_value.list_blobs.return_value[0].name = 'SEQ-1_R1.fastq'
-        blob_service_class.return_value.list_blobs.return_value[1].name = 'SEQ-1_R2.fastq'
-        blob_service_class.return_value.list_blobs.return_value[2].name = 'SEQ-2_R1.fastq'
+        blob_service_class.return_value.list_objects.return_value[0].name = 'SEQ-1_R1.fastq'
+        blob_service_class.return_value.list_objects.return_value[1].name = 'SEQ-1_R2.fastq'
+        blob_service_class.return_value.list_objects.return_value[2].name = 'SEQ-2_R1.fastq'
 
         check_uploaded_seqids(run)
 
@@ -621,10 +621,9 @@ class CowbatWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('olc_webportalv2.cowbat.views.batch.BatchServiceClient')
-    @mock.patch('olc_webportalv2.cowbat.views.batch_auth.SharedKeyCredentials')
+    @mock.patch('olc_webportalv2.cowbat.views.create_batch_client')
     def test_find_percent_complete_counts_report_files(
-        self, credentials, batch_client_class
+        self, batch_client_class
     ):
         run = SequencingRun(run_name='191218_CAL')
         batch_client_class.return_value.file.list_from_task.return_value = [
@@ -638,7 +637,7 @@ class CowbatWorkflowTests(TestCase):
 
         self.assertEqual(find_percent_complete(run), 7)
 
-    @mock.patch('olc_webportalv2.cowbat.views.BlockBlobService')
+    @mock.patch('olc_webportalv2.cowbat.views.get_storage_client')
     def test_upload_interop_posts_files_to_interop_path(self, blob_service_class):
         run = SequencingRun.objects.create(user=self.user, run_name='191218_CAL')
         upload = SimpleUploadedFile('metrics.bin', b'metrics')
@@ -650,11 +649,11 @@ class CowbatWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            blob_service_class.return_value.create_blob_from_bytes.call_count,
+            blob_service_class.return_value.upload_bytes.call_count,
             1,
         )
         self.assertEqual(
-            blob_service_class.return_value.create_blob_from_bytes.call_args[1]['blob_name'],
+            blob_service_class.return_value.upload_bytes.call_args.args[1],
             'InterOp/metrics.bin',
         )
 

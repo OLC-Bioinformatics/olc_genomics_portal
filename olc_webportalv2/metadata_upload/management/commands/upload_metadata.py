@@ -14,10 +14,9 @@ import logging
 import traceback
 from typing import Dict, List, Set
 
-from azure.storage.blob import BlockBlobService
-from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from olc_webportalv2.common.storage_client import get_storage_client, StorageClient
 
 from olc_webportalv2.metadata.models import (
     Genus,
@@ -54,28 +53,25 @@ class DataToUpload:
         self.olnid = None  # type: str
 
 
-def initialize_blob_client() -> BlockBlobService:
+def initialize_blob_client() -> StorageClient:
     """
-    Initializes the Azure Blob Service client.
+    Initializes the provider-neutral Storage client.
 
-    :return: BlockBlobService instance.
+    :return: StorageClient instance.
     """
-    return BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    return get_storage_client()
 
 
-def get_seqids_in_cloud(blob_client: BlockBlobService) -> Set[str]:
+def get_seqids_in_cloud(blob_client: StorageClient) -> Set[str]:
     """
     Retrieves the list of sequence IDs stored in the cloud.
 
-    :param blob_client: BlockBlobService instance.
+    :param blob_client: StorageClient instance.
     :return: Set of sequence IDs.
     """
     return set(
         blob.name.replace('.fasta', '') for blob in
-        blob_client.list_blobs('processed-data')
+        blob_client.list_objects('processed-data')
     )
 
 

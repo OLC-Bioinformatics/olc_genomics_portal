@@ -5,34 +5,23 @@ Common methods shared between multiple apps
 """
 
 # Standard imports
-from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from urllib.parse import quote
 from time import sleep
+from dataclasses import dataclass
 from typing import Optional
 import json
 import logging
 import os
 import smtplib
 
-# Azure imports
-from azure.batch import BatchClient
-from azure.core.credentials import AzureNamedKeyCredential
-from azure.core.exceptions import ResourceExistsError
-from azure.storage.blob import (
-    BlobServiceClient,
-    BlobSasPermissions,
-    ContainerSasPermissions,
-    generate_blob_sas,
-    generate_container_sas,
-)
-
 # Third-party imports
 import requests
 
 # Django-related imports
 from django.conf import settings
+from olc_webportalv2.common.batch_client import BatchServiceClient
+from olc_webportalv2.common.storage_client import StorageClient, get_storage_client
 
 
 def generic_api_submit(
@@ -221,73 +210,46 @@ def send_email(
                 server.quit()
 
 
-def create_batch_client() -> BatchClient:
+def create_batch_client() -> BatchServiceClient:
     """
-    Creates a batch client using the settings from the Django settings file.
-    :return: BatchClient object
+    Creates an HTTP client for the internal Batch service.
     """
-    credentials = AzureNamedKeyCredential(
-        settings.BATCH_ACCOUNT_NAME,
-        settings.BATCH_ACCOUNT_KEY
-    )
-    batch_client = BatchClient(
-        credential=credentials,
-        endpoint=settings.BATCH_ACCOUNT_URL
-    )
-    return batch_client
+    return BatchServiceClient()
 
 
-def create_blob_service() -> BlobServiceClient:
-    """
-    Creates a blob service client using the settings from the Django settings
-    file.
-    :return: BlobServiceClient object
-    """
-    blob_service_client = BlobServiceClient(
-        account_url=
-            f"https://{settings.AZURE_ACCOUNT_NAME}.blob.core.windows.net",
-        credential=settings.AZURE_ACCOUNT_KEY
-    )
-    return blob_service_client
+def create_blob_service() -> StorageClient:
+    """Return the provider-neutral client for the internal Storage service."""
+    return get_storage_client()
+
+
+@dataclass(frozen=True)
+class ObjectReference:
+    client: StorageClient
+    container: str
+    name: str
 
 
 def create_blob_client(
     container_name: str,
     blob_name: str,
-    blob_service_client: BlobServiceClient
-) -> BlobServiceClient.get_blob_client:
-    """
-    Creates a blob client using the settings from the Django settings file.
-    :param container_name: Name of the container
-    :param blob_name: Name of the blob
-    :return: BlobServiceClient object
-    """
-    return blob_service_client.get_blob_client(
-        container=container_name,
-        blob=blob_name
+    blob_service_client: StorageClient
+) -> ObjectReference:
+    return ObjectReference(blob_service_client, container_name, blob_name)
+
+
+def create_blob_from_path(blob_client: ObjectReference, file_path: str) -> None:
+    blob_client.client.upload_file(
+        blob_client.container,
+        blob_client.name,
+        file_path,
     )
-
-
-def create_blob_from_path(
-    blob_client: BlobServiceClient.get_blob_client,
-    file_path: str
-) -> None:
-    """
-    Creates a blob from a file path using the settings from the Django settings
-    file.
-    :param blob_client: Blob client object
-    :param file_path: Path to the file to be uploaded
-    :return: None
-    """
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
 
 
 def create_blob_from_bytes(
     container_name: str,
     blob_name: str,
     data: bytes,
-    blob_service_client: BlobServiceClient
+    blob_service_client: StorageClient
 ) -> None:
     """
     Uploads a blob from bytes.
@@ -295,21 +257,17 @@ def create_blob_from_bytes(
     :param container_name: Name of the container
     :param blob_name: Name of the blob
     :param data: Bytes to upload
-    :param blob_service_client: BlobServiceClient instance
+    :param blob_service_client: Storage service client
     :return: None
     """
-    blob_client = blob_service_client.get_blob_client(
-        container=container_name,
-        blob=blob_name
-    )
-    blob_client.upload_blob(data, overwrite=True)
+    blob_service_client.upload_bytes(container_name, blob_name, data)
 
 
 def upload_blob_from_path(
     container_name: str,
     blob_name: str,
     file_path: str,
-    blob_service_client: BlobServiceClient
+    blob_service_client: StorageClient
 ) -> None:
     """
     Uploads a blob from a local file path.
@@ -317,32 +275,19 @@ def upload_blob_from_path(
     :param container_name: Name of the container
     :param blob_name: Name of the blob
     :param file_path: Path to the local file
-    :param blob_service_client: BlobServiceClient instance
+    :param blob_service_client: Storage service client
     :return: None
     """
 
-    # Ensure the container exists before uploading
-    create_container(
-        container_name=container_name,
-        blob_service_client=blob_service_client
-    )
-
-    # Get the blob client for the specified container and blob
-    blob_client = blob_service_client.get_blob_client(
-        container=container_name,
-        blob=blob_name
-    )
-
-    # Upload the file to the blob
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
+    blob_service_client.ensure_container(container_name)
+    blob_service_client.upload_file(container_name, blob_name, file_path)
 
 
 def download_blob_to_path(
     container_name: str,
     blob_name: str,
     file_path: str,
-    blob_service_client: BlobServiceClient
+    blob_service_client: StorageClient
 ) -> None:
     """
     Downloads a blob to a local file path.
@@ -350,114 +295,74 @@ def download_blob_to_path(
     :param container_name: Name of the container
     :param blob_name: Name of the blob
     :param file_path: Local file path to write
-    :param blob_service_client: BlobServiceClient instance
+    :param blob_service_client: Storage service client
     :return: None
     """
-    # Get the blob client for the specified container and blob
-    blob_client = blob_service_client.get_blob_client(
-        container=container_name,
-        blob=blob_name
-    )
-
-    # Ensure the directory exists before downloading
-    dir_name = os.path.dirname(file_path)
-    if dir_name:
-        os.makedirs(dir_name, exist_ok=True)
-
-    # Download the blob to the specified file path
-    with open(file_path, "wb") as local_file:
-        blob_client.download_blob().readinto(local_file)
+    blob_service_client.download_file(container_name, blob_name, file_path)
 
 
 
 def generate_download_link(
-    blob_service_client: BlobServiceClient,
+    blob_service_client: StorageClient,
     container_name: str,
     blob_name: str,
     expiry: int = 8,
     content_disposition: Optional[str] = None
 ) -> str:
-    """
-    Generate a read-only SAS URL for a blob.
-
-    :param blob_service_client: BlobServiceClient instance
-    :param container_name: Name of the container
-    :param blob_name: Name of the blob
-    :param expiry: Number of days to keep the URL valid
-    :param content_disposition: Optional content disposition header
-    :return: SAS URL string
-    """
-    sas_token = generate_blob_sas(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        container_name=container_name,
-        blob_name=blob_name,
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        permission=BlobSasPermissions(read=True),
-        expiry=datetime.now(timezone.utc) + timedelta(days=expiry),
+    return blob_service_client.create_transfer_url(
+        container_name,
+        "read",
+        name=blob_name,
+        expires_in_seconds=expiry * 86400,
         content_disposition=content_disposition,
-    )
-
-    # Return the full URL with the SAS token
-    return (
-        f"{blob_service_client.url}/"
-        f"{container_name}/"
-        f"{quote(blob_name, safe='/')}?"
-        f"{sas_token}"
     )
 
 
 def generate_container_download_link(
-    blob_service_client: BlobServiceClient,
+    blob_service_client: StorageClient,
     container_name: str,
     expiry: int = 8
 ) -> str:
     """
     Generate a read-only SAS URL for a container.
 
-    :param blob_service_client: BlobServiceClient instance
+    :param blob_service_client: Storage service client
     :param container_name: Name of the container
     :param expiry: Number of days the link should be valid
     :return: SAS URL string
     """
-    sas_token = generate_container_sas(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        container_name=container_name,
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        permission=ContainerSasPermissions(read=True),
-        expiry=datetime.now(timezone.utc) + timedelta(days=expiry),
+    return blob_service_client.create_transfer_url(
+        container_name,
+        "read",
+        expires_in_seconds=expiry * 86400,
     )
-    return f"{blob_service_client.url}/{container_name}?{sas_token}"
 
 
 def create_container(
     container_name: str,
-    blob_service_client: BlobServiceClient
+    blob_service_client: StorageClient
 ) -> None:
     """
     Create a container if it does not already exist.
     """
-    try:
-        blob_service_client.create_container(container_name)
-    except ResourceExistsError:
-        pass
+    blob_service_client.ensure_container(container_name)
 
 
 def download_container(
-    blob_service_client: BlobServiceClient,
+    blob_service_client: StorageClient,
     container_name: str,
     output_dir: str
 ) -> None:
     """
     Download all blobs in a container to a local directory, preserving folder structure.
 
-    :param blob_service_client: BlobServiceClient instance
+    :param blob_service_client: Storage service client
     :param container_name: Name of the container
     :param output_dir: Local directory to write blobs to
     :return: None
     """
-    container_client = blob_service_client.get_container_client(container_name)
     os.makedirs(output_dir, exist_ok=True)
-    for blob in container_client.list_blobs():
+    for blob in blob_service_client.list_objects(container_name):
         blob_path = blob.name
 
         # Construct the full local path for the blob
@@ -469,9 +374,8 @@ def download_container(
             os.makedirs(destination_dir, exist_ok=True)
 
         # Download the blob to the destination path
-        download_blob_to_path(
-            container_name=container_name,
-            blob_name=blob_path,
-            file_path=destination_path,
-            blob_service_client=blob_service_client,
+        blob_service_client.download_file(
+            container_name,
+            blob_path,
+            destination_path,
         )

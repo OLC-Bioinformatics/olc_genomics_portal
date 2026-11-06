@@ -18,15 +18,12 @@ from typing import (
 )
 
 # Django-related imports
-from django.conf import settings  # To access azure credentials
 from django.db.models.query import QuerySet
 
 
 # Third-party imports
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import ContentSettings
-from bulk_update.helper import bulk_update
 import xlsxwriter
+from olc_webportalv2.common.storage_client import get_storage_client
 
 # Portal-specific imports
 from olc_webportalv2.primer_finder.models import (
@@ -42,7 +39,6 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorSEQID
 )
 from olc_webportalv2.common.methods import send_email
-from olc_webportalv2.cowbat.methods import AzureBatch
 
 
 def upload_primers(
@@ -71,12 +67,10 @@ def upload_primers(
     file_name = 'primers.fasta'
 
     # Create a blob service client to manipulate blobs
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY)
+    blob_client = get_storage_client()
 
     # Create the container
-    blob_client.create_container(container_name)
+    blob_client.ensure_container(container_name)
 
     # Create a string of the primer sequences. Only PrimerVerifierRequests
     # have the .primer_sequences attribute
@@ -88,10 +82,11 @@ def upload_primers(
                     reverse_primer=request.reverse_primer)
 
     # Write the bytes-encoded primer sequences to blob storage
-    blob_client.create_blob_from_bytes(
-        container_name=container_name,
-        blob_name=file_name,
-        blob=primer_sequences.encode('utf-8'))
+    blob_client.upload_bytes(
+        container_name,
+        file_name,
+        primer_sequences.encode('utf-8'),
+    )
 
     return container_name, file_name
 
@@ -107,10 +102,7 @@ def upload_probe(request: ValidatorRequest):
     file_name = 'probe.fasta'
 
     # Create a blob service client to manipulate blobs
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
 
     # Set the container name appropriately
     container_name = request.container_namer()
@@ -121,10 +113,11 @@ def upload_probe(request: ValidatorRequest):
     )
 
     # Write the bytes-encoded primer sequences to blob storage
-    blob_client.create_blob_from_bytes(
-        container_name=container_name,
-        blob_name=file_name,
-        blob=probe_sequence.encode('utf-8')
+    blob_client.ensure_container(container_name)
+    blob_client.upload_bytes(
+        container_name,
+        file_name,
+        probe_sequence.encode('utf-8'),
     )
 
 
@@ -406,17 +399,14 @@ def _download_reports(
         run_folder (str): The path to the run folder.
     """
     # Create a blob service client to manipulate blobs
-    blob_service = BlockBlobService(
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        account_name=settings.AZURE_ACCOUNT_NAME
-    )
+    blob_service = get_storage_client()
 
-    # Download the container
-    AzureBatch.download_container(
-        blob_service=blob_service,
-        container_name=container_name,
-        output_dir=run_folder
-    )
+    for blob in blob_service.list_objects(container_name):
+        blob_service.download_file(
+            container_name,
+            blob.name,
+            os.path.join(run_folder, blob.name),
+        )
 
 
 def _load_and_store_report(
@@ -626,7 +616,7 @@ def populate_sequence_details(
                         updated_sequences.append(sequence)
 
         # Bulk update the sequence objects
-        bulk_update(updated_sequences, update_fields=[
+        seqid_model.objects.bulk_update(updated_sequences, fields=[
             'amplicon_length', 'contig', 'direction', 'forward_mismatch',
             'forward_mismatch_details', 'forward_pos', 'forward_query',
             'forward_ref', 'primer_set', 'reverse_mismatch',
@@ -921,17 +911,15 @@ def create_blob_from_summary(
 
     :param request: PrimerVerifierRequest object
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    blob_client.create_blob_from_bytes(
-        container_name=request.container_namer(),
-        blob_name=os.path.join(
+    blob_client = get_storage_client()
+    container_name = request.container_namer()
+    blob_client.upload_bytes(
+        container_name,
+        os.path.join(
             'reports',
             '{name}_summary_report.json'.format(
                 name=request.container_namer())),
-        blob=request.summary.encode('utf-8')
+        request.summary.encode('utf-8'),
     )
 
 
@@ -1956,14 +1944,13 @@ def _upload_summary_excel(blob_client, container_name, request):
         workbook.close()
 
         blob_name = "reports/{0}_summary_report.xlsx".format(container_name)
-        blob_client.create_blob_from_path(
-            container_name=container_name,
-            blob_name=blob_name,
-            file_path=temp_path,
-            content_settings=ContentSettings(
-                content_type=(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+        blob_client.upload_file(
+            container_name,
+            blob_name,
+            temp_path,
+            content_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
             ),
         )
     finally:
@@ -1975,7 +1962,7 @@ def _upload_summary_excel(blob_client, container_name, request):
 
 def _archive_reports_and_upload(
     *,  # Force keyword args
-    blob_client: BlockBlobService,
+    blob_client,
     container_name: str
 ):
     """
@@ -1986,8 +1973,8 @@ def _archive_reports_and_upload(
     # Collect the list of report blobs (prefix 'reports/')
     report_blobs = [
         b
-        for b in blob_client.list_blobs(
-            container_name=container_name, prefix="reports/"
+        for b in blob_client.list_objects(
+            container_name, prefix="reports/"
         )
     ]
 
@@ -2006,9 +1993,7 @@ def _archive_reports_and_upload(
             local_dir = os.path.dirname(local_path)
             if not os.path.isdir(local_dir):
                 os.makedirs(local_dir)
-            blob_client.get_blob_to_path(
-                container_name=container_name, blob_name=b.name, file_path=local_path
-            )
+            blob_client.download_file(container_name, b.name, local_path)
 
         # Create zip archive that includes the "reports" folder at top-level
         base_name = os.path.join(tmpdir, "{0}_reports".format(container_name))
@@ -2020,10 +2005,10 @@ def _archive_reports_and_upload(
 
         # Upload to the container root
         zip_blob_name = "{0}_reports.zip".format(container_name)
-        blob_client.create_blob_from_path(
-            container_name=container_name,
-            blob_name=zip_blob_name,
-            file_path=archive_path,
-            content_settings=ContentSettings(content_type="application/zip"),
+        blob_client.upload_file(
+            container_name,
+            zip_blob_name,
+            archive_path,
+            content_type="application/zip",
         )
         return zip_blob_name

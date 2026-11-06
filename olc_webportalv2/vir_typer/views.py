@@ -3,11 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.formsets import formset_factory
-from azure.storage.blob import BlockBlobService
 from django.db import IntegrityError
 from django.contrib import messages
 #from weasyprint import HTML, CSS
-from django.conf import settings
 import json
 import os
 
@@ -15,6 +13,7 @@ import os
 from .forms import VirTyperProjectForm, VirTyperSampleForm, BaseVirTyperSampleFormSet
 from .models import VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
 from .tasks import run_vir_typer
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 # Vir_Typer Views
@@ -122,13 +121,15 @@ def vir_typer_upload(request, vir_typer_pk):
         seq_files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
         if seq_files:
             container_name = VirTyperProject.objects.get(pk=vir_typer_pk).container_namer()
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(container_name)
+            storage = get_storage_client()
+            storage.ensure_container(container_name)
             for item in seq_files:
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=item.name,
-                                                   blob=item.read())
+                storage.upload_bytes(
+                    container_name,
+                    item.name,
+                    item.read(),
+                    content_type=getattr(item, 'content_type', None),
+                )
             for sample in vir_typer_samples:
                 # sample_name = '{lsts}_{sn}'.format(lsts=str(sample.LSTS_ID),
                 #                                    sn=str(sample.sample_name))

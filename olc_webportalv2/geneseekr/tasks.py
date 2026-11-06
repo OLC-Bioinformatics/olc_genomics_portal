@@ -2,7 +2,6 @@
 
 # Standard imports
 from glob import glob
-import datetime
 import os
 import posixpath
 import shutil
@@ -14,12 +13,6 @@ from sentry_sdk import capture_exception
 from email.mime.text import MIMEText
 from celery import shared_task
 import smtplib
-
-# Django imports
-from django.conf import settings
-
-# Azure imports
-from azure.storage.blob import BlockBlobService, BlobPermissions
 
 # Local imports
 from olc_webportalv2.common.benchmarks import (
@@ -41,13 +34,13 @@ from olc_webportalv2.geneseekr.models import GeneSeekrAzureRequest, \
     NearNeighborDetail
 from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.cowbat.tasks import generate_download_link
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def make_config_file(seqids, job_name, input_data_folder, output_data_folder, command, config_file,
                      vm_size='Standard_D8s_v3', other_input_files=None, target=None, benchmark=None):
     """
-    Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
-    KubeJobSub package. Also, this assumes that you have settings imported so you have access to storage/batch names and keys
+    Writes a provider-neutral job configuration file.
     :param seqids: List of SeqIDs that are going to be analyzed.
     :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
     it will be put in olc_webportalv2/media/job_name - this will get cleaned up if it exists by our monitor_tasks function
@@ -74,17 +67,8 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
             container_name='processed-data'
         )
     with open(config_file, 'w') as f:
-        f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
-        f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
-        f.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
-        f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(settings.AZURE_ACCOUNT_NAME))
-        f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
         f.write('JOB_NAME:={}\n'.format(job_name))
-        f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
-        f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-        f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
         f.write('VM_SIZE:={}\n'.format(vm_size))
-        f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
         if len(seqids) > 50:
             f.write('CLOUDIN:={archive}\n'.format(
                 archive=os.path.join(
@@ -586,15 +570,9 @@ def _create_benchmark_download(*, benchmark_name, expiry_hours=12):
     canonical_name = normalise_benchmark_name(benchmark_name=benchmark_name)
     blob_name = benchmark_blob_name(benchmark_name=canonical_name)
 
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY,
-    )
+    blob_client = get_storage_client()
 
-    if not blob_client.exists(
-        container_name=BENCHMARK_CONTAINER_NAME,
-        blob_name=blob_name,
-    ):
+    if not blob_client.object_exists(BENCHMARK_CONTAINER_NAME, blob_name):
         raise FileNotFoundError(
             "Benchmark archive does not exist: {0}/{1}".format(
                 BENCHMARK_CONTAINER_NAME,
@@ -602,22 +580,14 @@ def _create_benchmark_download(*, benchmark_name, expiry_hours=12):
             )
         )
 
-    properties = blob_client.get_blob_properties(
-        container_name=BENCHMARK_CONTAINER_NAME,
-        blob_name=blob_name,
-    )
-    content_length = properties.properties.content_length
-
-    sas_token = blob_client.generate_blob_shared_access_signature(
-        container_name=BENCHMARK_CONTAINER_NAME,
-        blob_name=blob_name,
-        permission=BlobPermissions.READ,
-        expiry=(datetime.datetime.utcnow() + datetime.timedelta(hours=expiry_hours)),
-    )
-    sas_url = blob_client.make_blob_url(
-        container_name=BENCHMARK_CONTAINER_NAME,
-        blob_name=blob_name,
-        sas_token=sas_token,
+    content_length = blob_client.get_object(
+        BENCHMARK_CONTAINER_NAME, blob_name
+    ).size
+    sas_url = blob_client.create_transfer_url(
+        BENCHMARK_CONTAINER_NAME,
+        "download",
+        name=blob_name,
+        expires_in_seconds=expiry_hours * 60 * 60,
     )
 
     return {
@@ -774,18 +744,13 @@ def run_geneseekr(geneseekr_request_pk):
         with open(target_file, "w", encoding="utf-8") as target_object:
             target_object.write(geneseekr_request.query_sequence)
 
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY,
+        blob_client = get_storage_client()
+        blob_client.ensure_container(container_name)
+        blob_client.upload_file(
+            container_name,
+            posixpath.join("targets", file_name),
+            target_file,
         )
-        blob_client.create_container(container_name)
-
-        with open(target_file, "rb") as target_object:
-            blob_client.create_blob_from_bytes(
-                container_name=container_name,
-                blob_name=posixpath.join("targets", file_name),
-                blob=target_object.read(),
-            )
 
         sequence_count = len(geneseekr_request.seqids)
         if sequence_count < 10:
@@ -868,20 +833,23 @@ def run_nearest_neighbors(nearest_neighbor_pk):
         for sequence_data in SequenceData.objects.filter():
             seqids_in_metadata.append(sequence_data.seqid)
         # Download requested SeqID from blob storage - we *should* have already validated that the sequence exists.
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        blob_client = get_storage_client()
         if nearest_neighbor_request.seqid != '':
             fasta_file = os.path.join(work_dir, nearest_neighbor_request.seqid + '.fasta')
             # TODO: Check what error happens here if blob doesn't actually exist and catch, or verify that blob exists before
             #  trying to retrieve it.
-            blob_client.get_blob_to_path(container_name='processed-data',
-                                         blob_name=nearest_neighbor_request.seqid + '.fasta',
-                                         file_path=fasta_file)
+            blob_client.download_file(
+                'processed-data',
+                nearest_neighbor_request.seqid + '.fasta',
+                fasta_file,
+            )
         else:
             fasta_file = os.path.join(work_dir, nearest_neighbor_request.uploaded_file_name)
-            blob_client.get_blob_to_path(container_name='neighbor-{}'.format(nearest_neighbor_request.pk),
-                                         blob_name=nearest_neighbor_request.uploaded_file_name,
-                                         file_path=fasta_file)
+            blob_client.download_file(
+                'neighbor-{}'.format(nearest_neighbor_request.pk),
+                nearest_neighbor_request.uploaded_file_name,
+                fasta_file,
+            )
 
         mash_output_file = os.path.join(work_dir, 'mash_dist_results.tsv')
         cmd = '/data/web/mash-Linux64-v2.1/mash dist {query} {sketch} > {output}'.format(query=fasta_file,
@@ -891,10 +859,12 @@ def run_nearest_neighbors(nearest_neighbor_pk):
                                                                                          output=mash_output_file)
         os.system(cmd)  # Subprocess doesn't work here. Should be OK to switch once mash is actually installed.
         shutil.make_archive(work_dir, 'zip', work_dir)
-        sas_url = generate_download_link(blob_client=blob_client,
-                                         container_name='neighbor-output-{}'.format(nearest_neighbor_pk),
-                                         output_zipfile=work_dir + '.zip',
-                                         expiry=8)
+        sas_url = generate_download_link(
+            blob_service_client=blob_client,
+            container_name='neighbor-output-{}'.format(nearest_neighbor_pk),
+            output_zipfile=work_dir + '.zip',
+            expiry=8,
+        )
         nearest_neighbor_request.download_link = sas_url
         distances = dict()
         with open(mash_output_file) as f:

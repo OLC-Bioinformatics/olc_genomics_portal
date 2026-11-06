@@ -150,23 +150,22 @@ class NanoporeLatestResultTests(APITestCase):
 
         self.assertEqual(response.status_code, 401)
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_latest_result_returns_not_found_until_published(self, client_class):
         self.client.force_authenticate(user=self.user)
-        client_class.return_value.exists.return_value = False
+        client_class.return_value.object_exists.return_value = False
 
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data['error'], 'Results are not published yet.')
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_latest_result_returns_short_lived_read_url(self, client_class):
         self.client.force_authenticate(user=self.user)
         blob_client = Mock()
-        blob_client.exists.return_value = True
-        blob_client.generate_blob_shared_access_signature.return_value = 'sas'
-        blob_client.make_blob_url.return_value = (
+        blob_client.object_exists.return_value = True
+        blob_client.create_transfer_url.return_value = (
             'https://storage.example/results/latest.json?sas'
         )
         client_class.return_value = blob_client
@@ -179,20 +178,15 @@ class NanoporeLatestResultTests(APITestCase):
             'blob_name': 'runs/260825-nanopore/manifests/latest.json',
             'url': 'https://storage.example/results/latest.json?sas',
         })
+        self.assertEqual(blob_client.create_transfer_url.call_count, 1)
+        transfer_args = blob_client.create_transfer_url.call_args
+        self.assertEqual(transfer_args.args[:2], ('nanopore-results', 'download'))
         self.assertEqual(
-            blob_client.generate_blob_shared_access_signature.call_count, 1
-        )
-        signature_kwargs = (
-            blob_client.generate_blob_shared_access_signature.call_args[1]
-        )
-        self.assertTrue(signature_kwargs['permission'].read)
-        self.assertEqual(signature_kwargs['container_name'], 'nanopore-results')
-        self.assertEqual(
-            signature_kwargs['blob_name'],
+            transfer_args.kwargs['name'],
             'runs/260825-nanopore/manifests/latest.json'
         )
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_iteration_result_returns_short_lived_read_url(self, client_class):
         manifest = NanoporeManifest.objects.create(
             sequencing_run=self.run,
@@ -211,9 +205,8 @@ class NanoporeLatestResultTests(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
         blob_client = Mock()
-        blob_client.exists.return_value = True
-        blob_client.generate_blob_shared_access_signature.return_value = 'sas'
-        blob_client.make_blob_url.return_value = 'https://storage/iteration'
+        blob_client.object_exists.return_value = True
+        blob_client.create_transfer_url.return_value = 'https://storage/iteration'
         client_class.return_value = blob_client
 
         response = self.client.get(
@@ -326,7 +319,7 @@ class NanoporeRunCreationTests(APITestCase):
         self.assertEqual(SequencingRun.objects.count(), 1)
         self.assertEqual(NanoporeRun.objects.count(), 1)
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_prepare_uses_run_name_for_blob_prefix(self, blob_service_class):
         run = SequencingRun.objects.create(
             user=self.user,
@@ -334,8 +327,7 @@ class NanoporeRunCreationTests(APITestCase):
         )
         NanoporeRun.objects.create(sequencing_run=run)
         blob_service = blob_service_class.return_value
-        blob_service.generate_blob_shared_access_signature.return_value = 'sas'
-        blob_service.make_blob_url.return_value = 'https://storage/upload'
+        blob_service.create_transfer_url.return_value = 'https://storage/upload'
 
         response = self.client.post(
             '/en-ca/api/nanopore/runs/{0}/files/prepare/'.format(run.pk),
@@ -347,9 +339,7 @@ class NanoporeRunCreationTests(APITestCase):
         expected = '260916-nanopore/input/pod5/pass/sample.pod5'
         self.assertEqual(response.data['blob_name'], 'nanopore-runs/' + expected)
         self.assertEqual(
-            blob_service.generate_blob_shared_access_signature.call_args[1][
-                'blob_name'
-            ], expected
+            blob_service.create_transfer_url.call_args.kwargs['name'], expected
         )
 
 
@@ -419,7 +409,7 @@ class NanoporeStreamingTests(APITestCase):
         self.client.force_authenticate(user=self.user)
 
     @patch('olc_webportalv2.api.views.submit_nanopore_batch.apply_async')
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_complete_claims_file_and_starts_batch(
         self, blob_service_class, submit
     ):
@@ -431,11 +421,7 @@ class NanoporeStreamingTests(APITestCase):
             ),
             size_bytes=24120,
         )
-        properties = Mock()
-        properties.properties.content_length = 24120
-        blob_service_class.return_value.get_blob_properties.return_value = (
-            properties
-        )
+        blob_service_class.return_value.get_object.return_value = Mock(size=24120)
 
         with patch(
             'olc_webportalv2.api.views.transaction.on_commit',
@@ -494,13 +480,11 @@ class NanoporeStreamingTests(APITestCase):
         self.assertEqual(NanoporeProcessingBatch.objects.count(), 2)
 
     @patch('olc_webportalv2.api.views.submit_nanopore_batch.apply_async')
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_each_completed_file_is_claimed_once_in_a_generation(
         self, blob_service_class, submit
     ):
-        blob_service_class.return_value.get_blob_properties.return_value = (
-            Mock(properties=Mock(content_length=10))
-        )
+        blob_service_class.return_value.get_object.return_value = Mock(size=10)
         first = NanoporeFile.objects.create(
             sequencing_run=self.run,
             relative_path='one.pod5',
@@ -542,11 +526,11 @@ class NanoporeStreamingTests(APITestCase):
         )
         self.assertEqual(submit.call_count, 2)
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_processing_payload_reports_waiting_message_and_published_reports_only(
         self, blob_service_class
     ):
-        blob_service_class.return_value.exists.return_value = False
+        blob_service_class.return_value.object_exists.return_value = False
         manifest = NanoporeManifest.objects.create(
             sequencing_run=self.run,
             files=[],
@@ -572,11 +556,11 @@ class NanoporeStreamingTests(APITestCase):
         )
         self.assertEqual(response.data['processing']['reports'], [])
 
-    @patch('olc_webportalv2.api.views.BlockBlobService')
+    @patch('olc_webportalv2.api.views.get_storage_client')
     def test_processing_reports_include_published_manifest_only(
         self, blob_service_class
     ):
-        blob_service_class.return_value.exists.return_value = True
+        blob_service_class.return_value.object_exists.return_value = True
         manifest = NanoporeManifest.objects.create(
             sequencing_run=self.run,
             files=[],

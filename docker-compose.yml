@@ -7,18 +7,34 @@ services:
     links:
       - redis:redis
       - batch:batch
+      - storage:storage
+    depends_on:
+      batch:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
     env_file: env
     volumes:
       - ./:/data/web
-      - ../AzureBatch:/data/AzureBatch
       - ./sequences:/sequences
       - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
     environment:
-      - POSTGRES_USER=myproject_web
-      - USE_DOCKER=yes
-      - DOCKER_SOCKET=/var/run/docker.sock
-      - DOCKER_GROUP=dockerhost
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      POSTGRES_USER: myproject_web
+      USE_DOCKER: "yes"
+      DOCKER_SOCKET: /var/run/docker.sock
+      DOCKER_GROUP: dockerhost
+      DOCKER_HOST: unix:///var/run/docker.sock
+      AZURE_ACCOUNT_NAME: ""
+      AZURE_ACCOUNT_KEY: ""
+      BATCH_ACCOUNT_NAME: ""
+      BATCH_ACCOUNT_URL: ""
+      BATCH_ACCOUNT_KEY: ""
+      BATCH_ACCOUNT_SUBNET: ""
+      VM_IMAGE: ""
+      VM_CLIENT_ID: ""
+      VM_SECRET: ""
+      AMPLISEQ_IMAGE: ""
+      COWSNPHR_IMAGE: ""
     ports:
       - "8000"
     command: /bin/bash -c "gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
@@ -31,9 +47,59 @@ services:
     ports:
       - "5000:5000"
     env_file: env
+    environment:
+      AZURE_ACCOUNT_KEY: ""
+    depends_on:
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=4)"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - ./batch:/app
     command: ["/app/start.sh"]
+
+  storage:
+    restart: always
+    build:
+      context: ./storage
+      dockerfile: Dockerfile
+    expose:
+      - "5001"
+    env_file: env
+    environment:
+      STORAGE_BACKEND: azure
+      BATCH_ACCOUNT_NAME: ""
+      BATCH_ACCOUNT_URL: ""
+      BATCH_ACCOUNT_KEY: ""
+      BATCH_ACCOUNT_SUBNET: ""
+      VM_IMAGE: ""
+      VM_CLIENT_ID: ""
+      VM_SECRET: ""
+      VM_TENANT: ""
+      AMPLISEQ_IMAGE: ""
+      COWSNPHR_IMAGE: ""
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=4)"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   redmine:
     restart: always
@@ -112,14 +178,24 @@ services:
     restart: always
     <<: *web
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      batch:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
     command: ./worker_launcher.sh
 
   celerybeat:
     restart: always
     <<: *web
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      batch:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
     ports: []
     command: celery -A olc_webportalv2.taskapp beat -l info
 

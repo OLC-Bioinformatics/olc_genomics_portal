@@ -1,7 +1,6 @@
 # Django-related imports
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import gettext_lazy as _
@@ -20,7 +19,7 @@ from olc_webportalv2.geneseekr.tasks import run_geneseekr, run_mash, run_amr_sum
     run_nearest_neighbors
 from olc_webportalv2.metadata.models import Genus
 from olc_webportalv2.metadata.views import id_sync
-from azure.storage.blob import BlockBlobService
+from olc_webportalv2.common.storage_client import get_storage_client
 import os
 
 
@@ -188,12 +187,14 @@ def tree_request(request):
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
                 file_names.append(file_name)
-                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                               account_key=settings.AZURE_ACCOUNT_KEY)
-                blob_client.create_container(container_name)
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=other_file.name,
-                                                   blob=other_file.read())
+                storage = get_storage_client()
+                storage.ensure_container(container_name)
+                storage.upload_bytes(
+                    container_name,
+                    other_file.name,
+                    other_file.read(),
+                    content_type=getattr(other_file, 'content_type', None),
+                )
             tree_request.other_input_files = file_names
             tree_request.save()
             run_mash.apply_async(queue='cowbat', args=(tree_request.pk, ), countdown=10)
@@ -285,12 +286,14 @@ def amr_request(request):
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
                 file_names.append(file_name)
-                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                               account_key=settings.AZURE_ACCOUNT_KEY)
-                blob_client.create_container(container_name)
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=other_file.name,
-                                                   blob=other_file.read())
+                storage = get_storage_client()
+                storage.ensure_container(container_name)
+                storage.upload_bytes(
+                    container_name,
+                    other_file.name,
+                    other_file.read(),
+                    content_type=getattr(other_file, 'content_type', None),
+                )
             amr_request_object.other_input_files = file_names
             amr_request_object.save()
             run_amr_summary.apply_async(queue='cowbat', args=(amr_request_object.pk, ), countdown=10)
@@ -387,16 +390,18 @@ def prokka_request(request):
                 prokka_request_object.name = name
             prokka_request_object.save()
             container_name = 'prokka-{}'.format(prokka_request_object.pk)
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(container_name)
+            storage = get_storage_client()
+            storage.ensure_container(container_name)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
                 file_names.append(file_name)
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=other_file.name,
-                                                   blob=other_file.read())
+                storage.upload_bytes(
+                    container_name,
+                    other_file.name,
+                    other_file.read(),
+                    content_type=getattr(other_file, 'content_type', None),
+                )
             prokka_request_object.other_input_files = file_names
             prokka_request_object.save()
             run_prokka.apply_async(queue='cowbat', args=(prokka_request_object.pk, ), countdown=10)
@@ -473,12 +478,14 @@ def neighbor_request(request):
             nearest_neighbor_task.save()
             if uploaded_file_name != '':
                 container_name = 'neighbor-{}'.format(nearest_neighbor_task.pk)
-                blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                               account_key=settings.AZURE_ACCOUNT_KEY)
-                blob_client.create_container(container_name)
-                blob_client.create_blob_from_bytes(container_name=container_name,
-                                                   blob_name=uploaded_file_name,
-                                                   blob=uploaded_file.read())
+                storage = get_storage_client()
+                storage.ensure_container(container_name)
+                storage.upload_bytes(
+                    container_name,
+                    uploaded_file_name,
+                    uploaded_file.read(),
+                    content_type=getattr(uploaded_file, 'content_type', None),
+                )
             run_nearest_neighbors.apply_async(queue='geneseekr', args=(nearest_neighbor_task.pk, ), countdown=10)
             return redirect('geneseekr:neighbor_result', neighbor_request_pk=nearest_neighbor_task.pk)
     return render(request,

@@ -2,26 +2,15 @@
 Methods for FileZone app
 """
 
-from azure.storage.blob import BlockBlobService, ContentSettings
 import base64
 import binascii
-import datetime
 import hashlib
-import io
 import os
 import pathlib
 import re
+from email.utils import parsedate_to_datetime
 
-# Azure imports
-from azure.storage.blob import BlobPermissions
-try:
-    from azure.storage.blob import BlobServiceClient as BlockBlobService
-except ImportError:
-    from azure.storage.blob import BlockBlobService
-from azure.storage.blob import ContentSettings
-
-# To access azure credentials
-from django.conf import settings
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def human_bytes(byte_count: float) -> str:
@@ -51,49 +40,33 @@ def generate_sas(blob_name, container_name):
     """
     Create a SAS URL for a supplied blob
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    sas_url = generate_download_link(
-        blob_client=blob_client,
+    return generate_download_link(
+        blob_client=get_storage_client(),
         container_name=container_name,
         blob_name=blob_name,
         expiry=730
     )
-    return sas_url
 
 
 def generate_download_link(blob_client, container_name, blob_name, expiry=8):
     """
     Generate a download link with Content-Disposition for the blob, good for
     up to expiry days.
-    :param blob_client: Instance of azure.storage.blob.BlockBlobService
+    :param blob_client: Provider-neutral Storage client
     :param container_name: Name of the container.
     :param blob_name: Name of the blob to create a link for.
     :param expiry: Number of days the link should be valid for.
     :return: String of a link that allows people to download the blob.
     """
-    # Generate SAS token with 'read' permission and Content-Disposition for
-    # the blob
-    sas_token = blob_client.generate_blob_shared_access_signature(
-        container_name=container_name,
-        blob_name=blob_name,
-        permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry),
+    return blob_client.create_transfer_url(
+        container_name,
+        'download',
+        name=blob_name,
+        expires_in_seconds=expiry * 24 * 60 * 60,
         content_disposition='attachment; filename="{0}"'.format(
             blob_name.split('/')[-1]
-        )
+        ),
     )
-
-    # Construct the SAS URL with the SAS token
-    sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=blob_name,
-        sas_token=sas_token
-    )
-
-    return sas_url
 
 
 def copy_blobs(
@@ -105,16 +78,14 @@ def copy_blobs(
     :param str destination container: Name of the container into which the
     blobs are to be copied
     """
-    blob_service = BlockBlobService(
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        account_name=settings.AZURE_ACCOUNT_NAME
-    )
-    blob_service.create_container(container_name=destination_container)
+    blob_service = get_storage_client()
+    blob_service.ensure_container(destination_container)
     for blob_metadata_dict in blob_metadata_list:
-        blob_service.copy_blob(
+        blob_service.copy_object(
+            blob_metadata_dict["container_name"],
+            blob_metadata_dict["blob_name"],
             destination_container,
             blob_metadata_dict["blob_name"],
-            blob_metadata_dict["blob_download_link"]
         )
 
 
@@ -130,13 +101,9 @@ def calculate_checksum(item):
     # Iterate over the contents, and update the hashlib object
     for line in contents:
         md5.update(line)
-    # Use ContentSettings to set the MD5 checksum for the file
-    blob_headers = ContentSettings(
-        content_md5=base64.b64encode(md5.digest()).decode()
-    )
     # Reset the file position to the start
     item.seek(0)
-    return blob_headers
+    return base64.b64encode(md5.digest()).decode()
 
 
 class FileLocate:
@@ -170,28 +137,22 @@ class FileLocate:
         """
         Create the blob client necessary for the file locating functionality
         """
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
-        return blob_client
+        return get_storage_client()
 
     @staticmethod
     def locate_container(
-            blob_client: BlockBlobService,
+            blob_client,
             expressions: list,
             negative_expressions: list,
             debug: bool):
         """
         Locate containers matching the supplied regex
-        :param BlockBlobService blob_client: BlockBlobService client for blob
-            manipulations
+        :param blob_client: Provider-neutral Storage client
         :param list expressions: List of the regexes to use to search for
             containers
         :param list negative_expressions: List of regexes to use to filter
             returned containers
-        :return list containers/container_matches: List of
-            BlockBlobService.list_containers() relevant for this search
+        :return list containers/container_matches: Matching storage containers
         """
         # Get a list of all the containers
         containers = blob_client.list_containers()
@@ -257,16 +218,15 @@ class FileLocate:
 
     @staticmethod
     def locate_file(
-            blob_client: BlockBlobService,
+            blob_client,
             containers: list,
             expressions: list,
             negative_expressions: list,
             debug: bool):
         """
         Locate files in containers in blob storage with a supplied expression
-        :param BlockBlobService blob_client: BlockBlobService client for blob
-            manipulations
-        :param list containers: List of BlockBlobService.list_containers()
+        :param blob_client: Provider-neutral Storage client
+        :param list containers: List of provider-neutral storage containers
         :param list expressions: List of regexes to use to search for files
         :param list negative_expressions: List of regexes to use to filter
             returned files
@@ -282,7 +242,7 @@ class FileLocate:
         # List all the files in each of the containers that match the provided
         # expression
         for container in containers:
-            blobs = blob_client.list_blobs(container_name=container.name)
+            blobs = blob_client.list_objects(container.name)
             # Iterate through all the files in the container
             for blob_file in blobs:
                 # Store the file name and path in a variable
@@ -390,34 +350,29 @@ class FileLocate:
                     if container.name not in files:
                         files[container.name] = []
                     blob_size = human_bytes(
-                        byte_count=blob_file.properties.content_length
+                        byte_count=blob_file.size or 0
                     )
                     sas_url = generate_sas(
                         blob_name=blob_file.name,
                         container_name=container.name
                     )
-                    blob_date = blob_file.properties.last_modified.strftime(
-                        "%Y/%m/%d, %H:%M:%S"
+                    modified = (
+                        parsedate_to_datetime(blob_file.last_modified)
+                        if blob_file.last_modified else None
                     )
+                    blob_date = modified.strftime(
+                        "%Y/%m/%d, %H:%M:%S"
+                    ) if modified else ''
                     # Extract the MD5 information
                     try:
-                        # The MD5 checksum on files (smaller than 100MB?) is
-                        # stored in the
-                        # .properties.content_settings.content_md5 attribute.
-                        # It must be converted to a standard hex digest to be
-                        # compatible with normal md5sum calculations
                         blob_md5 = binascii.hexlify(
                             bytearray(
                                 base64.b64decode(
-                                    blob_file.properties.content_settings
-                                    .content_md5
+                                    blob_file.content_md5
                                 )
                             )
                         ).decode()
-                    # If the file is too large, stream it locally, calculate
-                    # the Azure-style MD5 checksum, and update the blob
-                    # properties with it. A md5sum-style hex digest is returned
-                    except TypeError:
+                    except (TypeError, AttributeError):
                         blob_md5 = FileLocate.calculate_md5(
                             blob_client=blob_client,
                             blob_file=blob_file,
@@ -427,6 +382,7 @@ class FileLocate:
                     files[container.name].append(
                         {
                             'pk': count,
+                            'container_name': container.name,
                             'blob_name': filename,
                             'blob_size': blob_size,
                             'blob_date': blob_date,
@@ -459,13 +415,13 @@ class FileLocate:
 
     @staticmethod
     def calculate_md5(
-            blob_client: BlockBlobService,
+            blob_client,
             blob_file,
             container_name: str) -> str:
         """
         Manually calculate the MD5 checksum of a large blob in a
             memory-efficient manner.
-        :param blob_client: BlockBlobService client for blob manipulations
+        :param blob_client: Provider-neutral Storage client
         :param blob_file: Blob from generator
         :param container_name: Name of container holding blob of interest
         :return: MD5 hex digest of blob
@@ -474,32 +430,10 @@ class FileLocate:
         chunk_size = 4096  # Define the chunk size
 
         # Create a stream to download the blob content
-        stream = io.BytesIO()
-        blob_client.get_blob_to_stream(container_name, blob_file.name, stream)
-        stream.seek(0)  # Reset the stream position to the beginning
-
-        # Read the blob content in chunks and update the MD5 hash
-        while True:
-            chunk = stream.read(chunk_size)
-            if not chunk:
-                break
-            md5.update(chunk)
-
-        # Convert MD5 digest to base64 to set as blob property (if needed).
-        blob_md5_base64 = base64.b64encode(md5.digest()).decode()
-        # Hexadecimal MD5 digest.
-        hex_md5 = md5.hexdigest()
-
-        # Set the blob properties with the new MD5 if necessary.
-        # Note: Only do this if you need to update the blob's properties.
-        blob_headers = ContentSettings(content_md5=blob_md5_base64)
-        blob_client.set_blob_properties(
-            container_name=container_name,
-            blob_name=blob_file.name,
-            content_settings=blob_headers
-        )
-
-        return hex_md5
+        content = blob_client.download_bytes(container_name, blob_file.name)
+        for offset in range(0, len(content), chunk_size):
+            md5.update(content[offset:offset + chunk_size])
+        return md5.hexdigest()
 
     def __init__(
             self, container_regex, container_exclude_regex, file_regex,

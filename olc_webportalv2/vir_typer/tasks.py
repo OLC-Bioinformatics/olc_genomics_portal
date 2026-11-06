@@ -1,6 +1,5 @@
 # from olc_webportalv2.cowbat.methods import AzureBatch
 from sentry_sdk import capture_exception
-from django.conf import settings
 from celery import shared_task
 import os
 
@@ -12,9 +11,7 @@ from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyp
 def make_config_file(job_name, sequences, input_data_folder, output_data_folder, command, config_file,
                      vm_size='Standard_D2s_v3'):
     """
-    Makes a config file that can be submitted to AzureBatch via my super cool (and very poorly named)
-    KubeJobSub package. Also, this assumes that you have settings imported, so you have access to storage/batch names
-    and keys
+    Writes a provider-neutral job configuration file.
     :param sequences: List of sequences that are going to be analyzed.
     :param job_name: Name of the job to be run via Batch. Also, if a zip folder has to be created,
     it will be put in olc_webportalv2/media/job_name - this will get cleaned up if it exists by our monitor_tasks
@@ -28,17 +25,8 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
     :return:
     """
     with open(config_file, 'w') as f:
-        f.write('BATCH_ACCOUNT_NAME:={}\n'.format(settings.BATCH_ACCOUNT_NAME))
-        f.write('BATCH_ACCOUNT_KEY:={}\n'.format(settings.BATCH_ACCOUNT_KEY))
-        f.write('BATCH_ACCOUNT_URL:={}\n'.format(settings.BATCH_ACCOUNT_URL))
-        f.write('STORAGE_ACCOUNT_NAME:={}\n'.format(settings.AZURE_ACCOUNT_NAME))
-        f.write('STORAGE_ACCOUNT_KEY:={}\n'.format(settings.AZURE_ACCOUNT_KEY))
         f.write('JOB_NAME:={}\n'.format(job_name))
-        f.write('VM_IMAGE:={}\n'.format(settings.VM_IMAGE))
-        f.write('VM_CLIENT_ID:={}\n'.format(settings.VM_CLIENT_ID))
-        f.write('VM_SECRET:={}\n'.format(settings.VM_SECRET))
         f.write('VM_SIZE:={}\n'.format(vm_size))
-        f.write('VM_TENANT:={}\n'.format(settings.VM_TENANT))
         # Desired format:
         # CLOUDIN:=container_name/file1 container_name/file_2 sequences
         f.write('CLOUDIN:=')

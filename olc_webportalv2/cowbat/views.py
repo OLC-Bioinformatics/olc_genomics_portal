@@ -9,11 +9,6 @@ import re
 import tempfile
 from django.http import HttpResponseNotAllowed, JsonResponse
 
-# Azure
-from azure.storage.blob import BlockBlobService
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-
 # Django-related imports
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
@@ -43,6 +38,7 @@ from olc_webportalv2.cowbat.forms import (
     RunRequestForm
 )
 from olc_webportalv2.common.methods import create_batch_client
+from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.cowbat.tasks import (
     escape_ansi,
     rename_research_container_task,
@@ -51,6 +47,7 @@ from olc_webportalv2.cowbat.tasks import (
 from olc_webportalv2.cowbat.utils import normalize_research_run_name
 from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.filezone.methods import calculate_checksum
+from olc_webportalv2.common.storage_client import get_storage_client
 from olc_webportalv2.geneseekr.forms import EmailForm
 
 # Set up logging
@@ -72,7 +69,9 @@ def find_percent_complete(sequencing_run):
         else:
             percent_completed = int(100.0 * (current_subfolders / final_num_reports))
 
-    except batchmodels.BatchErrorException:  # Means task and job have not yet been created
+    except BatchServiceError as exc:  # Means task and job have not yet been created
+        if exc.status_code != 404:
+            raise
         percent_completed = 1
     return percent_completed
 
@@ -81,15 +80,14 @@ def find_percentage_complete(sequencing_run):
     job_id = sequencing_run.job_id
     batch_client = create_batch_client()
 
-    node_files = batch_client.file.list_from_task(
-        job_id=job_id,
-        task_id=sequencing_run.task_id,
-        recursive=True
-    )
-
     # Initialise a dictionary to store the stderr file information
     contents = {}
     try:
+        node_files = batch_client.file.list_from_task(
+            job_id=job_id,
+            task_id=sequencing_run.task_id,
+            recursive=True
+        )
         for node_file in node_files:
             # Stderr.txt file
             if 'stderr' in node_file.name:
@@ -102,9 +100,11 @@ def find_percentage_complete(sequencing_run):
                         )
                 except Exception:
                     pass
-    except batchmodels.BatchErrorException:
+    except BatchServiceError as exc:
         # The run hasn't started assembling yet
-        return
+        if exc.status_code == 404:
+            return
+        raise
 
     # Define a variable to store the final line
     final_line = str()
@@ -161,12 +161,8 @@ def find_percentage_complete(sequencing_run):
 
 def check_uploaded_seqids(sequencing_run):
     container_name = str(sequencing_run).lower().replace('_', '-')
-    blob_client = BlockBlobService(account_key=settings.AZURE_ACCOUNT_KEY,
-                                   account_name=settings.AZURE_ACCOUNT_NAME)
-    blob_filenames = list()
-    blobs = blob_client.list_blobs(container_name=container_name)
-    for blob in blobs:
-        blob_filenames.append(blob.name)
+    storage = get_storage_client()
+    blob_filenames = [blob.name for blob in storage.list_objects(container_name)]
     # uploaded_seqids = list()
     for seqid in sequencing_run.seqids:
         forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
@@ -245,18 +241,18 @@ def upload_metadata(request):
                 sequencing_run = SequencingRun.objects.get(run_name=form.cleaned_data.get('run_name'))
             files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
             container_name = sequencing_run.run_name.lower().replace('_', '-')
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_container(container_name)
+            storage = get_storage_client()
+            storage.ensure_container(container_name)
             for item in files:
                 # Calculate the checksum
-                blob_headers = calculate_checksum(item=item)
+                blob_md5 = calculate_checksum(item=item)
                 # Upload to blob storage
-                blob_client.create_blob_from_bytes(
-                    container_name=container_name,
-                    blob_name=item.name,
-                    blob=item.read(),
-                    content_settings=blob_headers
+                storage.upload_bytes(
+                    container_name,
+                    item.name,
+                    item.read(),
+                    content_type=getattr(item, 'content_type', None),
+                    content_md5=blob_md5,
                 )
                 if item.name == 'SampleSheet.csv':
                     instance = DataFile(sequencing_run=sequencing_run, data_file=item)
@@ -341,11 +337,10 @@ def verify_realtime(request, sequencing_run_pk):
                     if 'Sample_ID' in lines[i]:
                         seqid_start = True
             container_name = sequencing_run.run_name.lower().replace('_', '-')
-            blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                           account_key=settings.AZURE_ACCOUNT_KEY)
-            blob_client.create_blob_from_path(container_name=container_name,
-                                              blob_name='SampleSheet.csv',
-                                              file_path=samplesheet_path)
+            get_storage_client().upload_file(
+                container_name, 'SampleSheet.csv', samplesheet_path,
+                content_type='text/csv',
+            )
             return redirect('cowbat:upload_interop', sequencing_run_pk=sequencing_run.pk)
     return render(request,
                   'cowbat/verify_realtime.html',
@@ -360,19 +355,19 @@ def upload_interop(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     if request.method == 'POST':
         container_name = sequencing_run.run_name.lower().replace('_', '-')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_client.create_container(container_name)
+        storage = get_storage_client()
+        storage.ensure_container(container_name)
         files = [request.FILES.get('file[%d]' % i) for i in range(0, len(request.FILES))]
         for item in files:
             # Calculate the checksum
-            blob_headers = calculate_checksum(item=item)
+            blob_md5 = calculate_checksum(item=item)
             # Upload to blob storage
-            blob_client.create_blob_from_bytes(
-                container_name=container_name,
-                blob_name=os.path.join('InterOp', item.name),
-                blob=item.read(),
-                content_settings=blob_headers
+            storage.upload_bytes(
+                container_name,
+                os.path.join('InterOp', item.name),
+                item.read(),
+                content_type=getattr(item, 'content_type', None),
+                content_md5=blob_md5,
             )
         return redirect('cowbat:upload_sequence_data', sequencing_run_pk=sequencing_run.pk)
     return render(request,
@@ -390,19 +385,19 @@ def upload_sequence_data(request, sequencing_run_pk):
     if request.method == 'POST':
         check_uploaded_seqids(sequencing_run=sequencing_run)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_client.create_container(container_name)
+        storage = get_storage_client()
+        storage.ensure_container(container_name)
         for i in range(0, len(request.FILES)):
             item = request.FILES.get('file[%d]' % i)
             # Calculate the checksum
-            blob_headers = calculate_checksum(item=item)
+            blob_md5 = calculate_checksum(item=item)
             # Upload to blob storage
-            blob_client.create_blob_from_bytes(
-                container_name=container_name,
-                blob_name=item.name,
-                blob=item.read(),
-                content_settings=blob_headers
+            storage.upload_bytes(
+                container_name,
+                item.name,
+                item.read(),
+                content_type=getattr(item, 'content_type', None),
+                content_md5=blob_md5,
             )
 
         # return redirect('cowbat:cowbat_processing', sequencing_run_pk=sequencing_run.pk)
@@ -1038,18 +1033,18 @@ def custom_run_upload(request, sequencing_run_pk):
     sequencing_run = get_object_or_404(SequencingRun, pk=sequencing_run_pk)
     if request.method == 'POST':
         container_name = sequencing_run.run_name
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        storage = get_storage_client()
         for i in range(0, len(request.FILES)):
             item = request.FILES.get('file[%d]' % i)
             # Calculate the checksum
-            blob_headers = calculate_checksum(item=item)
+            blob_md5 = calculate_checksum(item=item)
             # Upload to blob storage
-            blob_client.create_blob_from_bytes(
-                container_name=container_name,
-                blob_name=item.name,
-                blob=item.read(),
-                content_settings=blob_headers
+            storage.upload_bytes(
+                container_name,
+                item.name,
+                item.read(),
+                content_type=getattr(item, 'content_type', None),
+                content_md5=blob_md5,
             )
 
     return render(request,

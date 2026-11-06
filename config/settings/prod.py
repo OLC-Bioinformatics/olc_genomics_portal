@@ -9,6 +9,8 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 """
 
 # Standard imports
+import hashlib
+import hmac
 import os
 import sentry_sdk
 
@@ -116,7 +118,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.messages.middleware.MessageMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -485,19 +487,8 @@ LOGGING = {
     },
 }
 
-# Azure storage related stuff - credentials
-AZURE_ACCOUNT_NAME = env('AZURE_ACCOUNT_NAME')
-AZURE_ACCOUNT_KEY = env('AZURE_ACCOUNT_KEY')
-BATCH_ACCOUNT_NAME = env('BATCH_ACCOUNT_NAME')
-BATCH_ACCOUNT_URL = env('BATCH_ACCOUNT_URL')
-BATCH_ACCOUNT_KEY = env('BATCH_ACCOUNT_KEY')
-BATCH_ACCOUNT_SUBNET = env('BATCH_ACCOUNT_SUBNET')
-VM_IMAGE = env('VM_IMAGE')
-VM_CLIENT_ID = env('VM_CLIENT_ID', default="")
-VM_SECRET = env('VM_SECRET', default="")
+# Azure tenant is also used by Microsoft authentication.
 VM_TENANT = env('VM_TENANT', default="")
-AMPLISEQ_IMAGE = env('AMPLISEQ_IMAGE')
-COWSNPHR_IMAGE = env('COWSNPHR_IMAGE')
 SITE_URL = env('SITE_URL', default="https://foodport-dev.cloud-nuage.inspection.gc.ca")
 if MICROSOFT_AUTH_ENABLED:
     AD_APP_ID = env("AD_APP_ID")
@@ -508,13 +499,41 @@ else:
     AD_APP_SECRET = None
     VM_TENANT = None
 
-# Define the URL for the batch service API
-BATCH_SERVICE_URL = "http://batch:5000/submit_batch_request"
-
-# Define the headers for the batch API call
+# Internal Batch service connection and authentication.
+BATCH_SERVICE_BASE_URL = env(
+    'BATCH_SERVICE_BASE_URL',
+    default='http://batch:5000'
+)
+BATCH_SERVICE_TOKEN = env(
+    'BATCH_SERVICE_TOKEN',
+    default=hmac.new(
+        SECRET_KEY.encode('utf-8'),
+        b'foodport-batch-service',
+        hashlib.sha256
+    ).hexdigest()
+)
+BATCH_REQUEST_TIMEOUT = env.int('BATCH_REQUEST_TIMEOUT', default=600)
+BATCH_SERVICE_URL = (
+    f"{BATCH_SERVICE_BASE_URL.rstrip('/')}/submit_batch_request"
+)
 BATCH_URL_HEADERS = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {BATCH_SERVICE_TOKEN}",
 }
+
+# The Storage service uses the same deployment secret for internal
+# authentication, domain-separated by the service.
+STORAGE_SERVICE_URL = env('STORAGE_SERVICE_URL', default='http://storage:5001')
+STORAGE_SERVICE_TOKEN = env(
+    'STORAGE_SERVICE_TOKEN',
+    default=hmac.new(
+        SECRET_KEY.encode('utf-8'),
+        b'foodport-storage-service',
+        hashlib.sha256
+    ).hexdigest()
+)
+STORAGE_REQUEST_TIMEOUT = env.int('STORAGE_REQUEST_TIMEOUT', default=600)
+
 try:
     ENVIRONMENT = env('ENVIRONMENT')
 except django.core.exceptions.ImproperlyConfigured:

@@ -9,7 +9,6 @@ import os
 import pathlib
 import re
 import shutil
-import sys
 import tarfile
 
 # Django
@@ -18,15 +17,6 @@ from django.utils.translation import gettext_lazy as _
 
 # Celery Task Management
 from celery import shared_task
-
-# Azure
-from azure.batch import BatchClient
-from azure.batch.models import BatchTaskState
-from azure.core.exceptions import (
-    AzureError,
-    HttpResponseError,
-    ResourceNotFoundError,
-)
 
 # Sentry
 from sentry_sdk import capture_exception
@@ -39,14 +29,13 @@ from olc_webportalv2.ampliseq.models import (
 )
 from olc_webportalv2.common.methods import (
     create_batch_client,
-    create_blob_service,
-    create_blob_from_bytes,
-    download_blob_to_path,
-    generate_download_link,
-    create_container,
     generic_api_submit,
     send_email,
-    upload_blob_from_path,
+)
+from olc_webportalv2.common.batch_client import BatchServiceClient
+from olc_webportalv2.common.storage_client import (
+    StorageServiceError,
+    get_storage_client,
 )
 
 # Set up logging
@@ -59,7 +48,7 @@ def find_containers():
     Find all containers with names that match either a sequencing run, or
     have "ampliseq".
     """
-    blob_service = create_blob_service()
+    blob_service = get_storage_client()
     containers = blob_service.list_containers()
     # Compile the regular expressions
     seq_run_re = re.compile(r'\d{6}')
@@ -100,9 +89,7 @@ def refresh_container_names():
         # Delete removed container names
         ContainerName.objects.filter(container_name__in=deleted_names).delete()
     except (
-        ResourceNotFoundError,
-        HttpResponseError,
-        AzureError,
+        StorageServiceError,
         DatabaseError
     ) as exc:
         capture_exception(exc)
@@ -115,14 +102,14 @@ def upload_file(
     """
     Upload the user-supplied files to blob storage
     """
-    blob_service = create_blob_service()
-    create_container(container_name, blob_service)
+    blob_service = get_storage_client()
+    blob_service.ensure_container(container_name)
     blob_name = archive if archive else file.name
-    create_blob_from_bytes(
-        container_name=container_name,
-        blob_name=blob_name,
-        data=file.read(),
-        blob_service_client=blob_service,
+    blob_service.upload_bytes(
+        container_name,
+        blob_name,
+        file.read(),
+        content_type=getattr(file, 'content_type', None),
     )
 
 
@@ -148,15 +135,13 @@ def download_sequence_files(container_name: str):
     except FileNotFoundError:
         pass
     os.makedirs(tmp_storage_dir, exist_ok=True)
-    blob_service = create_blob_service()
-    container_client = blob_service.get_container_client(container_name)
-    blobs = container_client.list_blobs()
+    blob_service = get_storage_client()
+    blobs = blob_service.list_objects(container_name)
     for blob in blobs:
-        download_blob_to_path(
-            container_name=container_name,
-            blob_name=blob.name,
-            file_path=os.path.join(tmp_storage_dir, os.path.split(blob.name)[1]),
-            blob_service_client=blob_service,
+        blob_service.download_file(
+            container_name,
+            blob.name,
+            os.path.join(tmp_storage_dir, os.path.split(blob.name)[1]),
         )
     return tmp_storage_dir
 
@@ -222,14 +207,12 @@ def create_system_call(ampliseq: AmpliSeqRequest):
         )
     )
     # If the sequence files have been archived, unarchive them
-    if 'azure_batch' not in sys.modules:
-        cmd += (
-            'tar xf /datadrive/{container_name}/{container_name}.tar && '
-            'rm -rf /datadrive/{container_name}/results/ ; '
-            .format(
-                container_name=ampliseq.container_name
-            )
-        )
+    cmd += (
+        'if [ -f /datadrive/{container_name}/{container_name}.tar ]; then '
+        'tar xf /datadrive/{container_name}/{container_name}.tar && '
+        'rm -rf /datadrive/{container_name}/results/; fi; '
+        .format(container_name=ampliseq.container_name)
+    )
     cmd += (
         'nextflow run /datadrive/nf-core-ampliseq-2.7.1/workflow/ '
         '-profile singularity '
@@ -329,7 +312,7 @@ def run_ampliseq_batch(primary_key: int):
 
 def check_for_task_completion(
     task: AmpliSeqAzureTask,
-    batch_client: BatchClient
+    batch_client: BatchServiceClient
 ) -> tuple[bool, AmpliSeqRequest]:
     """
     Check to see if the task is complete
@@ -347,7 +330,7 @@ def check_for_task_completion(
     tasks_completed = True
     try:
         for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.state != BatchTaskState.COMPLETED:
+            if cloudtask.state != "completed":
                 tasks_completed = False
     # If something errors first time through, jobs can't get deleted. In that
     #   case, give up.
@@ -361,7 +344,7 @@ def check_for_task_completion(
 
 
 def delete_pool_job(
-    batch_client: BatchClient,
+    batch_client: BatchServiceClient,
     batch_job_name: str
 ) -> bool:
     """
@@ -390,29 +373,29 @@ def create_sas_urls(ampliseq):
     Create SAS URLs for the report, trace, and timeline files.
     """
     # Create a blob service client
-    blob_service = create_blob_service()
+    blob_service = get_storage_client()
 
     folder_path = '{container}/reports/{container}'.format(
         container=ampliseq.container_name
     )
 
-    execution_report_sas_url = generate_download_link(
-        blob_service_client=blob_service,
-        container_name=ampliseq.container_name,
-        blob_name=f'{folder_path}_execution_report.html',
-        expiry=8,
+    execution_report_sas_url = blob_service.create_transfer_url(
+        ampliseq.container_name,
+        'download',
+        name=f'{folder_path}_execution_report.html',
+        expires_in_seconds=8 * 24 * 60 * 60,
     )
-    execution_trace_sas_url = generate_download_link(
-        blob_service_client=blob_service,
-        container_name=ampliseq.container_name,
-        blob_name=f'{folder_path}_execution_trace.txt',
-        expiry=8,
+    execution_trace_sas_url = blob_service.create_transfer_url(
+        ampliseq.container_name,
+        'download',
+        name=f'{folder_path}_execution_trace.txt',
+        expires_in_seconds=8 * 24 * 60 * 60,
     )
-    execution_timeline_sas_url = generate_download_link(
-        blob_service_client=blob_service,
-        container_name=ampliseq.container_name,
-        blob_name=f'{folder_path}_execution_timeline.html',
-        expiry=8,
+    execution_timeline_sas_url = blob_service.create_transfer_url(
+        ampliseq.container_name,
+        'download',
+        name=f'{folder_path}_execution_timeline.html',
+        expires_in_seconds=8 * 24 * 60 * 60,
     )
     return (
         execution_report_sas_url,
@@ -426,27 +409,25 @@ def download_reports(ampliseq: AmpliSeqRequest):
     Download the HTML reports to disk
     """
     local_folder = os.path.join('olc_webportalv2', 'templates', 'ampliseq')
-    blob_service = create_blob_service()
+    blob_service = get_storage_client()
 
-    download_blob_to_path(
-        container_name=ampliseq.container_name,
-        blob_name=f'{ampliseq.container_name}/reports/'
-                  f'{ampliseq.container_name}_execution_report.html',
-        file_path=os.path.join(
+    blob_service.download_file(
+        ampliseq.container_name,
+        f'{ampliseq.container_name}/reports/'
+        f'{ampliseq.container_name}_execution_report.html',
+        os.path.join(
             local_folder,
             f'{ampliseq.container_name}_execution_report.html'
         ),
-        blob_service_client=blob_service,
     )
-    download_blob_to_path(
-        container_name=ampliseq.container_name,
-        blob_name=f'{ampliseq.container_name}/reports/'
-                  f'{ampliseq.container_name}_execution_timeline.html',
-        file_path=os.path.join(
+    blob_service.download_file(
+        ampliseq.container_name,
+        f'{ampliseq.container_name}/reports/'
+        f'{ampliseq.container_name}_execution_timeline.html',
+        os.path.join(
             local_folder,
             f'{ampliseq.container_name}_execution_timeline.html'
         ),
-        blob_service_client=blob_service,
     )
 
 
@@ -459,12 +440,10 @@ def download_results(ampliseq: AmpliSeqRequest):
     results_dir = 'results2'
 
     os.makedirs(results_folder, exist_ok=True)
-    blob_service = create_blob_service()
+    blob_service = get_storage_client()
 
     # List all blobs in the container
-    blobs = blob_service.get_container_client(
-        ampliseq.container_name
-    ).list_blobs()
+    blobs = blob_service.list_objects(ampliseq.container_name)
 
     # Boolean to track if any blobs were found for the results directory
     results_found = False
@@ -485,11 +464,10 @@ def download_results(ampliseq: AmpliSeqRequest):
             os.makedirs(path_to_create, exist_ok=True)
 
             # Download the blob to the appropriate path
-            download_blob_to_path(
-                container_name=ampliseq.container_name,
-                blob_name=blob.name,
-                file_path=os.path.join(path_to_create, file_name),
-                blob_service_client=blob_service,
+            blob_service.download_file(
+                ampliseq.container_name,
+                blob.name,
+                os.path.join(path_to_create, file_name),
             )
 
     # If no results were found, raise a FileNotFoundError
@@ -504,18 +482,15 @@ def download_results(ampliseq: AmpliSeqRequest):
     shutil.make_archive(os.path.splitext(zip_path)[0], 'zip', results_folder)
 
     # Upload the zip file to blob storage
-    upload_blob_from_path(
-        container_name=ampliseq.container_name,
-        blob_name=os.path.basename(zip_path),
-        file_path=zip_path,
-        blob_service_client=blob_service,
+    blob_service.upload_file(
+        ampliseq.container_name, os.path.basename(zip_path), zip_path
     )
 
-    sas_url = generate_download_link(
-        blob_service_client=blob_service,
-        container_name=ampliseq.container_name,
-        blob_name=os.path.basename(zip_path),
-        expiry=730,
+    sas_url = blob_service.create_transfer_url(
+        ampliseq.container_name,
+        'download',
+        name=os.path.basename(zip_path),
+        expires_in_seconds=730 * 24 * 60 * 60,
     )
 
     # Update the AmpliSeqRequest with the SAS URL for the results

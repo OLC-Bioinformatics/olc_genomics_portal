@@ -81,7 +81,7 @@ class AzureBatchHelperTests(TestCase):
     @mock.patch('olc_webportalv2.cowbat.methods.AzureBatch.random_string', return_value='ABC123')
     def test_generate_blob_name_adds_suffix_when_name_exists(self, random_string):
         blob_service = mock.Mock()
-        blob_service.exists.side_effect = [True, False]
+        blob_service.object_exists.side_effect = [True, False]
 
         result = AzureBatch.generate_blob_name(
             blob_service,
@@ -90,7 +90,7 @@ class AzureBatchHelperTests(TestCase):
         )
 
         self.assertEqual(result, 'read.fastqABC123')
-        self.assertEqual(blob_service.exists.call_count, 2)
+        self.assertEqual(blob_service.object_exists.call_count, 2)
         random_string.assert_called_once_with(string_length=6)
 
     def test_parse_configuration_file_collects_repeated_inputs(self):
@@ -149,21 +149,22 @@ class AzureBatchHelperTests(TestCase):
         with self.assertRaises(AttributeError):
             AzureBatch.check_input_output_command_match(batch)
 
-    @mock.patch('olc_webportalv2.cowbat.methods.BlockBlobService')
+    @mock.patch('olc_webportalv2.common.storage_client.get_storage_client')
     def test_prepare_cloud_input_resource_files_matches_blob_pattern(
         self, blob_service_class
     ):
         blob_service = blob_service_class.return_value
-        blob_service.list_blobs.return_value = [
+        blob_service.list_objects.return_value = [
             mock.Mock(name='reads/sample_R1.fastq'),
             mock.Mock(name='reads/sample_R2.fastq'),
             mock.Mock(name='notes.txt'),
         ]
-        blob_service.list_blobs.return_value[0].name = 'reads/sample_R1.fastq'
-        blob_service.list_blobs.return_value[1].name = 'reads/sample_R2.fastq'
-        blob_service.list_blobs.return_value[2].name = 'notes.txt'
-        blob_service.generate_container_shared_access_signature.return_value = 'sas'
-        blob_service.make_blob_url.side_effect = lambda **kwargs: kwargs['blob_name']
+        blob_service.list_objects.return_value[0].name = 'reads/sample_R1.fastq'
+        blob_service.list_objects.return_value[1].name = 'reads/sample_R2.fastq'
+        blob_service.list_objects.return_value[2].name = 'notes.txt'
+        blob_service.create_transfer_url.side_effect = (
+            lambda container, action, **kwargs: kwargs['name']
+        )
         settings = mock.Mock(AZURE_ACCOUNT_KEY='key', AZURE_ACCOUNT_NAME='account')
 
         result = BatchClass.prepare_cloud_input_resource_files(

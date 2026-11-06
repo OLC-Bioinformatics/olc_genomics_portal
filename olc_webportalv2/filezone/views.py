@@ -19,9 +19,6 @@ from django.views.decorators.csrf import csrf_exempt
 # Third-party imports
 from dal import autocomplete
 
-# Azure imports
-from azure.storage.blob import BlockBlobService
-
 # Portal-specific imports
 from olc_webportalv2.filezone.forms import (
     ContainerCreateForm,
@@ -48,6 +45,7 @@ from olc_webportalv2.filezone.tasks import (
     rename_blob,
     sanitise_rename
 )
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 @csrf_exempt  # needed or IE explodes
@@ -152,23 +150,21 @@ def container_view(request, filezone_pk):
     blob_data, blob_mapping_dict = list_blobs(filezone_pk=filezone_pk)
 
     if request.method == 'POST':
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        storage = get_storage_client()
 
         # Upload all the files. One at a time
         for __, file in request.FILES.items():
             messages.info(request, 'Uploading: ' + file.name)
             # Calculate the checksum
-            blob_headers = calculate_checksum(item=file)
+            blob_md5 = calculate_checksum(item=file)
 
             # Upload to blob storage
-            blob_client.create_blob_from_bytes(
-                container_name=container.container_name,
-                blob_name=file.name,
-                blob=file.read(),
-                content_settings=blob_headers
+            storage.upload_bytes(
+                container.container_name,
+                file.name,
+                file.read(),
+                content_type=getattr(file, 'content_type', None),
+                content_md5=blob_md5,
             )
 
         # Check if the form action specified in the POST request
@@ -188,7 +184,7 @@ def container_view(request, filezone_pk):
             # Generate a Shared Access Signature (SAS) URL for the
             # selected blobs to be downloaded
             sas_url = archive(
-                blob_client=blob_client,
+                blob_client=storage,
                 blob_list=download_blobs,
                 container_name=container.container_name,
                 container_pk=container.pk
@@ -408,10 +404,7 @@ def file_view(request, filezone_pk):
         settings.STATIC_URL, 'ajax', 'filezone', str(filezone_pk), 'arrays.txt'
     )
     if request.method == 'POST':
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        storage = get_storage_client()
         # Initialise a list to store the selected options
         selected_options = []
         selected_options_list = request.POST.getlist("selected_options")
@@ -437,14 +430,14 @@ def file_view(request, filezone_pk):
                             download_blobs.append(blob_dict)
                             container_list.append(container_name)
             sas_url = archive_multiple_containers(
-                blob_client=blob_client,
+                blob_client=storage,
                 blob_list=download_blobs,
                 container_list=container_list,
                 filezone_pk=filezone_request.pk
             )
         if request.POST.getlist("form-action") == ['copy']:
-            # Initialise a list to store blob dictionaries
-            blob_list = []
+            # Initialise a list to store the selected blob dictionaries
+            selected_blobs = []
 
             # Extract the name of the destination container from the request
             destination_container = request.POST.getlist(
@@ -452,9 +445,9 @@ def file_view(request, filezone_pk):
             )[0]
 
             # Determine which blobs are to be copied
-            for container_name, blob_list in \
+            for container_name, container_blobs in \
                     filezone_request.file_matches.items():
-                for blob_dict in blob_list:
+                for blob_dict in container_blobs:
 
                     # Iterate over all the user-selected blobs to copy
                     for str_pk in selected_options:
@@ -464,11 +457,10 @@ def file_view(request, filezone_pk):
                         # blob to download
                         if int(str_pk) == blob_dict['pk']:
 
-                            # Add blob dictionary to the list
-                            blob_list.append(blob_dict)
+                            selected_blobs.append(blob_dict)
             # Copy the blobs to the desired container
             copy_blobs(
-                blob_metadata_list=blob_list,
+                blob_metadata_list=selected_blobs,
                 destination_container=destination_container
             )
         return render(

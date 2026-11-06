@@ -7,10 +7,6 @@ import copy
 import fnmatch
 import os
 
-# Third party imports
-from azure.common import AzureMissingResourceHttpError
-from azure.storage.blob import BlockBlobService
-
 from django.conf import settings
 from django.http import JsonResponse, Http404
 
@@ -26,6 +22,7 @@ from olc_webportalv2.api.methods import send_email
 from olc_webportalv2.cowbat.models import SequencingRun, DataFile
 from olc_webportalv2.cowbat.tasks import run_cowbat_batch
 from olc_webportalv2.cowbat.utils import normalize_run_name
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 class UploadView(views.APIView):
@@ -50,29 +47,18 @@ class UploadView(views.APIView):
         # Get the file name from the keyword arguments
         file_name = kwargs['filename']
 
-        # Create a blob client to allow Azure file operations
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        storage = get_storage_client()
 
         # If the file has a .bin extension, it goes in the InterOp folder
         if file_name.endswith('.bin'):
             file_name = os.path.join('InterOp', file_name)
 
         # Check if the file exists in the container
-        file_exists = blob_client.exists(
-            container_name=container_name,
-            blob_name=file_name
-        )
+        file_exists = storage.object_exists(container_name, file_name)
 
         # If the file exists, calculate its size
         if file_exists:
-            blob = blob_client.get_blob_properties(
-                container_name=container_name,
-                blob_name=file_name
-            )
-            blob_size = blob.properties.content_length
+            blob_size = storage.get_object(container_name, file_name).size
         else:
             blob_size = 0
         return JsonResponse({'exists': file_exists, 'size': blob_size})
@@ -91,11 +77,7 @@ class UploadView(views.APIView):
         # Get the file name from the keyword arguments
         file_name = kwargs['filename']
 
-        # Create a blob client to allow Azure file operations
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        storage = get_storage_client()
 
         # If the file has a .bin extension, it goes in the InterOp folder
         if file_name.endswith('.bin'):
@@ -192,20 +174,14 @@ class UploadView(views.APIView):
         else:
             blob_file_name = file_name
 
-        # Create a blob client to handle Azure file operations
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
-
-        # Create the container if required
-        blob_client.create_container(container_name)
+        storage.ensure_container(container_name)
 
         # Upload the file to blob storage
-        blob_client.create_blob_from_bytes(
-            container_name=container_name,
-            blob_name=blob_file_name,
-            blob=file_obj.read()
+        storage.upload_bytes(
+            container_name,
+            blob_file_name,
+            file_obj.read(),
+            content_type=getattr(file_obj, "content_type", None),
         )
 
         # Do some stuff
@@ -238,14 +214,10 @@ class StartCowbatView(generics.RetrieveAPIView):
             raise Http404 from exc
         if sequencing_run.status == 'Unprocessed':
             blob_filenames = []
-            blob_client = BlockBlobService(
-                account_name=settings.AZURE_ACCOUNT_NAME,
-                account_key=settings.AZURE_ACCOUNT_KEY
-            )
+            storage = get_storage_client()
             container_name = self.kwargs['run_name'].lower().replace('_', '-')
-            blobs = blob_client.list_blobs(container_name=container_name)
-            for blob in blobs:
-                blob_filenames.append(blob.name)
+            blobs = storage.list_objects(container_name)
+            blob_filenames.extend(blob.name for blob in blobs)
             all_files_present = True
             for seqid in sequencing_run.seqids:
                 forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')

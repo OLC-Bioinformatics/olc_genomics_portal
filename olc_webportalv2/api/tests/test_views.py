@@ -4,10 +4,9 @@ import time
 from unittest.mock import patch
 
 from rest_framework.test import APITestCase
-from django.conf import settings
 from olc_webportalv2.users.models import User
 from olc_webportalv2.cowbat.models import SequencingRun
-from azure.storage.blob import BlockBlobService
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 class TestAPI(APITestCase):
@@ -19,10 +18,12 @@ class TestAPI(APITestCase):
         # These tests have to get run in top to bottom order, so they're not (strictly speaking) unit tests,
         # but they get run in order by default, so my worries are fairly minimal.
         super(TestAPI, cls).setUpClass()
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
+        blob_client = get_storage_client()
         # Make sure container doesn't already exist. API will autoconvert _ to - and make the whole thing lowercase
-        blob_client.delete_container('111111-fake')
+        try:
+            blob_client.delete_container('111111-fake')
+        except Exception:
+            pass
         # Give a bit of time for the delete operation to go through. Painfully long for a unit test, but sometimes
         # the delete operation takes quite a while. At least it only happens once!
         time.sleep(40)
@@ -50,10 +51,8 @@ class TestAPI(APITestCase):
         with open('olc_webportalv2/test_files/SampleSheet.csv', 'rb') as infile:
             response = self.client.put('/en-ca/api/upload/111111_FAKE/SampleSheet.csv', infile.read(), content_type='text/csv')
         sequencing_run = SequencingRun.objects.get(run_name='111111_FAKE')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_exists = blob_client.exists(container_name='111111-fake',
-                                         blob_name='SampleSheet.csv')
+        blob_client = get_storage_client()
+        blob_exists = blob_client.object_exists('111111-fake', 'SampleSheet.csv')
         self.assertTrue(blob_exists)
         self.assertIn('2018-SEQ-1471', sequencing_run.seqids)
         self.assertEqual(len(sequencing_run.seqids), 24)
@@ -64,10 +63,10 @@ class TestAPI(APITestCase):
         with open('olc_webportalv2/test_files/2018-SEQ-1471_S1_L001_R1_001.fastq.gz', 'rb') as infile:
             response = self.client.put('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz',
                                        infile.read(), content_type='application/gzip')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_exists = blob_client.exists(container_name='111111-fake',
-                                         blob_name='2018-SEQ-1471_S1_L001_R1_001.fastq.gz')
+        blob_client = get_storage_client()
+        blob_exists = blob_client.object_exists(
+            '111111-fake', '2018-SEQ-1471_S1_L001_R1_001.fastq.gz'
+        )
         self.assertTrue(blob_exists)
         self.assertEqual(response.status_code, 204)
 
@@ -77,10 +76,10 @@ class TestAPI(APITestCase):
             response = self.client.put('/en-ca/api/upload/111111_FAKE/QMetricsOut.bin',
                                        infile.read(),
                                        content_type='application/octet-stream')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_exists = blob_client.exists(container_name='111111-fake',
-                                         blob_name='InterOp/QMetricsOut.bin')
+        blob_client = get_storage_client()
+        blob_exists = blob_client.object_exists(
+            '111111-fake', 'InterOp/QMetricsOut.bin'
+        )
         self.assertTrue(blob_exists)
         self.assertEqual(response.status_code, 204)
 
@@ -90,10 +89,8 @@ class TestAPI(APITestCase):
             response = self.client.put('/en-ca/api/upload/111111_FAKE/RunInfo.xml',
                                        infile.read(),
                                        content_type='text/xml')
-        blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                       account_key=settings.AZURE_ACCOUNT_KEY)
-        blob_exists = blob_client.exists(container_name='111111-fake',
-                                         blob_name='RunInfo.xml')
+        blob_client = get_storage_client()
+        blob_exists = blob_client.object_exists('111111-fake', 'RunInfo.xml')
         self.assertTrue(blob_exists)
         self.assertEqual(response.status_code, 204)
 

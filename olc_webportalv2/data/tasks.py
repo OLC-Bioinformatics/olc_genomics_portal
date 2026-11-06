@@ -1,8 +1,4 @@
-# Django-related imports
-from django.conf import settings
-
 # Standard libraries
-import datetime
 import fnmatch
 import shutil
 import os
@@ -10,10 +6,7 @@ import re
 
 # Portal-specific things
 from olc_webportalv2.data.models import DataRequest
-
-# Azure
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
+from olc_webportalv2.common.storage_client import get_storage_client
 
 # Celery Task Management
 from celery import shared_task
@@ -33,11 +26,8 @@ def get_assembled_data(data_request_pk):
         container_name = 'processed-data'
         # Setup blob client
         print('Logging into blob service')
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
-        blob_files = blob_client.list_blobs(container_name=container_name)
+        blob_client = get_storage_client()
+        blob_files = blob_client.list_objects(container_name)
         # There's probably a better way to do this with list comprehension or something, but worry about that later
         blob_filename_list = list()
         for blob in blob_files:
@@ -46,10 +36,10 @@ def get_assembled_data(data_request_pk):
         print('Downloading files from blob storage')
         for seqid in data_request.seqids:
             if seqid in blob_filename_list:
-                blob_client.get_blob_to_path(
-                    container_name=container_name,
-                    blob_name=seqid + '.fasta',
-                    file_path=os.path.join(data_dir, seqid + '.fasta')
+                blob_client.download_file(
+                    container_name,
+                    seqid + '.fasta',
+                    os.path.join(data_dir, seqid + '.fasta'),
                 )
             else:
                 data_request.missing_seqids.append(seqid)
@@ -61,24 +51,18 @@ def get_assembled_data(data_request_pk):
         # Make container to put results into and upload the zip as a blob
         print('Uploading Zip')
         data_request_container = 'data-request-{}'.format(data_request_pk)
-        blob_client.create_container(data_request_container)
+        blob_client.ensure_container(data_request_container)
         blob_name = os.path.split(data_dir + '.zip')[1]
-        blob_client.create_blob_from_path(
-            container_name=data_request_container,
-            blob_name=blob_name,
-            file_path=data_dir + '.zip'
+        blob_client.upload_file(
+            data_request_container, blob_name, data_dir + '.zip'
         )
         # Generate an SAS url with read access that users will be able to use to download their sequences.
         print('Creating Download Link')
-        sas_token = blob_client.generate_container_shared_access_signature(
-            container_name=data_request_container,
-            permission=BlobPermissions.READ,
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8)
-        )
-        sas_url = blob_client.make_blob_url(
-            container_name=data_request_container,
-            blob_name=blob_name,
-            sas_token=sas_token
+        sas_url = blob_client.create_transfer_url(
+            data_request_container,
+            'download',
+            name=blob_name,
+            expires_in_seconds=8 * 24 * 60 * 60,
         )
         data_request.download_link = sas_url
 
@@ -107,10 +91,7 @@ def get_raw_data(data_request_pk):
             os.makedirs(data_dir)
         # Setup blob client
         print('Logging into blob service')
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        blob_client = get_storage_client()
         containers = blob_client.list_containers()
         fastq_dict = {}
         file_hits = set()
@@ -118,7 +99,7 @@ def get_raw_data(data_request_pk):
         for container in containers:
             if re.match('\d{6}-[a-z0-9]', container.name) and '-output' not in container.name:
                 print(container.name)
-                blob_files = blob_client.list_blobs(container_name=container.name)
+                blob_files = blob_client.list_objects(container.name)
                 for blob_file in blob_files:
                     match = re.findall('(\d{4}-[A-Z]+-\d{4}).+.fastq.gz', blob_file.name)
                     if match:
@@ -139,10 +120,10 @@ def get_raw_data(data_request_pk):
                 fastq_files = fastq_dict[seqid]
                 for container_name, fastqs_list in fastq_files.items():
                     for fastq in fastqs_list:
-                        blob_client.get_blob_to_path(
-                            container_name=container_name,
-                            blob_name=fastq,
-                            file_path=os.path.join(data_dir, fastq)
+                        blob_client.download_file(
+                            container_name,
+                            fastq,
+                            os.path.join(data_dir, fastq),
                         )
             except KeyError:
                 missing_seqids.append(seqid)
@@ -154,24 +135,18 @@ def get_raw_data(data_request_pk):
         # Make container to put results into and upload the zip as a blob
         print('Uploading Zip')
         data_request_container = 'data-request-{}'.format(data_request_pk)
-        blob_client.create_container(data_request_container)
+        blob_client.ensure_container(data_request_container)
         blob_name = os.path.split(data_dir + '.zip')[1]
-        blob_client.create_blob_from_path(
-            container_name=data_request_container,
-            blob_name=blob_name,
-            file_path=data_dir + '.zip'
+        blob_client.upload_file(
+            data_request_container, blob_name, data_dir + '.zip'
         )
         # Generate an SAS url with read access that users will be able to use to download their sequences.
         print('Creating Download Link')
-        sas_token = blob_client.generate_container_shared_access_signature(
-            container_name=data_request_container,
-            permission=BlobPermissions.READ,
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8)
-        )
-        sas_url = blob_client.make_blob_url(
-            container_name=data_request_container,
-            blob_name=blob_name,
-            sas_token=sas_token
+        sas_url = blob_client.create_transfer_url(
+            data_request_container,
+            'download',
+            name=blob_name,
+            expires_in_seconds=8 * 24 * 60 * 60,
         )
         data_request.download_link = sas_url
 

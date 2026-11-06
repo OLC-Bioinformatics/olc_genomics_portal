@@ -16,20 +16,6 @@ from django.conf import settings
 from django.db import DatabaseError
 from django.utils.translation import gettext_lazy as _
 
-# Azure imports
-import azure.batch.batch_auth as batch_auth
-import azure.batch.models as batchmodels
-from azure.common import AzureMissingResourceHttpError, AzureHttpError
-try:
-    from azure.storage.blob import BlobServiceClient as BlockBlobService
-except ImportError:
-    from azure.storage.blob import BlockBlobService
-
-try:
-    from azure.storage.blob import BlobSasPermissions as BlobPermissions
-except ImportError:
-    from azure.storage.blob import BlobPermissions
-
 # Celery Task Management
 from celery import shared_task
 
@@ -44,6 +30,7 @@ from olc_webportalv2.common.methods import (
     create_batch_client,
     generic_api_submit
 )
+from olc_webportalv2.common.batch_client import BatchServiceClient
 from olc_webportalv2.cowsnphr.models import (
     COWSNPhRAzureTask,
     COWSNPhRRequest,
@@ -52,6 +39,10 @@ from olc_webportalv2.cowsnphr.models import (
 from olc_webportalv2.primer_finder.methods import send_email
 from olc_webportalv2.filezone.methods import (
     FileLocate
+)
+from olc_webportalv2.common.storage_client import (
+    StorageServiceError,
+    get_storage_client,
 )
 
 # Set the logging levels
@@ -65,11 +56,7 @@ def find_containers():
     "cowsnphr".
     Ignore any output containers
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    containers = blob_client.list_containers()
+    containers = get_storage_client().list_containers()
     # Compile the regular expressions
     seq_run_re = re.compile(r'\d{6}')
     cowsnphr_re = re.compile('cowsnphr')
@@ -109,8 +96,7 @@ def refresh_container_names():
         # Delete removed container names
         ContainerName.objects.filter(container_name__in=deleted_names).delete()
     except (
-            AzureMissingResourceHttpError,
-            AzureHttpError,
+            StorageServiceError,
             DatabaseError) as exc:
         capture_exception(exc)
 
@@ -128,12 +114,9 @@ def container_sanity(
     the mask file (if present)
     """
     # Create a client for listing blobs in the container
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
     # List all the blobs in the container
-    blobs = blob_client.list_blobs(container_name=container_name)
+    blobs = blob_client.list_objects(container_name)
     # Create variables to store whether the query files, the reference genome,
     # and the optional mask file are present
     fastq = False
@@ -184,12 +167,9 @@ def upload_files_for_cowsnphr(
     folder, and all other files in the "ref" folder
     """
     # Create a blob client
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
     # Create the container (if required)
-    blob_client.create_container(container_name)
+    blob_client.ensure_container(container_name)
     # Determine if the file extension is .gz and set the destination folder
     # appropriately
     if os.path.splitext(file.name)[-1] == '.gz':
@@ -199,10 +179,11 @@ def upload_files_for_cowsnphr(
     # Create a variable to store the blob file name and path
     blob_name = os.path.join(folder, file.name)
     # Upload the file to blob
-    blob_client.create_blob_from_bytes(
-        container_name=container_name,
-        blob_name=blob_name,
-        blob=file.read()
+    blob_client.upload_bytes(
+        container_name,
+        blob_name,
+        file.read(),
+        content_type=getattr(file, 'content_type', None),
     )
 
 
@@ -481,11 +462,8 @@ def copy_blobs(
     :param str destination container: Name of the container into which the
         blobs are to be copied
     """
-    blob_service = BlockBlobService(
-        account_key=settings.AZURE_ACCOUNT_KEY,
-        account_name=settings.AZURE_ACCOUNT_NAME
-    )
-    blob_service.create_container(container_name=destination_container)
+    blob_service = get_storage_client()
+    blob_service.ensure_container(destination_container)
     for blob_metadata_dict in blob_metadata_list:
         # Set the new name of the blob as the destination folder and the file
         # name (without path information )
@@ -493,10 +471,11 @@ def copy_blobs(
             destination_path,
             os.path.basename(blob_metadata_dict["blob_name"])
         )
-        blob_service.copy_blob(
+        blob_service.copy_object(
+            blob_metadata_dict["container_name"],
+            blob_metadata_dict["blob_name"],
             destination_container,
             blob_name,
-            blob_metadata_dict["blob_download_link"]
         )
 
 
@@ -507,7 +486,7 @@ def check_for_task_completion(
     """
     Check to see if the task is complete
     :param COWSNPhRAzureTask task: Current Azure task
-    :param batch.BatchServiceClient batch_client: Azure batch client
+    :param BatchServiceClient batch_client: Batch service client
     :return COWSNPhRRequest cowsnphr_request: Database entry of the current
     COWSNPhR analysis
     """
@@ -522,7 +501,7 @@ def check_for_task_completion(
         # Iterate over the tasks associated with the name of the batch job
         for cloudtask in batch_client.task.list(batch_job_name):
             print('cloudtasks', cloudtask.id, cloudtask.state)
-            if cloudtask.state != batchmodels.TaskState.completed:
+            if cloudtask.state != "completed":
 
                 tasks_completed = False
         print('tasks complete', tasks_completed)
@@ -545,7 +524,7 @@ def check_for_task_completion(
             for node in nodes:
                 print('node', node.id, node.state)
                 # Reboot the node if it becomes unusable
-                if node.state == batchmodels.ComputeNodeState.unusable:
+                if node.state == "unusable":
                     print(
                         f"Rebooting node {node.id} due to "
                         "unusable state."
@@ -553,8 +532,7 @@ def check_for_task_completion(
                     batch_client.compute_node.reboot(
                         pool_id=pool.id,
                         node_id=node.id,
-                        node_reboot_option=batchmodels.ComputeNodeRebootOption
-                        .requeue
+                        node_reboot_option="requeue"
                     )
                     print(f"Node {node.id} is being rebooted.")
                     return False, cowsnphr_request
@@ -640,7 +618,7 @@ def delete_pool_job(
 ) -> bool:
     """
     Delete the pool and job for an analyses
-    :param batch.BatchServiceClient batch_client: Azure batch client
+    :param BatchServiceClient batch_client: Batch service client
     :param str batch_job_name: Name of batch job and pool
     :return bool exit_codes_good: Boolean indicating whether all the tasks
     associated with the batch job completed successfully (exit code 0)
@@ -796,10 +774,7 @@ def download_folders(cowsnphr):
     Download the report folders from blob storage
     """
     # Create a client for listing blobs in the container
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
     # Output container name is the container name
     output_container = cowsnphr.container_name
     # Set the name of the local folder
@@ -810,7 +785,7 @@ def download_folders(cowsnphr):
     )
     os.makedirs(local_folder, exist_ok=True)
     # List all the blobs in the container
-    blobs = blob_client.list_blobs(container_name=output_container)
+    blobs = blob_client.list_objects(output_container)
     # Store the names of the desired folders in a list
     desired_folders = [
         'alignments',
@@ -832,12 +807,12 @@ def download_folders(cowsnphr):
                 )
             ):
                 os.makedirs(os.path.join(local_folder, folder), exist_ok=True)
-                blob_client.get_blob_to_path(
-                    container_name=output_container,
-                    blob_name=blob.name,
-                    file_path=os.path.join(
+                blob_client.download_file(
+                    output_container,
+                    blob.name,
+                    os.path.join(
                         local_folder, folder, os.path.basename(blob.name)
-                    )
+                    ),
                 )
     return blob_client, local_folder, output_container
 
@@ -1053,9 +1028,9 @@ def generate_archive_download_link(
         output_zipfile,
         expiry=8):
     """
-    Make a download link for a file that will be put into Azure blob storage,
+    Upload an archive and create a provider-neutral download link,
     good for up to expiry days
-    :param blob_client: Instance of azure.storage.blob.BlockBlobService
+    :param blob_client: Provider-neutral Storage client
     :param container_name: Name of container you want to create.
     :param output_zipfile: Zipfile that you want to upload and for which you
         want to create a link.
@@ -1063,19 +1038,11 @@ def generate_archive_download_link(
     :return: String of a link that allows people to download container.
     """
     blob_name = os.path.basename(output_zipfile)
-    blob_client.create_blob_from_path(
-        container_name=container_name,
-        blob_name=blob_name,
-        file_path=output_zipfile
+    blob_client.ensure_container(container_name)
+    blob_client.upload_file(container_name, blob_name, output_zipfile)
+    return blob_client.create_transfer_url(
+        container_name,
+        "download",
+        name=blob_name,
+        expires_in_seconds=expiry * 24 * 60 * 60,
     )
-    sas_token = blob_client.generate_container_shared_access_signature(
-        container_name=container_name,
-        permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=expiry)
-    )
-    sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=blob_name,
-        sas_token=sas_token
-    )
-    return sas_url

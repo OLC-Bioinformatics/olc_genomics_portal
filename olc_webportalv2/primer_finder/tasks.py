@@ -6,12 +6,10 @@ requests.
 """
 
 # Standard imports
-import datetime
 import os
 import posixpath
 import shlex
 import shutil
-import time
 from typing import (
     Any,
     Tuple
@@ -21,10 +19,6 @@ from typing import (
 from django.conf import settings
 
 # Third-party imports
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob import BlobPermissions
-from azure.batch import batch_auth
-import azure.batch.models as batchmodels
 from celery import shared_task
 
 # Portal-specific imports
@@ -52,6 +46,7 @@ from olc_webportalv2.primer_finder.models import (
     VerifierPanel,
     VerifierPrimerSet
 )
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 @shared_task
@@ -104,7 +99,7 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
         upload_probe(request=primer_request)
         input_blob_names.append("probe.fasta")
 
-    # Set the path to the mounted container in the AzureBatch VM
+    # Set the path to the mounted container in the Batch VM
     path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
 
     # Create the PrimerValidator system call
@@ -395,10 +390,7 @@ def _generate_input_blob_sas_urls(
     Raises:
         FileNotFoundError: If one of the requested blobs does not exist.
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
 
     input_blobs = []
     unique_blob_names = []
@@ -413,10 +405,7 @@ def _generate_input_blob_sas_urls(
             unique_blob_names.append(blob_name)
 
     for blob_name in unique_blob_names:
-        if not blob_client.exists(
-            container_name=container_name,
-            blob_name=blob_name
-        ):
+        if not blob_client.object_exists(container_name, blob_name):
             raise FileNotFoundError(
                 "Required Batch input blob does not exist: "
                 "{container}/{blob}".format(
@@ -424,21 +413,11 @@ def _generate_input_blob_sas_urls(
                 )
             )
 
-        sas_token = blob_client.generate_blob_shared_access_signature(
-            container_name=container_name,
-            blob_name=blob_name,
-            permission=BlobPermissions.READ,
-            expiry=(
-                datetime.datetime.utcnow() + datetime.timedelta(
-                    hours=expiry_hours
-                )
-            ),
-        )
-
-        sas_url = blob_client.make_blob_url(
-            container_name=container_name,
-            blob_name=blob_name,
-            sas_token=sas_token
+        sas_url = blob_client.create_transfer_url(
+            container_name,
+            "download",
+            name=blob_name,
+            expires_in_seconds=expiry_hours * 60 * 60,
         )
 
         input_blobs.append({"blob_name": blob_name, "sas_url": sas_url})
@@ -527,73 +506,6 @@ def _handle_primer_error(
     request.save()
 
 
-def _wait_for_blob_copy(
-    *,
-    blob_client: BlockBlobService,
-    container_name: str,
-    blob_name: str,
-    timeout_seconds: int = 3600,
-    poll_interval_seconds: int = 10
-):
-    """
-    Wait for an asynchronous Azure Blob copy operation to complete.
-
-    Azure Blob copy operations may complete asynchronously. This function
-    polls the destination blob until the copy succeeds, fails, is aborted,
-    or reaches the configured timeout.
-
-    Args:
-        blob_client (BlockBlobService): The Azure Blob service client.
-        container_name (str): The destination container name.
-        blob_name (str): The destination blob name.
-        timeout_seconds (int): Maximum number of seconds to wait for the copy.
-        poll_interval_seconds (int): Number of seconds between status checks.
-
-    Raises:
-        RuntimeError: If the copy operation fails or is aborted.
-        TimeoutError: If the copy operation does not finish before timeout.
-    """
-    deadline = time.monotonic() + timeout_seconds
-
-    while True:
-        blob_properties = blob_client.get_blob_properties(
-            container_name=container_name, blob_name=blob_name
-        )
-
-        copy_properties = blob_properties.properties.copy
-        copy_status = getattr(copy_properties, "status", None)
-
-        # A successful copy is ready for the Batch task to download.
-        if copy_status == "success":
-            return
-
-        # Stop immediately if Azure reports a terminal failure.
-        if copy_status in ("failed", "aborted"):
-            status_description = getattr(
-                copy_properties,
-                "status_description",
-                None
-            )
-            raise RuntimeError(
-                "Azure Blob copy failed for {blob}: "
-                "status={status}, description={description}".format(
-                    blob=blob_name,
-                    status=copy_status,
-                    description=status_description
-                )
-            )
-
-        if time.monotonic() >= deadline:
-            raise TimeoutError(
-                "Timed out waiting for Azure Blob copy of {blob}; "
-                "last copy status was {status}".format(
-                    blob=blob_name, status=copy_status
-                )
-            )
-
-        time.sleep(poll_interval_seconds)
-
-
 def copy_benchmark_files(
     *,  # Force the use of keyword arguments
     container_name: str,
@@ -618,109 +530,35 @@ def copy_benchmark_files(
     Returns:
         str: The blob name of the benchmark archive in the request container.
     """
-    # Create the blob service client for manipulating blobs
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
 
     source_container_name = "benchmark-datasets"
     source_blob_name = "{genus}.zip".format(genus=genus)
     destination_blob_name = posixpath.join(panel, source_blob_name)
 
     # Retrieve the authoritative size of the benchmark source blob.
-    source_properties = blob_client.get_blob_properties(
-        container_name=source_container_name, blob_name=source_blob_name
-    )
-    source_size = source_properties.properties.content_length
-
-    destination_exists = blob_client.exists(
-        container_name=container_name, blob_name=destination_blob_name
+    source_size = blob_client.get_object(
+        source_container_name, source_blob_name
+    ).size
+    destination_exists = blob_client.object_exists(
+        container_name, destination_blob_name
     )
 
     if destination_exists:
-        destination_properties = blob_client.get_blob_properties(
-            container_name=container_name, blob_name=destination_blob_name
-        )
-
-        copy_properties = destination_properties.properties.copy
-        copy_status = getattr(copy_properties, "status", None)
-
-        # A previous invocation may already have started the copy. Wait for
-        # that operation rather than starting another copy over the same blob.
-        if copy_status == "pending":
-            _wait_for_blob_copy(
-                blob_client=blob_client,
-                container_name=container_name,
-                blob_name=destination_blob_name,
-            )
-
-            # Refresh the properties after the pending copy finishes.
-            destination_properties = blob_client.get_blob_properties(
-                container_name=container_name, blob_name=destination_blob_name
-            )
-            copy_properties = destination_properties.properties.copy
-            copy_status = getattr(copy_properties, "status", None)
-
-        destination_size = destination_properties.properties.content_length
-
-        # A missing copy status is acceptable because the destination may have
-        # been uploaded directly instead of being created by Copy Blob.
-        if copy_status in (None, "success") and destination_size == source_size:
+        destination_size = blob_client.get_object(
+            container_name, destination_blob_name
+        ).size
+        if destination_size == source_size:
             return destination_blob_name
 
-        # The destination is failed, aborted, incomplete, or does not match
-        # the source. Remove it before starting a replacement copy.
-        blob_client.delete_blob(
-            container_name=container_name, blob_name=destination_blob_name
-        )
+        blob_client.delete_object(container_name, destination_blob_name)
 
-    # Generate a short-lived read-only SAS URL for the benchmark source.
-    # This allows Copy Blob to read the source even when the benchmark
-    # container is private.
-    source_sas_token = blob_client.generate_blob_shared_access_signature(
-        container_name=source_container_name,
-        blob_name=source_blob_name,
-        permission=BlobPermissions.READ,
-        expiry=(datetime.datetime.utcnow() + datetime.timedelta(hours=12)),
+    blob_client.copy_object(
+        source_container_name,
+        source_blob_name,
+        container_name,
+        destination_blob_name,
     )
-
-    source_url = blob_client.make_blob_url(
-        container_name=source_container_name,
-        blob_name=source_blob_name,
-        sas_token=source_sas_token,
-    )
-
-    # Copy the benchmark file into the request-specific container.
-    blob_client.copy_blob(
-        container_name=container_name,
-        blob_name=os.path.join(panel, f'{genus}.zip'),
-        copy_source=f'https://{settings.AZURE_ACCOUNT_NAME}.'
-        f'blob.core.windows.net/benchmark-datasets/{genus}.zip'
-    )
-
-    # Copy Blob may be asynchronous, particularly for a large archive.
-    _wait_for_blob_copy(
-        blob_client=blob_client,
-        container_name=container_name,
-        blob_name=destination_blob_name,
-    )
-
-    # Perform a final size check after Azure reports a successful copy.
-    destination_properties = blob_client.get_blob_properties(
-        container_name=container_name, blob_name=destination_blob_name
-    )
-    destination_size = destination_properties.properties.content_length
-
-    if destination_size != source_size:
-        raise RuntimeError(
-            "Benchmark copy size mismatch for {blob}: "
-            "source={source_size}, destination={destination_size}".format(
-                blob=destination_blob_name,
-                source_size=source_size,
-                destination_size=destination_size,
-            )
-        )
 
     return destination_blob_name
 
@@ -740,15 +578,11 @@ def create_empty_folder(
             folder is to be created
     """
     # Create the blob service client for manipulating blobs
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    # Create the empty folder
-    blob_client.create_blob_from_text(
-        container_name=container_name,
-        blob_name=os.path.join(panel, 'empty.txt'),
-        text=''
+    blob_client = get_storage_client()
+    blob_client.upload_bytes(
+        container_name,
+        os.path.join(panel, 'empty.txt'),
+        b'',
     )
 
 
@@ -834,7 +668,7 @@ def _check_tasks_completed(
     """
     try:
         for cloud_task in batch_client.task.list(batch_job_name):
-            if cloud_task.state != batchmodels.TaskState.completed:
+            if cloud_task.state != "completed":
                 return False
         return True
     except Exception:
@@ -950,10 +784,7 @@ def post_verifier_run(
             containing the reports.
     """
     try:
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
+        blob_client = get_storage_client()
 
         # Delete .fasta and .zip files from the container
         _cleanup_blob_container(
@@ -1013,60 +844,47 @@ def post_verifier_run(
 
 def _cleanup_blob_container(
     *,  # Force the use of keyword arguments
-    blob_client: BlockBlobService,
+    blob_client,
     container_name: str
 ):
     """
     Delete .fasta and .zip files from the blob container.
 
     Args:
-        blob_client (BlockBlobService): The Azure Blob service client.
+        blob_client: Provider-neutral Storage client.
         container_name (str): The name of the container.
     """
     # Iterate through the blobs in the container
-    for blob in blob_client.list_blobs(container_name=container_name):
+    for blob in blob_client.list_objects(container_name):
         if blob.name.endswith(('.fasta', '.zip')):
-            blob_client.delete_blob(
-                container_name=container_name,
-                blob_name=blob.name
-            )
+            blob_client.delete_object(container_name, blob.name)
 
 
 def _generate_sas_urls(
     *,  # Force the use of keyword arguments
-    blob_client: BlockBlobService,
+    blob_client,
     container_name: str
 ) -> Tuple[str, str]:
     """
     Generate SAS URLs for the report and summary files.
 
     Args:
-        blob_client (BlockBlobService): The Azure Blob service client.
+        blob_client: Provider-neutral Storage client.
         container_name (str): The name of the container.
 
     Returns:
         Tuple[str, str]: The report and summary SAS URLs.
     """
-    # Generate an SAS token with read access
-    sas_token = blob_client.generate_container_shared_access_signature(
-        container_name=container_name,
-        permission=BlobPermissions.READ,
-        expiry=datetime.datetime.utcnow() + datetime.timedelta(days=8)
-    )
-
-    # Create SAS URLs for the Excel summary report archive of reports
     excel_blob_name = f"reports/{container_name}_summary_report.xlsx"
     archive_blob_name = f"{container_name}_reports.zip"
 
-    excel_sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=excel_blob_name,
-        sas_token=sas_token
+    excel_sas_url = blob_client.create_transfer_url(
+        container_name, "download", name=excel_blob_name,
+        expires_in_seconds=8 * 24 * 60 * 60,
     )
-    archive_sas_url = blob_client.make_blob_url(
-        container_name=container_name,
-        blob_name=archive_blob_name,
-        sas_token=sas_token
+    archive_sas_url = blob_client.create_transfer_url(
+        container_name, "download", name=archive_blob_name,
+        expires_in_seconds=8 * 24 * 60 * 60,
     )
     return excel_sas_url, archive_sas_url
 
@@ -1230,10 +1048,7 @@ def post_validator_run(
     Post-run steps for the PrimerValidator analysis.
     """
     try:
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY,
-        )
+        blob_client = get_storage_client()
 
         # Remove the .fasta and .zip files from the container
         _cleanup_blob_container(

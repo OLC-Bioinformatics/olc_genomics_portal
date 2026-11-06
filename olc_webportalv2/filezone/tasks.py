@@ -10,19 +10,12 @@ import fnmatch
 import json
 import logging
 import os
-import sys
 import zipfile
+from email.utils import parsedate_to_datetime
 
 # Django imports
 from django.conf import settings
 from django.db import DatabaseError
-# Azure imports
-from azure.common import AzureMissingResourceHttpError, AzureHttpError
-try:
-    from azure.storage.blob import BlobServiceClient as BlockBlobService
-except ImportError:
-    from azure.storage.blob import BlockBlobService
-
 # Celery Task Management
 from celery import shared_task
 
@@ -42,6 +35,10 @@ from olc_webportalv2.filezone.models import (
     ContainerName,
     Regexes
 )
+from olc_webportalv2.common.storage_client import (
+    StorageServiceError,
+    get_storage_client,
+)
 
 # Set the logging levels
 logger = logging.getLogger()
@@ -52,11 +49,7 @@ def find_containers():
     """
     Find all containers
     """
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
-    containers = blob_client.list_containers()
+    containers = get_storage_client().list_containers()
     # Use a set comprehension to get the container names
     container_set = {str(container.name) for container in containers}
     return sorted(container_set)
@@ -79,8 +72,7 @@ def refresh_container_names():
             ) for container in container_list
         )
     except (
-            AzureMissingResourceHttpError,
-            AzureHttpError,
+            StorageServiceError,
             DatabaseError) as exc:
         capture_exception(exc)
 
@@ -90,11 +82,7 @@ def create_container(container_name):
     Create a container in Azure storage
     """
     try:
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
-        )
-        blob_client.create_container(container_name)
+        get_storage_client().ensure_container(container_name)
     except Exception as exc:
         return exc
 
@@ -104,7 +92,7 @@ def calculate_md5_parallel(blob_client, blob, container_name):
     Calculate MD5 in parallel for a given blob. Attempts to use the MD5
     provided by Azure, and falls back to manual calculation if necessary.
 
-    :param blob_client: Azure BlobServiceClient instance
+    :param blob_client: Provider-neutral Storage client
     :param blob: Blob object for which to calculate MD5
     :param container_name: Name of the container containing the blob
     :return: MD5 hash of the blob as a hexadecimal string
@@ -114,12 +102,11 @@ def calculate_md5_parallel(blob_client, blob, container_name):
         return binascii.hexlify(
             bytearray(
                 base64.b64decode(
-                    blob.properties.content_settings.content_md5
+                    blob.content_md5
                 )
             )
         ).decode()
-    except TypeError:
-        # Fallback to manual MD5 calculation if Azure's MD5 is unavailable
+    except (TypeError, AttributeError):
         return FileLocate.calculate_md5(
             blob_client=blob_client,
             blob_file=blob,
@@ -136,20 +123,16 @@ def list_blobs(filezone_pk):
                         the container
     :return: List of dictionaries with blob details
     """
-    # Initialize Azure Blob Service client with account details
-    blob_client = BlockBlobService(
-        account_name=settings.AZURE_ACCOUNT_NAME,
-        account_key=settings.AZURE_ACCOUNT_KEY
-    )
+    blob_client = get_storage_client()
     # Retrieve container name using the FileZone primary key
     container = ContainerName.objects.get(pk=filezone_pk)
 
     # List all blobs in the specified container
-    blobs = blob_client.list_blobs(container_name=container.container_name)
+    blobs = blob_client.list_objects(container.container_name)
 
     # Filter out zero-size blobs and sort by blob name
     blobs = sorted(
-        [blob for blob in blobs if blob.properties.content_length > 0],
+        [blob for blob in blobs if (blob.size or 0) > 0],
         key=lambda blob: blob.name
     )
 
@@ -161,6 +144,7 @@ def list_blobs(filezone_pk):
         file_name = blob.name.split('/')[-1]
         blob_dict = {
             'pk': index,
+            'container_name': container.container_name,
             'blob_name': file_name,
             'blob_full_path': blob.name,
             # Placeholder values, will be updated after MD5 calculation
@@ -191,11 +175,11 @@ def list_blobs(filezone_pk):
 
             # Update blob details with results from parallel processing
             blob_data[index - 1].update({
-                'blob_size': human_bytes(
-                    byte_count=blob.properties.content_length
-                ),
-                'blob_date': blob.properties.last_modified.strftime(
-                    "%Y/%m/%d, %H:%M:%S"
+                'blob_size': human_bytes(byte_count=blob.size or 0),
+                'blob_date': (
+                    parsedate_to_datetime(blob.last_modified).strftime(
+                        "%Y/%m/%d, %H:%M:%S"
+                    ) if blob.last_modified else ''
                 ),
                 'blob_download_link': generate_sas(
                     blob_name=blob.name,
@@ -250,37 +234,19 @@ def rename_blob(blob_name, blob_rename, container_name):
     Rename a blob with user-supplied text
     """
     errors = []
-    # Use the AzureStorage library if available
-    if 'azure_storage' in sys.modules:
-        pass
-    # Otherwise copy the blob using the new name, and delete the original
-    else:
-        blob_client = BlockBlobService(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            account_key=settings.AZURE_ACCOUNT_KEY
+    blob_client = get_storage_client()
+    try:
+        blob_client.copy_object(
+            container_name, blob_name, container_name, blob_rename
         )
-        try:
-            # Create the new blob
-            blob_client.copy_blob(
-                container_name,
-                blob_rename,
-                'https://{account_name}.blob.core.windows.net/'
-                '{source_container_name}/'
-                '{source_file_path}'.format(
-                        account_name=settings.AZURE_ACCOUNT_NAME,
-                        source_container_name=container_name,
-                        source_file_path=blob_name
-                    )
-            )
-        except Exception as exc:
-            errors.append('Error creating blob: ' + str(exc))
-        errors = delete_blob(
-            blob_client=blob_client,
-            container_name=container_name,
-            blob_name=blob_name,
-            errors=errors
-        )
-    return errors
+    except Exception as exc:
+        return ['Error creating blob: ' + str(exc)]
+    return delete_blob(
+        blob_client=blob_client,
+        container_name=container_name,
+        blob_name=blob_name,
+        errors=errors
+    )
 
 
 def delete_blob(blob_client, container_name, blob_name, errors):
@@ -289,10 +255,7 @@ def delete_blob(blob_client, container_name, blob_name, errors):
     """
     # Delete the original blob
     try:
-        blob_client.delete_blob(
-            container_name,
-            blob_name
-        )
+        blob_client.delete_object(container_name, blob_name)
     except Exception as exc:
         errors.append('Error deleting blob: ' + str(exc))
     return errors
@@ -307,9 +270,8 @@ def prep_delete_blob(blob_client, blob_list, container_name):
     for blob_dict in blob_list:
         try:
             # blob_full_path is the full path including the blob name
-            blob_client.delete_blob(
-                container_name,
-                blob_dict['blob_full_path']
+            blob_client.delete_object(
+                container_name, blob_dict['blob_full_path']
             )
         except Exception as exc:
             errors.append(exc)
@@ -330,7 +292,7 @@ def archive(blob_client, blob_list, container_name, container_pk):
         os.makedirs(archive_folder, exist_ok=True)
         # List all the things in the container - if it's a file in reports
         # folder or an assembly, download it.
-        blobs = blob_client.list_blobs(container_name=container_name)
+        blobs = blob_client.list_objects(container_name)
         local_files = set()
         for blob_dict in blob_list:
             for blob in blobs:
@@ -339,10 +301,8 @@ def archive(blob_client, blob_list, container_name, container_pk):
                         archive_folder, os.path.basename(blob.name)
                     )
                     local_files.add(local_file)
-                    blob_client.get_blob_to_path(
-                        container_name=container_name,
-                        blob_name=blob.name,
-                        file_path=local_file
+                    blob_client.download_file(
+                        container_name, blob.name, local_file
                     )
         archive_file = os.path.join(
             archive_folder,
@@ -360,7 +320,7 @@ def archive(blob_client, blob_list, container_name, container_pk):
                 )
 
         sas_url = generate_archive_download_link(
-            blob_client=blob_client,
+            blob_service_client=blob_client,
             container_name='filezone-archives',
             output_zipfile=archive_file,
             expiry=730
@@ -388,7 +348,7 @@ def archive_multiple_containers(
         for container_name in container_list:
             # List all the things in the container - if it's a file in reports
             # folder or an assembly, download it.
-            blobs = blob_client.list_blobs(container_name=container_name)
+            blobs = blob_client.list_objects(container_name)
             for blob_dict in blob_list:
                 for blob in blobs:
                     if fnmatch.fnmatch(blob.name, blob_dict['blob_name']):
@@ -396,10 +356,8 @@ def archive_multiple_containers(
                             archive_folder, os.path.basename(blob.name)
                         )
                         local_files.add(local_file)
-                        blob_client.get_blob_to_path(
-                            container_name=container_name,
-                            blob_name=blob.name,
-                            file_path=local_file
+                        blob_client.download_file(
+                            container_name, blob.name, local_file
                         )
         archive_file = os.path.join(
             archive_folder, 'filezone_request_{filezone_pk}.zip'.format(
@@ -415,7 +373,7 @@ def archive_multiple_containers(
                 )
 
         sas_url = generate_archive_download_link(
-            blob_client=blob_client,
+            blob_service_client=blob_client,
             container_name='filezone-archives',
             output_zipfile=archive_file,
             expiry=730

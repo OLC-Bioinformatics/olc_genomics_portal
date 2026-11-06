@@ -7,7 +7,6 @@ import os
 
 
 # Django
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import (
@@ -17,9 +16,6 @@ from django.shortcuts import (
 )
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
-
-# Azure
-from azure.storage.blob import BlockBlobService
 
 # Third-party imports
 from dal import autocomplete

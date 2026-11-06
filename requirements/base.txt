@@ -35,7 +35,7 @@ awesome-slugify==1.6.5
 
 # Redis support
 django-redis==7.0.0
-redis==8.0.1
+redis==6.4.0
 
 # Task Management and Monitoring
 celery==5.6.3
@@ -57,13 +57,6 @@ amqp==5.3.1
 asn1crypto==1.5.1
 atomicwrites==1.4.1
 attrs==26.1.0
-
-# Azure SDK
-azure-core==1.41.0
-azure-batch==15.1.0
-azure-identity==1.25.3
-azure-storage-blob==12.30.0
-azure-storage-file-share==12.26.0
 
 Babel==2.18.0
 billiard==4.2.4

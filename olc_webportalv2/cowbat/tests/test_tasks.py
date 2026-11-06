@@ -5,15 +5,11 @@ import os
 import shutil
 import tempfile
 
-from azure.batch.models import BatchErrorException, TaskState
 from django.test import TestCase, override_settings
 from django.utils import timezone as django_timezone
 
+from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.cowbat.models import AzureTask
-from olc_webportalv2.cowbat.models import NanoporeFile
-from olc_webportalv2.cowbat.models import NanoporeManifest
-from olc_webportalv2.cowbat.models import NanoporeProcessingBatch
-from olc_webportalv2.cowbat.models import NanoporeRun
 from olc_webportalv2.cowbat.models import SequencingRun
 from olc_webportalv2.cowbat.models import SummaryMetadata
 from olc_webportalv2.cowbat.tasks import (
@@ -24,13 +20,8 @@ from olc_webportalv2.cowbat.tasks import (
     nextseq_run,
     read_sections,
     run_cowbat_batch,
-    submit_nanopore_batch,
     add_read_filenames_to_metadata,
-    build_nanopore_command,
     check_cowbat_tasks,
-    check_nanopore_tasks,
-    collect_nanopore_iteration,
-    _reconcile_nanopore_generation_results,
     cowbat_cleanup,
     handle_incomplete_tasks,
     handle_task_completion,
@@ -54,591 +45,16 @@ class RunCowbatBatchTests(TestCase):
         defaults.update(kwargs)
         return SequencingRun.objects.create(**defaults)
 
-    def test_build_nanopore_command_uses_mounted_paths(self):
-        command = build_nanopore_command(
-            'foodport-nanopore-task --manifest "{manifest_path}" '
-            '--source-root "{source_root}" --task-root "{task_root}"',
-            manifest_path="/mnt/manifest.json",
-            source_root="/mnt/pod5",
-            task_root="$AZ_BATCH_TASK_WORKING_DIR",
-        )
-
-        self.assertEqual(
-            command,
-            'foodport-nanopore-task --manifest "/mnt/manifest.json" '
-            '--source-root "/mnt/pod5" '
-            '--task-root "$AZ_BATCH_TASK_WORKING_DIR"',
-        )
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
-    @override_settings(NANOPORE_BATCH_COMMAND="foodport-nanopore-task")
-    def test_nanopore_submission_failure_remains_retryable(self, blob_service_class):
-        run = self.create_run(
-            run_name="260825-nanopore",
-            workflow_state="ready",
-        )
-        NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="pending",
-        )
-        blob_service_class.return_value.create_blob_from_text.side_effect = (
-            RuntimeError("temporary storage failure")
-        )
-
-        submit_nanopore_batch.run(run.pk)
-
-        processing_batch = NanoporeProcessingBatch.objects.get(sequencing_run=run)
-        run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "failed")
-        self.assertIn("temporary storage failure", processing_batch.error)
-        self.assertEqual(run.workflow_state, "error")
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.requests.post")
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
-    @mock.patch.object(submit_nanopore_batch, "retry")
-    @override_settings(
-        NANOPORE_BATCH_COMMAND="foodport-nanopore-task",
-        NANOPORE_BARCODE_VALUES="22",
-    )
-    def test_nanopore_capacity_failure_schedules_retry(
-        self, retry, blob_service_class, post
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore-capacity",
-            workflow_state="ready",
-        )
-        NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="pending",
-        )
-        response = mock.Mock(status_code=503)
-        response.json.return_value = {
-            "error": "Azure capacity is temporarily unavailable.",
-            "error_code": "capacity_unavailable",
-            "retryable": True,
-        }
-        post.return_value = response
-        retry.side_effect = RuntimeError("celery retry scheduled")
-
-        with self.assertRaisesRegex(RuntimeError, "retry scheduled"):
-            submit_nanopore_batch.run(run.pk)
-
-        processing_batch = NanoporeProcessingBatch.objects.get(sequencing_run=run)
-        run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "submitting")
-        self.assertIn("temporarily unavailable", processing_batch.error)
-        self.assertEqual(run.task_retry_count, 1)
-        self.assertEqual(retry.call_count, 1)
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.requests.post")
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
-    @mock.patch.object(submit_nanopore_batch, "retry")
-    @override_settings(
-        NANOPORE_BATCH_COMMAND="foodport-nanopore-task",
-        NANOPORE_BARCODE_VALUES="22",
-    )
-    def test_nanopore_capacity_failure_exhausts_retries(
-        self, retry, blob_service_class, post
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore-capacity-exhausted",
-            workflow_state="ready",
-        )
-        NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="pending",
-        )
-        response = mock.Mock(status_code=503)
-        response.json.return_value = {
-            "error": "Azure capacity is temporarily unavailable.",
-            "error_code": "capacity_unavailable",
-            "retryable": True,
-        }
-        post.return_value = response
-
-        with mock.patch.object(submit_nanopore_batch.request, "retries", 8):
-            submit_nanopore_batch.run(run.pk)
-
-        processing_batch = NanoporeProcessingBatch.objects.get(sequencing_run=run)
-        run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "failed")
-        self.assertIn("after 8 retries", processing_batch.error)
-        self.assertEqual(run.workflow_state, "error")
-        self.assertEqual(retry.call_count, 0)
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.requests.post")
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
-    @override_settings(
-        NANOPORE_BATCH_COMMAND=(
-            'foodport-nanopore-task --manifest-blob "{manifest_blob}" '
-            '--input-container "{input_container}" '
-            '--output-container "{output_container}" '
-            '--source-root "{source_root}" --task-root "{task_root}"'
-        ),
-        NANOPORE_BARCODE_VALUES="22",
-        NANOPORE_BATCH_VM_SIZE="Standard_NV18ads_A10_v5",
-        NANOPORE_RAW_CONTAINER="nanopore-runs",
-        NANOPORE_RESULTS_CONTAINER="nanopore-results",
-    )
-    def test_nanopore_submission_uses_wrapper_contract(self, blob_service_class, post):
-        run = self.create_run(
-            run_name="260825-nanopore",
-            workflow_state="ready",
-        )
-        NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[
-                {
-                    "relative_path": "pass/sample.pod5",
-                    "blob_name": (
-                        "nanopore-runs/260825-nanopore/input/pod5/pass/sample.pod5"
-                    ),
-                    "size_bytes": 123,
-                    "sha256": "",
-                }
-            ],
-            sha256="manifest-sha",
-        )
-        NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="pending",
-        )
-        response = mock.Mock()
-        response.json.return_value = {
-            "pool_id": "pool-1",
-            "job_id": "job-1",
-            "tasks": ["task-1"],
-            "status": "Success",
-        }
-        post.return_value = response
-
-        submit_nanopore_batch.run(run.pk)
-
-        blob_calls = (
-            blob_service_class.return_value.create_blob_from_text.call_args_list
-        )
-        self.assertEqual(len(blob_calls), 3)
-        for call in blob_calls:
-            self.assertNotIn("overwrite", call[1])
-        request_data = post.call_args[1]["data"]
-        self.assertIn("Standard_NV18ads_A10_v5", request_data)
-        self.assertIn(
-            "nanopore-runs/260825-nanopore/input/manifests/input-manifest-v000001.json",
-            request_data,
-        )
-        self.assertIn("foodport-nanopore-task", request_data)
-        self.assertIn("--manifest-prefix", request_data)
-        self.assertIn("--control-blob", request_data)
-        self.assertIn("runs/260825-nanopore", request_data)
-        processing_batch = NanoporeProcessingBatch.objects.get(sequencing_run=run)
-        run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "submitted")
-        self.assertEqual(processing_batch.azure_job_id, "job-1")
-        self.assertEqual(run.workflow_state, "processing")
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
-    def test_nanopore_monitor_marks_successful_task_complete(
-        self, credentials, batch_client_class
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore",
-            workflow_state="stopping",
-            job_id="job-1",
-            task_id="task-1",
-        )
-        nanopore_run = NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        processing_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="submitted",
-            azure_pool_id="pool-1",
-            azure_job_id="job-1",
-            azure_task_id="task-1",
-        )
-        pending_manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "later.pod5"}],
-            sha256="later-manifest-sha",
-            generation=2,
-        )
-        pending_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=pending_manifest,
-            generation=2,
-            status="pending",
-            pod5_count=1,
-        )
-        cloud_task = mock.Mock(
-            id="task-1",
-            state=TaskState.completed,
-            execution_info=mock.Mock(exit_code=0),
-        )
-        batch_client_class.return_value.task.list.return_value = [cloud_task]
-
-        check_nanopore_tasks()
-
-        processing_batch.refresh_from_db()
-        run.refresh_from_db()
-        nanopore_run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "complete")
-        self.assertEqual(processing_batch.exit_code, 0)
-        self.assertEqual(run.workflow_state, "complete")
-        self.assertEqual(run.status, "Processed")
-        self.assertEqual(nanopore_run.status, "complete")
-        pending_batch.refresh_from_db()
-        self.assertEqual(pending_batch.status, "complete")
-        self.assertEqual(pending_batch.exit_code, 0)
-        self.assertEqual(pending_batch.processed_pod5_count, 1)
-        batch_client = batch_client_class.return_value
-        batch_client.job.delete.assert_called_once_with(job_id="job-1")
-        batch_client.pool.delete.assert_called_once_with(pool_id="pool-1")
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
-    def test_nanopore_monitor_cleans_up_failed_task_resources(
-        self, credentials, batch_client_class
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore-failed",
-            workflow_state="submitted",
-        )
-        NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        processing_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="submitted",
-            azure_pool_id="pool-failed",
-            azure_job_id="job-failed",
-            azure_task_id="task-failed",
-        )
-        cloud_task = mock.Mock(
-            id="task-failed",
-            state=TaskState.completed,
-            execution_info=mock.Mock(exit_code=2),
-        )
-        batch_client_class.return_value.task.list.return_value = [cloud_task]
-
-        check_nanopore_tasks()
-
-        processing_batch.refresh_from_db()
-        run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "failed")
-        self.assertEqual(run.workflow_state, "error")
-        batch_client = batch_client_class.return_value
-        batch_client.job.delete.assert_called_once_with(job_id="job-failed")
-        batch_client.pool.delete.assert_called_once_with(pool_id="pool-failed")
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.submit_nanopore_batch.apply_async")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
-    def test_nanopore_streaming_failure_retries_pending_generation(
-        self, credentials, batch_client_class, submit
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore-retry",
-            workflow_state="submitted",
-        )
-        nanopore_run = NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        processing_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="submitted",
-            azure_pool_id="pool-failed",
-            azure_job_id="job-failed",
-            azure_task_id="task-failed",
-        )
-        pending_manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "later.pod5"}],
-            sha256="later-manifest-sha",
-            generation=2,
-        )
-        pending_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=pending_manifest,
-            generation=2,
-            status="pending",
-            pod5_count=1,
-        )
-        cloud_task = mock.Mock(
-            id="task-failed",
-            state=TaskState.completed,
-            execution_info=mock.Mock(exit_code=1),
-        )
-        batch_client_class.return_value.task.list.return_value = [cloud_task]
-
-        check_nanopore_tasks()
-
-        processing_batch.refresh_from_db()
-        pending_batch.refresh_from_db()
-        run.refresh_from_db()
-        nanopore_run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "failed")
-        self.assertEqual(pending_batch.status, "pending")
-        self.assertEqual(run.workflow_state, "processing")
-        self.assertEqual(run.status, "Unprocessed")
-        self.assertEqual(nanopore_run.status, "processing")
-        submit.assert_called_once_with(queue="cowbat", args=(run.pk,))
-
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
-    def test_nanopore_success_completes_pending_generations_with_one_task(
-        self, credentials, batch_client_class
-    ):
-        run = self.create_run(
-            run_name="260825-nanopore-success-pending",
-            workflow_state="stopping",
-        )
-        nanopore_run = NanoporeRun.objects.create(sequencing_run=run)
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "sample.pod5"}],
-            sha256="manifest-sha",
-        )
-        processing_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            status="submitted",
-            azure_pool_id="pool-complete",
-            azure_job_id="job-complete",
-            azure_task_id="task-complete",
-        )
-        pending_manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "later.pod5"}],
-            sha256="later-manifest-sha",
-            generation=2,
-        )
-        pending_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=pending_manifest,
-            generation=2,
-            status="pending",
-            pod5_count=1,
-        )
-        cloud_task = mock.Mock(
-            id="task-complete",
-            state=TaskState.completed,
-            execution_info=mock.Mock(exit_code=0),
-        )
-        batch_client_class.return_value.task.list.return_value = [cloud_task]
-
-        check_nanopore_tasks()
-
-        processing_batch.refresh_from_db()
-        pending_batch.refresh_from_db()
-        run.refresh_from_db()
-        nanopore_run.refresh_from_db()
-        self.assertEqual(processing_batch.status, "complete")
-        self.assertEqual(pending_batch.status, "complete")
-        self.assertEqual(run.workflow_state, "complete")
-        self.assertEqual(run.status, "Processed")
-        self.assertEqual(nanopore_run.status, "complete")
-        batch_client = batch_client_class.return_value
-        batch_client.job.delete.assert_called_once_with(job_id="job-complete")
-        batch_client.pool.delete.assert_called_once_with(pool_id="pool-complete")
-
-    def test_nanopore_collection_defers_until_result_is_published(self):
-        run = self.create_run(
-            run_name="260925-nanopore-gated",
-            workflow_state="processing",
-        )
-        NanoporeRun.objects.create(
-            sequencing_run=run,
-            status="processing",
-            last_file_seen_at=django_timezone.now(),
-        )
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "first.pod5"}],
-            sha256="first-manifest",
-            generation=1,
-        )
-        active = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            generation=1,
-            status="running",
-            pod5_count=1,
-            azure_job_id="job-1",
-            azure_task_id="task-1",
-        )
-        waiting = NanoporeFile.objects.create(
-            sequencing_run=run,
-            relative_path="pass/wave-2/later.pod5",
-            blob_name="run/input/pod5/pass/wave-2/later.pod5",
-            size_bytes=123,
-            sha256="later",
-            status="uploaded",
-        )
-
-        result = collect_nanopore_iteration.run(run.pk, force=True)
-
-        waiting.refresh_from_db()
-        self.assertEqual(result["status"], "deferred")
-        self.assertEqual(
-            result["reason"],
-            "previous iteration result is not published",
-        )
-        self.assertEqual(result["active_batch_id"], active.pk)
-        self.assertIsNone(waiting.processing_batch_id)
-
-    def test_nanopore_collection_merges_waiting_waves_after_publication(self):
-        run = self.create_run(
-            run_name="260925-nanopore-merge",
-            workflow_state="processing",
-        )
-        NanoporeRun.objects.create(
-            sequencing_run=run,
-            status="processing",
-            last_file_seen_at=django_timezone.now(),
-        )
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "first.pod5"}],
-            sha256="first-manifest",
-            generation=1,
-        )
-        NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            generation=1,
-            status="running",
-            pod5_count=1,
-            last_completed_at=django_timezone.now(),
-            processed_pod5_count=1,
-            azure_job_id="job-1",
-            azure_task_id="task-1",
-        )
-        waiting = [
-            NanoporeFile.objects.create(
-                sequencing_run=run,
-                relative_path="pass/wave-{0}/file-{0}.pod5".format(wave),
-                blob_name=(
-                    "run/input/pod5/pass/wave-{0}/file-{0}.pod5"
-                ).format(wave),
-                size_bytes=100 + wave,
-                sha256="file-{0}".format(wave),
-                status="uploaded",
-            )
-            for wave in (2, 3, 4)
-        ]
-
-        with self.captureOnCommitCallbacks(execute=True):
-            with mock.patch(
-                "olc_webportalv2.cowbat.tasks."
-                "submit_nanopore_batch.apply_async"
-            ) as submit:
-                result = collect_nanopore_iteration.run(run.pk, force=True)
-
-        merged = NanoporeProcessingBatch.objects.get(
-            sequencing_run=run,
-            generation=2,
-        )
-        self.assertEqual(result["status"], "queued")
-        self.assertEqual(merged.pod5_count, 3)
-        self.assertEqual(len(merged.manifest.files), 3)
-        self.assertEqual(
-            set(NanoporeFile.objects.filter(
-                pk__in=[item.pk for item in waiting]
-            ).values_list("processing_batch_id", flat=True)),
-            {merged.pk},
-        )
-        submit.assert_called_once_with(queue="cowbat", args=(run.pk,))
-
-    def test_nanopore_result_publication_unlocks_next_collection(self):
-        run = self.create_run(
-            run_name="260925-nanopore-result",
-            workflow_state="processing",
-        )
-        NanoporeRun.objects.create(sequencing_run=run, status="processing")
-        manifest = NanoporeManifest.objects.create(
-            sequencing_run=run,
-            files=[{"relative_path": "first.pod5"}],
-            sha256="first-manifest",
-            generation=1,
-        )
-        processing_batch = NanoporeProcessingBatch.objects.create(
-            sequencing_run=run,
-            manifest=manifest,
-            generation=1,
-            status="running",
-            pod5_count=3,
-            report_url=(
-                "runs/260925-nanopore-result/iterations/"
-                "iteration-000001/manifests/iteration-000001.json"
-            ),
-        )
-        blob_service = mock.Mock()
-        blob_service.exists.return_value = True
-        blob_service.get_blob_to_text.return_value = mock.Mock(
-            content=(
-                '{"status":"completed","scheduler_exit_code":0,'
-                '"generation":1}'
-            )
-        )
-
-        completed, failed = _reconcile_nanopore_generation_results(
-            run,
-            blob_service,
-        )
-
-        processing_batch.refresh_from_db()
-        self.assertEqual([item.pk for item in completed], [processing_batch.pk])
-        self.assertEqual(failed, [])
-        self.assertIsNotNone(processing_batch.last_completed_at)
-        self.assertEqual(processing_batch.processed_pod5_count, 3)
-        self.assertEqual(processing_batch.status, "running")
-
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
+    @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     def test_marks_run_upload_error_when_read_pair_is_incomplete(
-        self, blob_service_class, isdir
+        self, storage_client_factory, isdir
     ):
         run = self.create_run()
-        blob_service_class.return_value.list_blobs.return_value = [
+        storage_client_factory.return_value.list_objects.return_value = [
             mock.Mock(name="SEQ-1_R1.fastq"),
         ]
-        blob_service_class.return_value.list_blobs.return_value[
+        storage_client_factory.return_value.list_objects.return_value[
             0
         ].name = "SEQ-1_R1.fastq"
 
@@ -648,20 +64,20 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.status, "UploadError")
 
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
+    @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.nextseq_run")
     def test_nextseq_run_uses_nextseq_branch(
         self, nextseq_run, blob_service_class, isdir
     ):
         run = self.create_run(nextseq=True)
-        blob_service_class.return_value.list_blobs.return_value = [
+        blob_service_class.return_value.list_objects.return_value = [
             mock.Mock(name="SEQ-1_R1.fastq"),
             mock.Mock(name="SEQ-1_R2.fastq"),
         ]
-        blob_service_class.return_value.list_blobs.return_value[
+        blob_service_class.return_value.list_objects.return_value[
             0
         ].name = "SEQ-1_R1.fastq"
-        blob_service_class.return_value.list_blobs.return_value[
+        blob_service_class.return_value.list_objects.return_value[
             1
         ].name = "SEQ-1_R2.fastq"
 
@@ -677,20 +93,20 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.task_retry_count, 1)
 
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
+    @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.submit_batch")
     def test_submits_complete_non_nextseq_run(
         self, submit_batch, blob_service_class, isdir
     ):
         run = self.create_run()
-        blob_service_class.return_value.list_blobs.return_value = [
+        blob_service_class.return_value.list_objects.return_value = [
             mock.Mock(name="SEQ-1_R1.fastq"),
             mock.Mock(name="SEQ-1_R2.fastq"),
         ]
-        blob_service_class.return_value.list_blobs.return_value[
+        blob_service_class.return_value.list_objects.return_value[
             0
         ].name = "SEQ-1_R1.fastq"
-        blob_service_class.return_value.list_blobs.return_value[
+        blob_service_class.return_value.list_objects.return_value[
             1
         ].name = "SEQ-1_R2.fastq"
 
@@ -722,7 +138,7 @@ class RunCowbatBatchTests(TestCase):
         }
 
         nextseq_run(
-            blob_client=mock.Mock(),
+            blob_service_client=mock.Mock(),
             blob_files=["SEQ-1_R1.fastq.gz"],
             container_name=run.container,
             sequencing_run=run,
@@ -744,7 +160,7 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.copy_blobs")
     @mock.patch(
         "olc_webportalv2.cowbat.tasks.create_sub_container",
-        side_effect=lambda blob_client, container_name, i: "{}-{}".format(
+        side_effect=lambda blob_service_client, container_name, i: "{}-{}".format(
             container_name, i
         ),
     )
@@ -760,7 +176,7 @@ class RunCowbatBatchTests(TestCase):
         ]
 
         result = no_sample_sheet(
-            blob_client=mock.Mock(),
+            blob_service_client=mock.Mock(),
             blob_files=blob_files,
             container_name="run-1",
             max_samples=1,
@@ -775,7 +191,7 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.copy_blobs")
     @mock.patch(
         "olc_webportalv2.cowbat.tasks.create_sub_container",
-        side_effect=lambda blob_client, container_name, i: "{}-{}".format(
+        side_effect=lambda blob_service_client, container_name, i: "{}-{}".format(
             container_name, i
         ),
     )
@@ -789,7 +205,7 @@ class RunCowbatBatchTests(TestCase):
         ]
 
         result = no_sample_sheet(
-            blob_client=mock.Mock(),
+            blob_service_client=mock.Mock(),
             blob_files=blob_files,
             container_name="run-1",
             max_samples=40,
@@ -822,11 +238,10 @@ class RunCowbatBatchTests(TestCase):
         self.assertIn(" -p", command)
         self.assertEqual(api_submit.call_args[1]["vm_size"], "Standard_D4s_v3")
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.requests.post")
-    def test_cowbat_api_submit_persists_batch_response(self, post):
+    @mock.patch("olc_webportalv2.cowbat.tasks.generic_api_submit")
+    def test_cowbat_api_submit_persists_batch_response(self, batch_submit):
         run = self.create_run()
-        response = post.return_value
-        response.json.return_value = {
+        batch_submit.return_value = {
             "pool_id": "pool-1",
             "job_id": "job-1",
             "tasks": ["task-1"],
@@ -848,7 +263,14 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.batch_submit_status, "Submitted")
         self.assertEqual(run.batch_submit_errors, "")
         self.assertEqual(run.azuretask.count(), 1)
-        self.assertEqual(post.call_count, 1)
+        batch_submit.assert_called_once_with(
+            command="assemble",
+            container_name=run.container,
+            vm_size="Standard_D4s_v3",
+            input_file_pattern=None,
+            analysis_type="COWBAT",
+            unique_id="FoodPort",
+        )
 
     def test_check_sample_sheet_format_detects_target(self):
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as sample_sheet:
@@ -937,10 +359,10 @@ class RunCowbatBatchTests(TestCase):
             with open(report_path, "w") as report:
                 report.write("SeqID,SampleName\nSEQ-1,Sample 1\n")
 
-            blob_client = mock.Mock()
+            storage_client = mock.Mock()
             add_read_filenames_to_metadata(
                 sequencing_run=run,
-                blob_client=blob_client,
+                blob_service_client=storage_client,
                 container_name="run-1",
                 reports_folder=reports_folder,
                 blob_filenames=[
@@ -956,21 +378,21 @@ class RunCowbatBatchTests(TestCase):
         self.assertIn("R1_file,R2_file", report_contents)
         self.assertIn("SEQ-1_R1.fastq.gz,SEQ-1_R2.fastq.gz", report_contents)
         self.assertEqual(run.errors, [])
-        self.assertEqual(blob_client.create_blob_from_path.call_count, 1)
+        self.assertEqual(storage_client.upload_file.call_count, 1)
 
     def test_add_read_filenames_ignores_missing_report(self):
         run = self.create_run()
-        blob_client = mock.Mock()
+        storage_client = mock.Mock()
 
         add_read_filenames_to_metadata(
             sequencing_run=run,
-            blob_client=blob_client,
+            blob_service_client=storage_client,
             container_name="run-1",
             reports_folder=tempfile.gettempdir(),
             blob_filenames=[],
         )
 
-        blob_client.create_blob_from_path.assert_not_called()
+        storage_client.upload_file.assert_not_called()
         run.refresh_from_db()
         self.assertEqual(run.errors, [])
 
@@ -986,7 +408,7 @@ class RunCowbatBatchTests(TestCase):
 
             add_read_filenames_to_metadata(
                 sequencing_run=run,
-                blob_client=mock.Mock(),
+                blob_service_client=mock.Mock(),
                 container_name="run-1",
                 reports_folder=reports_folder,
                 blob_filenames=[
@@ -1067,7 +489,7 @@ class RunCowbatBatchTests(TestCase):
         batch_client.task.list.return_value = [
             mock.Mock(execution_info=mock.Mock(exit_code=0)),
         ]
-        batch_error = BatchErrorException(lambda *args: None, mock.Mock())
+        batch_error = BatchServiceError(500, "Batch service failure")
         batch_client.job.delete.side_effect = batch_error
         batch_client.pool.delete.side_effect = batch_error
 
@@ -1257,10 +679,9 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.percent_complete, Decimal("66.90"))
 
     @mock.patch("olc_webportalv2.cowbat.tasks.handle_task_completion")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
+    @mock.patch("olc_webportalv2.cowbat.tasks.create_batch_client")
     def test_check_cowbat_tasks_routes_completed_tasks(
-        self, credentials, batch_client_class, handle_completion
+        self, batch_client_class, handle_completion
     ):
         run = self.create_run(job_id="job-1")
         azure_task = AzureTask.objects.create(
@@ -1268,7 +689,7 @@ class RunCowbatBatchTests(TestCase):
             exit_code_file="/tmp/exit_codes.txt",
         )
         batch_client_class.return_value.task.list.return_value = [
-            mock.Mock(state=TaskState.completed),
+            mock.Mock(state="completed"),
         ]
 
         check_cowbat_tasks()
@@ -1281,10 +702,9 @@ class RunCowbatBatchTests(TestCase):
         )
 
     @mock.patch("olc_webportalv2.cowbat.tasks.handle_incomplete_tasks")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
+    @mock.patch("olc_webportalv2.cowbat.tasks.create_batch_client")
     def test_check_cowbat_tasks_routes_active_tasks(
-        self, credentials, batch_client_class, handle_incomplete
+        self, batch_client_class, handle_incomplete
     ):
         run = self.create_run(job_id="job-1")
         azure_task = AzureTask.objects.create(
@@ -1306,11 +726,9 @@ class RunCowbatBatchTests(TestCase):
 
     @mock.patch("olc_webportalv2.cowbat.tasks.handle_task_completion")
     @mock.patch("olc_webportalv2.cowbat.tasks.handle_incomplete_tasks")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch.BatchServiceClient")
-    @mock.patch("olc_webportalv2.cowbat.tasks.batch_auth.SharedKeyCredentials")
+    @mock.patch("olc_webportalv2.cowbat.tasks.create_batch_client")
     def test_check_cowbat_tasks_records_batch_error_without_processing_run(
         self,
-        credentials,
         batch_client_class,
         handle_incomplete,
         handle_completion,
@@ -1320,8 +738,8 @@ class RunCowbatBatchTests(TestCase):
             sequencing_run=run,
             exit_code_file="/tmp/exit_codes.txt",
         )
-        batch_client_class.return_value.task.list.side_effect = BatchErrorException(
-            lambda *args: None, mock.Mock()
+        batch_client_class.return_value.task.list.side_effect = (
+            BatchServiceError(500, "Batch service failure")
         )
 
         check_cowbat_tasks()
@@ -1350,7 +768,7 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.add_read_filenames_to_metadata")
     @mock.patch("olc_webportalv2.cowbat.tasks.os.listdir", return_value=[])
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
+    @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.send_email")
     @override_settings(ENVIRONMENT="PROD")
     def test_cowbat_cleanup_downloads_reports_and_completes_run(
@@ -1376,11 +794,11 @@ class RunCowbatBatchTests(TestCase):
             "SampleSheet.csv",
             "unrelated.txt",
         ]
-        blob_service_class.return_value.list_blobs.return_value = [
+        blob_service_class.return_value.list_objects.return_value = [
             mock.Mock(name=blob_name) for blob_name in blob_names
         ]
         for blob, blob_name in zip(
-            blob_service_class.return_value.list_blobs.return_value, blob_names
+            blob_service_class.return_value.list_objects.return_value, blob_names
         ):
             blob.name = blob_name
         generate_link.return_value = "https://example.test/run.zip"
@@ -1391,7 +809,7 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.status, "Complete")
         self.assertEqual(run.percent_complete, Decimal("100.00"))
         self.assertEqual(run.download_link, "https://example.test/run.zip")
-        self.assertEqual(blob_service_class.return_value.get_blob_to_path.call_count, 7)
+        self.assertEqual(blob_service_class.return_value.download_file.call_count, 7)
         self.assertEqual(add_read_filenames.call_count, 1)
         self.assertEqual(load_report_mock.call_count, 1)
         self.assertEqual(make_archive.call_count, 1)
@@ -1406,7 +824,7 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.os.listdir", return_value=[])
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isfile", return_value=False)
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
-    @mock.patch("olc_webportalv2.cowbat.tasks.BlockBlobService")
+    @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.send_email")
     def test_cowbat_cleanup_records_missing_summary_report(
         self,
@@ -1423,7 +841,7 @@ class RunCowbatBatchTests(TestCase):
         run = self.create_run(container="191218-cal")
         blob = mock.Mock()
         blob.name = "reports/combinedMetadata.csv"
-        blob_service_class.return_value.list_blobs.return_value = [blob]
+        blob_service_class.return_value.list_objects.return_value = [blob]
         generate_link.return_value = "https://example.test/run.zip"
 
         cowbat_cleanup.run(run.pk)

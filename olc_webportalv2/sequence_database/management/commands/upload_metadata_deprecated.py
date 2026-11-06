@@ -1,17 +1,14 @@
 from django.core.management.base import BaseCommand
 from olc_webportalv2.metadata.models import SequenceData, LabID, Genus, Species, Serotype, MLST, RMLST, OLNID
-from django.conf import settings
 import csv
 import re
-
-from azure.storage.blob import BlockBlobService
+from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def upload_metadata(seqtracking_csv, seqmetadata_csv):
-    blob_client = BlockBlobService(account_name=settings.AZURE_ACCOUNT_NAME,
-                                   account_key=settings.AZURE_ACCOUNT_KEY)
+    blob_client = get_storage_client()
     seqids_in_cloud = []
-    generator = blob_client.list_blobs('processed-data')
+    generator = blob_client.list_objects('processed-data')
     for blob in generator:
         seqids_in_cloud.append(blob.name.replace('.fasta', ''))
 

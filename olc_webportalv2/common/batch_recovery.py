@@ -4,10 +4,10 @@
 
 import logging
 
-import azure.batch.models as batchmodels
 from django.conf import settings
 from django.core.cache import cache
 
+from olc_webportalv2.common.batch_client import BatchServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ def retry_failed_pool_resize(
 
     try:
         pool = batch_client.pool.get(pool_id=pool_id)
-    except Exception as exc:
+    except BatchServiceError as exc:
         message = str(exc).lower()
 
         if "does not exist" in message or "not found" in message:
@@ -192,12 +192,10 @@ def retry_failed_pool_resize(
     try:
         batch_client.pool.resize(
             pool_id=pool_id,
-            pool_resize_parameter=batchmodels.PoolResizeParameter(
-                target_dedicated_nodes=(target_dedicated_nodes),
-                target_low_priority_nodes=(target_low_priority_nodes),
-            ),
+            target_dedicated_nodes=target_dedicated_nodes,
+            target_low_priority_nodes=target_low_priority_nodes,
         )
-    except Exception as exc:
+    except BatchServiceError as exc:
         cache.delete(cache_key)
 
         logger.exception(

@@ -6,32 +6,17 @@ Collection of tasks for the COWBAT app
 import csv
 from datetime import (
     datetime,
-    timedelta,
     timezone,
 )
 from glob import glob
 from io import StringIO
 from time import sleep
-from urllib.parse import quote
 import fnmatch
 import json
 import logging
 import os
 import re
 import shutil
-
-# Azure-related imports
-from azure.batch import BatchClient
-from azure.batch.models import BatchTaskState
-from azure.core.exceptions import (
-    AzureError,
-    HttpResponseError,
-    ResourceNotFoundError,
-)
-from azure.storage.blob import (
-    BlobSasPermissions,
-    generate_blob_sas,
-)
 
 # Django-related imports
 from django.conf import settings
@@ -50,14 +35,12 @@ from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
 from olc_webportalv2.common.methods import (
     create_batch_client,
-    create_blob_service,
-    create_container,
-    download_blob_to_path,
-    download_container,
-    generate_download_link,
     generic_api_submit,
     send_email,
-    upload_blob_from_path,
+)
+from olc_webportalv2.common.batch_client import (
+    BatchServiceClient,
+    BatchServiceError,
 )
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
@@ -97,6 +80,59 @@ from olc_webportalv2.vir_typer.models import (
     VirTyperAzureRequest,
     VirTyperProject,
 )
+from olc_webportalv2.common.storage_client import (
+    StorageServiceError,
+    get_storage_client,
+)
+
+
+def create_container(container_name, blob_service_client=None):
+    (blob_service_client or get_storage_client()).ensure_container(container_name)
+
+
+def upload_blob_from_path(
+    container_name, blob_name, file_path, blob_service_client=None
+):
+    client = blob_service_client or get_storage_client()
+    client.ensure_container(container_name)
+    return client.upload_file(container_name, blob_name, file_path)
+
+
+def download_blob_to_path(
+    container_name, blob_name, file_path, blob_service_client=None
+):
+    client = blob_service_client or get_storage_client()
+    return client.download_file(container_name, blob_name, file_path)
+
+
+def download_container(blob_service_client, container_name, output_dir):
+    for item in blob_service_client.list_objects(container_name):
+        blob_service_client.download_file(
+            container_name,
+            item.name,
+            os.path.join(output_dir, container_name, item.name),
+        )
+
+
+def generate_download_link(
+    blob_service_client,
+    container_name,
+    blob_name=None,
+    output_zipfile=None,
+    expiry=8,
+):
+    if output_zipfile:
+        blob_name = os.path.basename(output_zipfile)
+        blob_service_client.ensure_container(container_name)
+        blob_service_client.upload_file(
+            container_name, blob_name, output_zipfile
+        )
+    return blob_service_client.create_transfer_url(
+        container_name,
+        "download",
+        name=blob_name,
+        expires_in_seconds=expiry * 24 * 60 * 60,
+    )
 
 
 @shared_task
@@ -156,7 +192,7 @@ def run_cowbat_batch(
     sequencing_run.save()
 
     try:
-        blob_service = create_blob_service()
+        blob_service = get_storage_client()
 
         # Check if all files are present. If not, change status to
         # 'UploadError'
@@ -164,7 +200,7 @@ def run_cowbat_batch(
             os.makedirs(run_folder)
         container_name = sequencing_run.run_name.lower().replace('_', '-')
         blob_filenames = []
-        blobs = blob_service.get_container_client(container_name).list_blobs()
+        blobs = blob_service.list_objects(container_name)
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
@@ -348,7 +384,7 @@ def nextseq_run(
     """
     Split NextSeq runs into manageable sizes, copy blobs to appropriate
     containers and run the assembly pipeline on each sub-sequencing run
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param blob_files: List of blob files
     :param sequencing_run: SequencingRun object
     """
@@ -458,7 +494,7 @@ def sample_sheet(
     """
     Download the SampleSheet.csv from the blob container and parse it to
     determine the number of samples and the number of sub-runs required
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param container_name: Name of the blob container
     :param run_name: Name of the sequencing run
     :param file_names: List of file names in the blob container
@@ -600,7 +636,7 @@ def create_sub_sample_sheet(
         sub_runs: dict):
     """
     Create a sub-sample sheet for each sub-run
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param container_name: Name of the blob container
     :param file_names: List of file names in the blob container
     :param file_path: Path to the sub-sample sheets
@@ -669,16 +705,13 @@ def create_sub_container(
 ):
     """
     Create a sub-container for the sub-run
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param container_name: Name of the blob container
     :param i: Index of the sub-run
     :return: Name of the sub-container
     """
     sub_container_name = container_name + f'-{i}'
-    create_container(
-        container_name=sub_container_name,
-        blob_service_client=blob_service_client,
-    )
+    create_container(sub_container_name, blob_service_client=blob_service_client)
     return sub_container_name
 
 
@@ -691,7 +724,7 @@ def copy_blobs(
 ):
     """
     Copy blobs from a container to a sub-container
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param container_name: Name of the blob container
     :param file_names: List of file names in the blob container
     :param sample_name: Name of the sample
@@ -700,27 +733,12 @@ def copy_blobs(
     fastq_files = [fastq for fastq in file_names if sample_name in fastq]
 
     for fastq in fastq_files:
-        sas_token = generate_blob_sas(
-            account_name=settings.AZURE_ACCOUNT_NAME,
-            container_name=container_name,
-            blob_name=fastq,
-            account_key=settings.AZURE_ACCOUNT_KEY,
-            permission=BlobSasPermissions(read=True),
-            expiry=datetime.now(timezone.utc) + timedelta(hours=1),
+        blob_service_client.copy_object(
+            container_name,
+            fastq,
+            sub_container_name,
+            fastq,
         )
-        
-        source_url = (
-            f"{blob_service_client.url}/"
-            f"{container_name}/"
-            f"{quote(fastq, safe='/')}?"
-            f"{sas_token}"
-        )
-
-        dest_blob_client = blob_service_client.get_blob_client(
-            container=sub_container_name,
-            blob=fastq,
-        )
-        dest_blob_client.start_copy_from_url(source_url)
 
 
 def archive_sub_run(
@@ -758,7 +776,7 @@ def no_sample_sheet(
     """
     Count the number of samples in a blob container and distribute the
     samples across sub-runs
-    :param blob_service_client: BlobServiceClient object
+    :param blob_service_client: Provider-neutral Storage client
     :param blob_files: List of file names in the blob container
     :param container_name: Name of the blob container
     :param max_samples: Maximum number of samples per sub-run
@@ -870,7 +888,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
         os.makedirs(reports_and_assemblies_folder)
     container_name = \
         sequencing_run.run_name.lower().replace('_', '-')
-    blob_service = create_blob_service()
+    blob_service = get_storage_client()
     # Download all reports and assemblies to reports and assemblies folder.
     assemblies_folder = os.path.join(
         'olc_webportalv2',
@@ -894,7 +912,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
     # List all the things in the container - if it's a file in reports folder
     # or an assembly, download it.
-    blobs = list(blob_service.get_container_client(container_name).list_blobs())
+    blobs = blob_service.list_objects(container_name)
     blob_filenames = [b.name for b in blobs]
     for blob in blobs:
         if fnmatch.fnmatch(
@@ -1157,7 +1175,9 @@ def add_read_filenames_to_metadata(
 
     # Convert any existing columns to string/object and replace NaN with ''
     for col in ('R1_file', 'R2_file'):
-        if col in df.columns:
+        if col not in df.columns:
+            df[col] = ''
+        else:
             df[col] = df[col].fillna('').astype(str)
 
     # Populate
@@ -1319,7 +1339,7 @@ def check_cowbat_progress(
                     sequencing_run.errors.append(type(exc))
                     sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
-    except (AzureError, HttpResponseError) as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Azure error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
@@ -1385,9 +1405,9 @@ def check_cowbat_tasks():
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != BatchTaskState.COMPLETED:
+                if cloudtask.state != "completed":
                     tasks_completed = False
-        except (AzureError, HttpResponseError) as exc:
+        except BatchServiceError as exc:
             sequencing_run.errors.append('Running task error:')
             sequencing_run.errors.append(str(exc))
             sequencing_run.save()
@@ -1488,7 +1508,7 @@ def handle_task_completion(
                 exit_codes_good = False
                 sequencing_run.errors.append('Exit code issue: ')
                 sequencing_run.errors.append(str(cloudtask.execution_info))
-    except (AzureError, HttpResponseError) as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Terminating task error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
@@ -1498,13 +1518,13 @@ def handle_task_completion(
     # files downloaded in tasks.
     try:
         batch_client.job.delete(job_id=batch_job_name)
-    except (AzureError, HttpResponseError) as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Terminating job error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
     try:
         batch_client.pool.delete(pool_id=sequencing_run.pool_id)
-    except (AzureError, HttpResponseError) as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Terminating pool error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
@@ -1555,7 +1575,7 @@ def handle_incomplete_tasks(
     # Locate all the batch pools
     try:
         pools = list(batch_client.pool.list())
-    except AzureError as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Pool listing error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
@@ -1569,7 +1589,7 @@ def handle_incomplete_tasks(
     # Recreate the pools generator
     try:
         pools = list(batch_client.pool.list())
-    except AzureError as exc:
+    except BatchServiceError as exc:
         sequencing_run.errors.append('Pool listing error:')
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
@@ -1634,10 +1654,10 @@ def check_tree_tasks() -> None:
         try:
             # Check if all tasks related to this job have completed
             tasks_completed = all(
-                task.state == BatchTaskState.COMPLETED
+                task.state == "completed"
                 for task in batch_client.task.list(batch_job_name)
             )
-        except (AzureError, HttpResponseError) as exc:
+        except BatchServiceError as exc:
             # If job doesn't exist, update status to 'Error' and delete
             # the task
             Tree.objects.filter(
@@ -1660,7 +1680,7 @@ def check_tree_tasks() -> None:
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                blob_client = create_blob_service()
+                blob_client = get_storage_client()
 
                 download_container(
                     blob_service_client=blob_client,
@@ -1697,9 +1717,11 @@ def check_tree_tasks() -> None:
                 for suffix in ['-input', '-output']:
                     try:
                         blob_client.delete_container(
-                            container_name=f'tree-{tree_object.pk}{suffix}'
+                            f'tree-{tree_object.pk}{suffix}'
                         )
-                    except ResourceNotFoundError:
+                    except StorageServiceError as exc:
+                        if exc.status_code != 404:
+                            raise
                         pass
 
                 # Prepare the output folder and remove the batch config file
@@ -1789,10 +1811,10 @@ def check_amr_summary_tasks():
         try:
             # Check if all tasks related to this job have completed
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != BatchTaskState.COMPLETED:
+                if cloudtask.state != "completed":
                     tasks_completed = False
         # If job doesn't exist, update status to 'Error' and delete the task
-        except (AzureError, HttpResponseError):
+        except BatchServiceError:
             AMRSummary.objects.filter(
                 pk=amr_task.amr_request.pk
             ).update(status='Error')
@@ -1813,7 +1835,7 @@ def check_amr_summary_tasks():
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                blob_client = create_blob_service()
+                blob_client = get_storage_client()
 
                 download_container(
                     blob_service_client=blob_client,
@@ -1933,10 +1955,10 @@ def check_vir_typer_tasks():
         tasks_completed = True
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != BatchTaskState.COMPLETED:
+                if cloudtask.state != "completed":
                     tasks_completed = False
         # Catch specific Azure Batch exceptions
-        except (AzureError, HttpResponseError):
+        except BatchServiceError:
             VirTyperProject.objects.filter(
                 pk=vir_typer_task.pk).update(status='Error')
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
@@ -1959,7 +1981,7 @@ def check_vir_typer_tasks():
             batch_client.pool.delete(pool_id=batch_job_name)
 
             if exit_codes_good:
-                blob_client = create_blob_service()
+                blob_client = get_storage_client()
 
                 vir_typer_result_container = batch_job_name
 
@@ -2049,9 +2071,9 @@ def check_prokka_tasks() -> None:
             # Check the status of each task in the batch
             for cloud_task in batch_client.task.list(batch_job_name):
                 # If any task is not completed, set tasks_completed to False
-                if cloud_task.state != BatchTaskState.COMPLETED:
+                if cloud_task.state != "completed":
                     tasks_completed = False
-        except (AzureError, HttpResponseError):
+        except BatchServiceError:
             # Handle exceptions
             ProkkaRequest.objects.filter(
                 pk=prokka_task.prokka_request.pk
@@ -2070,7 +2092,7 @@ def check_prokka_tasks() -> None:
 
 
 def handle_completed_tasks(
-    batch_client: BatchClient,
+    batch_client: BatchServiceClient,
     batch_job_name: str,
     prokka_object: ProkkaRequest,
     prokka_task: ProkkaAzureRequest
@@ -2113,7 +2135,7 @@ def handle_successful_tasks(
     """
     Handle successful tasks.
     """
-    blob_client = create_blob_service()
+    blob_client = get_storage_client()
 
     download_container(
         blob_service_client=blob_client,
@@ -2302,7 +2324,7 @@ def _populate_benchmark_seqids(
     tree and ensures the request reflects the exact archive that was analysed.
 
     Args:
-        blob_client (BlockBlobService): Azure Blob service client.
+        blob_client: Provider-neutral Storage client.
         geneseekr_request (GeneSeekrRequest): Completed benchmark request.
         output_container (str): Request container containing the SEQID file.
         run_folder (str): Local folder used while processing results.
@@ -2319,10 +2341,7 @@ def _populate_benchmark_seqids(
     )
     seqids_name = "{0}_seqids.txt".format(benchmark_name)
 
-    if not blob_client.exists(
-        container_name=output_container,
-        blob_name=seqids_name,
-    ):
+    if not blob_client.object_exists(output_container, seqids_name):
         raise FileNotFoundError(
             "Generated benchmark SEQID file is missing: {0}/{1}".format(
                 output_container,
@@ -2332,11 +2351,7 @@ def _populate_benchmark_seqids(
 
     os.makedirs(run_folder, exist_ok=True)
     local_seqids = os.path.join(run_folder, seqids_name)
-    blob_client.get_blob_to_path(
-        container_name=output_container,
-        blob_name=seqids_name,
-        file_path=local_seqids,
-    )
+    blob_client.download_file(output_container, seqids_name, local_seqids)
 
     with open(local_seqids, "r", encoding="utf-8") as seqids_object:
         sequence_ids = sorted({line.strip() for line in seqids_object if line.strip()})
@@ -2386,11 +2401,11 @@ def check_geneseekr_tasks():
             for cloudtask in batch_client.task.list(batch_job_name):
 
                 # If any task is not completed, set the flag to False
-                if cloudtask.state != BatchTaskState.COMPLETED:
+                if cloudtask.state != "completed":
                     tasks_completed = False
 
         # If an Azure-related error occurs, handle it
-        except (AzureError, HttpResponseError):
+        except BatchServiceError:
             GeneSeekrRequest.objects.filter(
                 pk=geneseekr_task.geneseekr_request.pk
             ).update(status='Error')
@@ -2434,9 +2449,9 @@ def check_geneseekr_tasks():
                     batch_job_name
                 )
 
-                blob_client = create_blob_service()
+                blob_client = get_storage_client()
 
-                blobs = blob_client.get_container_client(output_container).list_blobs()
+                blobs = blob_client.list_objects(output_container)
 
                 # Iterate over each blob
                 for blob in blobs:
@@ -2797,7 +2812,7 @@ def clean_old_containers():
     """
     Remove containers matching regexes if they are over one week old
     """
-    blob_client = create_blob_service()
+    blob_client = get_storage_client()
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = [
@@ -2815,14 +2830,19 @@ def clean_old_containers():
         re.compile(r'^prokka-\d+-\w+$'),
         re.compile(r'^tree-\d+-\w+$'),
         re.compile(r'^vir-typer-\d+-\w+$')]
-    generator = blob_client.list_containers(include_metadata=True)
+    generator = blob_client.list_containers()
     for container in generator:
         for pattern in patterns_to_search:
             if re.match(pattern, container.name):
+                if not container.created_at:
+                    continue
+                created_at = datetime.fromisoformat(
+                    container.created_at.replace('Z', '+00:00')
+                )
+                if created_at.tzinfo is None:
+                    created_at = created_at.replace(tzinfo=timezone.utc)
                 today = datetime.now(timezone.utc)
-                container_age = abs(
-                    container.properties.last_modified - today
-                ).days
+                container_age = abs(created_at - today).days
                 if container_age > 7:
                     blob_client.delete_container(container.name)
 
