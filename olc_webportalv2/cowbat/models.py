@@ -1,7 +1,7 @@
 
 from decimal import Decimal
 from django.db import models
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings  # To access azure credentials
 import os
@@ -60,8 +60,8 @@ class SequencingRun(models.Model):
     reverse_reads_to_upload = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     uploaded_forward_reads = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     uploaded_reverse_reads = ArrayField(models.CharField(max_length=24), blank=True, default=list)
-    sample_plate = JSONField(default=dict, blank=True, null=True)
-    realtime_strains = JSONField(default=dict, blank=True, null=True)
+    sample_plate = models.JSONField(default=dict, blank=True, null=True)
+    realtime_strains = models.JSONField(default=dict, blank=True, null=True)
     download_link = models.CharField(max_length=256, blank=True, default='')
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, default=list)
     container = models.CharField(max_length=64, blank=True, default='')
@@ -131,4 +131,4 @@ class ResearchRun(models.Model):
 
 class SummaryMetadata(models.Model):
     sequencing_run = models.ForeignKey(SequencingRun, on_delete=models.CASCADE, related_name='summarymetadata')
-    summary_results = JSONField(default=dict, blank=True, null=True)
+    summary_results = models.JSONField(default=dict, blank=True, null=True)

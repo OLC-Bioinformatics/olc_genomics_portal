@@ -1,16 +1,15 @@
-# Wheel 0.25+ needed to install certain packages on CPython 3.5+
-# like Pillow and psycopg2
-wheel==0.47.0
+# Build support for packages with native extensions.
+wheel==0.48.0
 
 # Bleeding edge Django
-django==6.0.6
+django==6.1.3
 
 # Configuration
 django-environ==0.14.0
 
 # Forms
-django-crispy-forms==2.6
-crispy-bootstrap5==2026.3
+django-crispy-forms==2.7
+crispy-bootstrap5==2026.9
 
 # Form autocompletion
 django-autocomplete-light==5.0.0
@@ -19,99 +18,101 @@ django-autocomplete-light==5.0.0
 django-model-utils==5.0.0
 
 # Images
-Pillow==12.2.0
+Pillow==13.0.0
 
 # Password storage
 argon2-cffi==25.1.0
 
 # For user registration, either via email or social
-django-allauth==65.18.0
+django-allauth==65.21.1
 
 # Python-PostgreSQL Database Adapter
-psycopg2==2.9.12
+psycopg2==2.9.13
 
 # Unicode slugification
 awesome-slugify==1.6.5
 
-# Redis support
+# Keep redis-py below 8 while Compose uses Redis 3.0.
 django-redis==7.0.0
 redis==6.4.0
 
-# Task Management and Monitoring
+# Redis 3.0 lacks ZRANGE BYSCORE, used by the Celery/Kombu 5.7 transport.
 celery==5.6.3
-flower==2.0.1
+flower==2.2.0
 
 # Testing
-selenium==4.45.0
-django-test-plus==2.4.1
+selenium==4.52.0
+django-test-plus==2.7.0
 
 # Sentry, for error reporting
-sentry-sdk==2.63.0
+sentry-sdk==2.74.0
 
 # Django rest framework
-djangorestframework==3.17.1
+djangorestframework==3.18.3
 
 # Custom requirements beyond cookiecutter-django
 adal==1.2.7
-amqp==5.3.1
+amqp==5.4.2
 asn1crypto==1.5.1
 atomicwrites==1.4.1
 attrs==26.1.0
 
 Babel==2.18.0
-billiard==4.2.4
-biopython==1.87
-certifi==2026.6.17
-cffi==2.0.0
-chardet==7.4.3
-Click==8.4.2
+billiard==4.3.2
+biopython==1.88
+certifi==2026.10.23
+cffi==2.1.1
+chardet==7.7.0
+Click==8.5.1
 confindr==0.8.2
-cryptography==49.0.0
+cryptography==50.0.2
 cycler==0.12.1
 defusedxml==0.7.1
-django-debug-toolbar==7.0.0
-django-filter==25.2
+django-debug-toolbar==8.0.0
+django-filter==26.2
 django-extensions==4.1
 django-multiselectfield==1.0.1
 django-pandas==0.6.7
-django-tables2==3.0.0
+django-tables2==3.0.1
 django-widget-tweaks==1.5.1
-gunicorn==26.0.0
-idna==3.18
+gunicorn==26.2.0
+idna==3.20
 interop==1.9.0
 isodate==0.7.2
-kiwisolver==1.5.0
+kiwisolver==1.5.1
 kombu==5.6.2
-matplotlib==3.11.0
-more-itertools==11.1.0
+matplotlib==3.11.2
+more-itertools==11.2.1
 msrest==0.7.1
 msrestazure==0.6.4.post1
-numpy==2.5.0
-oauthlib==3.3.1
+numpy==2.5.4
+oauthlib==4.0.1
 olefile==0.47
-pandas==3.0.3
-pipdeptree==3.1.0
-pluggy==1.6.0
+pandas==3.1.1
+pipdeptree==4.2.14
+pluggy==1.7.0
 psutil==7.2.2
 py==1.11.0
-pycparser==3.0
-PyJWT==2.13.0
-pyparsing==3.3.2
-pytest==9.1.1
+pycparser==3.12
+PyJWT==2.15.1
+pyparsing==3.3.3
+pytest==9.2.0
+# Keep python-dateutil on the compatible 2.x line for the current Celery stack.
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
-regex==2026.5.9
+regex==2026.11.7
 requests==2.34.2
 requests-oauthlib==2.0.0
 seaborn==0.13.2
-sqlparse==0.5.5
+sqlparse==0.6.1
 strainchoosr==0.1.7
 termcolor==3.3.0
-tornado==6.5.7
+tornado==6.6
+# awesome-slugify 1.6.5 requires Unidecode<0.05.
 Unidecode==0.4.21
-urllib3==2.7.0
+urllib3==2.8.0
 vine==5.1.0
-XlsxWriter==3.2.9
+XlsxWriter==3.3.1
 xlrd==2.0.2
 
 # Azure AD
@@ -119,4 +120,4 @@ django-microsoft-authentication==0.1.6
 
 # Redmine
 python-redmine==2.5.0
-pymysql==1.2.0
+pymysql==1.2.3

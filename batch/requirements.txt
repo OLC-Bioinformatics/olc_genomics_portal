@@ -1,2 +1,4 @@
+# 15.1.0 removed the model/client API used by this provider; keep the latest
+# compatible SDK until the provider is migrated to the new API surface.
 azure-batch==14.2.0
-requests>=2.31,<3
+requests==2.34.2

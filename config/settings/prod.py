@@ -67,6 +67,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'crispy_forms',  # Form layouts
+    'crispy_bootstrap5',  # Bootstrap 5 form templates
     'allauth',  # registration
     'allauth.account',  # registration
     'allauth.socialaccount',  # registration
@@ -354,8 +355,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Some really nice defaults
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 # ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Options are 'optional',
 # 'mandatory' and 'none'
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'

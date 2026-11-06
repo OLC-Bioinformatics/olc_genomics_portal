@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 
 # verbose names are needed for translation!
@@ -90,4 +90,4 @@ class MetaDataRequest(models.Model):
     seqids = ArrayField(
         models.CharField(max_length=24), blank=True, default=list
     )
-    criteria = JSONField(default=dict, blank=True, null=True)
+    criteria = models.JSONField(default=dict, blank=True, null=True)

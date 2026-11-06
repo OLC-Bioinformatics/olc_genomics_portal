@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from django.contrib.postgres.fields import JSONField
 from olc_webportalv2.users.models import User
 
 # GeneSeekr Models ------------------------------------------------------------------------------------------------------------------------------------
@@ -17,7 +16,7 @@ class GeneSeekrRequest(models.Model):
     geneseekr_type = models.CharField(max_length=48, default='BLASTN')
     # This will hold a dictionary of percent of isolates where gene/sequence was found for each gene:
     # In format (ish) {'gene1': 70, 'gene2: 80}
-    geneseekr_results = JSONField(default=dict, blank=True, null=True)
+    geneseekr_results = models.JSONField(default=dict, blank=True, null=True)
     gene_targets = ArrayField(models.CharField(max_length=128), blank=True, null=True, default=list)
     other_input_files = ArrayField(models.CharField(max_length=64), blank=True, default=list, null=True)
     name = models.CharField(max_length=50, blank=True, null=True)
@@ -39,7 +38,7 @@ class GeneSeekrDetail(models.Model):
     seqid = models.CharField(max_length=64, default='')
     # Pretty much identical to geneseekr request JSONField, but this one has percent ID for the
     # value instead of percent of times found.
-    geneseekr_results = JSONField(default=dict, blank=True, null=True)
+    geneseekr_results = models.JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):
         return self.seqid
@@ -101,7 +100,7 @@ class AMRSummary(models.Model):
 class AMRDetail(models.Model):
     amr_request = models.ForeignKey(AMRSummary, on_delete=models.CASCADE, related_name='amrdetail', null=True)
     seqid = models.CharField(max_length=24, default='')
-    amr_results = JSONField(default=dict, blank=True, null=True)
+    amr_results = models.JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):
         return self.seqid

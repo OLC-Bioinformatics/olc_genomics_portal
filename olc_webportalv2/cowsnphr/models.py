@@ -1,7 +1,6 @@
 # Django imports
 from django.contrib.postgres.fields import (
-    ArrayField,
-    JSONField
+    ArrayField
 )
 from django.db import models
 
@@ -45,7 +44,7 @@ class COWSNPhRRequest(models.Model):
     )
     # Report data
     alignment = models.TextField(blank=True, null=True)
-    amino_acid_summary_table = JSONField(default=dict, blank=True, null=True)
+    amino_acid_summary_table = models.JSONField(default=dict, blank=True, null=True)
     amino_acid_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,
@@ -60,21 +59,21 @@ class COWSNPhRRequest(models.Model):
         blank=True,
         null=True
     )
-    assembly_report = JSONField(default=dict, blank=True, null=True)
+    assembly_report = models.JSONField(default=dict, blank=True, null=True)
     assembly_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,
         blank=True,
         null=True
     )
-    contig_summary = JSONField(default=dict, blank=True, null=True)
+    contig_summary = models.JSONField(default=dict, blank=True, null=True)
     contig_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,
         blank=True,
         null=True
     )
-    nucleotide_summary_table = JSONField(default=dict, blank=True, null=True)
+    nucleotide_summary_table = models.JSONField(default=dict, blank=True, null=True)
     nucleotide_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,
@@ -90,14 +89,14 @@ class COWSNPhRRequest(models.Model):
         null=True
     )
     phylogenetic_tree = models.TextField(blank=True, null=True)
-    snv_matrix = JSONField(default=dict, blank=True, null=True)
+    snv_matrix = models.JSONField(default=dict, blank=True, null=True)
     snv_matrix_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,
         blank=True,
         null=True
     )
-    snv_summary = JSONField(default=dict, blank=True, null=True)
+    snv_summary = models.JSONField(default=dict, blank=True, null=True)
     snv_summary_headers = ArrayField(
         models.CharField(max_length=256),
         default=list,

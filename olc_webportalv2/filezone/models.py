@@ -1,6 +1,5 @@
 from django.contrib.postgres.fields import (
-    ArrayField,
-    JSONField
+    ArrayField
 )
 from django.db import models
 
@@ -81,8 +80,8 @@ class Regexes(models.Model):
         blank=True,
         null=True
     )
-    file_matches = JSONField(default=dict, blank=True, null=True)
-    file_ajax = JSONField(default=dict, blank=True, null=True)
+    file_matches = models.JSONField(default=dict, blank=True, null=True)
+    file_ajax = models.JSONField(default=dict, blank=True, null=True)
     status = models.CharField(max_length=64, default='Unprocessed')
 
     def __str__(self):
