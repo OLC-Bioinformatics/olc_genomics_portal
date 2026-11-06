@@ -5,7 +5,9 @@ OLC Webportal V2
 
 A web portal for accessing CFIA genomic data, with some tools included.
 
-The portal itself runs via docker-compose, and submits jobs to Azure Batch Service.
+The portal runs with Docker Compose. Django and Celery use internal Batch and
+Storage services rather than calling cloud-provider SDKs directly. Azure is the
+current backend; a local-cluster backend is planned.
 
 ## Installing
 
@@ -56,12 +58,29 @@ SENTRY_DSN=your_sentry_dsn
 
 The Dev deployment pipeline receives its environment values from the
 `FoodPort-Dev-Portal-Secrets` Azure DevOps variable group and transfers them to
-the VM over SSH. The VM does not need Key Vault access for deployment. The
-active `AzureBatch` submission client uses the VM's system-assigned managed
-identity; legacy COWBAT Batch API paths still use `BATCH_ACCOUNT_KEY`. Do not configure
-`VM_CLIENT_ID`, `VM_SECRET`, or `VM_TENANT`. `ENTRA_TENANT_ID` remains a
-non-secret setting for Microsoft sign-in; it is separate from the removed VM
-service-principal credentials.
+the VM over SSH. The VM does not need Key Vault access for deployment. Compose
+passes the Azure Storage account key only to the Storage service. Batch also
+receives the non-secret account name needed for its SAS-backed Blob mounts, but
+not the account key. Batch account credentials go only to Batch; web and Celery
+containers receive neither provider's credentials. The internal service tokens
+are domain-separated values derived from `SECRET_KEY`.
+
+## Provider services
+
+The Django/web container uses provider-neutral HTTP clients. The Batch service
+owns job submission, progress, cancellation, and pool/node operations. The
+Storage service owns remote object operations and issues short-lived transfer
+URLs for web and Batch clients. Azure SDK imports and provider credentials are
+isolated to the service that owns each provider operation. Compose currently
+selects `STORAGE_BACKEND=azure`; a local-cluster implementation is future work.
+
+The Batch service preserves `/submit_batch_request`'s pool/job/task response
+shape and submits asynchronously. Its configured analysis types are `COWBAT`,
+`AmpliSeq`, and `COWSNPhR`; input object listing/copying and mount/output SAS
+generation are delegated to Storage. The mount SAS expires after seven days,
+so a long-lived pool may require credential renewal. Gallery-image Trusted
+Launch metadata discovery and `no_tidy=true` are not supported by this
+submission path; unsupported analysis types and `no_tidy=true` return an error.
 
 #### Research run file management
 
@@ -315,11 +334,10 @@ For the migration, create a dedicated user-assigned managed identity and a
 managed-identity/workload-identity-federation service connection in the
 FoodPort project. Authorize only the required pipelines, and keep the existing
 service-principal connection until the new connection has been tested. Do not
-reuse `foodportbatch`, which is the Batch service identity. The portal VM's
-system-assigned identity remains separate and is used by the active
-`AzureBatch` client. Legacy COWBAT Batch paths and Blob Storage still use
-separately configured account keys. The Dev deployment's secret values are
-provided by its Azure DevOps variable group.
+reuse `foodportbatch`, which is the Batch service identity. The Dev deployment's
+provider credentials are provided by its Azure DevOps variable group and are
+scoped by Compose to the Batch or Storage service; the Django/web container
+uses the authenticated internal service APIs.
 
 ### Pipeline purposes
 
