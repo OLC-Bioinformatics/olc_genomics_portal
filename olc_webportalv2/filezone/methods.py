@@ -44,11 +44,11 @@ def generate_sas(blob_name, container_name):
         blob_client=get_storage_client(),
         container_name=container_name,
         blob_name=blob_name,
-        expiry=730
+        expiry=7
     )
 
 
-def generate_download_link(blob_client, container_name, blob_name, expiry=8):
+def generate_download_link(blob_client, container_name, blob_name, expiry=7):
     """
     Generate a download link with Content-Disposition for the blob, good for
     up to expiry days.

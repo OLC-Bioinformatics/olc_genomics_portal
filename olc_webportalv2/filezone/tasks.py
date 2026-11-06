@@ -322,8 +322,7 @@ def archive(blob_client, blob_list, container_name, container_pk):
         sas_url = generate_archive_download_link(
             blob_service_client=blob_client,
             container_name='filezone-archives',
-            output_zipfile=archive_file,
-            expiry=730
+            output_zipfile=archive_file
         )
         return sas_url
     except Exception as exc:
@@ -375,8 +374,7 @@ def archive_multiple_containers(
         sas_url = generate_archive_download_link(
             blob_service_client=blob_client,
             container_name='filezone-archives',
-            output_zipfile=archive_file,
-            expiry=730
+            output_zipfile=archive_file
         )
         return sas_url
     except Exception as exc:
