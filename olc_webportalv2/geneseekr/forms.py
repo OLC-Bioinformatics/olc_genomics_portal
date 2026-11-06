@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 
 # Local imports
 from olc_webportalv2.common.benchmarks import BENCHMARK_CHOICES
+from olc_webportalv2.common.forms import MultipleFileField
 from olc_webportalv2.metadata.models import (
     Genus,
     SequenceData
@@ -221,7 +222,7 @@ class TreeForm(forms.Form):
     name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
 
-    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
+    other_files = MultipleFileField(required=False, label='')
     number_diversitree_strains = forms.IntegerField(label= _('Number of diversitree strains'), min_value=0,required=False)
 
     def clean(self):
@@ -279,7 +280,7 @@ class TreeForm(forms.Form):
 class AMRForm(forms.Form):
     name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
-    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
+    other_files = MultipleFileField(required=False, label='')
 
     def clean(self):
         super().clean()
@@ -330,7 +331,7 @@ class AMRForm(forms.Form):
 class ProkkaForm(forms.Form):
     name = forms.CharField(label=_('Name: '), required=False, widget=forms.TextInput(attrs={'placeholder': _('Optional')}))
     seqids = forms.CharField(max_length=100000, widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}), label='', required=False)
-    other_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
+    other_files = MultipleFileField(required=False, label='')
 
     def clean(self):
         super().clean()

@@ -4,6 +4,7 @@ from django.forms.formsets import BaseFormSet
 from django.forms import ModelForm
 from django import forms
 
+from olc_webportalv2.common.forms import MultipleFileField
 from olc_webportalv2.vir_typer.models import VirTyperProject, VirTyperRequest
 
 
@@ -114,7 +115,7 @@ class VirTyperSampleForm(BaseModelForm):
 
 
 class VirTyperFileForm(forms.Form):
-    query_files = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False, label='')
+    query_files = MultipleFileField(required=False, label='')
 
     def clean(self):
         super().clean()
