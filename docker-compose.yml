@@ -134,6 +134,7 @@ services:
       "-m",
       "flower",
       "--broker=redis://redis:6379/0",
+      "flower",
       "--port=8888"
     ]
     ports:
@@ -219,4 +220,3 @@ volumes:
   redmine-db:
   rag-db:
   rag-model-cache:
-
