@@ -25,19 +25,25 @@ RUN micromamba config remove-key channels --system || true && \
     micromamba config append channels olcbioinformatics --system && \
     micromamba config list
 
-# Create isolated env with Python 3.12 and deps (tqdm pinned)
+# Create an isolated service environment without the legacy AzureBatch wrapper.
 RUN micromamba create -y -n batch \
     -c conda-forge -c bioconda -c olcbioinformatics \
     --strict-channel-priority \
     python=3.12 \
     gunicorn \
     flask \
-    azure_batch==0.0.13 && \
+    pip && \
     micromamba clean -a -y
 
 # Use env without activation
 ENV CONDA_DEFAULT_ENV=batch
 ENV PATH=/opt/conda/envs/batch/bin:$PATH
+
+COPY requirements.txt /opt/batch-requirements.txt
+RUN python -m pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    -r /opt/batch-requirements.txt
 
 WORKDIR /app
 

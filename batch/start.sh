@@ -12,12 +12,9 @@ echo "[batch] Working dir: $(pwd)"
 echo "[batch] Listing /app:"
 ls -la /app || true
 
-# Warn if API or env file missing
+# Warn if API file is missing
 if [ ! -f /app/api.py ]; then
   echo "[batch] WARNING: /app/api.py not found. Is the volume mounted?"
-fi
-if [ ! -f /app/env ]; then
-  echo "[batch] WARNING: /app/env not found. Batch jobs will fail without credentials."
 fi
 
 # Start gunicorn
