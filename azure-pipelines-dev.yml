@@ -845,6 +845,15 @@ stages:
           "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST REMOTE_SECRET_DIR=$safe_REMOTE_SECRET_DIR bash -s" <<'EOF'
           set -euo pipefail
           umask 077
+          ca_bundle=/etc/ssl/certs/ca-certificates.crt
+          if [ ! -r "$ca_bundle" ]; then
+            echo "ERROR: system CA bundle is missing or unreadable: $ca_bundle" >&2
+            exit 1
+          fi
+          export CURL_CA_BUNDLE="$ca_bundle"
+          export PIP_CERT="$ca_bundle"
+          export REQUESTS_CA_BUNDLE="$ca_bundle"
+          export SSL_CERT_FILE="$ca_bundle"
 
           trap 'rm -rf -- "$REMOTE_SECRET_DIR"' EXIT
 
@@ -884,6 +893,13 @@ stages:
             echo "Conda environment 'foodport' already exists"
           fi
 
+          "$CONDA_BIN" config --set ssl_verify "$ca_bundle"
+          "$CONDA_BIN" env config vars set -n foodport \
+            CURL_CA_BUNDLE="$ca_bundle" \
+            PIP_CERT="$ca_bundle" \
+            REQUESTS_CA_BUNDLE="$ca_bundle" \
+            SSL_CERT_FILE="$ca_bundle"
+
           # --- Refresh the host environment only when its requirements change ---
           requirements_hash_file="$HOME/miniconda/envs/foodport/.requirements-base.sha256"
           requirements_hash="$(sha256sum "$REMOTE_DIR/requirements/base.txt" | cut -d ' ' -f1)"
@@ -898,6 +914,8 @@ stages:
           else
             echo "Python requirements unchanged; skipping host dependency installation"
           fi
+
+          "$CONDA_BIN" run -n foodport python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Conda Requests TLS check passed')"
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
@@ -929,8 +947,8 @@ stages:
       displayName: 'Deploy portal on dev VM'
       env:
         FOODPORT_SECRET_VARIABLES_READY: $(FOODPORT_SECRET_VARIABLES_READY)
-        FOODPORT_DJANGO_SECRET_KEY: $(FOODPORT_DJANGO_SECRET_KEY)
-        FOODPORT_DJANGO_SECRET_KEY_BASE: $(FOODPORT_DJANGO_SECRET_KEY_BASE)
+        FOODPORT_DJANGO_SECRET_KEY: $(foodport_django_secret_key)
+        FOODPORT_DJANGO_SECRET_KEY_BASE: $(foodport_django_secret_key_base)
         REDMINE_DB_PASSWORD: $(REDMINE_DB_PASSWORD)
         RAG_DB_PASSWORD: $(RAG_DB_PASSWORD)
         AZURE_ACCOUNT_NAME: $(AZURE_ACCOUNT_NAME)
