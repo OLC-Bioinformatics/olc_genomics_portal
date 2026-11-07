@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import permissions, status, views
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.response import Response
 
@@ -167,7 +168,7 @@ class EntraDesktopExchangeView(views.APIView):
 
 
 class EntraDesktopLogoutView(views.APIView):
-    authentication_classes = (DesktopTokenAuthentication,)
+    authentication_classes = (DesktopTokenAuthentication, TokenAuthentication)
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
