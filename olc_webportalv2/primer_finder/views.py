@@ -19,26 +19,32 @@ from django.shortcuts import (
     render
 )
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+
+# Third-party imports
 
 # Portal-specific imports
 from olc_webportalv2.geneseekr.forms import EmailForm
 
 from olc_webportalv2.primer_finder.forms import (
-    PrimerValidatorForm,
-    PrimerVerifierForm
+    ValidatorExperimentForm,
+    ValidatorTargetFormSetFactory,
+    VerifierForm,
+    canonicalize_primer_base_name,
 )
 from olc_webportalv2.primer_finder.methods import (
-    exclusivity_panel_retrieve,
     populate_panel,
     populate_primer_details,
     populate_primer_sets,
 )
 from olc_webportalv2.primer_finder.models import (
-    PrimerVerifierRequest,
+    VerifierRequest,
     ValidatorPanel,
     ValidatorPrimers,
     ValidatorPrimerSet,
     ValidatorRequest,
+    ValidatorSample,
+    ValidatorTarget,
     VerifierPanel,
     VerifierPrimerSet
 )
@@ -70,7 +76,7 @@ def primer_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_home(request: HttpRequest) -> HttpResponse:
+def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     """
     View for the primer validator home page. This view is responsible for
     rendering the home page, and for deleting projects from the database.
@@ -82,12 +88,12 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
 
     # Retrieve all the projects from the database that are associated with the
     # current user
-    verifier_projects = PrimerVerifierRequest.objects.filter(user=request.user)
+    verifier_projects = VerifierRequest.objects.filter(user=request.user)
     if request.method == "POST":
 
         # If the delete button is pressed, delete the project from the database
         if request.POST.get('delete'):
-            query = PrimerVerifierRequest.objects.filter(
+            query = VerifierRequest.objects.filter(
                 pk=request.POST.get('delete')
             )
             query.delete()
@@ -103,7 +109,7 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_request(request: HttpRequest) -> HttpResponse:
+def primer_verifier_request(request: HttpRequest) -> HttpResponse:
     """
     View for the primer validator request form. This view is responsible for
     rendering the form, validating the form, and saving the form to the
@@ -117,9 +123,9 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
     Returns:
         object: The HTTP response object.
     """
-    form = PrimerVerifierForm()
+    form = VerifierForm()
     if request.method == "POST":
-        form = PrimerVerifierForm(request.POST)
+        form = VerifierForm(request.POST)
         if form.is_valid():
             # Save the form but don't commit yet
             validator_request = form.save(commit=False)
@@ -130,11 +136,38 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
             validator_request.probe_sequence = form.cleaned_data.get(
                 'probe_sequence'
             )
-            validator_request.inclusivity_panel = form.cleaned_data.get(
+            inclusivity_panel = list(form.cleaned_data.get(
                 'inclusivity_panel'
-            )
-            validator_request.exclusivity_panel = form.cleaned_data.get(
+            ) or [])
+            exclusivity_panel = list(form.cleaned_data.get(
                 'exclusivity_panel'
+            ) or [])
+            for panel_values, field_name in (
+                (inclusivity_panel, 'inclusivity_benchmark'),
+                (exclusivity_panel, 'exclusivity_benchmark'),
+            ):
+                benchmark = form.cleaned_data.get(field_name)
+                if benchmark and benchmark not in panel_values:
+                    panel_values.append(benchmark)
+            validator_request.inclusivity_panel = inclusivity_panel
+            validator_request.exclusivity_panel = exclusivity_panel
+            validator_request.inclusivity_genus = form.cleaned_data.get(
+                'inclusivity_genus', ''
+            )
+            validator_request.exclusivity_genus = form.cleaned_data.get(
+                'exclusivity_genus', ''
+            )
+            validator_request.inclusivity_seqids = form.cleaned_data.get(
+                'inclusivity_seqids', []
+            )
+            validator_request.exclusivity_seqids = form.cleaned_data.get(
+                'exclusivity_seqids', []
+            )
+            validator_request.inclusivity_benchmark = form.cleaned_data.get(
+                'inclusivity_benchmark', ''
+            )
+            validator_request.exclusivity_benchmark = form.cleaned_data.get(
+                'exclusivity_benchmark', ''
             )
             validator_request.project_name = form.cleaned_data.get(
                 'project_name'
@@ -145,7 +178,7 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
             # Give the project a name if it was not provided
             if not validator_request.project_name:
                 validator_request.project_name = \
-                    PrimerVerifierRequest.objects.get(
+                    VerifierRequest.objects.get(
                         pk=validator_request.pk
                     ).container_namer()
             validator_request.save()
@@ -175,9 +208,9 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
 
             # Create queries for the list of the entries in the
             # inclusivity_panel and exclusivity_panel
-            inclusivity_query = PrimerVerifierRequest.objects.filter(
+            inclusivity_query = VerifierRequest.objects.filter(
                 pk=validator_request.pk)[0].inclusivity_panel
-            exclusivity_query = PrimerVerifierRequest.objects.filter(
+            exclusivity_query = VerifierRequest.objects.filter(
                 pk=validator_request.pk)[0].exclusivity_panel
 
             # Populate the database with the inclusivity/exclusivity panel and
@@ -192,17 +225,35 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                 pk=validator_request.pk,
                 panel_type='exclusivity'
             )
+            populate_panel(
+                genera=([form.cleaned_data.get('inclusivity_genus')] if
+                        form.cleaned_data.get('inclusivity_genus') else []) +
+                (['selected-seqids'] if form.cleaned_data.get(
+                    'inclusivity_seqids'
+                ) else []),
+                pk=validator_request.pk,
+                panel_type='inclusivity'
+            )
+            populate_panel(
+                genera=([form.cleaned_data.get('exclusivity_genus')] if
+                        form.cleaned_data.get('exclusivity_genus') else []) +
+                (['selected-seqids'] if form.cleaned_data.get(
+                    'exclusivity_seqids'
+                ) else []),
+                pk=validator_request.pk,
+                panel_type='exclusivity'
+            )
 
             # Create and submit the batch job
             run_primer_verifier.apply_async(
-                queue='cowbat',
+                queue='primer_finder',
                 kwargs={'verifier_request_pk': validator_request.pk},
                 countdown=10
             )
-            # Redirect the view to validator_processing
+            # Redirect the view to verifier_processing
             return redirect(
-                'primer_finder:primer_validator_processing',
-                validator_pk=validator_request.pk
+                'primer_finder:primer_verifier_processing',
+                verifier_pk=validator_request.pk
             )
     return render(
         request,
@@ -215,9 +266,9 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_processing(
+def primer_verifier_processing(
     request: HttpRequest,
-    validator_pk: int
+    verifier_pk: int
 ) -> HttpResponse:
     """
     View for the primer validator processing page. This view is responsible for
@@ -228,10 +279,10 @@ def primer_validator_processing(
 
     :return: The HTTP response object
     """
-    # Retrieve the PrimerVerifierRequest object
-    validator_request = get_object_or_404(
-        PrimerVerifierRequest,
-        pk=validator_pk
+    # Retrieve the VerifierRequest object
+    verifier_request = get_object_or_404(
+        VerifierRequest,
+        pk=verifier_pk
     )
 
     # Create an instance of the EmailForm
@@ -249,20 +300,20 @@ def primer_validator_processing(
 
             # Ensure that the email is provided and a string
             if email_address and isinstance(email_address, str):
-                if validator_request.emails_array is None:
-                    validator_request.emails_array = []
+                if verifier_request.emails_array is None:
+                    verifier_request.emails_array = []
 
                 # If the email is not already in the database, save it
-                if email_address not in validator_request.emails_array:
-                    validator_request.emails_array.append(email_address)
-                    validator_request.save()
+                if email_address not in verifier_request.emails_array:
+                    verifier_request.emails_array.append(email_address)
+                    verifier_request.save()
                     form = EmailForm()
                     messages.success(request, _("Email saved"))
     return render(
         request,
         'primer_finder/verifier_processing.html',
         {
-            'primer_verifier_request': validator_request,
+            'primer_verifier_request': verifier_request,
             'form': form
         }
     )
@@ -270,9 +321,9 @@ def primer_validator_processing(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_results(
+def primer_verifier_results(
     request: HttpRequest,
-    validator_pk: int
+    verifier_pk: int
 ) -> HttpResponse:
     """
     View for the primer validator results page. This view is responsible for
@@ -284,21 +335,21 @@ def primer_validator_results(
 
     :return: The HTTP response object
     """
-    validator_request = get_object_or_404(
-        PrimerVerifierRequest,
-        pk=validator_pk
+    verifier_request = get_object_or_404(
+        VerifierRequest,
+        pk=verifier_pk
     )
 
     # Retrieve the PrimerSet object(s) corresponding to the verifier_request
     # primary key
     primer_set = VerifierPrimerSet.objects.filter(
-        verifier_request_id=validator_request.pk
+        verifier_request_id=verifier_request.pk
     )
 
     # Retrieve the Panel object(s) corresponding to the verifier_request
     # primary key
     panel_set = VerifierPanel.objects.filter(
-        verifier_request_id=validator_request.pk
+        verifier_request_id=verifier_request.pk
     )
 
     # Create a list of all the primer names
@@ -329,8 +380,8 @@ def primer_validator_results(
         request,
         'primer_finder/verifier_results.html',
         {
-            'request': validator_request,
-            'mismatch_details': json.loads(validator_request.summary),
+            'request': verifier_request,
+            'mismatch_details': json.loads(verifier_request.summary),
             'primers': primer_list,
             'clean_primers': clean_primers,
             'panels': sorted(
@@ -349,7 +400,7 @@ def primer_validator_results(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_home(request: HttpRequest) -> HttpResponse:
+def primer_validator_home(request: HttpRequest) -> HttpResponse:
     """
     View for the primer verifier home page. This view is responsible for
     rendering the home page and for displaying the user's primer verifier
@@ -365,12 +416,11 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     validator_projects = ValidatorRequest.objects.filter(user=request.user)
 
     # Handle project deletion
-    if request.method == "POST":
-        if request.POST.get('delete'):
-            query = ValidatorRequest.objects.filter(
-                pk=request.POST.get('delete')
-            )
-            query.delete()
+    if request.method == "POST" and request.POST.get('delete'):
+        query = ValidatorRequest.objects.filter(
+            pk=request.POST.get('delete')
+        )
+        query.delete()
 
     return render(request,
                   'primer_finder/validator_home.html',
@@ -381,7 +431,7 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_request(
+def primer_validator_request(
     request: HttpRequest
 ) -> HttpResponse:
     """
@@ -394,130 +444,190 @@ def primer_verifier_request(
     Returns:
         HttpResponse: The HTTP response object.
     """
-    # Create the form
-    form = PrimerValidatorForm()
-    if request.method == "POST":
-        # Populate the form with data from the request
-        form = PrimerValidatorForm(request.POST)
-
-        # Form validation
-        if form.is_valid():
-            # Save the information from the ModelForm into the database
-            # (but don't commit yet; certain required elements still need to
-            # be populated)
-            verifier_request = form.save(commit=False)
-
-            # Populate the missing elements as required
-            verifier_request.user = request.user
-            verifier_request.forward_primer = form.cleaned_data.get(
-                'forward_primer'
+    validator_data = request.POST.copy() if request.method == 'POST' else None
+    if validator_data is not None:
+        validator_data.setdefault('mismatches', '3')
+        validator_data.setdefault('min_amplicon_size', '0')
+        validator_data.setdefault('max_amplicon_size', '1500')
+        validator_data.setdefault('range_buffer', '0')
+        validator_data.setdefault('contig_breaks', '')
+    form = ValidatorExperimentForm(
+        validator_data,
+        request.FILES or None,
+        initial={
+            'mismatches': 3,
+            'min_amplicon_size': 0,
+            'max_amplicon_size': 1500,
+            'range_buffer': 0,
+            'contig_breaks': False,
+        }
+    )
+    target_forms = ValidatorTargetFormSetFactory(
+        request.POST or None, request.FILES or None, prefix='targets'
+    )
+    form_valid = form.is_valid() if request.method == 'POST' else False
+    target_forms.classification_rule = (
+        form.cleaned_data.get('classification_rule', '') if form_valid else ''
+    ) or request.POST.get('classification_rule', '')
+    target_forms.logic = (
+        form.cleaned_data.get('logic', '')
+        if form_valid else request.POST.get('logic', '')
+    )
+    target_forms_valid = (
+        target_forms.is_valid() if request.method == 'POST' else False
+    )
+    if form_valid and target_forms_valid:
+        selected_categories = form.cleaned_data.get(
+            'gene_exclusion_categories', []
+        )
+        has_gene_reference = any(
+            (row.get('gene_sequence') or '').strip() or
+            row.get('reference_fasta')
+            for row in target_forms.cleaned_data
+        )
+        if selected_categories and not has_gene_reference:
+            form.add_error(
+                'gene_exclusion_categories',
+                'Sample exclusion gene-analysis categories require at least '
+                'one pasted gene reference sequence or uploaded FASTA file.'
             )
-            verifier_request.reverse_primer = form.cleaned_data.get(
-                'reverse_primer'
+            form_valid = False
+    if request.method == "POST" and form_valid and target_forms_valid:
+        rows = target_forms.cleaned_data
+        first = rows[0]
+        primer_lines = []
+        with transaction.atomic():
+            verifier_request = ValidatorRequest.objects.create(
+                user=request.user,
+                project_name=form.cleaned_data.get('project_name') or '',
+                status='Processing',
+                mismatches=form.cleaned_data['mismatches'],
+                min_amplicon_size=form.cleaned_data['min_amplicon_size'],
+                max_amplicon_size=form.cleaned_data['max_amplicon_size'],
+                contig_breaks=form.cleaned_data['contig_breaks'],
+                range_buffer=form.cleaned_data['range_buffer'],
+                forward_primer=first['forward_primer'],
+                reverse_primer=first['reverse_primer'],
+                probe_sequence='',
+                inclusivity_panel=form.cleaned_data['inclusivity_panel'],
+                exclusivity_panel=form.cleaned_data['exclusivity_panel'],
+                gene_exclusion_categories=form.cleaned_data.get(
+                    'gene_exclusion_categories', []
+                ),
             )
-            verifier_request.probe_sequence = form.cleaned_data.get(
-                'probe_sequence'
-            )
-            verifier_request.inclusivity_panel = form.cleaned_data.get(
-                'inclusivity_panel'
-            )
-            verifier_request.project_name = form.cleaned_data.get(
-                'project_name'
-            )
-            verifier_request.status = 'Processing'
-
-            # Save the entry
-            verifier_request.save()
-
-            # Give the project a name if it was not provided
             if not verifier_request.project_name:
-                # Set the name of the project using the generic name used for
-                # batch jobs, containers, etc.
-                # ('primer-validator-' + primer_validator_request.pk)
-                verifier_request.project_name = \
-                    ValidatorRequest.objects.get(
-                        pk=verifier_request.pk
-                    ).container_namer()
-                verifier_request.save()
+                verifier_request.project_name = verifier_request.container_namer()
+            sample_map = {}
+            for row in rows:
+                primer_name = canonicalize_primer_base_name(
+                    row['target_name']
+                )
 
-            # Extract the list of all primer base names
-            primer_list = form.cleaned_data.get('primer_list') or []
+                if not primer_name:
+                    raise ValueError(
+                        'Validator target name could not be canonicalized'
+                    )
 
-            # Enter the list of primer base names into the database
-            populate_primer_sets(
-                pk=verifier_request.pk,
-                primer_list=primer_list,
-                model=ValidatorPrimerSet
-            )
+                sample = sample_map.get(primer_name)
+                if sample is None:
+                    sample = ValidatorSample.objects.create(
+                        validator_request=verifier_request,
+                        name=primer_name,
+                        logic=form.cleaned_data['logic'],
+                        classification_rule=form.cleaned_data[
+                            'classification_rule'
+                        ],
+                    )
+                    sample_map[primer_name] = sample
 
-            # Populate the database with the details of the primers
-            primer_details = form.cleaned_data.get('primer_details') or {}
+                target = ValidatorTarget.objects.create(
+                    sample=sample,
+                    name=primer_name,
+                    forward_primer=row['forward_primer'],
+                    reverse_primer=row['reverse_primer'],
+                    probe_sequence=row.get('probe_sequence', ''),
+                    probe_evaluation_method=row.get(
+                        'probe_evaluation_method',
+                        'percent_identity'
+                    ),
+                    probe_percent_identity=(
+                        row.get('probe_percent_identity')
+                        if row.get('probe_percent_identity') is not None
+                        else 80.0
+                    ),
+                    probe_max_differences=(
+                        row.get('probe_max_differences')
+                        if row.get('probe_max_differences') is not None
+                        else 2
+                    ),
+                    gene_sequence=row.get('gene_sequence', ''),
+                )
 
-            # Create a query of all the primer base_names
-            primer_query = ValidatorPrimerSet.objects.filter(
-                validator_request_id=verifier_request.pk
-            )
-            populate_primer_details(
-                query=primer_query,
-                details=primer_details,
-                model=ValidatorPrimers
-            )
-            # Create queries for the list of the entries in the
-            # inclusivity_panel and exclusivity_panel
-            inclusivity_query = ValidatorRequest.objects.filter(
-                pk=verifier_request.pk)[0].inclusivity_panel
+                reference_fasta = row.get('reference_fasta')
+                if reference_fasta:
+                    target.reference_fasta = reference_fasta
+                    target.save(update_fields=['reference_fasta'])
 
-            # Populate the exclusivity query
-            exclusivity_panel = exclusivity_panel_retrieve(
-                inclusivity=inclusivity_query[0]
-            )
-            verifier_request.exclusivity_panel = exclusivity_panel
+                primer_lines.extend([
+                    '>{0}-F'.format(primer_name),
+                    row['forward_primer'],
+                    '>{0}-R'.format(primer_name),
+                    row['reverse_primer'],
+                ])
+            verifier_request.primer_sequences = '\n'.join(primer_lines)
             verifier_request.save()
-
-            # Create queries for the list of the entries in the
-            # inclusivity_panel and exclusivity_panel
-            exclusivity_query = ValidatorRequest.objects.filter(
-                pk=verifier_request.pk
-            )[0].exclusivity_panel
-
-            # Populate the database with the inclusivity/exclusivity panel and
-            # the genus/genera
+            for row in rows:
+                primer_name = canonicalize_primer_base_name(
+                    row['target_name']
+                )
+                primer_set = ValidatorPrimerSet.objects.create(
+                    validator_request=verifier_request,
+                    primer_name=primer_name,
+                )
+                ValidatorPrimers.objects.create(
+                    primer=primer_set,
+                    primer_header=primer_name + '-F',
+                    primer_sequence=row['forward_primer'],
+                )
+                ValidatorPrimers.objects.create(
+                    primer=primer_set,
+                    primer_header=primer_name + '-R',
+                    primer_sequence=row['reverse_primer'],
+                )
             populate_panel(
-                genera=inclusivity_query,
+                genera=verifier_request.inclusivity_panel,
                 pk=verifier_request.pk,
                 panel_type='inclusivity',
                 panel=ValidatorPanel
             )
             populate_panel(
-                genera=exclusivity_query,
+                genera=verifier_request.exclusivity_panel,
                 pk=verifier_request.pk,
                 panel_type='exclusivity',
                 panel=ValidatorPanel
             )
-
-            # Create and submit the batch job
-            run_primer_validator.apply_async(
-                queue="cowbat",
-                kwargs={"validator_request_pk": verifier_request.pk},
-                countdown=10,
-            )
-            # Redirect the view to primer_verifier_processing
-            return redirect(
-                'primer_finder:primer_verifier_processing',
-                verifier_pk=verifier_request.pk
-            )
+        run_primer_validator.apply_async(
+            queue="primer_finder",
+            kwargs={"validator_request_pk": verifier_request.pk},
+            countdown=10,
+        )
+        return redirect(
+            'primer_finder:primer_validator_processing',
+            validator_pk=verifier_request.pk
+        )
     return render(request,
                   'primer_finder/validator_request.html',
                   {
                       'form': form,
+                      'target_forms': target_forms,
                   })
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_processing(
+def primer_validator_processing(
     request: HttpRequest,
-    verifier_pk: int
+    validator_pk: int
 ) -> HttpResponse:
     """
     View for the primer verifier processing page. This view is responsible for
@@ -531,9 +641,9 @@ def primer_verifier_processing(
         HttpResponse: The HTTP response object.
     """
     # Retrieve the ValidatorRequest object
-    verifier_request = get_object_or_404(
+    validator_request = get_object_or_404(
         ValidatorRequest,
-        pk=verifier_pk
+        pk=validator_pk
     )
 
     # Create the email form
@@ -549,28 +659,28 @@ def primer_verifier_processing(
 
             # Validate the email address
             if email_address and isinstance(email_address, str):
-                if verifier_request.emails_array is None:
-                    verifier_request.emails_array = []
+                if validator_request.emails_array is None:
+                    validator_request.emails_array = []
 
                 # Check if the email address is already in the array
-                if email_address not in verifier_request.emails_array:
-                    verifier_request.emails_array.append(email_address)
-                    verifier_request.save()
+                if email_address not in validator_request.emails_array:
+                    validator_request.emails_array.append(email_address)
+                    validator_request.save()
                     form = EmailForm()
                     messages.success(request, _("Email saved"))
     return render(request,
                   'primer_finder/validator_processing.html',
                   {
-                      'primer_validator_request': verifier_request,
+                    'primer_validator_request': validator_request,
                       'form': form
                   })
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_results(
+def primer_validator_results(
     request: HttpRequest,
-    verifier_pk: int
+    validator_pk: int
 ) -> HttpResponse:
     """
     View for the primer verifier results page. This view is responsible for
@@ -584,20 +694,20 @@ def primer_verifier_results(
         HttpResponse: The HTTP response object.
     """
     # Retrieve the ValidatorRequest object
-    verifier_request = get_object_or_404(
-        ValidatorRequest, pk=verifier_pk
+    validator_request = get_object_or_404(
+        ValidatorRequest, pk=validator_pk
     )
 
     # Retrieve the PrimerSet object(s) corresponding to the validator_request
     # primary key
     primer_set = ValidatorPrimerSet.objects.filter(
-        validator_request_id=verifier_request.pk
+        validator_request_id=validator_request.pk
     )
 
     # Retrieve the Panel object(s) corresponding to the validator_request
     # primary key
     panel_set = ValidatorPanel.objects.filter(
-        validator_request_id=verifier_request.pk
+        validator_request_id=validator_request.pk
     )
 
     # Create a list of all the primer names
@@ -631,9 +741,9 @@ def primer_verifier_results(
         request,
         'primer_finder/verifier_results.html',
         {
-            'request': verifier_request,
+            'request': validator_request,
             'mismatch_details': json.loads(
-                verifier_request.summary
+                validator_request.summary
             ),
             'primers': primer_list,
             'clean_primers': clean_primers,
@@ -655,7 +765,7 @@ def primer_verifier_results(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_report(request, verifier_pk):
+def primer_validator_report(request, validator_pk):
     """
     View for the primer verifier report page.
 
@@ -663,7 +773,7 @@ def primer_verifier_report(request, verifier_pk):
         request (object): The HTTP request object.
         verifier_pk (int): The primary key of the ValidatorRequest object.
     """
-    verifier_request = get_object_or_404(ValidatorRequest, pk=verifier_pk)
+    verifier_request = get_object_or_404(ValidatorRequest, pk=validator_pk)
 
     # Retrieve the PrimerSet object(s) corresponding to the validator_request
     # primary key
@@ -735,11 +845,11 @@ def finder_home(request):
     Args:
         request (object): The HTTP request object.
     """
-    finder_projects = PrimerVerifierRequest.objects.filter(user=request.user)
+    finder_projects = VerifierRequest.objects.filter(user=request.user)
 
     if request.method == "POST":
         if request.POST.get('delete'):
-            query = PrimerVerifierRequest.objects.filter(
+            query = VerifierRequest.objects.filter(
                 pk=request.POST.get('delete')
             )
             query.delete()

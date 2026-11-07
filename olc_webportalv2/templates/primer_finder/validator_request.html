@@ -1,102 +1,432 @@
 {% extends "base.html" %}
-{#Head container#}
-{% load static %}
-{% load bootstrap %}
-{% load crispy_forms_tags %}
-{% load i18n widget_tweaks %}
+{% load i18n %}
 {% block content %}
+<style>
+    .validator-shell { max-width: 1080px; margin: 0 auto; color: #263238; }
+    .validator-shell h2 { color: #17324d; font-size: 1.75rem; font-weight: 600; margin-bottom: 1.5rem; }
+    .validator-intro { margin: 1.5rem 0 1.75rem; }
+    .validator-intro label, .validator-target label, .gene-tools label,
+    .validator-settings label, .validator-rules label { display: block; font-weight: 600; margin-bottom: .4rem; color: #34495e; }
+    .validator-intro input { max-width: 32rem; }
+    .validator-shell input, .validator-shell textarea, .validator-shell select { border-color: #c8d1d9; }
+    .validator-shell input:focus, .validator-shell textarea:focus, .validator-shell select:focus { border-color: #4d83a8; box-shadow: 0 0 0 .15rem rgba(77, 131, 168, .15); }
+    .validator-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .validator-panel { min-width: 0; padding: 1rem 1.1rem 1.1rem; border: 1px solid #d7e0e7; border-top: 3px solid #4d83a8; border-radius: .35rem; background: #fbfcfd; }
+    .validator-panel h5 { margin: 0 0 .8rem; color: #34495e; font-size: 1rem; font-weight: 600; letter-spacing: 0; }
+    .validator-panel.exclusivity { border-top-color: #c8873d; }
+    .validator-panel .btn { margin: .2rem .35rem .2rem 0; border-radius: .3rem !important; white-space: normal; }
+    .validator-panel .btn-group { display: flex; flex-wrap: wrap; width: 100%; gap: .25rem; }
+    .validator-panel .btn-group .btn { margin: 0; }
+    .gene-category-disabled { opacity: .55; cursor: not-allowed; }
+    .gene-category-option input[type="checkbox"]:disabled {
+        accent-color: #4d83a8;
+    }
+    .validator-target { background: #fff; border: 1px solid #d7e0e7 !important; border-radius: .35rem; padding: 1.25rem 1.25rem 1rem; margin-bottom: 1.25rem; }
+    .validator-target legend { float: none; width: auto; padding: 0 .5rem; margin: 0 0 .6rem -.5rem; color: #17324d; font-size: 1rem; font-weight: 600; line-height: 1.25; }
+    .validator-target input, .validator-target textarea, .validator-target select { width: 100%; max-width: 100%; }
+    .validator-target input[name$="-forward_primer"],
+    .validator-target input[name$="-reverse_primer"],
+    .validator-target input[name$="-probe_sequence"],
+    .validator-target textarea[name$="-gene_sequence"] {
+        font-family: "Courier New", Courier, monospace;
+        line-height: 1.35;
+    }
+    .target-row { margin-bottom: .5rem; }
+    .probe-evaluation { display: none; margin: .25rem 0 .85rem; padding: .5rem .7rem; border: 1px solid #d7e0e7; border-radius: .3rem; background: #f7f9fa; }
+    .probe-evaluation.is-visible { display: block; }
+    .probe-evaluation-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .65rem; }
+    .probe-evaluation-title { color: #34495e; font-size: .9rem; font-weight: 600; }
+    .probe-option { display: inline-flex; align-items: center; gap: .3rem; margin: 0; padding: .15rem .25rem; }
+    .probe-option.inactive {
+            opacity: 1;
+        }
 
-<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
-<br>
+        .probe-option.inactive input[type="number"],
+        .probe-option.inactive .probe-unit {
+            opacity: .45;
+        }
 
-<h2>{%trans "PrimerVerifier Request"%}</h2>
-<form action='' enctype="multipart/form-data" method="post">
-    {% csrf_token %}
-    {% if form.errors %}
-    <div class="alert alert-danger" role="alert" align="center">
-        {{ form.non_field_errors|escape }}
-    </div>
-    {% endif %}
-    {{ form.project_name|as_crispy_field }}
-    {{ form.forward_primer|as_crispy_field }}
-    {{ form.reverse_primer|as_crispy_field }}
+        .probe-option.inactive label {
+            opacity: 1;
+            cursor: pointer;
+        }
+    .probe-option label { display: inline-flex; align-items: center; gap: .3rem; margin: 0; font-size: .9rem; font-weight: 500; white-space: nowrap; }
+    .probe-option input[type="radio"] { width: auto; margin: 0; }
+    .probe-option input[type="number"] { width: 5.25rem; max-width: 5.25rem; padding: .2rem .35rem; }
+    .probe-unit { color: #687783; font-size: .85rem; }
+    .probe-or { color: #687783; font-size: .75rem; font-weight: 700; }
+    .probe-evaluation-help { margin: .25rem 0 0; color: #687783; font-size: .78rem; }
 
-    <!--Probe-->
-    <div class="container">
-        <div class="row">
-            <div style="margin-right: 2em">
-                {{ form.probe_sequence|as_crispy_field}}
+    .gene-tools { background: #f7f9fa; padding: 1rem; border: 1px solid #d7e0e7; border-radius: .3rem; }
+    .gene-tools textarea {
+        min-height: 7rem;
+        font-family: "Courier New", Courier, monospace;
+        line-height: 1.35;
+        white-space: pre;
+        tab-size: 4;
+    }
+    .gene-note { color: #687783; font-size: .9rem; margin: 0 0 .75rem; }
+    .gene-dropzone { border: 1px dashed #9eabb5; border-radius: .3rem; padding: 1rem; text-align: center; background: #fff; }
+    .validator-settings { background: #f7f9fa; border: 1px solid #d7e0e7; border-radius: .35rem; padding: 1rem; }
+    .validator-settings input[type="number"], .validator-settings select { max-width: 10rem; }
+    .validator-rules { margin-top: 1.5rem; }
+    .validator-actions { border-top: 1px solid #d7e0e7; margin-top: 1.75rem; padding-top: 1.25rem; }
+    .validator-actions #add-validator-target { margin-right: .75rem; }
+    @media (max-width: 767.98px) {
+        .validator-panels { grid-template-columns: 1fr; }
+        .validator-actions #add-validator-target { display: block; margin: 0 0 .75rem; }
+    }
+</style>
+<div class="container">
+    <p class="text-right"><a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
+    <h2>{% trans "PrimerValidator Request" %}</h2>
+    <div class="validator-shell">
+    <form action="" enctype="multipart/form-data" method="post">
+        {% csrf_token %}
+        {% if form.errors or target_forms.errors %}
+        <div class="alert alert-danger" role="alert">
+            <strong>{% trans "Please correct the errors below before running PrimerValidator." %}</strong>
+            <ul class="mb-0 mt-2">
+                {% for field, errors in form.errors.items %}
+                <li>{{ field|title }}: {{ errors|striptags }}</li>
+                {% endfor %}
+                {% for error in target_forms.non_form_errors %}
+                <li>{% trans "Target validation" %}: {{ error|striptags }}</li>
+                {% endfor %}
+                {% for target_form in target_forms %}
+                    {% for field, errors in target_form.errors.items %}
+                    <li>{% trans "Target" %}: {{ field|title }}: {{ errors|striptags }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <div class="validator-intro">
+            {{ form.project_name.label_tag }}
+            {{ form.project_name }}
+            <small class="form-text text-muted">{% trans "Optional: give this experiment a name you will recognize later." %}</small>
+            {{ form.project_name.errors }}
+        </div>
+        {{ form.non_field_errors }}
+        <div class="validator-panels">
+            <div class="validator-panel inclusivity">
+                <h5>{% trans "Inclusivity panel" %}</h5>
+                <div class="btn-group flex-wrap" data-panel="inclusivity_panel">
+                    {% for checkbox in form.inclusivity_panel %}
+                    <label class="btn btn-success">
+                        {{ checkbox.tag }} {{ checkbox.choice_label }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="validator-panel exclusivity">
+                <h5>{% trans "Exclusivity panel" %}</h5>
+                <div class="btn-group flex-wrap" data-panel="exclusivity_panel">
+                    {% for checkbox in form.exclusivity_panel %}
+                    <label class="btn btn-warning">
+                        {{ checkbox.tag }} {{ checkbox.choice_label }}
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Inclusivity panel-->
-    <label>
-        {{ form.inclusivity_panel.label }}
-    </label>
-    <div class="container">
-        <div class="row">
-            <div class="btn-group">
-                {% for checkbox in form.inclusivity_panel %}
-                <label class="btn btn-success">
+        <div class="form-row validator-settings mb-4">
+            <div class="col-md-2 mb-2">
+                <label for="id_mismatches" title="Maximum mismatches allowed across the forward and reverse primer matches.">
+                    Maximum Number of Mismatches
+                </label>{{ form.mismatches }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label for="id_min_amplicon_size" title="Reject amplicons shorter than this length. Use 0 for no minimum.">
+                    Minimum Amplicon Size
+                </label>{{ form.min_amplicon_size }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label for="id_max_amplicon_size" title="Reject amplicons longer than this length. Use 0 for no maximum.">
+                    Maximum Amplicon Size
+                </label>{{ form.max_amplicon_size }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label for="id_range_buffer" title="Minimum number of bases between separate amplicons.">
+                    Minimum distance between amplicons
+                </label>{{ form.range_buffer }}
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="form-check">
+                    <label for="id_contig_breaks" title="Allow a primer pair to span a break between contigs.">
+                        Allow searching for amplicons over multiple contigs?
+                    </label>
+                    {{ form.contig_breaks }}
+                </div>
+            </div>
+        </div>
+        <div class="form-row validator-rules mb-4">
+            <div class="col-md-5 mb-2">
+                {{ form.classification_rule.label_tag }}{{ form.classification_rule }}
+                <small class="form-text text-muted">{{ form.classification_rule.help_text }}</small>
+            </div>
+            <div class="col-md-3 mb-2">
+                {{ form.logic.label_tag }}{{ form.logic }}
+                <small class="form-text text-muted">{{ form.logic.help_text }}</small>
+                <small id="logic-rule-note" class="form-text text-muted" style="display:none;">
+                    {% trans "Disabled because the selected classification rule defines the required targets." %}
+                </small>
+            </div>
+        </div>
+        <div class="validator-rules mb-4">
+            {{ form.gene_exclusion_categories.label_tag }}
+            <div class="btn-group flex-wrap" data-panel="gene_exclusion_categories">
+                {% for checkbox in form.gene_exclusion_categories %}
+                <label class="btn btn-outline-secondary mr-2 mb-2 gene-category-option" title="{{ checkbox.choice_label }}">
                     {{ checkbox.tag }} {{ checkbox.choice_label }}
                 </label>
                 {% endfor %}
             </div>
+            <small id="gene-category-availability-note" class="form-text text-muted">
+                {% trans "Sample exclusion gene-analysis categories are unavailable until one or more gene references are supplied." %}
+            </small>
+            <small class="form-text text-muted">
+                {% trans "Samples with supplied gene references matching the selected categories will be removed from summary totals and model results, but remain in the Excel report. With the Salmonella rule, only invA or stn references can cause exclusion." %}
+            </small>
         </div>
+        {{ target_forms.management_form }}
+        <div id="validator-targets">
+        {% for target_form in target_forms %}
+            <fieldset class="validator-target border rounded p-3 mb-3">
+                <legend>{% trans "Target" %}</legend>
+                {{ target_form.non_field_errors }}
+                <div class="form-row target-row">
+                    <div class="col-md-3 mb-2">
+                        {{ target_form.target_name.label_tag }}{{ target_form.target_name }}
+                        <small class="form-text text-muted target-rule-note"></small>
+                    </div>
+                </div>
+                <div class="form-row target-row">
+                    <div class="col-md-4 mb-2"><label>{% trans "Forward primer" %}</label>{{ target_form.forward_primer }}</div>
+                    <div class="col-md-4 mb-2"><label>{% trans "Reverse primer" %}</label>{{ target_form.reverse_primer }}</div>
+                    <div class="col-md-4 mb-2"><label title="Optional target-specific probe. If supplied, the amplicon and probe criterion must both pass.">{% trans "Probe (optional)" %}</label>{{ target_form.probe_sequence }}</div>
+                </div>
+                <div class="probe-evaluation" aria-live="polite" aria-hidden="true">
+                    <div class="probe-evaluation-row">
+                        <span class="probe-evaluation-title" title="The target counts as detected only when its amplicon is present and its probe passes the selected criterion.">{% trans "Probe passes by:" %}</span>
+                        <div class="probe-option probe-percent-option" title="The observed probe percent identity must be equal to or greater than this value.">
+                            <label>{{ target_form.probe_evaluation_method.0.tag }} {% trans "Identity" %}</label>
+                            {{ target_form.probe_percent_identity }} <span class="probe-unit">%</span>
+                        </div>
+                        <span class="probe-or">{% trans "OR" %}</span>
+                        <div class="probe-option probe-difference-option" title="The sum of probe mismatches and gaps must be equal to or less than this value.">
+                            <label>{{ target_form.probe_evaluation_method.1.tag }} {% trans "Differences" %}</label>
+                            {{ target_form.probe_max_differences }} <span class="probe-unit">{% trans "max" %}</span>
+                        </div>
+                    </div>
+                    <p class="probe-evaluation-help">{% trans "Identity is the minimum accepted percentage. Differences are mismatches plus gaps and must not exceed the maximum." %}</p>
+                    {{ target_form.probe_evaluation_method.errors }}
+                    {{ target_form.probe_percent_identity.errors }}
+                    {{ target_form.probe_max_differences.errors }}
+                </div>
+                <button type="button" class="toggle-gene btn btn-outline-primary btn-sm">
+                    {% trans "Add gene reference sequence" %}
+                </button>
+                <div class="gene-box gene-tools mt-3" style="display:none;">
+                    <label>{% trans "Gene reference" %}</label>
+                    <p class="gene-note">{% trans "Paste a sequence or FASTA records, upload a multi-FASTA file, or use both." %}</p>
+                    {{ target_form.gene_sequence }}
+                    <div class="gene-dropzone mt-3">
+                        <label>{% trans "Target-specific multi-FASTA upload" %}</label>
+                        {{ target_form.reference_fasta }}
+                    </div>
+                </div>
+                {% for hidden in target_form.hidden_fields %}{{ hidden }}{% endfor %}
+            </fieldset>
+        {% endfor %}
+        </div>
+        <div class="validator-actions">
+            <button type="button" id="add-validator-target" class="btn btn-outline-success">
+                {% trans "Add another target" %}
+            </button>
+            <button type="submit" class="btn btn-primary">{% trans "Run PrimerValidator" %}</button>
+        </div>
+    </form>
     </div>
+</div>
+<script>
+(function () {
+    var container = document.getElementById('validator-targets');
+    var addButton = document.getElementById('add-validator-target');
+    var total = document.getElementById('id_targets-TOTAL_FORMS');
+    var panelInputs = document.querySelectorAll(
+        '[data-panel="inclusivity_panel"] input[type="checkbox"], ' +
+        '[data-panel="exclusivity_panel"] input[type="checkbox"]'
+    );
+    var logicSelect = document.getElementById('id_logic');
+    var classificationSelect = document.getElementById('id_classification_rule');
+    var logicRuleNote = document.getElementById('logic-rule-note');
+    var geneCategoryAvailabilityNote = document.getElementById('gene-category-availability-note');
+    var categoryDescriptions = {
+        FRAME_SHIFT: 'Frame shift: adjacent gene-reference hits are out of frame.',
+        INTERNAL_STOP: 'Internal stop: the translated gene contains a premature stop codon.',
+        PARTIAL_CONTIG_END: 'Partial contig end: the gene hit reaches the end of the contig.',
+        EXTENDED: 'Extended gene: the hit spans the reference but has no expected terminal stop.'
+    };
+    var targetRuleMessages = {
+        salmonella: 'Salmonella classification uses invA or stn. At least one is required; extra targets are allowed but do not affect classification or exclusions.',
+        AND: 'All logic selected. Every target is required. Extra targets are allowed.',
+        OR: 'Any logic selected. At least one target is required. Extra targets are allowed.',
+        none: 'No classification or target logic selected. Use one standalone target.'
+    };
+    function syncTargetRuleHelp() {
+        var rule = classificationSelect && classificationSelect.value;
+        var logic = logicSelect && logicSelect.value;
+        var message = targetRuleMessages[rule === 'salmonella' ? 'salmonella' : logic || 'none'];
+        document.querySelectorAll('.target-rule-note').forEach(function (note) {
+            note.textContent = message;
+        });
+    }
+    function syncProbeEvaluation(fieldset) {
+        var probe = fieldset.querySelector('input[name$="-probe_sequence"]');
+        var evaluation = fieldset.querySelector('.probe-evaluation');
+        var radios = fieldset.querySelectorAll('input[name$="-probe_evaluation_method"]');
+        var percent = fieldset.querySelector('input[name$="-probe_percent_identity"]');
+        var differences = fieldset.querySelector('input[name$="-probe_max_differences"]');
+        if (!probe || !evaluation || !percent || !differences) { return; }
+        var hasProbe = Boolean(probe.value.trim());
+        var selected = fieldset.querySelector('input[name$="-probe_evaluation_method"]:checked');
+        if (!selected && radios.length) { radios[0].checked = true; selected = radios[0]; }
+        evaluation.classList.toggle('is-visible', hasProbe);
+        evaluation.setAttribute('aria-hidden', hasProbe ? 'false' : 'true');
+        radios.forEach(function (radio) { radio.disabled = !hasProbe; });
+        var usePercent = !selected || selected.value === 'percent_identity';
+        percent.disabled = !hasProbe || !usePercent;
+        differences.disabled = !hasProbe || usePercent;
+        fieldset.querySelector('.probe-percent-option').classList.toggle('inactive', hasProbe && !usePercent);
+        fieldset.querySelector('.probe-difference-option').classList.toggle('inactive', hasProbe && usePercent);
+    }
+    function wireProbeEvaluation(fieldset) {
+        var probe = fieldset.querySelector('input[name$="-probe_sequence"]');
+        var radios = fieldset.querySelectorAll('input[name$="-probe_evaluation_method"]');
+        if (probe) { probe.addEventListener('input', function () { syncProbeEvaluation(fieldset); }); }
+        radios.forEach(function (radio) { radio.addEventListener('change', function () { syncProbeEvaluation(fieldset); }); });
+        syncProbeEvaluation(fieldset);
+    }
+    function addTarget() {
+        var index = parseInt(total.value, 10);
+        var source = container.querySelector('.validator-target');
+        var clone = source.cloneNode(true);
+        clone.innerHTML = clone.innerHTML.replace(/targets-0/g, 'targets-' + index);
+        Array.prototype.forEach.call(clone.querySelectorAll('input, textarea'), function (field) {
+            if (field.type === 'hidden') { return; }
+            if (field.type === 'radio' || field.type === 'checkbox') { field.checked = false; return; }
+            if (field.name && field.name.endsWith('-probe_percent_identity')) { field.value = '80.0'; }
+            else if (field.name && field.name.endsWith('-probe_max_differences')) { field.value = '3'; }
+            else { field.value = ''; }
+        });
+        var percentRadio = clone.querySelector('input[name$="-probe_evaluation_method"][value="percent_identity"]');
+        if (percentRadio) { percentRadio.checked = true; }
+        clone.querySelector('.gene-box').style.display = 'none';
+        container.appendChild(clone);
+        total.value = index + 1;
+        wireGeneToggle(clone);
+        wireDropzone(clone);
+        wireReferenceFields(clone);
+        wireProbeEvaluation(clone);
+        syncGeneCategories();
+    }
+    function syncMinimumTargets() {
+        var classificationRule = classificationSelect && classificationSelect.value;
+        var logicRule = logicSelect && logicSelect.value;
+        var requiresMultipleTargets = classificationRule === 'salmonella' ||
+            logicRule === 'AND' || logicRule === 'OR';
+        if (requiresMultipleTargets &&
+            container.querySelectorAll('.validator-target').length < 2) {
+            addTarget();
+        }
+    }
+    function syncClassificationRule() {
+        var ruleSelected = classificationSelect && classificationSelect.value &&
+            classificationSelect.value !== 'none';
+        if (ruleSelected) { logicSelect.value = ''; }
+        logicSelect.disabled = ruleSelected;
+        logicRuleNote.style.display = ruleSelected ? 'block' : 'none';
+        syncMinimumTargets();
+        syncTargetRuleHelp();
+    }
+    function syncLogicRule() {
+        syncMinimumTargets();
+        syncTargetRuleHelp();
+    }
+    classificationSelect.addEventListener('change', syncClassificationRule);
+    logicSelect.addEventListener('change', syncLogicRule);
 
-    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerValidator" %}</button>
-</form>
-
-
-<script type="text/javascript">
-    // Create a listener for any changes in the document. Will be used to disable the corresponding checkbox in the
-    // opposite panel when a genus is selected
-
-    // Filter the document for all elements with .btn-group (limited to the inclusivity/exclusivity panels)
-    const selects = document.querySelectorAll('.btn-group');
-    // Iterate through all the individual entries in the group
-    selects.forEach((elem) => {
-        // Create a listener for any changes in the page
-        elem.addEventListener('change', (event) => {
-            // Find the name of the target of the change e.g. inclusivity_panel
-            let clicked_panel = event.target.name;
-            // Extract the id of the target e.g. id_inclusivity_panel_3
-            let element_id = event.target.id;
-            // Split of the index from the end of the id e.g. id_inclusivity_panel_3 -> [id inclusivity panel 3] -> 3
-            let index = element_id.split('_')[3];
-            // Iterate through all the instances of the .btn-group
-            for (const select of selects) {
-                // Ensure that the current element is for the inclusivity panel
-                if (clicked_panel === 'inclusivity_panel') {
-                    // Javascript magic. Use the index extracted above to ensure that we're looking at non-target
-                    // genera each time. The 'children' key is used to extract the child element from the button
-                    // group. Finally, use the panel as the key to extract the object containing the checkbox
-                    // attribute
-                    let children = select['children'];
-                    for (let alternate_index = 0; alternate_index < children.length; alternate_index++) {
-                        // Ensure that we're looking at a different index than the clicked one
-                        if (alternate_index !== parseInt(index)) {
-                            // Check to see if the clicked button has a checkmark
-                            if (select['children'][index]['children'].hasOwnProperty(clicked_panel)) {
-                                // Define the non-target panel to avoid typing this out multiple times
-                                let opposing_panel = select['children'][alternate_index]['children'][clicked_panel];
-                                // If the current panel is checked, disable the opposing panel, and remove any checks
-                                if (event.target.checked) {
-                                    opposing_panel.disabled = true;
-                                    opposing_panel.checked = false;
-                                } else {
-                                    opposing_panel.disabled = false;
-                                }
-                            }
-                        }
-                    }
-                }
+    function syncGeneCategories() {
+        var hasReference = false;
+        document.querySelectorAll('.validator-target').forEach(function (fieldset) {
+            var sequence = fieldset.querySelector('textarea[name$="-gene_sequence"]');
+            var upload = fieldset.querySelector('input[name$="-reference_fasta"]');
+            if ((sequence && sequence.value.trim()) || (upload && upload.files.length)) {
+                hasReference = true;
             }
         });
+        document.querySelectorAll('input[name="gene_exclusion_categories"]').forEach(function (input) {
+            input.disabled = !hasReference;
+            var label = input.closest('label');
+            if (label) {
+                label.classList.toggle('gene-category-disabled', !hasReference);
+                label.title = categoryDescriptions[input.value] || '';
+            }
+        });
+        geneCategoryAvailabilityNote.style.display = hasReference ? 'none' : 'block';
+    }
+    function wireReferenceFields(fieldset) {
+        var sequence = fieldset.querySelector('textarea[name$="-gene_sequence"]');
+        var upload = fieldset.querySelector('input[name$="-reference_fasta"]');
+        if (sequence) { sequence.addEventListener('input', syncGeneCategories); }
+        if (upload) { upload.addEventListener('change', syncGeneCategories); }
+    }
+    syncClassificationRule();
+    function syncPanels() {
+        var selected = {};
+        panelInputs.forEach(function (input) {
+            if (input.checked) { selected[input.value] = input.name; }
+        });
+        panelInputs.forEach(function (input) {
+            var other = input.name === 'inclusivity_panel' ? 'exclusivity_panel' : 'inclusivity_panel';
+            input.disabled = !input.checked && selected[input.value] === other;
+        });
+    }
+    panelInputs.forEach(function (input) { input.addEventListener('change', syncPanels); });
+    syncPanels();
+
+    function wireDropzone(fieldset) {
+        var dropzone = fieldset.querySelector('.gene-dropzone');
+        var input = dropzone.querySelector('input[type="file"]');
+        ['dragenter', 'dragover'].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault(); dropzone.classList.add('border-primary');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault(); dropzone.classList.remove('border-primary');
+            });
+        });
+        dropzone.addEventListener('drop', function (event) {
+            if (event.dataTransfer.files.length) { input.files = event.dataTransfer.files; }
+        });
+    }
+    function wireGeneToggle(fieldset) {
+        fieldset.querySelector('.toggle-gene').addEventListener('click', function () {
+            var box = fieldset.querySelector('.gene-box');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.validator-target'), wireGeneToggle);
+    Array.prototype.forEach.call(document.querySelectorAll('.validator-target'), wireReferenceFields);
+    Array.prototype.forEach.call(document.querySelectorAll('.validator-target'), wireProbeEvaluation);
+    syncGeneCategories();
+    addButton.addEventListener('click', function () {
+        addTarget();
     });
-
+    Array.prototype.forEach.call(document.querySelectorAll('.validator-target'), wireDropzone);
+}());
 </script>
-
 {% endblock %}

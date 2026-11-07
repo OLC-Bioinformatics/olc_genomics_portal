@@ -5,7 +5,7 @@ Models for primer finder.
 """
 
 # Django imports
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -15,9 +15,9 @@ from olc_webportalv2.common.benchmarks import BENCHMARK_CHOICES
 from olc_webportalv2.users.models import User
 
 
-class PrimerVerifierRequest(models.Model):
+class VerifierRequest(models.Model):
     """
-    Model representing a primer verifier request.
+    Model representing a PrimerVerifier request.
 
     Args:
         models (Model): Django model class.
@@ -76,22 +76,43 @@ class PrimerVerifierRequest(models.Model):
     exclusivity_panel = ArrayField(
         models.CharField(max_length=24), blank=True, default=list
     )
+    inclusivity_genus = models.CharField(max_length=48, blank=True, default='')
+    exclusivity_genus = models.CharField(max_length=48, blank=True, default='')
+    inclusivity_seqids = ArrayField(
+        models.CharField(max_length=24), blank=True, default=list
+    )
+    exclusivity_seqids = ArrayField(
+        models.CharField(max_length=24), blank=True, default=list
+    )
+    inclusivity_benchmark = models.CharField(
+        max_length=48, blank=True, default=''
+    )
+    exclusivity_benchmark = models.CharField(
+        max_length=48, blank=True, default=''
+    )
+    benchmark_versions = JSONField(default=dict, blank=True)
 
     def __str__(self):
         return self.project_name
 
     def container_namer(self):
         """
-        Returns the container name for the primer validator request.
+        Returns the container name for the PrimerVerifier request.
         """
-        return 'primer-validator-' + str(self.pk)
+        return 'primer-verifier-' + str(self.pk)
 
 
 # Inclusivity/exclusivity panel choices
 CAMPYLOBACTER = 'campylobacter'
+CITROBACTER_EXCLUSIVITY = 'citrobacter-exclusivity'
+ENTEROBACTER_EXCLUSIVITY = 'enterobacter-exclusivity'
 ESCHERICHIA = 'escherichia'
+ESCHERICHIA_EXCLUSIVITY = 'escherichia-exclusivity'
 LISTERIA = 'listeria'
+LISTERIA_EXCLUSIVITY = 'listeria-exclusivity'
+SHIGELLA_EXCLUSIVITY = 'shigella-exclusivity'
 BDS_SALMONELLA = 'bds-salmonella'
+NCBI_REFERENCE_EXCLUSIVITY = 'ncbi-reference-exclusivity'
 NCBI_SALMONELLA = 'ncbi-salmonella'
 VTEC = 'vtec'
 EXCLUSIVITY = 'bds-exclusivity'
@@ -106,7 +127,7 @@ class VerifierPrimerSet(models.Model):
     Model representing a set of primers within a primer verification request.
     """
     verifier_request = models.ForeignKey(
-        PrimerVerifierRequest,
+        VerifierRequest,
         on_delete=models.CASCADE,
         related_name='primer_id')
     primer_name = models.CharField(max_length=64, blank=False)
@@ -146,7 +167,7 @@ class VerifierPanel(models.Model):
     Model representing a panel within a primer verification request.
     """
     verifier_request = models.ForeignKey(
-        PrimerVerifierRequest,
+        VerifierRequest,
         on_delete=models.CASCADE,
         related_name='panel_details')
     genus = models.CharField(max_length=64, blank=False)
@@ -227,17 +248,48 @@ class VerifierAzureRequest(models.Model):
     Model representing a request to the Azure service for primer verification.
 
     Args:
-        verifier_request (PrimerVerifierRequest): The primer verification
+        verifier_request (VerifierRequest): The PrimerVerifier
         request associated with this Azure request.
     """
     verifier_request = models.ForeignKey(
-        PrimerVerifierRequest,
+        VerifierRequest,
         on_delete=models.CASCADE, related_name='azuretask'
     )
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
 
     def __str__(self):
         return 'verifier-azure-request-{pk}'.format(pk=self.pk)
+
+
+class VerifierAnalysisTask(models.Model):
+    """Track the independent PrimerVerifier Batch analyses."""
+    TASK_TYPES = (
+        ('primer', 'Primer analysis'),
+        ('gene', 'Gene analysis'),
+    )
+    STATUSES = (
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('complete', 'Complete'),
+        ('error', 'Error'),
+    )
+
+    verifier_request = models.ForeignKey(
+        VerifierRequest,
+        on_delete=models.CASCADE,
+        related_name='analysis_tasks',
+    )
+    task_type = models.CharField(max_length=16, choices=TASK_TYPES)
+    status = models.CharField(max_length=16, choices=STATUSES, default='pending')
+    batch_job_id = models.CharField(max_length=128, blank=True)
+    batch_task_id = models.CharField(max_length=128, blank=True)
+    error = models.TextField(blank=True, default='')
+    input_manifest = JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('verifier_request', 'task_type')
+        ordering = ('task_type', 'pk')
 
 
 class ValidatorRequest(models.Model):
@@ -259,16 +311,45 @@ class ValidatorRequest(models.Model):
     summary = models.TextField(blank=True)
     # JSON summary of number of mismatches-specific details
     totals = models.TextField(blank=True)
+    # Raw GeneSeekr report files, keyed by relative report path.
+    gene_report = models.TextField(blank=True, default='')
+    # Normalized GeneSeekr hits for API and UI consumers.
+    gene_results = JSONField(default=list, blank=True)
+    # Keep the unfiltered report for the Excel export.
+    validator_original_report = models.TextField(blank=True, default='')
+    gene_exclusion_categories = ArrayField(
+        models.CharField(max_length=32), blank=True, default=list
+    )
+    gene_exclusion_results = JSONField(default=dict, blank=True)
+    gene_exclusion_details = JSONField(default=dict, blank=True)
+    gene_exclusion_note = models.TextField(blank=True, default='')
 
     # primer_validator.py arguments
     mismatches = models.IntegerField(
-        default=2,
+        default=3,
         validators=[MaxValueValidator(3), MinValueValidator(0)]
+    )
+    min_amplicon_size = models.IntegerField(
+        default=0,
+        validators=[MaxValueValidator(10000), MinValueValidator(0)]
+    )
+    max_amplicon_size = models.IntegerField(
+        default=1500,
+        validators=[MaxValueValidator(10000), MinValueValidator(0)]
+    )
+    contig_breaks = models.BooleanField(default=False)
+    range_buffer = models.IntegerField(
+        default=0,
+        validators=[MaxValueValidator(200), MinValueValidator(0)]
     )
 
     # Primers
     forward_primer = models.TextField(blank=False)
     reverse_primer = models.TextField(blank=False)
+    primer_sequences = models.TextField(blank=True, default='')
+    reference_fasta = models.FileField(
+        upload_to='primer_validator_inputs/', blank=True, null=True
+    )
 
     # Probe
     probe_sequence = models.TextField(blank=True)
@@ -280,13 +361,108 @@ class ValidatorRequest(models.Model):
     exclusivity_panel = ArrayField(
         models.CharField(max_length=24), blank=True, default=list
     )
+    benchmark_versions = JSONField(default=dict, blank=True)
 
     def __str__(self):
         return self.project_name
 
     def container_namer(self):
-        container_name = 'primer-verifier-' + str(self.pk)
+        container_name = 'primer-validator-' + str(self.pk)
         return container_name
+
+
+class ValidatorSample(models.Model):
+    """Named diagnostic sample containing one or more validator targets."""
+    LOGIC_CHOICES = (
+        ('', 'No logic'),
+        ('AND', 'All targets must be present'),
+        ('OR', 'At least one target must be present'),
+    )
+    CLASSIFICATION_CHOICES = (
+        ('none', 'No classification rule'),
+        ('salmonella', 'Salmonella: invA or stn required'),
+    )
+
+    validator_request = models.ForeignKey(
+        ValidatorRequest, on_delete=models.CASCADE, related_name='samples'
+    )
+    name = models.CharField(max_length=128)
+    logic = models.CharField(
+        max_length=3, choices=LOGIC_CHOICES, blank=True, default=''
+    )
+    classification_rule = models.CharField(
+        max_length=32, choices=CLASSIFICATION_CHOICES, default='none'
+    )
+
+    class Meta:
+        unique_together = ('validator_request', 'name')
+        ordering = ('name', 'pk')
+
+
+class ValidatorTarget(models.Model):
+    """One locked-down diagnostic target belonging to a sample."""
+    sample = models.ForeignKey(
+        ValidatorSample, on_delete=models.CASCADE, related_name='targets'
+    )
+    name = models.CharField(max_length=128)
+    forward_primer = models.CharField(max_length=10000, blank=True)
+    reverse_primer = models.CharField(max_length=10000, blank=True)
+    PROBE_EVALUATION_CHOICES = (
+        ('percent_identity', 'Minimum percent identity'),
+        ('max_differences', 'Maximum total differences'),
+    )
+
+    probe_sequence = models.CharField(max_length=10000, blank=True)
+    probe_evaluation_method = models.CharField(
+        max_length=32,
+        choices=PROBE_EVALUATION_CHOICES,
+        default='percent_identity'
+    )
+    probe_percent_identity = models.FloatField(
+        default=80.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)]
+    )
+    probe_max_differences = models.PositiveIntegerField(default=2)
+    gene_sequence = models.TextField(blank=True)
+    reference_fasta = models.FileField(
+        upload_to='primer_validator_inputs/targets/', blank=True, null=True
+    )
+
+    class Meta:
+        unique_together = ('sample', 'name')
+        ordering = ('name', 'pk')
+
+
+
+class ValidatorAnalysisTask(models.Model):
+    """Track one independent PrimerValidator Batch analysis."""
+    TASK_TYPES = (
+        ('primer', 'Primer analysis'),
+        ('gene', 'Gene analysis'),
+    )
+    STATUSES = (
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('complete', 'Complete'),
+        ('error', 'Error'),
+    )
+
+    validator_request = models.ForeignKey(
+        ValidatorRequest,
+        on_delete=models.CASCADE,
+        related_name='analysis_tasks',
+    )
+    task_type = models.CharField(max_length=16, choices=TASK_TYPES)
+    status = models.CharField(max_length=16, choices=STATUSES, default='pending')
+    batch_job_id = models.CharField(max_length=128, blank=True)
+    batch_task_id = models.CharField(max_length=128, blank=True)
+    error = models.TextField(blank=True, default='')
+    input_manifest = JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('validator_request', 'task_type')
+        ordering = ('task_type', 'pk')
 
 
 class ValidatorPrimerSet(models.Model):
@@ -423,7 +599,7 @@ class ValidatorSEQID(models.Model):
         verbose_name_plural = _('validator sequence details')
 
 
-class PrimerValidatorAzureRequest(models.Model):
+class ValidatorAzureRequest(models.Model):
     """
     Model representing a request to the Azure validation service.
     """
@@ -434,6 +610,11 @@ class PrimerValidatorAzureRequest(models.Model):
 
     def __str__(self):
         return 'validator-azure-request-{pk}'.format(pk=self.pk)
+
+
+# Compatibility aliases for integrations that imported the historical names.
+PrimerVerifierRequest = VerifierRequest
+PrimerValidatorAzureRequest = ValidatorAzureRequest
 
 
 class PrimerFinderRequest(models.Model):
