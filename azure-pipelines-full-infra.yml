@@ -89,6 +89,9 @@ stages:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends curl unzip
         fi
+        curl --fail --show-error --silent --location --connect-timeout 10 --max-time 30 \
+          --output /dev/null --write-out 'MDP PyPI TLS check passed (HTTP %{http_code})\n' \
+          https://pypi.org/simple/pip/
         if ! command -v az >/dev/null 2>&1; then
           installer="$(mktemp)"
           trap 'rm -f -- "$installer"' EXIT
@@ -174,6 +177,9 @@ stages:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends curl unzip
         fi
+        curl --fail --show-error --silent --location --connect-timeout 10 --max-time 30 \
+          --output /dev/null --write-out 'MDP PyPI TLS check passed (HTTP %{http_code})\n' \
+          https://pypi.org/simple/pip/
         if ! command -v az >/dev/null 2>&1; then
           installer="$(mktemp)"
           trap 'rm -f -- "$installer"' EXIT
@@ -308,6 +314,13 @@ stages:
         fi
         sudo install -D -m 0644 "$(rootCA.secureFilePath)" /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
         sudo update-ca-certificates
+        if ! command -v curl >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl
+        fi
+        curl --fail --show-error --silent --location --connect-timeout 10 --max-time 30 \
+          --output /dev/null --write-out 'Bootstrap agent PyPI TLS check passed (HTTP %{http_code})\n' \
+          https://pypi.org/simple/pip/
       displayName: Trust GoC root CA before artifact download
 
     - task: DownloadPipelineArtifact@2
@@ -387,6 +400,11 @@ stages:
           sudo cp /tmp/GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
           sudo chmod 644 /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
           sudo update-ca-certificates
+          curl --fail --show-error --silent --location --connect-timeout 10 --max-time 30 \
+            --output /dev/null --write-out 'Target VM PyPI TLS check passed (HTTP %{http_code})\n' \
+            https://pypi.org/simple/pip/
+          printf '%s\n' 'export CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt' 'export PIP_CERT=/etc/ssl/certs/ca-certificates.crt' 'export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt' 'export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt' | sudo tee /etc/profile.d/foodport-ca-certificates.sh >/dev/null
+          sudo chmod 644 /etc/profile.d/foodport-ca-certificates.sh
           sudo mkdir -p /etc/foodport/tls
           sudo cp /tmp/cloud-nuage.crt /etc/foodport/tls/cloud-nuage.crt
           sudo cp /tmp/cloud-nuage.key /etc/foodport/tls/cloud-nuage.key
@@ -414,6 +432,11 @@ stages:
           sudo rm -f /etc/apt/sources.list.d/docker.list
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg lsb-release git python3 python3-pip python3-venv apt-transport-https software-properties-common
+          curl --fail --show-error --silent --location --connect-timeout 10 --max-time 30 \
+            --output /dev/null --write-out 'Target VM PyPI TLS check passed (HTTP %{http_code})\n' \
+            https://pypi.org/simple/pip/
+          printf '[global]\ncert = /etc/ssl/certs/ca-certificates.crt\n' | sudo tee /etc/pip.conf >/dev/null
+          sudo chmod 644 /etc/pip.conf
 
           if ! command -v docker >/dev/null 2>&1; then
             echo "DEBUG: docker not installed, entering docker bootstrap block"
@@ -491,6 +514,8 @@ stages:
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set always_yes yes --set changeps1 no
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+          export CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+          export PIP_CERT=/etc/ssl/certs/ca-certificates.crt
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --set ssl_verify /etc/ssl/certs/ca-certificates.crt
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels conda-forge
           CONDA_NO_PLUGINS=true /home/${TARGET_SSH_USER}/miniconda/bin/conda config --prepend channels bioconda
@@ -727,6 +752,7 @@ stages:
             rm -f celerybeat-schedule.db celerybeat.pid
             docker compose down
             docker compose up -d
+            docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
             exit 0
           fi
 
@@ -735,6 +761,7 @@ stages:
             sudo rm -f celerybeat-schedule.db celerybeat.pid
             sudo env PATH="$PATH" docker compose down || true
             sudo env PATH="$PATH" docker compose up -d
+            sudo env PATH="$PATH" docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
             exit 0
           fi
 

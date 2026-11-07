@@ -11,7 +11,7 @@ from olc_webportalv2.primer_finder import views
 
 urlpatterns = [
     url(_(r"^$"), views.primer_home, name="primer_home"),
-    # PrimerVerifier
+    # PrimerValidator: locked-down sample/target diagnostic workflow.
     url(
         _(r"^primer_validator/"),
         views.primer_validator_home,
@@ -32,7 +32,12 @@ urlpatterns = [
         views.primer_validator_results,
         name="primer_validator_results",
     ),
-    # PrimerValidator
+    url(
+        _(r"^primer_validator_report/(?P<validator_pk>\d+)/$"),
+        views.primer_validator_report,
+        name="primer_validator_report",
+    ),
+    # PrimerVerifier: original open-ended primer workflow.
     url(_(r"^primer_verifier/"),
         views.primer_verifier_home,
         name="primer_verifier_home"),
@@ -50,11 +55,6 @@ urlpatterns = [
         _(r"^primer_verifier_results/(?P<verifier_pk>\d+)/$"),
         views.primer_verifier_results,
         name="primer_verifier_results",
-    ),
-    url(
-        _(r"^primer_verifier_report/(?P<verifier_pk>\d+)/$"),
-        views.primer_verifier_report,
-        name="primer_verifier_report",
     ),
     # PrimerFinder
     # url(_(r'^finder/'), views.finder_home, name='finder_home'),

@@ -108,7 +108,8 @@ LOCAL_APPS = [
     'widget_tweaks',
 
     # REST!
-    'rest_framework'
+    'rest_framework',
+    'rest_framework.authtoken'
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -130,7 +131,12 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_RATES': {
+        'pairing_start': '10/hour',
+        'pairing_exchange': '10/hour',
+        'entra_exchange': '10/hour',
+    },
 }
 
 # CHANGE PERMISSIONS ON UPLOADED FILES TO ALLOW FOR COWBAT TO RUN
@@ -515,10 +521,67 @@ else:
 
 # Define the URL for the batch service API
 BATCH_SERVICE_URL = "http://batch:5000/submit_batch_request"
+NANOPORE_BATCH_SERVICE_URL = env(
+    'NANOPORE_BATCH_SERVICE_URL', default=BATCH_SERVICE_URL
+)
+NANOPORE_BATCH_COMMAND = env(
+    'NANOPORE_BATCH_COMMAND',
+    default=(
+        'foodport-nanopore-task '
+        '--manifest-blob "{manifest_blob}" '
+        '--input-container "{input_container}" '
+        '--output-container "{output_container}" '
+        '--input-sas-url "$FOODPORT_INPUT_SAS_URL" '
+        '--output-sas-url "$FOODPORT_OUTPUT_SAS_URL" '
+        '--source-root "{source_root}" '
+        '--task-root "{task_root}" '
+        '--manifest-prefix "{manifest_prefix}" '
+        '--control-blob "{control_blob}" '
+        '--scheduler /opt/foodport/poresippr/'
+        'poresippr_incremental_dorado_scheduler.py '
+        '--device cuda:0 '
+        '--python /opt/micromamba/root/envs/poresippr/bin/python'
+    )
+)
+NANOPORE_BATCH_VM_SIZE = env(
+    'NANOPORE_BATCH_VM_SIZE', default='Standard_NV18ads_A10_v5'
+)
+NANOPORE_SUBMISSION_MAX_RETRIES = env.int(
+    'NANOPORE_SUBMISSION_MAX_RETRIES', default=8
+)
+NANOPORE_SUBMISSION_RETRY_DELAY = env.int(
+    'NANOPORE_SUBMISSION_RETRY_DELAY', default=60
+)
+NANOPORE_SUBMISSION_MAX_RETRY_DELAY = env.int(
+    'NANOPORE_SUBMISSION_MAX_RETRY_DELAY', default=900
+)
+NANOPORE_RAW_CONTAINER = env(
+    'NANOPORE_RAW_CONTAINER', default='nanopore-runs'
+)
+NANOPORE_RESULTS_CONTAINER = env(
+    'NANOPORE_RESULTS_CONTAINER', default='nanopore-results'
+)
+NANOPORE_DORADO_MODEL = env(
+    'NANOPORE_DORADO_MODEL',
+    default='dna_r10.4.1_e8.2_400bps_fast@v5.2.0'
+)
+NANOPORE_BARCODE_KIT = env(
+    'NANOPORE_BARCODE_KIT', default='SQK-RBK114-24'
+)
+NANOPORE_BARCODE_VALUES = env(
+    'NANOPORE_BARCODE_VALUES', default='12,16,20,22'
+)
+NANOPORE_REFERENCE = env(
+    'NANOPORE_REFERENCE',
+    default='/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta'
+)
+
+BATCH_SERVICE_SECRET = env('BATCH_SERVICE_SECRET')
 
 # Define the headers for the batch API call
 BATCH_URL_HEADERS = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "X-Batch-Service-Secret": BATCH_SERVICE_SECRET,
 }
 try:
     ENVIRONMENT = env('ENVIRONMENT')

@@ -180,6 +180,14 @@ az pipelines run --name "<your-dev-pipeline-name>" --branch main \
 After assigning the runtime roles to the principal ID in the `devVm` artifact,
 rerun with `bootstrapRemoteVm=true`.
 
+The bootstrap installs the GoC root CA in the MDP agent and target VM trust
+stores, configures pip and Conda to use the system CA bundle, and persists CA
+bundle settings for shell tools. The dev deployment also exports these settings
+in its non-interactive SSH command and stores them in the `foodport` Conda
+environment; `/etc/profile.d` settings alone are not loaded by that command.
+The web image also installs this CA before installing Python dependencies; do
+not use pip's `trusted-host` option to bypass certificate validation.
+
 If the repo is in a different Azure DevOps project, ensure the pipeline is authorized to access the external repo from
 Pipeline settings > Resources > Repositories, or via the repo resource permissions dialog.
 
@@ -357,8 +365,8 @@ values in source control, pipeline logs, or chat.
 
 | Variable name | Existing Key Vault secret |
 |---|---|
-| `SECRET_KEY` | `secret-key` |
-| `SECRET_KEY_BASE` | `secret-key-base` |
+| `foodport_django_secret_key` | `secret-key` |
+| `foodport_django_secret_key_base` | `secret-key-base` |
 | `REDMINE_DB_PASSWORD` | `redmine-database-password` |
 | `AZURE_ACCOUNT_NAME` | `azure-account-name` |
 | `AZURE_ACCOUNT_KEY` | `azure-account-key` |
@@ -404,6 +412,11 @@ values in source control, pipeline logs, or chat.
 | `CLIENT_SECRET` | `client-secret` |
 | `RESOURCE_GROUP_NAME` | `resource-group-name` |
 | `STORAGE_ACCOUNT_NAME` | `storage-account-name` |
+
+The pipeline maps these two variable-group names to its
+`FOODPORT_DJANGO_SECRET_KEY` and `FOODPORT_DJANGO_SECRET_KEY_BASE` task
+variables, then writes them as `SECRET_KEY` and `SECRET_KEY_BASE` in the
+generated environment file.
 
 After adding all 47 values, set the existing non-secret
 `FOODPORT_SECRET_VARIABLES_READY` variable to `true`. Under the variable group's

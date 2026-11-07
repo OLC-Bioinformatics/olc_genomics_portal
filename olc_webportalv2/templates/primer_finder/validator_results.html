@@ -7,6 +7,9 @@
 {% block content %}
 
 <h4>Summary Report for {{ primer_validator_request.project_name }}</h4>
+{% if request.gene_exclusion_note %}
+<div class="alert alert-warning" role="alert">{{ request.gene_exclusion_note }}</div>
+{% endif %}
 
 <table class="table table-hover display nowrap" style="width:100%">
     <thead>
