@@ -32,7 +32,7 @@ RUN micromamba create -y -n batch \
     python=3.12 \
     gunicorn \
     flask \
-    azure_batch==0.0.13 && \
+    azure_batch==0.0.34 && \
     micromamba clean -a -y
 
 # Use env without activation
