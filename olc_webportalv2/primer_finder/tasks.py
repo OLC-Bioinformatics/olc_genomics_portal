@@ -26,6 +26,11 @@ from olc_webportalv2.common.methods import (
     create_batch_client,
     generic_api_submit
 )
+from olc_webportalv2.common.benchmarks import (
+    benchmark_archive_info,
+    select_benchmark_blob,
+    validate_benchmark_panel,
+)
 from olc_webportalv2.primer_finder.methods import (
     _archive_reports_and_upload,
     create_details,
@@ -63,7 +68,6 @@ def run_primer_verifier(
     """
     try:
         _process_primer_request(
-            panel_model=VerifierPanel,
             request_model=PrimerVerifierRequest,
             request_pk=verifier_request_pk
         )
@@ -75,12 +79,11 @@ def run_primer_verifier(
         )
 
 
-def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk: int):
+def _process_primer_request(*, request_model: Any, request_pk: int):
     """
     Process a primer validator or verifier request.
 
     Args:
-        panel_model (Any): The model class for the panel.
         request_model (Any): The request model to process.
         request_pk (int): The primary key of the request object.
     """
@@ -99,23 +102,11 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
         upload_probe(request=primer_request)
         input_blob_names.append("probe.fasta")
 
-    # Set the path to the mounted container in the Batch VM
-    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
-
-    # Create the PrimerValidator system call
-    cmd = _create_primer_cmd(
-        container_name=container_name,
-        file_name=file_name,
-        path=path,
-        request=primer_request
-    )
-
     # Handle the inclusivity panel files
-    _handle_panel_files(
+    inclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=True,
-        panel_model=panel_model,
-        request_pk=request_pk,
+        request=primer_request,
     )
     input_blob_names.extend(inclusivity_blob_names)
 
@@ -123,8 +114,7 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
     exclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=False,
-        panel_model=panel_model,
-        request_pk=request_pk,
+        request=primer_request,
     )
     input_blob_names.extend(exclusivity_blob_names)
 
@@ -429,20 +419,17 @@ def _handle_panel_files(
     *,  # Force the use of keyword arguments
     container_name: str,
     inclusivity: bool,
-    panel_model: Any,
-    request_pk: int
+    request: Any,
 ) -> list:
     """
-    Handle inclusivity or exclusivity panel files. If the panel is specified,
-    copy the benchmark files to the appropriate folder. If the panel is not
-    specified, create an empty folder.
+    Copy selected benchmark archives and individual FASTA files into a panel.
+    An empty panel gets a placeholder object so the Batch task can mount it.
 
     Args:
         container_name (str): Name of the container.
         inclusivity (bool): True if handling inclusivity panel, False for
             exclusivity.
-        panel_model (Any): The model class for the panel.
-        request_pk (int): Primary key of the request.
+        request (Any): The PrimerVerifier or PrimerValidator request.
 
     Returns:
         list: Blob names of the benchmark ZIP files required by the Batch
@@ -451,30 +438,72 @@ def _handle_panel_files(
     # Determine the panel type
     panel_type = "inclusivity" if inclusivity else "exclusivity"
 
-    # Choose the correct FK field name depending on panel_model
-    if panel_model == VerifierPanel:
-        fk_name = "verifier_request_id"
-    else:
-        fk_name = "validator_request_id"
-
-    # Run queries to retrieve all objects corresponding to the appropriate
-    # panel
-    panel_filter = panel_model.objects.filter(
-        **{fk_name: request_pk, "panel": panel_type}
-    )
-
     benchmark_blob_names = []
+    selected_benchmarks = []
+    for selected_benchmark in (
+        getattr(request, panel_type + '_panel', []) or []
+    ):
+        benchmark_name = validate_benchmark_panel(
+            benchmark_name=selected_benchmark,
+            panel=panel_type,
+        )
+        if benchmark_name not in selected_benchmarks:
+            selected_benchmarks.append(benchmark_name)
 
-    # Copy the benchmark files if the panel is specified
-    if panel_filter.exists():
-        for panel in panel_filter:
-            benchmark_blob_name = copy_benchmark_files(
-                container_name=container_name,
-                genus=panel.genus.lower(),
-                panel=panel_type,
+    scalar_benchmark = getattr(request, panel_type + '_benchmark', '')
+    if scalar_benchmark:
+        benchmark_name = validate_benchmark_panel(
+            benchmark_name=scalar_benchmark,
+            panel=panel_type,
+        )
+        if benchmark_name not in selected_benchmarks:
+            selected_benchmarks.append(benchmark_name)
+
+    for benchmark_name in selected_benchmarks:
+        benchmark_blob_name = copy_benchmark_files(
+            container_name=container_name,
+            genus=benchmark_name,
+            panel=panel_type,
+        )
+        benchmark_blob_names.append(benchmark_blob_name)
+        archive_info = benchmark_archive_info(
+            blob_name=posixpath.basename(benchmark_blob_name),
+            benchmark_name=benchmark_name,
+        )
+        if archive_info and archive_info['version']:
+            versions = dict(getattr(request, 'benchmark_versions', {}) or {})
+            versions[archive_info['benchmark_name']] = archive_info['version']
+            request.benchmark_versions = versions
+            request.save(update_fields=['benchmark_versions'])
+
+    from olc_webportalv2.metadata.models import SequenceData
+
+    query_genus = getattr(request, panel_type + '_genus', '')
+    selected_seqids = set(
+        getattr(request, panel_type + '_seqids', []) or []
+    )
+    if query_genus:
+        selected_seqids.update(
+            SequenceData.objects.filter(
+                genus__iexact=query_genus
+            ).values_list('seqid', flat=True)
+        )
+        if not selected_seqids:
+            raise ValueError(
+                'No sequences were found for selected genus: {0}'.format(
+                    query_genus
+                )
             )
-            benchmark_blob_names.append(benchmark_blob_name)
-    else:
+    if selected_seqids:
+        benchmark_blob_names.extend(
+            _copy_sequence_files(
+                container_name=container_name,
+                panel=panel_type,
+                seqids=sorted(selected_seqids),
+            )
+        )
+
+    if not benchmark_blob_names:
         create_empty_folder(container_name=container_name, panel=panel_type)
 
     return benchmark_blob_names
@@ -515,15 +544,14 @@ def copy_benchmark_files(
     """
     Copy the benchmark files to the appropriate folder.
 
-    If the destination blob already exists and has the same size as the
-    benchmark source blob, the existing destination is reused. If an
-    asynchronous copy is already pending, this function waits for it to
-    complete. A failed, aborted, or mismatched destination is replaced.
+    Select the highest available numeric archive version, falling back to the
+    unversioned archive. Reuse an existing destination when its size matches;
+    replace it when the source differs.
 
     Args:
         container_name (str): The name of the container to which the benchmark
             files are to be copied.
-        genus (str): The genus for which the benchmark files are to be copied.
+        genus (str): The canonical benchmark dataset identifier.
         panel (str): The panel (inclusivity/exclusivity) for which the
             benchmark files are to be copied.
 
@@ -533,7 +561,21 @@ def copy_benchmark_files(
     blob_client = get_storage_client()
 
     source_container_name = "benchmark-datasets"
-    source_blob_name = "{genus}.zip".format(genus=genus)
+    source_objects = blob_client.list_objects(
+        source_container_name,
+        prefix=genus,
+    )
+    selected_archive = select_benchmark_blob(
+        blob_names=[item.name for item in source_objects],
+        benchmark_name=genus,
+    )
+    if selected_archive is None:
+        raise FileNotFoundError(
+            "No benchmark archive is available for dataset: {0}".format(
+                genus
+            )
+        )
+    source_blob_name = selected_archive['blob_name']
     destination_blob_name = posixpath.join(panel, source_blob_name)
 
     # Retrieve the authoritative size of the benchmark source blob.
@@ -561,6 +603,45 @@ def copy_benchmark_files(
     )
 
     return destination_blob_name
+
+
+def _copy_sequence_files(*, container_name: str, panel: str, seqids: list) -> list:
+    """Copy selected processed-data FASTA objects into a request panel."""
+    blob_client = get_storage_client()
+    source_container = 'processed-data'
+    copied_names = []
+
+    for seqid in sorted(set(seqids)):
+        source_name = '{0}.fasta'.format(seqid)
+        destination_name = posixpath.join(panel, source_name)
+        if not blob_client.object_exists(source_container, source_name):
+            raise FileNotFoundError(
+                'Selected SeqID is missing from processed-data: {0}'.format(
+                    seqid
+                )
+            )
+
+        source_size = blob_client.get_object(
+            source_container, source_name
+        ).size
+        if blob_client.object_exists(container_name, destination_name):
+            destination_size = blob_client.get_object(
+                container_name, destination_name
+            ).size
+            if destination_size == source_size:
+                copied_names.append(destination_name)
+                continue
+            blob_client.delete_object(container_name, destination_name)
+
+        blob_client.copy_object(
+            source_container,
+            source_name,
+            container_name,
+            destination_name,
+        )
+        copied_names.append(destination_name)
+
+    return copied_names
 
 
 def create_empty_folder(
@@ -903,7 +984,6 @@ def run_primer_validator(
     """
     try:
         _process_primer_request(
-            panel_model=ValidatorPanel,
             request_model=ValidatorRequest,
             request_pk=validator_request_pk
         )

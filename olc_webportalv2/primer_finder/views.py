@@ -22,6 +22,10 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Portal-specific imports
 from olc_webportalv2.geneseekr.forms import EmailForm
+from olc_webportalv2.common.benchmarks import (
+    benchmark_panel_storage_name,
+    normalise_benchmark_name,
+)
 
 from olc_webportalv2.primer_finder.forms import (
     PrimerValidatorForm,
@@ -130,11 +134,37 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
             validator_request.probe_sequence = form.cleaned_data.get(
                 'probe_sequence'
             )
-            validator_request.inclusivity_panel = form.cleaned_data.get(
-                'inclusivity_panel'
+            inclusivity_panel = list(
+                form.cleaned_data.get('inclusivity_panel') or []
             )
-            validator_request.exclusivity_panel = form.cleaned_data.get(
-                'exclusivity_panel'
+            exclusivity_panel = list(
+                form.cleaned_data.get('exclusivity_panel') or []
+            )
+            validator_request.inclusivity_panel = [
+                benchmark_panel_storage_name(benchmark_name=benchmark)
+                for benchmark in inclusivity_panel
+            ]
+            validator_request.exclusivity_panel = [
+                benchmark_panel_storage_name(benchmark_name=benchmark)
+                for benchmark in exclusivity_panel
+            ]
+            validator_request.inclusivity_genus = form.cleaned_data.get(
+                'inclusivity_genus', ''
+            )
+            validator_request.exclusivity_genus = form.cleaned_data.get(
+                'exclusivity_genus', ''
+            )
+            validator_request.inclusivity_seqids = form.cleaned_data.get(
+                'inclusivity_seqids', []
+            )
+            validator_request.exclusivity_seqids = form.cleaned_data.get(
+                'exclusivity_seqids', []
+            )
+            validator_request.inclusivity_benchmark = form.cleaned_data.get(
+                'inclusivity_benchmark', ''
+            )
+            validator_request.exclusivity_benchmark = form.cleaned_data.get(
+                'exclusivity_benchmark', ''
             )
             validator_request.project_name = form.cleaned_data.get(
                 'project_name'
@@ -179,6 +209,26 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                 pk=validator_request.pk)[0].inclusivity_panel
             exclusivity_query = PrimerVerifierRequest.objects.filter(
                 pk=validator_request.pk)[0].exclusivity_panel
+            inclusivity_query = [
+                normalise_benchmark_name(benchmark_name=benchmark)
+                for benchmark in inclusivity_query
+            ]
+            exclusivity_query = [
+                normalise_benchmark_name(benchmark_name=benchmark)
+                for benchmark in exclusivity_query
+            ]
+            for panel_values, field_name in (
+                (inclusivity_query, 'inclusivity_benchmark'),
+                (exclusivity_query, 'exclusivity_benchmark'),
+            ):
+                benchmark = form.cleaned_data.get(field_name)
+                if benchmark:
+                    panel_values.append(
+                        normalise_benchmark_name(
+                            benchmark_name=benchmark
+                        )
+                    )
+                panel_values[:] = list(dict.fromkeys(panel_values))
 
             # Populate the database with the inclusivity/exclusivity panel and
             # the genus/genera
@@ -192,6 +242,21 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                 pk=validator_request.pk,
                 panel_type='exclusivity'
             )
+            for panel_type in ('inclusivity', 'exclusivity'):
+                query_generas = []
+                query_genus = form.cleaned_data.get(
+                    panel_type + '_genus'
+                )
+                if query_genus:
+                    query_generas.append(query_genus)
+                if form.cleaned_data.get(panel_type + '_seqids'):
+                    query_generas.append('selected-seqids')
+                if query_generas:
+                    populate_panel(
+                        genera=query_generas,
+                        pk=validator_request.pk,
+                        panel_type=panel_type,
+                    )
 
             # Create and submit the batch job
             run_primer_verifier.apply_async(

@@ -466,7 +466,13 @@ class AzureBatchProvider:
                         models.EnvironmentSetting(
                             name="CONDA",
                             value="/usr/bin/miniconda/bin",
-                        )
+                        ),
+                        *[
+                            models.EnvironmentSetting(name=name, value=value)
+                            for name, value in (
+                                data.get("environment_variables") or {}
+                            ).items()
+                        ],
                     ],
                 )
             )

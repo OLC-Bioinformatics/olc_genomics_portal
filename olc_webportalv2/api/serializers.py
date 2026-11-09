@@ -12,6 +12,8 @@ from rest_framework import serializers
 from olc_webportalv2.cowbat.models import SequencingRun
 from olc_webportalv2.cowbat.utils import normalize_run_name
 
+from olc_webportalv2.cowbat.models import NanoporeFile
+
 
 class SequencingRunSerializer(serializers.ModelSerializer):
     """
@@ -100,7 +102,7 @@ class SequencingRunSerializer(serializers.ModelSerializer):
 
     def validate_run_name(self, value):
         """
-        Validates run_name format (YYMMDD-lab or YYMMDD_M###).
+        Validates run_name format (5-6 digits, separator, lowercase suffix).
 
         Parameters:
         - value (str): The run_name value to validate.
@@ -115,9 +117,10 @@ class SequencingRunSerializer(serializers.ModelSerializer):
         pattern = r'\d{5,6}[-_][a-z]+'
 
         # Use re to determine whether the consolidated pattern matches
-        if not re.match(pattern, value):
+        if not re.fullmatch(pattern, value):
             raise serializers.ValidationError(
-                "Invalid run name. Format must be YYMMDD-lab or YYMMDD_LAB."
+                "Invalid run name. Use 5-6 digits followed by '-' or '_' "
+                "and lowercase letters."
             )
         return normalize_run_name(value)
 
@@ -141,3 +144,137 @@ class SequencingRunSerializer(serializers.ModelSerializer):
                 " Please only select one."
             )
         return data
+
+
+class NanoporeRunSerializer(SequencingRunSerializer):
+    BARCODE_KITS = ('SQK-RBK114-24',)
+    run_name = serializers.CharField(max_length=64)
+    instrument_name = serializers.CharField(max_length=128, required=False,
+                                             allow_blank=True, write_only=True)
+    instrument_type = serializers.CharField(max_length=128, required=False,
+                                             allow_blank=True, write_only=True)
+    source_directory = serializers.CharField(max_length=512, required=False,
+                                              allow_blank=True, write_only=True)
+    dorado_model = serializers.CharField(max_length=128, required=False,
+                                         allow_blank=True, write_only=True)
+    reference_panel = serializers.CharField(max_length=128, required=False,
+                                             allow_blank=True, write_only=True)
+    barcode_kit = serializers.CharField(max_length=64)
+    barcode_values = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=24),
+        allow_empty=False,
+    )
+    sample_metadata = serializers.JSONField()
+    class Meta(SequencingRunSerializer.Meta):
+        fields = [
+            'run_name', 'basic_assembly', 'preprocess', 'nextseq', 'email',
+            'instrument_name', 'instrument_type', 'source_directory',
+            'dorado_model', 'reference_panel', 'barcode_kit',
+            'barcode_values', 'sample_metadata'
+        ]
+
+    def create(self, validated_data):
+        email = validated_data.pop('email', None)
+        metadata = {
+            field: validated_data.pop(field, '')
+            for field in (
+                'instrument_name', 'instrument_type', 'source_directory',
+                'dorado_model', 'reference_panel'
+            )
+        }
+        metadata = dict(metadata,
+                        barcode_kit=validated_data.pop('barcode_kit'),
+                        barcode_values=validated_data.pop('barcode_values'),
+                        sample_metadata=validated_data.pop('sample_metadata'))
+        sequencing_run = SequencingRun.objects.create(
+            user=self.context['request'].user,
+            workflow_state='created',
+            **validated_data
+        )
+        if email:
+            sequencing_run.emails_array.append(email)
+            sequencing_run.save(update_fields=['emails_array'])
+        from olc_webportalv2.cowbat.models import NanoporeRun
+        NanoporeRun.objects.create(
+            sequencing_run=sequencing_run,
+            created_by=self.context['request'].user,
+            **metadata
+        )
+        return sequencing_run
+
+    def validate_barcode_kit(self, value):
+        if value not in self.BARCODE_KITS:
+            raise serializers.ValidationError('Unsupported barcode kit.')
+        return value
+
+    def validate(self, data):
+        data = super(NanoporeRunSerializer, self).validate(data)
+        barcode_values = data.get('barcode_values', [])
+        if len(barcode_values) != len(set(barcode_values)):
+            raise serializers.ValidationError(
+                {'barcode_values': 'Barcode values must be unique.'}
+            )
+        sample_metadata = data.get('sample_metadata', {})
+        samples = sample_metadata.get('samples') if isinstance(
+            sample_metadata, dict
+        ) else None
+        if not isinstance(samples, list) or not samples:
+            raise serializers.ValidationError(
+                {'sample_metadata': 'samples must be a non-empty list.'}
+            )
+        if len(samples) != len(barcode_values):
+            raise serializers.ValidationError(
+                {'sample_metadata': 'Every barcode must have one sample.'}
+            )
+        seen_barcodes = []
+        seen_seqids = []
+        for sample in samples:
+            if not isinstance(sample, dict):
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'Each sample must be an object.'}
+                )
+            barcode = sample.get('barcode')
+            seqid = sample.get('seqid')
+            if barcode not in barcode_values:
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'Sample barcode is not configured.'}
+                )
+            if barcode in seen_barcodes:
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'Sample barcodes must be unique.'}
+                )
+            if not isinstance(seqid, str) or not re.match(
+                    r'^\d{4}-MIN-\d{4}$', seqid):
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'SEQIDs must match YYYY-MIN-NNNN.'}
+                )
+            if seqid in seen_seqids:
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'SEQIDs must be unique.'}
+                )
+            olnid = sample.get('olnid')
+            if not isinstance(olnid, str) or not olnid.strip():
+                raise serializers.ValidationError(
+                    {'sample_metadata': 'Every sample requires an OLNID.'}
+                )
+            seen_barcodes.append(barcode)
+            seen_seqids.append(seqid)
+        if set(seen_barcodes) != set(barcode_values):
+            raise serializers.ValidationError(
+                {'sample_metadata': 'Every configured barcode must be present.'}
+            )
+        return data
+
+
+class NanoporeFileSerializer(serializers.ModelSerializer):
+    batch_id = serializers.IntegerField(
+        source='processing_batch_id', read_only=True
+    )
+
+    class Meta:
+        model = NanoporeFile
+        fields = [
+            'id', 'relative_path', 'size_bytes', 'sha256', 'status',
+            'batch_id'
+        ]
+        read_only_fields = ['id', 'status']

@@ -366,6 +366,14 @@ executed by the Batch node. The current command invokes the installed
 containers, task paths, scheduler, and CUDA device. The wrapper accepts the
 manifest and runs Dorado, minimap2, samtools, and target detection.
 
+The web application publishes manifests and control state through the internal
+Storage service and submits work through the shared Batch service. It creates
+expiring container transfer URLs for the wrapper and passes them as
+`FOODPORT_INPUT_SAS_URL` and `FOODPORT_OUTPUT_SAS_URL` task environment
+variables. Their lifetime is controlled by
+`NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS` (default: 604800 seconds); the URLs
+are redacted from application logs.
+
 The wrapper reads POD5 entries from each immutable generation manifest,
 basecalls with Dorado, aligns with minimap2, produces sorted/indexed BAM files
 with samtools, publishes the generation result, and then polls for the next
@@ -374,8 +382,9 @@ generation. The old Guppy CSV format is not used by this submission contract.
 If `NANOPORE_BATCH_COMMAND` is missing, the processing record is marked
 `failed` and the run is marked `error`. When configured, the processing status
 becomes `submitted` after the Batch service returns a job and task ID. Azure
-GPU capacity errors are retried up to three times with delayed backoff. While
-those retries are pending, the status response includes
+GPU capacity errors are retried with delayed backoff, up to
+`NANOPORE_SUBMISSION_MAX_RETRIES` times (default: 8). While those retries are
+pending, the status response includes
 `processing.retryable: true`, `processing.retry_count`,
 `processing.retry_limit`, and a user-safe `processing.message`. If capacity
 remains unavailable, the processing status becomes `failed` with an actionable

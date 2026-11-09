@@ -123,7 +123,7 @@ class CommonMethodTests(SimpleTestCase):
         response.json.return_value = {'job_id': 'job-1'}
         post.return_value = response
 
-        result = generic_api_submit.run(
+        result = generic_api_submit(
             command='echo run',
             container_name='job-1',
             vm_size='Standard_D4s_v3',
@@ -131,7 +131,14 @@ class CommonMethodTests(SimpleTestCase):
             input_file_pattern=[],
             unique_id='FoodPort',
             download_file_pattern=['reports/*'],
+            output_file_pattern=['output/'],
+            output_container='results',
+            output_prefix='runs/42',
             log_prefix='logs',
+            environment_variables={
+                'FOODPORT_INPUT_SAS_URL':
+                    'https://storage.example/input?sig=secret-value',
+            },
         )
 
         self.assertEqual(result, {'job_id': 'job-1'})
@@ -146,7 +153,14 @@ class CommonMethodTests(SimpleTestCase):
         self.assertEqual(payload['download_file_pattern'], ['reports/*'])
         self.assertEqual(payload['analysis_type'], 'GENESEEKR')
         self.assertEqual(payload['unique_id'], 'FoodPort')
+        self.assertEqual(payload['output_file_pattern'], ['output/'])
+        self.assertEqual(payload['output_container'], 'results')
+        self.assertEqual(payload['output_prefix'], 'runs/42')
         self.assertEqual(payload['log_prefix'], 'logs')
+        self.assertEqual(
+            payload['environment_variables']['FOODPORT_INPUT_SAS_URL'],
+            'https://storage.example/input?sig=secret-value',
+        )
         self.assertEqual(response.raise_for_status.call_count, 1)
 
     @mock.patch('olc_webportalv2.common.methods.requests.post')
@@ -163,7 +177,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertRaises(RuntimeError):
-            generic_api_submit.run(
+            generic_api_submit(
                 command='echo run',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',
@@ -186,7 +200,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertRaises(RuntimeError):
-            generic_api_submit.run(
+            generic_api_submit(
                 command='echo run',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',
@@ -209,7 +223,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertLogs(level=logging.INFO) as logs:
-            generic_api_submit.run(
+            generic_api_submit(
                 command='curl https://storage.example/blob?sig=secret-value',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',

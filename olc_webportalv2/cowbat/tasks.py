@@ -134,6 +134,12 @@ def generate_download_link(
         expires_in_seconds=expiry * 24 * 60 * 60,
     )
 
+import hashlib
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone as django_timezone
+from olc_webportalv2.cowbat.models import NanoporeFile, NanoporeManifest, NanoporeProcessingBatch
+
 
 @shared_task
 def rename_research_container_task(sequencing_run_pk, old_name, new_name):
@@ -2568,6 +2574,12 @@ def monitor_tasks():
     except Exception as e:
         capture_exception(e)
 
+    try:
+        check_nanopore_tasks()
+    except Exception as exc:
+        logger.exception("Nanopore task monitoring failed: {}".format(exc))
+        capture_exception(exc)
+
     # Also check for Mash tree creation tasks
     try:
         check_tree_tasks()
@@ -2879,3 +2891,1138 @@ def clean_old_models():
                 if request is not None:
                     # Delete all database entries created over seven days ago
                     request.delete()
+
+
+NANOPORE_SUBMISSION_MAX_RETRIES = getattr(
+    settings, "NANOPORE_SUBMISSION_MAX_RETRIES", 8
+)
+
+
+NANOPORE_SUBMISSION_RETRY_DELAY = getattr(
+    settings, "NANOPORE_SUBMISSION_RETRY_DELAY", 60
+)
+
+
+NANOPORE_SUBMISSION_MAX_RETRY_DELAY = getattr(
+    settings, "NANOPORE_SUBMISSION_MAX_RETRY_DELAY", 900
+)
+
+
+def _batch_submission_is_retryable(response, response_data):
+    if response_data.get("retryable") is True:
+        return True
+    if response.status_code == 503 and response_data.get("error_code") == (
+        "capacity_unavailable"
+    ):
+        return True
+    error_message = response_data.get("error", "")
+    return (
+        isinstance(error_message, str)
+        and "insufficient capacity" in error_message.lower()
+    )
+
+
+def _nanopore_batch_is_active(run):
+    """Return whether one persistent Azure task owns this run."""
+    return run.nanopore_processing_batches.filter(
+        status__in=("submitting", "submitted", "running"),
+        azure_job_id__gt="",
+    ).exists()
+
+
+def _nanopore_collection_blocker(run):
+    """Return the oldest generation whose result is not published yet."""
+    return (
+        run.nanopore_processing_batches.filter(
+            status__in=(
+                "pending",
+                "submitting",
+                "submitted",
+                "running",
+                "published",
+            ),
+            last_completed_at__isnull=True,
+        )
+        .order_by("generation", "pk")
+        .first()
+    )
+
+
+def _unclaimed_nanopore_files(run):
+    """Return uploaded POD5 files that are not assigned to a generation."""
+    return NanoporeFile.objects.filter(
+        sequencing_run=run,
+        status="uploaded",
+        processing_batch__isnull=True,
+    )
+
+
+def _schedule_nanopore_collection(run_id, force=False, countdown=0):
+    """Schedule collection after the surrounding transaction commits."""
+    def schedule():
+        collect_nanopore_iteration.apply_async(
+            queue="cowbat",
+            args=(run_id,),
+            kwargs={"force": force},
+            countdown=countdown,
+        )
+
+    transaction.on_commit(schedule)
+
+
+def _nanopore_result_payload(blob_service, processing_batch):
+    """Return one published generation result, or None when unavailable."""
+    if not processing_batch.report_url:
+        return None
+    container_name = getattr(
+        settings,
+        "NANOPORE_RESULTS_CONTAINER",
+        "nanopore-results",
+    )
+    if not blob_service.object_exists(container_name, processing_batch.report_url):
+        return None
+    payload = json.loads(
+        blob_service.download_bytes(container_name, processing_batch.report_url)
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("Nanopore result must be a JSON object.")
+    return payload
+
+
+def _nanopore_result_identity_error(run, batch_record, payload):
+    """Reject stale results before changing database state."""
+    try:
+        run_id = int(payload.get("run_id"))
+        generation = int(payload.get("generation", payload.get("iteration")))
+    except (TypeError, ValueError):
+        return "Nanopore result has invalid run ID or generation."
+    if (run_id != run.pk or payload.get("run_name") != run.run_name
+            or generation != batch_record.generation):
+        return ("Nanopore result identity mismatch: expected run {0}, "
+                "generation {1}; found run {2}, generation {3}.").format(
+                    run.pk, batch_record.generation, run_id, generation)
+    return None
+
+
+def _reconcile_nanopore_generation_results(run, blob_service):
+    """Persist newly published immutable generation result manifests."""
+    completed = []
+    failed = []
+    batches = run.nanopore_processing_batches.filter(
+        status__in=("submitted", "running", "published"),
+        last_completed_at__isnull=True,
+    ).order_by("generation")
+    for batch_record in batches:
+        payload = _nanopore_result_payload(blob_service, batch_record)
+        if payload is None:
+            continue
+        identity_error = _nanopore_result_identity_error(run, batch_record, payload)
+        if identity_error:
+            batch_record.status = "failed"
+            batch_record.error = identity_error
+            batch_record.save(update_fields=["status", "error"])
+            failed.append(batch_record)
+            logger.error(identity_error)
+            continue
+        result_status = str(payload.get("status", "")).strip().lower()
+        exit_code = payload.get("scheduler_exit_code")
+        try:
+            exit_code = int(exit_code)
+        except (TypeError, ValueError):
+            pass
+        # The immutable result manifest describes completion of one
+        # scheduler generation, not termination of the persistent Azure
+        # wrapper task. Keep finished_at unset until Azure itself reports
+        # that the wrapper task reached the Completed state.
+        completed_at = django_timezone.now()
+        batch_record.report = payload
+        batch_record.exit_code = exit_code
+        batch_record.last_completed_at = completed_at
+        if result_status in (
+            "complete",
+            "completed",
+            "success",
+            "succeeded",
+        ) and exit_code == 0:
+            batch_record.processed_pod5_count = batch_record.pod5_count
+            if batch_record.status == "published":
+                batch_record.status = "complete"
+            completed.append(batch_record)
+        else:
+            if not batch_record.azure_job_id:
+                batch_record.status = "failed"
+            batch_record.error = (
+                "Nanopore generation {0} reported status {1!r} with "
+                "scheduler exit code {2!r}."
+            ).format(batch_record.generation, result_status, exit_code)
+            failed.append(batch_record)
+        batch_record.save(update_fields=[
+            "status",
+            "report",
+            "exit_code",
+            "last_completed_at",
+            "processed_pod5_count",
+            "error",
+        ])
+    return completed, failed
+
+
+def _claim_nanopore_batch(run):
+    """Claim all uploaded files in one immutable quiet-window generation."""
+    files = list(
+        NanoporeFile.objects.select_for_update()
+        .filter(
+            sequencing_run=run,
+            status="uploaded",
+            processing_batch__isnull=True,
+        )
+        .order_by("pk")
+    )
+    if not files:
+        return None
+
+    generation = (
+        run.nanopore_manifests.order_by("-generation")
+        .values_list("generation", flat=True)
+        .first()
+        or 0
+    ) + 1
+    manifest_files = [
+        {
+            "id": nanopore_file.pk,
+            "relative_path": nanopore_file.relative_path,
+            "blob_name": nanopore_file.blob_name,
+            "size_bytes": nanopore_file.size_bytes,
+            "sha256": nanopore_file.sha256,
+        }
+        for nanopore_file in files
+    ]
+    manifest_json = json.dumps(
+        manifest_files,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    manifest = NanoporeManifest.objects.create(
+        sequencing_run=run,
+        files=manifest_files,
+        sha256=hashlib.sha256(manifest_json).hexdigest(),
+        generation=generation,
+        finalized=True,
+    )
+    processing_batch = NanoporeProcessingBatch.objects.create(
+        sequencing_run=run,
+        manifest=manifest,
+        generation=generation,
+        status="pending",
+        pod5_count=len(files),
+        report_url=(
+            "runs/{0}/iterations/iteration-{1:06d}/manifests/"
+            "iteration-{1:06d}.json"
+        ).format(run.run_name, generation),
+    )
+    NanoporeFile.objects.filter(
+        pk__in=[nanopore_file.pk for nanopore_file in files]
+    ).update(processing_batch=processing_batch)
+    return processing_batch
+
+
+def _write_nanopore_control(run, state):
+    """Publish the mutable control state consumed by the Batch wrapper."""
+    blob_service = get_storage_client()
+    container_name = settings.NANOPORE_RAW_CONTAINER
+    blob_service.ensure_container(container_name)
+    blob_service.upload_bytes(
+        container_name,
+        "{0}/input/control/state.json".format(run.run_name),
+        json.dumps(
+            {
+                "schema_version": 1,
+                "run_id": run.pk,
+                "run_name": run.run_name,
+                "state": state,
+                "updated_at": django_timezone.now().isoformat(),
+            },
+            sort_keys=True,
+        ).encode("utf-8"),
+        content_type="application/json",
+    )
+
+
+@shared_task
+
+def collect_nanopore_iteration(sequencing_run_pk, force=False):
+    """Claim waiting uploads after the preceding generation is published.
+
+    Files stay uploaded and unclaimed while any earlier generation lacks an
+    immutable result manifest. Once that result is published, all accumulated
+    files are claimed into one generation. ``force=True`` skips only the quiet
+    window; it never bypasses the preceding-generation gate.
+    """
+    with transaction.atomic():
+        try:
+            sequencing_run = SequencingRun.objects.select_for_update().get(
+                pk=sequencing_run_pk
+            )
+        except SequencingRun.DoesNotExist:
+            return {
+                "status": "ignored",
+                "reason": "run does not exist",
+                "run_id": sequencing_run_pk,
+            }
+        if sequencing_run.workflow_state in ("complete", "error"):
+            return {
+                "status": "ignored",
+                "reason": "run is closed",
+                "run_id": sequencing_run.pk,
+            }
+
+        blocker = _nanopore_collection_blocker(sequencing_run)
+        if blocker is not None:
+            waiting_count = _unclaimed_nanopore_files(sequencing_run).count()
+            return {
+                "status": "deferred",
+                "reason": "previous iteration result is not published",
+                "run_id": sequencing_run.pk,
+                "active_batch_id": blocker.pk,
+                "active_generation": blocker.generation,
+                "active_status": blocker.status,
+                "waiting_file_count": waiting_count,
+            }
+
+        nanopore_run = sequencing_run.nanopore_run
+        if not force and nanopore_run.last_file_seen_at is not None:
+            collection_window = getattr(
+                settings,
+                "NANOPORE_COLLECTION_WINDOW_SECONDS",
+                60,
+            )
+            ready_at = nanopore_run.last_file_seen_at + timedelta(
+                seconds=collection_window
+            )
+            now = django_timezone.now()
+            if now < ready_at:
+                countdown = max(
+                    1,
+                    int((ready_at - now).total_seconds()) + 1,
+                )
+                _schedule_nanopore_collection(
+                    sequencing_run.pk,
+                    force=False,
+                    countdown=countdown,
+                )
+                return {
+                    "status": "deferred",
+                    "reason": "collection window is still open",
+                    "run_id": sequencing_run.pk,
+                    "countdown": countdown,
+                }
+
+        processing_batch = _claim_nanopore_batch(sequencing_run)
+        if processing_batch is None:
+            return {
+                "status": "idle",
+                "reason": "no unclaimed uploaded files",
+                "run_id": sequencing_run.pk,
+            }
+
+        sequencing_run.workflow_state = (
+            "stopping"
+            if sequencing_run.workflow_state == "stopping"
+            else "processing"
+        )
+        sequencing_run.status = "Unprocessed"
+        sequencing_run.save(update_fields=["workflow_state", "status"])
+        nanopore_run.status = (
+            "stopping"
+            if sequencing_run.workflow_state == "stopping"
+            else "processing"
+        )
+        nanopore_run.save(update_fields=["status"])
+        batch_pk = processing_batch.pk
+        generation = processing_batch.generation
+        pod5_count = processing_batch.pod5_count
+        run_id = sequencing_run.pk
+
+        def publish_or_submit():
+            submit_nanopore_batch.apply_async(
+                queue="cowbat",
+                args=(run_id,),
+            )
+
+        transaction.on_commit(publish_or_submit)
+
+    logger.info(
+        "Collected Nanopore generation run=%s batch=%s generation=%s "
+        "pod5_count=%s force=%s",
+        sequencing_run_pk,
+        batch_pk,
+        generation,
+        pod5_count,
+        force,
+    )
+    return {
+        "status": "queued",
+        "run_id": sequencing_run_pk,
+        "batch_id": batch_pk,
+        "generation": generation,
+        "pod5_count": pod5_count,
+    }
+
+
+def _scheduler_csvs(sequencing_run, nanopore_run):
+    barcode_values = nanopore_run.barcode_values or [
+        int(value.strip())
+        for value in settings.NANOPORE_BARCODE_VALUES.split(",")
+        if value.strip()
+    ]
+    samples = (nanopore_run.sample_metadata or {}).get("samples") or [
+        {
+            "barcode": value,
+            "seqid": "barcode{0:02d}".format(value),
+            "olnid": "BARCODE-{0:02d}".format(value),
+        }
+        for value in barcode_values
+    ]
+    nanopore_run.barcode_kit = (
+        nanopore_run.barcode_kit or settings.NANOPORE_BARCODE_KIT
+    )
+    nanopore_run.barcode_values = barcode_values
+    nanopore_run.sample_metadata = {"samples": samples}
+    input_csv = (
+        "reference,pod5_dir,output_dir,barcode,barcode_values,run_id\n"
+        "{0},$AZ_BATCH_TASK_WORKING_DIR/source,"
+        "$AZ_BATCH_TASK_WORKING_DIR/output,{1},{2},{3}\n"
+    ).format(
+        settings.NANOPORE_REFERENCE,
+        nanopore_run.barcode_kit,
+        ",".join(str(value) for value in barcode_values),
+        sequencing_run.run_name,
+    )
+    metadata_csv = "Barcode,SEQID,OLNID\n" + "".join(
+        "{0},{1},{2}\n".format(
+            sample["barcode"], sample["seqid"], sample.get("olnid", "")
+        )
+        for sample in sorted(samples, key=lambda item: item["barcode"])
+    )
+    return input_csv, metadata_csv
+
+
+@shared_task(bind=True, max_retries=NANOPORE_SUBMISSION_MAX_RETRIES)
+def submit_nanopore_batch(self, sequencing_run_pk):
+    with transaction.atomic():
+        sequencing_run = SequencingRun.objects.select_for_update().get(
+            pk=sequencing_run_pk
+        )
+        publish_only = _nanopore_batch_is_active(sequencing_run)
+        processing_batch = (
+            sequencing_run.nanopore_processing_batches.filter(status="pending")
+            .order_by("generation")
+            .first()
+        )
+        if processing_batch is None:
+            return
+        if not publish_only:
+            if processing_batch.status == "submitted" or processing_batch.azure_job_id:
+                return
+            if processing_batch.status == "submitting" and self.request.retries == 0:
+                return
+        if sequencing_run.workflow_state in ("complete", "error"):
+            return
+        if not settings.NANOPORE_BATCH_COMMAND:
+            processing_batch.status = "failed"
+            processing_batch.error = "NANOPORE_BATCH_COMMAND is not configured."
+            processing_batch.save(update_fields=["status", "error"])
+            sequencing_run.workflow_state = "error"
+            sequencing_run.save(update_fields=["workflow_state"])
+            return
+        if not publish_only:
+            processing_batch.status = "submitting"
+            processing_batch.error = ""
+            processing_batch.save(update_fields=["status", "error"])
+
+    manifest = processing_batch.manifest
+    storage_prefix = sequencing_run.run_name
+    blob_service = get_storage_client()
+    blob_service.ensure_container(settings.NANOPORE_RAW_CONTAINER)
+    manifest_prefix = "{0}/input/manifests/input-manifest-v".format(storage_prefix)
+    manifest_blob_name = "{0}{1:06d}.json".format(
+        manifest_prefix, processing_batch.generation
+    )
+    control_blob_name = "{0}/input/control/state.json".format(storage_prefix)
+    nanopore_run = sequencing_run.nanopore_run
+    if not nanopore_run.scheduler_input_csv:
+        input_csv, metadata_csv = _scheduler_csvs(sequencing_run, nanopore_run)
+        nanopore_run.scheduler_input_csv = input_csv
+        nanopore_run.scheduler_metadata_csv = metadata_csv
+        nanopore_run.scheduler_input_sha256 = hashlib.sha256(
+            input_csv.encode("utf-8")
+        ).hexdigest()
+        nanopore_run.scheduler_metadata_sha256 = hashlib.sha256(
+            metadata_csv.encode("utf-8")
+        ).hexdigest()
+        nanopore_run.save(
+            update_fields=[
+                "scheduler_input_csv",
+                "scheduler_metadata_csv",
+                "scheduler_input_sha256",
+                "scheduler_metadata_sha256",
+            ]
+        )
+    barcode_values = nanopore_run.barcode_values
+    manifest_payload = {
+        "schema_version": 1,
+        "run_id": sequencing_run.pk,
+        "run_name": sequencing_run.run_name,
+        "finalized": manifest.finalized,
+        "finalized_at": manifest.created_at.isoformat(),
+        "dorado": {
+            "model": nanopore_run.dorado_model or settings.NANOPORE_DORADO_MODEL,
+            "barcode_kit": nanopore_run.barcode_kit,
+        },
+        "reference": {"path": settings.NANOPORE_REFERENCE},
+        "scheduler": {
+            "input_blob": "{0}/input/input.csv".format(storage_prefix),
+            "metadata_blob": "{0}/input/metadata.csv".format(storage_prefix),
+            "input_sha256": nanopore_run.scheduler_input_sha256,
+            "metadata_sha256": nanopore_run.scheduler_metadata_sha256,
+        },
+        "barcodes": [
+            {
+                "barcode": value,
+                "seqid": next(
+                    sample["seqid"]
+                    for sample in nanopore_run.sample_metadata["samples"]
+                    if sample["barcode"] == value
+                ),
+                "olnid": next(
+                    sample.get("olnid", "")
+                    for sample in nanopore_run.sample_metadata["samples"]
+                    if sample["barcode"] == value
+                ),
+            }
+            for value in barcode_values
+        ],
+        "files": manifest.files,
+    }
+    manifest_text = json.dumps(manifest_payload, sort_keys=True)
+    logger.info(
+        "Publishing Nanopore input manifest run=%s batch=%s generation=%s "
+        "status=%s publish_only=%s blob=%s",
+        sequencing_run.pk,
+        processing_batch.pk,
+        processing_batch.generation,
+        processing_batch.status,
+        publish_only,
+        manifest_blob_name,
+    )
+    try:
+        blob_service.upload_bytes(
+            settings.NANOPORE_RAW_CONTAINER,
+            manifest_blob_name,
+            manifest_text.encode("utf-8"),
+            content_type="application/json",
+        )
+        blob_service.upload_bytes(
+            settings.NANOPORE_RAW_CONTAINER,
+            "{0}/input/input.csv".format(storage_prefix),
+            nanopore_run.scheduler_input_csv.encode("utf-8"),
+            content_type="text/csv",
+        )
+        blob_service.upload_bytes(
+            settings.NANOPORE_RAW_CONTAINER,
+            "{0}/input/metadata.csv".format(storage_prefix),
+            nanopore_run.scheduler_metadata_csv.encode("utf-8"),
+            content_type="text/csv",
+        )
+        # Do not publish the stopping control state here. A finalized run
+        # may still have this newly published generation to process. The
+        # monitor writes stopping only after every generation result has been
+        # reconciled and no uploaded files remain unclaimed.
+        if publish_only:
+            processing_batch.status = "published"
+            processing_batch.submitted_at = (
+                processing_batch.submitted_at or django_timezone.now()
+            )
+            processing_batch.save(update_fields=["status", "submitted_at"])
+            logger.info(
+                "Published Nanopore manifest run=%s generation=%s blob=%s",
+                sequencing_run.pk,
+                processing_batch.generation,
+                manifest_blob_name,
+            )
+            return
+        mount_root = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(
+            settings.NANOPORE_RAW_CONTAINER
+        )
+        command = build_nanopore_command(
+            settings.NANOPORE_BATCH_COMMAND,
+            run_id=sequencing_run.pk,
+            run_name=sequencing_run.run_name,
+            manifest_blob=manifest_blob_name,
+            input_container=settings.NANOPORE_RAW_CONTAINER,
+            output_container=settings.NANOPORE_RESULTS_CONTAINER,
+            source_root="$AZ_BATCH_TASK_WORKING_DIR/source",
+            task_root="$AZ_BATCH_TASK_WORKING_DIR",
+            manifest_prefix=manifest_prefix,
+            control_blob=control_blob_name,
+        )
+        request_data = {
+            "container": settings.NANOPORE_RAW_CONTAINER,
+            "command_file": command,
+            "vm_size": settings.NANOPORE_BATCH_VM_SIZE,
+            "input_file_pattern": [
+                "{0}/{1}".format(settings.NANOPORE_RAW_CONTAINER, manifest_blob_name),
+                "{0}/{1}/input/pod5/*".format(
+                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
+                ),
+                "{0}/{1}/input/input.csv".format(
+                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
+                ),
+                "{0}/{1}/input/metadata.csv".format(
+                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
+                ),
+            ],
+            "download_file_pattern": [],
+            "output_file_pattern": ["output/"],
+            "output_container": settings.NANOPORE_RESULTS_CONTAINER,
+            "output_prefix": "runs/{0}".format(sequencing_run.run_name),
+            "analysis_type": "Nanopore",
+            "unique_id": "foodport-nanopore-{0}".format(sequencing_run.pk),
+            "log_prefix": "runs/{0}/logs".format(sequencing_run.run_name),
+        }
+        transfer_url_ttl = getattr(
+            settings,
+            "NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS",
+            604800,
+        )
+        blob_service.ensure_container(settings.NANOPORE_RESULTS_CONTAINER)
+        environment_variables = {
+            "FOODPORT_INPUT_SAS_URL": blob_service.create_transfer_url(
+                settings.NANOPORE_RAW_CONTAINER,
+                "read",
+                expires_in_seconds=transfer_url_ttl,
+            ),
+            "FOODPORT_OUTPUT_SAS_URL": blob_service.create_transfer_url(
+                settings.NANOPORE_RESULTS_CONTAINER,
+                "write",
+                expires_in_seconds=transfer_url_ttl,
+            ),
+        }
+        response_data = generic_api_submit(
+            command=command,
+            container_name=settings.NANOPORE_RAW_CONTAINER,
+            vm_size=settings.NANOPORE_BATCH_VM_SIZE,
+            analysis_type="Nanopore",
+            input_file_pattern=request_data["input_file_pattern"],
+            unique_id=request_data["unique_id"],
+            download_file_pattern=request_data["download_file_pattern"],
+            output_file_pattern=request_data["output_file_pattern"],
+            output_container=request_data["output_container"],
+            output_prefix=request_data["output_prefix"],
+            log_prefix=request_data["log_prefix"],
+            environment_variables=environment_variables,
+        )
+        submission_status = str(
+            response_data.get("status", "")
+        ).strip().lower()
+        if submission_status not in ("success", "submitted"):
+            raise RuntimeError(
+                "Batch service submission failed: {0}".format(
+                    response_data.get("error", "Unknown Batch service error")
+                )
+            )
+        job_id = response_data["job_id"]
+        task_ids = response_data.get("tasks", [])
+        if not task_ids:
+            raise ValueError("Batch service returned no task ID.")
+    except Exception as exc:
+        response_data = locals().get("response_data", {})
+        response = getattr(exc, "response", None)
+        if response is not None:
+            try:
+                error_data = response.json()
+            except ValueError:
+                error_data = {}
+            response_data = error_data if isinstance(error_data, dict) else {}
+        retryable = (
+            "Retryable Batch capacity error" in str(exc)
+            or response_data.get("retryable") is True
+            or (
+                response is not None
+                and _batch_submission_is_retryable(response, response_data)
+            )
+        )
+        if retryable and self.request.retries < self.max_retries:
+            retry_number = self.request.retries + 1
+            processing_batch.status = "submitting"
+            processing_batch.error = (
+                "Azure GPU capacity is temporarily unavailable. "
+                "Retrying submission (attempt {0} of {1})."
+            ).format(retry_number, self.max_retries)
+            processing_batch.save(update_fields=["status", "error"])
+            sequencing_run.task_retry_count = retry_number
+            sequencing_run.save(update_fields=["task_retry_count"])
+            logger.warning(
+                "Nanopore run %s hit transient Azure capacity on attempt "
+                "%s/%s; retrying",
+                sequencing_run.pk,
+                retry_number,
+                self.max_retries,
+                exc_info=True,
+            )
+            raise self.retry(
+                exc=exc,
+                countdown=min(
+                    NANOPORE_SUBMISSION_MAX_RETRY_DELAY,
+                    NANOPORE_SUBMISSION_RETRY_DELAY * (2**self.request.retries),
+                ),
+            )
+        processing_batch.status = "failed"
+        if retryable:
+            processing_batch.error = (
+                "Azure GPU capacity remained unavailable after {0} retries."
+            ).format(self.max_retries)
+        else:
+            processing_batch.error = str(exc)[:1000]
+        processing_batch.save(update_fields=["status", "error"])
+        sequencing_run.workflow_state = "error"
+        sequencing_run.save(update_fields=["workflow_state"])
+        sequencing_run.nanopore_run.status = "error"
+        sequencing_run.nanopore_run.save(update_fields=["status"])
+        return
+
+    processing_batch.status = "submitted"
+    processing_batch.azure_pool_id = str(response_data.get("pool_id", ""))
+    processing_batch.azure_job_id = str(job_id)
+    processing_batch.azure_task_id = str(task_ids[0])
+    processing_batch.submitted_at = django_timezone.now()
+    processing_batch.save(
+        update_fields=[
+            "status",
+            "azure_pool_id",
+            "azure_job_id",
+            "azure_task_id",
+            "submitted_at",
+        ]
+    )
+    sequencing_run.workflow_state = (
+        "stopping" if sequencing_run.workflow_state == "stopping" else "processing"
+    )
+    sequencing_run.job_id = str(job_id)
+    sequencing_run.task_id = str(task_ids[0])
+    sequencing_run.batch_submit_status = response_data.get("status", "")
+    sequencing_run.save(
+        update_fields=["workflow_state", "job_id", "task_id", "batch_submit_status"]
+    )
+
+
+def build_nanopore_command(template, **paths):
+    """Format the image-installed wrapper command with mounted task paths."""
+    command = template.format(**paths)
+    if paths.get("manifest_prefix") and "--manifest-prefix" not in command:
+        command += ' --manifest-prefix "{0}"'.format(paths["manifest_prefix"])
+    if paths.get("control_blob") and "--control-blob" not in command:
+        command += ' --control-blob "{0}"'.format(paths["control_blob"])
+    return command
+
+
+def _batch_resource_missing(exception):
+    """Return whether the Batch service reports a missing resource."""
+    error = getattr(exception, "error", None)
+    code = getattr(error, "code", None)
+    if hasattr(code, "value"):
+        code = code.value
+    code = str(code or "").strip().lower()
+
+    response = getattr(exception, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if status_code is None:
+        status_code = getattr(exception, "status_code", None)
+
+    message = str(exception).lower()
+    missing_codes = (
+        "jobnotfound",
+        "poolnotfound",
+        "resourcenotfound",
+        "notfound",
+    )
+    missing_messages = (
+        "does not exist",
+        "could not be found",
+        "resource not found",
+        "the specified job does not exist",
+        "the specified pool does not exist",
+    )
+    return (
+        status_code == 404
+        or code in missing_codes
+        or any(value in message for value in missing_messages)
+    )
+
+
+def _batch_state_value(resource):
+    """Return a normalized Azure Batch resource state string."""
+    state = getattr(resource, "state", None)
+    if hasattr(state, "value"):
+        state = state.value
+    state = str(state or "").strip().lower()
+    if "." in state:
+        state = state.rsplit(".", 1)[-1]
+    return state.replace("_", "").replace("-", "")
+
+
+def _append_unique_run_errors(run, errors):
+    """Append cleanup errors without duplicating messages every poll cycle."""
+    current_errors = list(run.errors or [])
+    changed = False
+    for error in errors:
+        if error not in current_errors:
+            current_errors.append(error)
+            changed = True
+    if changed:
+        run.errors = current_errors
+    return changed
+
+
+def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
+    """Request and verify asynchronous Nanopore job and pool deletion.
+
+    Azure Batch resource deletion is asynchronous. The job is deleted first.
+    A later monitor cycle verifies that the job is absent before requesting
+    pool deletion. Azure identifiers are cleared only after resource absence
+    is confirmed, allowing cleanup to resume after worker restarts.
+    """
+    resource_errors = []
+    updated_fields = []
+
+    job_id = processing_batch.azure_job_id
+    if job_id:
+        try:
+            try:
+                batch_client.task.list(job_id)
+            except BatchServiceError as exc:
+                if not _batch_resource_missing(exc):
+                    raise
+                job_exists = False
+            else:
+                job_exists = True
+
+            if not job_exists:
+                logger.info(
+                    "Confirmed Nanopore Batch job deletion run=%s job=%s",
+                    run.pk,
+                    job_id,
+                )
+                processing_batch.azure_job_id = ""
+                processing_batch.azure_task_id = ""
+                updated_fields.extend(["azure_job_id", "azure_task_id"])
+            else:
+                logger.warning(
+                    "Requesting Nanopore Batch job deletion run=%s job=%s",
+                    run.pk,
+                    job_id,
+                )
+                batch_client.job.delete(job_id)
+        except Exception as exc:
+            message = "Nanopore job cleanup error: {0}".format(exc)
+            resource_errors.append(message)
+            logger.exception(
+                "Could not clean up Nanopore Batch job run=%s job=%s",
+                run.pk,
+                job_id,
+            )
+
+        if updated_fields:
+            processing_batch.save(update_fields=updated_fields)
+
+        if resource_errors and _append_unique_run_errors(run, resource_errors):
+            run.save(update_fields=["errors"])
+
+        # The pool must not be deleted until Azure confirms job deletion.
+        if processing_batch.azure_job_id:
+            return {
+                "complete": False,
+                "pending": True,
+                "errors": resource_errors,
+            }
+
+    pool_id = processing_batch.azure_pool_id
+    if pool_id:
+        try:
+            try:
+                pool = batch_client.pool.get(pool_id=pool_id)
+            except BatchServiceError as exc:
+                if not _batch_resource_missing(exc):
+                    raise
+                pool = None
+
+            if pool is None:
+                logger.info(
+                    "Confirmed Nanopore Batch pool deletion run=%s pool=%s",
+                    run.pk,
+                    pool_id,
+                )
+                processing_batch.azure_pool_id = ""
+                if "azure_pool_id" not in updated_fields:
+                    updated_fields.append("azure_pool_id")
+            else:
+                pool_state = _batch_state_value(pool)
+                if pool_state != "deleting":
+                    logger.warning(
+                        "Requesting Nanopore Batch pool deletion run=%s pool=%s",
+                        run.pk,
+                        pool_id,
+                    )
+                    batch_client.pool.delete(pool_id=pool_id)
+                else:
+                    logger.info(
+                        "Nanopore Batch pool deletion is pending run=%s pool=%s",
+                        run.pk,
+                        pool_id,
+                    )
+        except Exception as exc:
+            message = "Nanopore pool cleanup error: {0}".format(exc)
+            resource_errors.append(message)
+            logger.exception(
+                "Could not clean up Nanopore Batch pool run=%s pool=%s",
+                run.pk,
+                pool_id,
+            )
+
+    if updated_fields:
+        processing_batch.save(update_fields=updated_fields)
+
+    if resource_errors and _append_unique_run_errors(run, resource_errors):
+        run.save(update_fields=["errors"])
+
+    complete = not (
+        processing_batch.azure_job_id
+        or processing_batch.azure_pool_id
+    )
+    return {
+        "complete": complete,
+        "pending": not complete,
+        "errors": resource_errors,
+    }
+
+
+def check_nanopore_tasks():
+    """Reconcile generation publication, task state, and resource cleanup."""
+    owner_batches = (
+        NanoporeProcessingBatch.objects.filter(
+            Q(azure_job_id__gt="") | Q(azure_pool_id__gt="")
+        )
+        .select_related("sequencing_run", "sequencing_run__nanopore_run")
+        .order_by("pk")
+    )
+    if not owner_batches.exists():
+        return
+
+    batch_client = create_batch_client()
+    result_blobs = get_storage_client()
+
+    for owner_batch in owner_batches:
+        run = owner_batch.sequencing_run
+        try:
+            completed_generations, failed_generations = (
+                _reconcile_nanopore_generation_results(run, result_blobs)
+            )
+            if failed_generations:
+                failed_batch = failed_generations[0]
+                run.workflow_state = "error"
+                run.status = "Error"
+                run.failure_stage = "processing"
+                run.nanopore_run.status = "error"
+                run.exit_code = failed_batch.exit_code
+                _append_unique_run_errors(run, [failed_batch.error])
+                run.nanopore_run.save(update_fields=["status"])
+                run.save(update_fields=[
+                    "workflow_state", "status", "failure_stage", "exit_code",
+                    "errors",
+                ])
+                _write_nanopore_control(run, "error")
+
+            waiting_count = _unclaimed_nanopore_files(run).count()
+            blocker = _nanopore_collection_blocker(run)
+            if (run.workflow_state != "error" and not failed_generations
+                    and waiting_count > 0 and blocker is None):
+                collect_nanopore_iteration.apply_async(
+                    queue="cowbat",
+                    args=(run.pk,),
+                    kwargs={"force": run.workflow_state == "stopping"},
+                )
+            elif (
+                not failed_generations
+                and run.workflow_state == "stopping"
+                and waiting_count == 0
+                and blocker is None
+            ):
+                _write_nanopore_control(run, "stopping")
+
+            # Save the terminal observation before deletion starts. Later
+            # monitor cycles then bypass task polling and resume cleanup.
+            if owner_batch.finished_at is None:
+                try:
+                    cloud_tasks = list(batch_client.task.list(
+                        owner_batch.azure_job_id
+                    ))
+                except BatchServiceError as exc:
+                    if not _batch_resource_missing(exc):
+                        raise
+                    owner_batch.exit_code = None
+                    owner_batch.finished_at = django_timezone.now()
+                    owner_batch.error = (
+                        "Azure Batch job disappeared before FoodPort observed "
+                        "a terminal Nanopore task state."
+                    )
+                    owner_batch.save(update_fields=[
+                        "exit_code", "finished_at", "error",
+                    ])
+                    run.workflow_state = "error"
+                    run.status = "Error"
+                    run.failure_stage = "cleanup"
+                    run.nanopore_run.status = "error"
+                    _append_unique_run_errors(run, [owner_batch.error])
+                    run.nanopore_run.save(update_fields=["status"])
+                    run.save(update_fields=[
+                        "workflow_state", "status", "failure_stage", "errors",
+                    ])
+                    cloud_tasks = []
+
+                if owner_batch.finished_at is None:
+                    cloud_task = next(
+                        (
+                            task for task in cloud_tasks
+                            if str(getattr(task, "id", ""))
+                            == owner_batch.azure_task_id
+                        ),
+                        cloud_tasks[0] if cloud_tasks else None,
+                    )
+                    if cloud_task is None:
+                        continue
+                    if _batch_state_value(cloud_task) != "completed":
+                        if run.workflow_state == "error":
+                            continue
+                        owner_batch.status = "running"
+                        owner_batch.started_at = (
+                            owner_batch.started_at or django_timezone.now()
+                        )
+                        if run.workflow_state not in ("stopping", "error"):
+                            run.workflow_state = "processing"
+                        run.task_started_at = (
+                            run.task_started_at or django_timezone.now()
+                        )
+                        owner_batch.save(update_fields=["status", "started_at"])
+                        run.save(update_fields=[
+                            "workflow_state", "task_started_at",
+                        ])
+                        continue
+
+                    # Read the persistent wrapper task exit code directly
+                    # from Azure. owner_batch.exit_code may currently hold the
+                    # scheduler exit code from the latest generation result,
+                    # which must never be used as proof that the wrapper ended.
+                    wrapper_exit_code = getattr(
+                        getattr(cloud_task, "execution_info", None),
+                        "exit_code", None,
+                    )
+                    owner_batch.exit_code = wrapper_exit_code
+                    owner_batch.finished_at = django_timezone.now()
+                    run.exit_code = wrapper_exit_code
+                    run.task_finished_at = owner_batch.finished_at
+                    owner_batch.save(update_fields=["exit_code", "finished_at"])
+                    run.save(update_fields=["exit_code", "task_finished_at"])
+
+            wrapper_exit_code = owner_batch.exit_code
+            scheduler_exit_code = None
+            if isinstance(owner_batch.report, dict):
+                scheduler_exit_code = owner_batch.report.get(
+                    "scheduler_exit_code"
+                )
+            # A successful wrapper cannot substitute for missing results.
+            unresolved = run.nanopore_processing_batches.filter(
+                last_completed_at__isnull=True,
+            )
+
+            waiting_count = _unclaimed_nanopore_files(run).count()
+            blocker = _nanopore_collection_blocker(run)
+            successful_drain = (
+                wrapper_exit_code == 0
+                and run.workflow_state != "error"
+                and waiting_count == 0
+                and blocker is None
+                and not unresolved.exists()
+                and not run.nanopore_processing_batches.filter(status="failed").exists()
+            )
+
+            if not successful_drain:
+                owner_batch.status = "failed"
+                if not owner_batch.error:
+                    owner_batch.error = (
+                        "Azure Batch wrapper task exited with code {0} "
+                        "before all Nanopore generations were drained. "
+                        "The latest reconciled scheduler generation exited "
+                        "with code {1}."
+                    ).format(wrapper_exit_code, scheduler_exit_code)
+                    if wrapper_exit_code == 0 and unresolved.exists():
+                        owner_batch.error = (
+                            "Azure Batch wrapper exited without all generation "
+                            "result manifests."
+                        )
+                run.workflow_state = "error"
+                run.status = "Error"
+                run.failure_stage = "processing"
+                run.nanopore_run.status = "error"
+                _append_unique_run_errors(run, [owner_batch.error])
+                owner_batch.save(update_fields=[
+                    "status", "last_completed_at",
+                    "processed_pod5_count", "error",
+                ])
+                run.nanopore_run.save(update_fields=["status"])
+                run.save(update_fields=[
+                    "workflow_state", "status", "failure_stage", "errors",
+                ])
+
+            cleanup = _cleanup_nanopore_batch_resources(
+                batch_client=batch_client,
+                processing_batch=owner_batch,
+                run=run,
+            )
+            if not cleanup["complete"]:
+                if successful_drain:
+                    owner_batch.status = "running"
+                    run.workflow_state = "stopping"
+                    run.nanopore_run.status = "stopping"
+                    owner_batch.save(update_fields=[
+                        "status", "last_completed_at", "processed_pod5_count",
+                    ])
+                    run.nanopore_run.save(update_fields=["status"])
+                    run.save(update_fields=["workflow_state"])
+                continue
+
+            if successful_drain:
+                owner_batch.status = "complete"
+                run.workflow_state = "complete"
+                run.status = "Processed"
+                run.failure_stage = ""
+                run.nanopore_run.status = "complete"
+                run.nanopore_run.terminated_at = django_timezone.now()
+                owner_batch.save(update_fields=[
+                    "status", "last_completed_at", "processed_pod5_count",
+                    "azure_pool_id", "azure_job_id", "azure_task_id",
+                ])
+                run.nanopore_run.save(update_fields=["status", "terminated_at"])
+                run.save(update_fields=[
+                    "workflow_state", "status", "failure_stage",
+                ])
+            else:
+                owner_batch.save(update_fields=[
+                    "azure_pool_id", "azure_job_id", "azure_task_id",
+                ])
+
+        except (BatchServiceError, StorageServiceError) as exc:
+            owner_batch.error = str(exc)[:1000]
+            owner_batch.save(update_fields=["error"])
+            message = "Nanopore Batch polling error: {0}".format(exc)
+            if _append_unique_run_errors(run, [message]):
+                run.save(update_fields=["errors"])

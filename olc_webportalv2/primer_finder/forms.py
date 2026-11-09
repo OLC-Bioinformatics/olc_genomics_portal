@@ -15,10 +15,16 @@ from django import forms
 
 # Third-party imports
 from Bio import SeqIO
+from dal import autocomplete
 
 # Portal-specific imports
+from olc_webportalv2.common.benchmarks import (
+    EXCLUSIVITY_BENCHMARK_CHOICES,
+    INCLUSIVITY_BENCHMARK_CHOICES,
+    validate_benchmark_panel,
+)
+from olc_webportalv2.metadata.models import Genus, SequenceData
 from olc_webportalv2.primer_finder.models import (
-    genera,
     PrimerVerifierRequest,
     ValidatorRequest
 )
@@ -32,10 +38,68 @@ mismatch_choices = (
 )
 
 
+class SeqIDMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Accept Select2 values and legacy whitespace-separated SeqIDs."""
+
+    def clean(self, value):
+        if isinstance(value, str):
+            value = value.split()
+        return super().clean(value)
+
+
 class PrimerVerifierForm(ModelForm):
     """
     Form for the PrimerVerifierRequest model.
     """
+
+    inclusivity_genus = forms.ModelChoiceField(
+        queryset=Genus.objects.all(),
+        required=False,
+        label=_('Genus'),
+        widget=autocomplete.ModelSelect2(
+            url='metadata:genus_query_autocompleter',
+            attrs={'data-placeholder': _('Search genus ...')},
+        ),
+    )
+    exclusivity_genus = forms.ModelChoiceField(
+        queryset=Genus.objects.all(),
+        required=False,
+        label=_('Genus'),
+        widget=autocomplete.ModelSelect2(
+            url='metadata:genus_query_autocompleter',
+            attrs={'data-placeholder': _('Search genus ...')},
+        ),
+    )
+    inclusivity_seqids = SeqIDMultipleChoiceField(
+        queryset=SequenceData.objects.all(),
+        required=False,
+        label=_('Specific SeqIDs'),
+        widget=autocomplete.ModelSelect2Multiple(
+            url='metadata:seqid_autocompleter',
+            attrs={'data-placeholder': _('Search SeqIDs ...')},
+        ),
+    )
+    exclusivity_seqids = SeqIDMultipleChoiceField(
+        queryset=SequenceData.objects.all(),
+        required=False,
+        label=_('Specific SeqIDs'),
+        widget=autocomplete.ModelSelect2Multiple(
+            url='metadata:seqid_autocompleter',
+            attrs={'data-placeholder': _('Search SeqIDs ...')},
+        ),
+    )
+    inclusivity_benchmark = forms.ChoiceField(
+        required=False,
+        choices=(('', _('No benchmark dataset')),) +
+        INCLUSIVITY_BENCHMARK_CHOICES,
+        label=_('Benchmark dataset'),
+    )
+    exclusivity_benchmark = forms.ChoiceField(
+        required=False,
+        choices=(('', _('No benchmark dataset')),) +
+        EXCLUSIVITY_BENCHMARK_CHOICES,
+        label=_('Benchmark dataset'),
+    )
 
     class Meta:
         """
@@ -52,7 +116,13 @@ class PrimerVerifierForm(ModelForm):
             'contig_breaks',
             'range_buffer',
             'inclusivity_panel',
-            'exclusivity_panel'
+            'exclusivity_panel',
+            'inclusivity_genus',
+            'exclusivity_genus',
+            'inclusivity_seqids',
+            'exclusivity_seqids',
+            'inclusivity_benchmark',
+            'exclusivity_benchmark',
         ]
         labels = {
             "project_name": _("Project Name"),
@@ -71,6 +141,10 @@ class PrimerVerifierForm(ModelForm):
             "exclusivity_panel": _(
                 "Genus/Genera to include in exclusivity panel"
             ),
+            "inclusivity_genus": _("Genus to include in inclusivity panel"),
+            "exclusivity_genus": _("Genus to include in exclusivity panel"),
+            "inclusivity_seqids": _("Specific inclusivity SeqIDs"),
+            "exclusivity_seqids": _("Specific exclusivity SeqIDs"),
         }
         widgets = {
             "project_name": forms.TextInput(
@@ -113,12 +187,23 @@ class PrimerVerifierForm(ModelForm):
                 }
             ),
             "inclusivity_panel": forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=INCLUSIVITY_BENCHMARK_CHOICES,
             ),
             "exclusivity_panel": forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=EXCLUSIVITY_BENCHMARK_CHOICES,
             ),
         }
+
+    inclusivity_panel = forms.MultipleChoiceField(
+        required=False,
+        choices=INCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    exclusivity_panel = forms.MultipleChoiceField(
+        required=False,
+        choices=EXCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+    )
 
     @staticmethod
     def clean_primer_names(primer_name):
@@ -375,7 +460,7 @@ class PrimerVerifierForm(ModelForm):
         # Primer Validation
         primer_list = []
         primer_details = {}
-        primer_sequences = self.cleaned_data['primer_sequences']
+        primer_sequences = self.cleaned_data.get('primer_sequences', '')
         if not primer_sequences:
             error_list.append(
                 _('Please provide FASTA-formatted forward and reverse primers')
@@ -389,7 +474,9 @@ class PrimerVerifierForm(ModelForm):
 
         # Probe
         probe_sequence = \
-            self.cleaned_data["probe_sequence"].replace(" ", "").rstrip()
+            (self.cleaned_data.get("probe_sequence") or "").replace(
+                " ", ""
+            ).rstrip()
         allowed_chars = "acgt"
         if not all(char in allowed_chars for char in probe_sequence.lower()):
             error_list.append(
@@ -400,13 +487,68 @@ class PrimerVerifierForm(ModelForm):
             )
 
         # Inclusivity and Exclusivity Panels
-        inclusivity_panel = self.cleaned_data['inclusivity_panel']
-        exclusivity_panel = self.cleaned_data['exclusivity_panel']
-        if not inclusivity_panel and not exclusivity_panel:
+        inclusivity_panel = self.cleaned_data.get(
+            'inclusivity_panel', []
+        ) or []
+        exclusivity_panel = self.cleaned_data.get(
+            'exclusivity_panel', []
+        ) or []
+        inclusivity_genus, inclusivity_seqids = self._clean_query_selection(
+            'inclusivity'
+        )
+        exclusivity_genus, exclusivity_seqids = self._clean_query_selection(
+            'exclusivity'
+        )
+        inclusivity_benchmark = self.cleaned_data.get(
+            'inclusivity_benchmark', ''
+        )
+        exclusivity_benchmark = self.cleaned_data.get(
+            'exclusivity_benchmark', ''
+        )
+        if not (
+            inclusivity_panel or exclusivity_panel or
+            inclusivity_genus or exclusivity_genus or
+            inclusivity_seqids or exclusivity_seqids or
+            inclusivity_benchmark or exclusivity_benchmark
+        ):
             error_list.append(
-                _('Please select at least one genus in either the inclusivity '
-                  'or exclusivity panel.')
+                _('Select at least one benchmark, genus, or SeqID for either '
+                  'panel.')
             )
+
+        inclusivity_benchmarks = set(inclusivity_panel)
+        exclusivity_benchmarks = set(exclusivity_panel)
+        if inclusivity_benchmark:
+            inclusivity_benchmarks.add(inclusivity_benchmark)
+        if exclusivity_benchmark:
+            exclusivity_benchmarks.add(exclusivity_benchmark)
+        if inclusivity_benchmarks.intersection(exclusivity_benchmarks):
+            error_list.append(
+                _('A benchmark dataset cannot be assigned to both panels.')
+            )
+        if inclusivity_genus and exclusivity_genus and (
+            inclusivity_genus.casefold() == exclusivity_genus.casefold()
+        ):
+            error_list.append(_('A genus cannot be assigned to both panels.'))
+        if set(inclusivity_seqids).intersection(exclusivity_seqids):
+            error_list.append(_('A SeqID cannot be assigned to both panels.'))
+
+        for benchmark_name in inclusivity_benchmarks:
+            try:
+                validate_benchmark_panel(
+                    benchmark_name=benchmark_name,
+                    panel='inclusivity',
+                )
+            except ValueError as exc:
+                error_list.append(str(exc))
+        for benchmark_name in exclusivity_benchmarks:
+            try:
+                validate_benchmark_panel(
+                    benchmark_name=benchmark_name,
+                    panel='exclusivity',
+                )
+            except ValueError as exc:
+                error_list.append(str(exc))
 
         # Minimum Amplicon Size
         min_amplicon_size = self.cleaned_data.get('min_amplicon_size')
@@ -487,8 +629,33 @@ class PrimerVerifierForm(ModelForm):
             "probe_sequence": probe_sequence,
             "inclusivity_panel": inclusivity_panel,
             "exclusivity_panel": exclusivity_panel,
+            "inclusivity_genus": inclusivity_genus,
+            "exclusivity_genus": exclusivity_genus,
+            "inclusivity_seqids": inclusivity_seqids,
+            "exclusivity_seqids": exclusivity_seqids,
+            "inclusivity_benchmark": inclusivity_benchmark,
+            "exclusivity_benchmark": exclusivity_benchmark,
             "project_name": self.cleaned_data.get("project_name"),
         }
+
+    def _clean_query_selection(self, prefix):
+        genus = self.cleaned_data.get(prefix + '_genus')
+        genus = genus.genus.strip() if genus else ''
+        raw_seqids = self.cleaned_data.get(prefix + '_seqids')
+        if hasattr(raw_seqids, 'values_list'):
+            seqids = list(raw_seqids.values_list('seqid', flat=True))
+        else:
+            seqids = raw_seqids or []
+            if isinstance(seqids, str):
+                seqids = seqids.split()
+        if genus and not SequenceData.objects.filter(
+            genus__iexact=genus
+        ).exists():
+            self.add_error(
+                prefix + '_genus',
+                _('This genus is not present in the sequence database.'),
+            )
+        return genus, sorted(set(seqids))
 
 
 class PrimerValidatorForm(ModelForm):
@@ -538,7 +705,7 @@ class PrimerValidatorForm(ModelForm):
                        }
             ),
             'inclusivity_panel': forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=INCLUSIVITY_BENCHMARK_CHOICES,
             ),
         }
 

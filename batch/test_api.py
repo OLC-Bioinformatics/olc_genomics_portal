@@ -60,6 +60,18 @@ def test_nanopore_payload_rejects_scalar_input_pattern():
         api._validate_payload(payload)
 
 
+def test_submission_validates_environment_variables():
+    payload = valid_payload()
+    payload["environment_variables"] = {
+        "FOODPORT_INPUT_SAS_URL": "https://storage.example/input?sig=token",
+    }
+    api._validate_payload(payload)
+
+    payload["environment_variables"] = ["not", "a", "mapping"]
+    with pytest.raises(TypeError, match="environment_variables"):
+        api._validate_payload(payload)
+
+
 class FakeProvider:
     def __init__(self):
         self.calls = []
@@ -474,6 +486,9 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
         ],
         "vm_size": "Standard_D4s_v3",
         "unique_id": "FoodPort",
+        "environment_variables": {
+            "FOODPORT_INPUT_SAS_URL": "https://storage.example/input?sig=token",
+        },
     })
 
     assert result == {
@@ -502,6 +517,14 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
         '/bin/bash -c "echo first"',
         '/bin/bash -c "echo second"',
     ]
+    assert {
+        item.name: item.value for item in tasks[0].environment_settings
+    } == {
+        "CONDA": "/usr/bin/miniconda/bin",
+        "FOODPORT_INPUT_SAS_URL": (
+            "https://storage.example/input?sig=token"
+        ),
+    }
     assert tasks[0].output_files == []
     assert [output.file_pattern for output in tasks[1].output_files] == [
         "$AZ_BATCH_TASK_DIR/stderr.txt",

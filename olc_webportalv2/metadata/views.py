@@ -72,6 +72,26 @@ class GenusAutoCompleter(autocomplete.Select2ListView):
         return make_genus_choice_list()
 
 
+class GenusQueryAutoCompleter(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Genus.objects.none()
+        queryset = Genus.objects.all()
+        if self.q:
+            queryset = queryset.filter(genus__icontains=self.q)
+        return queryset.order_by('genus')
+
+
+class SeqIDAutoCompleter(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return SequenceData.objects.none()
+        queryset = SequenceData.objects.all()
+        if self.q:
+            queryset = queryset.filter(seqid__icontains=self.q)
+        return queryset.order_by('seqid')
+
+
 class SpeciesAutoCompleter(autocomplete.Select2ListView):
     def get_list(self):
         return make_species_choice_list()

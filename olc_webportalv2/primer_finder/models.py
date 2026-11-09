@@ -76,6 +76,24 @@ class PrimerVerifierRequest(models.Model):
     exclusivity_panel = ArrayField(
         models.CharField(max_length=24), blank=True, default=list
     )
+    inclusivity_genus = models.CharField(max_length=48, blank=True, default='')
+    exclusivity_genus = models.CharField(max_length=48, blank=True, default='')
+    inclusivity_seqids = ArrayField(
+        models.CharField(max_length=24), blank=True, default=list
+    )
+    exclusivity_seqids = ArrayField(
+        models.CharField(max_length=24), blank=True, default=list
+    )
+    inclusivity_benchmark = models.CharField(
+        max_length=48, blank=True, default=''
+    )
+    exclusivity_benchmark = models.CharField(
+        max_length=48, blank=True, default=''
+    )
+    benchmark_versions = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'primer_finder_verifierrequest'
 
     def __str__(self):
         return self.project_name
@@ -259,6 +277,7 @@ class ValidatorRequest(models.Model):
     summary = models.TextField(blank=True)
     # JSON summary of number of mismatches-specific details
     totals = models.TextField(blank=True)
+    benchmark_versions = models.JSONField(default=dict, blank=True)
 
     # primer_validator.py arguments
     mismatches = models.IntegerField(
