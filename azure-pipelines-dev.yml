@@ -887,6 +887,10 @@ stages:
           fi
           echo "Deploying dev branch commit $checked_out_commit"
 
+          # Nginx serves these public assets as www-data; the deployment umask is 077.
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
+
           python3 "$REMOTE_DIR/remote_deploy_env.py"
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
