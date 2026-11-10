@@ -99,19 +99,8 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
         upload_probe(request=primer_request)
         input_blob_names.append("probe.fasta")
 
-    # Set the path to the mounted container in the Batch VM
-    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
-
-    # Create the PrimerValidator system call
-    cmd = _create_primer_cmd(
-        container_name=container_name,
-        file_name=file_name,
-        path=path,
-        request=primer_request
-    )
-
     # Handle the inclusivity panel files
-    _handle_panel_files(
+    inclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=True,
         panel_model=panel_model,
@@ -344,12 +333,15 @@ def _create_primer_cmd(
     # Add the probe sequence. getattr() prevents AttributeError for request
     # types that do not define probe_sequence.
     if getattr(request, "probe_sequence", None):
-        cmd += f" -p /datadrive/{container_name}/probe.fasta"
+        primer_command += " -p {probe}".format(
+            probe=shlex.quote(posixpath.join(run_directory, "probe.fasta"))
+        )
 
-    # Copy the reports folder and seqids files to the container mount
-    cmd += (
-        f" && cp -R /datadrive/{container_name}/reports {path} && "
-        f"cp /datadrive/{container_name}/*_seqids.txt {path}"
+    command_parts.append(primer_command)
+    command_parts.append(
+        'cp -R {reports} "$mount_dir/"'.format(
+            reports=shlex.quote(reports_directory)
+        )
     )
 
     # Copy sequence-ID files back when at least one such file exists. The

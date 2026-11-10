@@ -9,7 +9,7 @@
 <p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
 <br>
 
-<h2>{%trans "PrimerValidatorRequest"%}</h2>
+<h2>{%trans "PrimerVerifier Request"%}</h2>
 <form action='' enctype="multipart/form-data" method="post">
     {% csrf_token %}
     {% if form.errors %}
@@ -80,7 +80,7 @@
         </div>
     </div>
     {{ form.contig_breaks|as_crispy_field}}
-    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerValidator" %}</button>
+    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerVerifier" %}</button>
 </form>
 
 

@@ -40,6 +40,11 @@ urlpatterns = [
         views.primer_validator_results,
         name="primer_validator_results",
     ),
+    path(
+        _("primer_validator_report/<int:validator_pk>/"),
+        views.primer_validator_report,
+        name="primer_validator_report",
+    ),
 
     # PrimerVerifier
     path(

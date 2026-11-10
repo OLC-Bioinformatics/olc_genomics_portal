@@ -70,7 +70,7 @@ def primer_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_home(request: HttpRequest) -> HttpResponse:
+def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     """
     View for the primer validator home page. This view is responsible for
     rendering the home page, and for deleting projects from the database.
@@ -103,9 +103,9 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_request(request: HttpRequest) -> HttpResponse:
+def primer_verifier_request(request: HttpRequest) -> HttpResponse:
     """
-    View for the primer validator request form. This view is responsible for
+    View for the primer verifier request form. This view is responsible for
     rendering the form, validating the form, and saving the form to the
     database. The view also populates the database with the primer details
     and the panel details. The view also creates and submits the batch job
@@ -199,10 +199,10 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                 kwargs={'verifier_request_pk': validator_request.pk},
                 countdown=10
             )
-            # Redirect the view to validator_processing
+            # Redirect the view to verifier_processing
             return redirect(
-                'primer_finder:primer_validator_processing',
-                validator_pk=validator_request.pk
+                'primer_finder:primer_verifier_processing',
+                verifier_pk=validator_request.pk
             )
     return render(
         request,
@@ -215,12 +215,12 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_processing(
+def primer_verifier_processing(
     request: HttpRequest,
-    validator_pk: int
+    verifier_pk: int
 ) -> HttpResponse:
     """
-    View for the primer validator processing page. This view is responsible for
+    View for the primer verifier processing page. This view is responsible for
     rendering the processing page, and for saving the email to the database.
 
     :param request: The HTTP request object
@@ -231,7 +231,7 @@ def primer_validator_processing(
     # Retrieve the PrimerVerifierRequest object
     validator_request = get_object_or_404(
         PrimerVerifierRequest,
-        pk=validator_pk
+        pk=verifier_pk
     )
 
     # Create an instance of the EmailForm
@@ -270,12 +270,12 @@ def primer_validator_processing(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_validator_results(
+def primer_verifier_results(
     request: HttpRequest,
-    validator_pk: int
+    verifier_pk: int
 ) -> HttpResponse:
     """
-    View for the primer validator results page. This view is responsible for
+    View for the primer verifier results page. This view is responsible for
     rendering the results page, and for populating the page with the
     appropriate data.
 
@@ -286,7 +286,7 @@ def primer_validator_results(
     """
     validator_request = get_object_or_404(
         PrimerVerifierRequest,
-        pk=validator_pk
+        pk=verifier_pk
     )
 
     # Retrieve the PrimerSet object(s) corresponding to the verifier_request
@@ -349,7 +349,7 @@ def primer_validator_results(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_home(request: HttpRequest) -> HttpResponse:
+def primer_validator_home(request: HttpRequest) -> HttpResponse:
     """
     View for the primer verifier home page. This view is responsible for
     rendering the home page and for displaying the user's primer verifier
@@ -381,11 +381,11 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_request(
+def primer_validator_request(
     request: HttpRequest
 ) -> HttpResponse:
     """
-    View for the primer verifier request page. This view is responsible for
+    View for the primer validator request page. This view is responsible for
     rendering the request page and for saving the email to the database.
 
     Args:
@@ -501,10 +501,10 @@ def primer_verifier_request(
                 kwargs={"validator_request_pk": verifier_request.pk},
                 countdown=10,
             )
-            # Redirect the view to primer_verifier_processing
+            # Redirect the view to primer_validator_processing
             return redirect(
-                'primer_finder:primer_verifier_processing',
-                verifier_pk=verifier_request.pk
+                'primer_finder:primer_validator_processing',
+                validator_pk=verifier_request.pk
             )
     return render(request,
                   'primer_finder/validator_request.html',
@@ -515,17 +515,17 @@ def primer_verifier_request(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_processing(
+def primer_validator_processing(
     request: HttpRequest,
-    verifier_pk: int
+    validator_pk: int
 ) -> HttpResponse:
     """
-    View for the primer verifier processing page. This view is responsible for
+    View for the primer validator processing page. This view is responsible for
     rendering the processing page and for saving the email to the database.
 
     Args:
         request (object): The HTTP request object.
-        verifier_pk (int): The primary key of the ValidatorRequest object.
+        validator_pk (int): The primary key of the ValidatorRequest object.
 
     Returns:
         HttpResponse: The HTTP response object.
@@ -533,7 +533,7 @@ def primer_verifier_processing(
     # Retrieve the ValidatorRequest object
     verifier_request = get_object_or_404(
         ValidatorRequest,
-        pk=verifier_pk
+        pk=validator_pk
     )
 
     # Create the email form
@@ -568,24 +568,24 @@ def primer_verifier_processing(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_results(
+def primer_validator_results(
     request: HttpRequest,
-    verifier_pk: int
+    validator_pk: int
 ) -> HttpResponse:
     """
-    View for the primer verifier results page. This view is responsible for
+    View for the primer validator results page. This view is responsible for
     rendering the results page for a specific primer validation request.
 
     Args:
         request (object): The HTTP request object.
-        verifier_pk (int): The primary key of the ValidatorRequest object.
+        validator_pk (int): The primary key of the ValidatorRequest object.
 
     Returns:
         HttpResponse: The HTTP response object.
     """
     # Retrieve the ValidatorRequest object
     verifier_request = get_object_or_404(
-        ValidatorRequest, pk=verifier_pk
+        ValidatorRequest, pk=validator_pk
     )
 
     # Retrieve the PrimerSet object(s) corresponding to the validator_request
@@ -629,9 +629,9 @@ def primer_verifier_results(
         clean_primers[primer] = clean_primer
     return render(
         request,
-        'primer_finder/verifier_results.html',
+        'primer_finder/validator_results.html',
         {
-            'request': verifier_request,
+            'primer_validator_request': verifier_request,
             'mismatch_details': json.loads(
                 verifier_request.summary
             ),
@@ -655,15 +655,15 @@ def primer_verifier_results(
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_report(request, verifier_pk):
+def primer_validator_report(request, validator_pk):
     """
-    View for the primer verifier report page.
+    View for the primer validator report page.
 
     Args:
         request (object): The HTTP request object.
-        verifier_pk (int): The primary key of the ValidatorRequest object.
+        validator_pk (int): The primary key of the ValidatorRequest object.
     """
-    verifier_request = get_object_or_404(ValidatorRequest, pk=verifier_pk)
+    verifier_request = get_object_or_404(ValidatorRequest, pk=validator_pk)
 
     # Retrieve the PrimerSet object(s) corresponding to the validator_request
     # primary key
@@ -724,6 +724,12 @@ def primer_verifier_report(request, verifier_pk):
                         )[1],
                       'reverse': verifier_request.reverse_primer.split('\n')[1]
                   })
+
+
+@csrf_exempt
+@login_required
+def primer_verifier_report(request, verifier_pk):
+    return primer_validator_report(request, validator_pk=verifier_pk)
 
 
 @csrf_exempt  # needed or IE explodes

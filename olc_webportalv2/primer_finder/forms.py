@@ -551,8 +551,10 @@ class PrimerValidatorForm(ModelForm):
         error_list = list()
         primer_details = dict()
         # Primers
-        forward_primer = self.cleaned_data['forward_primer']
-        reverse_primer = self.cleaned_data['reverse_primer']
+        forward_primer = self.cleaned_data.get('forward_primer')
+        reverse_primer = self.cleaned_data.get('reverse_primer')
+        if forward_primer is None or reverse_primer is None:
+            return self.cleaned_data
         forward_primer, error_list, primer_list, forward_primer_details = \
             PrimerVerifierForm.validate_primers(
                 primer_sequences='>primer-F\r\n{forward}'.format(
@@ -571,7 +573,9 @@ class PrimerValidatorForm(ModelForm):
         primer_details.update(reverse_primer_details)
         # Probe
         probe_sequence = \
-            self.cleaned_data['probe_sequence'].replace(' ', '').rstrip()
+            (self.cleaned_data.get('probe_sequence') or '').replace(
+                ' ', ''
+            ).rstrip()
         allowed_chars = 'acgt'
         if not all(char in allowed_chars for char in probe_sequence.lower()):
             error_list.append(
@@ -581,7 +585,7 @@ class PrimerValidatorForm(ModelForm):
                 )
             )
         # At least one option of the inclusivity panels must be selected
-        inclusivity_panel = self.cleaned_data['inclusivity_panel']
+        inclusivity_panel = self.cleaned_data.get('inclusivity_panel') or []
         if not inclusivity_panel:
             error_list.append(
                 _('Please select an option for the inclusivity panel.')
