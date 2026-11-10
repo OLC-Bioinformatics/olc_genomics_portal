@@ -123,7 +123,7 @@ class CommonMethodTests(SimpleTestCase):
         response.json.return_value = {'job_id': 'job-1'}
         post.return_value = response
 
-        result = generic_api_submit.run(
+        result = generic_api_submit(
             command='echo run',
             container_name='job-1',
             vm_size='Standard_D4s_v3',
@@ -163,7 +163,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertRaises(RuntimeError):
-            generic_api_submit.run(
+            generic_api_submit(
                 command='echo run',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',
@@ -186,7 +186,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertRaises(RuntimeError):
-            generic_api_submit.run(
+            generic_api_submit(
                 command='echo run',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',
@@ -209,7 +209,7 @@ class CommonMethodTests(SimpleTestCase):
         post.return_value = response
 
         with self.assertLogs(level=logging.INFO) as logs:
-            generic_api_submit.run(
+            generic_api_submit(
                 command='curl https://storage.example/blob?sig=secret-value',
                 container_name='job-1',
                 vm_size='Standard_D4s_v3',

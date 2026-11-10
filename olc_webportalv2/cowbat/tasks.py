@@ -8,9 +8,9 @@ from datetime import (
     datetime,
     timezone,
 )
+from decimal import Decimal
 from glob import glob
 from io import StringIO
-from time import sleep
 import fnmatch
 import json
 import logging
@@ -21,6 +21,7 @@ import shutil
 # Django-related imports
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 
 # Third-party library imports
 from Bio import SeqIO
@@ -42,6 +43,7 @@ from olc_webportalv2.common.batch_client import (
     BatchServiceClient,
     BatchServiceError,
 )
+from olc_webportalv2.common.batch_recovery import retry_failed_pool_resize
 from olc_webportalv2.cowbat.models import (
     SequencingRun,
     AzureTask,
@@ -51,7 +53,6 @@ from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.cowsnphr.models import COWSNPhRRequest
 from olc_webportalv2.cowsnphr.tasks import (
     check_cowsnphr_tasks,
-    delete_pool_job,
 )
 from olc_webportalv2.filezone.models import Regexes
 from olc_webportalv2.geneseekr.models import (
@@ -189,7 +190,16 @@ def run_cowbat_batch(
 
     # Set the name of the container
     sequencing_run.container = str(sequencing_run).lower().replace('_', '-')
-    sequencing_run.save()
+    if sequencing_run.task_started_at is None:
+        sequencing_run.task_started_at = datetime.now(timezone.utc)
+    sequencing_run.task_queue = 'cowbat'
+    sequencing_run.workflow_state = 'uploading'
+    sequencing_run.save(update_fields=[
+        'container',
+        'task_started_at',
+        'task_queue',
+        'workflow_state',
+    ])
 
     try:
         blob_service = get_storage_client()
@@ -212,7 +222,15 @@ def run_cowbat_batch(
 
         if all_files_present is False:
             sequencing_run.status = 'UploadError'
-            sequencing_run.save()
+            sequencing_run.workflow_state = 'error'
+            sequencing_run.failure_stage = 'upload'
+            sequencing_run.task_finished_at = datetime.now(timezone.utc)
+            sequencing_run.save(update_fields=[
+                'status',
+                'workflow_state',
+                'failure_stage',
+                'task_finished_at',
+            ])
             return
 
         # Process NextSeq runs differently
@@ -239,9 +257,20 @@ def run_cowbat_batch(
         logger.addHandler(fh)
         logger.exception(exc)
         capture_exception(exc)
-        SequencingRun.objects.filter(
-            pk=sequencing_run_pk
-        ).update(status='Error')
+        sequencing_run.status = 'Error'
+        sequencing_run.workflow_state = 'error'
+        sequencing_run.failure_stage = 'submission'
+        sequencing_run.task_finished_at = datetime.now(timezone.utc)
+        sequencing_run.errors.append(
+            f'Cowbat submission failed: {exc}'
+        )
+        sequencing_run.save(update_fields=[
+            'status',
+            'workflow_state',
+            'failure_stage',
+            'task_finished_at',
+            'errors',
+        ])
 
 
 def submit_batch(
@@ -364,6 +393,11 @@ def cowbat_api_submit(
     sequencing_run.task_id = tasks[0] if tasks else ''
     sequencing_run.batch_submit_status = response_data.get('status', '')
     sequencing_run.batch_submit_errors = response_data.get('error', '')
+    sequencing_run.status = 'Processing'
+    sequencing_run.workflow_state = 'submitted'
+    sequencing_run.failure_stage = ''
+    sequencing_run.task_queue = 'cowbat'
+    sequencing_run.task_submitted_at = datetime.now(timezone.utc)
 
     # Save the changes
     sequencing_run.save()
@@ -388,6 +422,12 @@ def nextseq_run(
     :param blob_files: List of blob files
     :param sequencing_run: SequencingRun object
     """
+    container_name = (
+        container_name
+        or sequencing_run.container
+        or str(sequencing_run).lower().replace('_', '-')
+    )
+
     # Check if a sample sheet is present
     if 'SampleSheet.csv' in blob_files:
         print('Sample sheet present')
@@ -424,20 +464,29 @@ def nextseq_run(
         )
 
         # Create a SequenceRun object for each sub-sequencing run
-        sub_sequencing_run = SequencingRun.objects.get_or_create(
-            run_name=sub_container_name,
-            container=sub_container_name,
-            seqids=sub_runs[i],
-            basic_assembly=sequencing_run.basic_assembly,
-            preprocess=sequencing_run.preprocess,
-            nextseq=True,
-            progress='Processing',
+        submitted_at = (
+            sequencing_run.task_submitted_at
+            or datetime.now(timezone.utc)
         )
-        # If the SequencingRun object already exists, a tuple is returned.
-        # Extract the SequencingRun object
-        # from the tuple
-        if isinstance(sub_sequencing_run, tuple):
-            sub_sequencing_run = sub_sequencing_run[0]
+        sub_sequencing_run, _ = SequencingRun.objects.get_or_create(
+            run_name=sub_container_name,
+            defaults={
+                'container': sub_container_name,
+                'seqids': sub_runs[i],
+                'basic_assembly': sequencing_run.basic_assembly,
+                'preprocess': sequencing_run.preprocess,
+                'nextseq': True,
+                'progress': 'Processing',
+                'status': 'Processing',
+                'user': sequencing_run.user,
+                'emails_array': sequencing_run.emails_array,
+                'workflow_state': 'submitted',
+                'task_submitted_at': submitted_at,
+                'task_started_at': datetime.now(timezone.utc),
+                'task_queue': 'cowbat',
+            },
+        )
+        os.makedirs(local_path, exist_ok=True)
         try:
             #  Recreate the archive name
             # archive_name = 'sub_sample_sheets-{i}.zip'.format(i=i)
@@ -481,7 +530,12 @@ def nextseq_run(
             capture_exception(exc)
             SequencingRun.objects.filter(
                 pk=sub_sequencing_run.pk
-            ).update(status='Error')
+            ).update(
+                status='Error',
+                workflow_state='error',
+                failure_stage='submission',
+                task_finished_at=datetime.now(timezone.utc),
+            )
 
 
 def sample_sheet(
@@ -787,14 +841,16 @@ def no_sample_sheet(
         }
 
     num_samples = len(sample_names)
-    num_sub_runs = num_samples // max_samples
-    if num_samples % max_samples != 0:
-        num_sub_runs += 1
+    if max_samples <= 0:
+        raise ValueError('max_samples must be greater than zero')
+    num_sub_runs = (
+        num_samples + max_samples - 1
+    ) // max_samples
 
     sub_runs = {i + 1: [] for i in range(num_sub_runs)}
 
     for i, sample in enumerate(sorted(sample_names)):
-        sub_run_index = i // max_samples
+        sub_run_index = i % num_sub_runs
         sub_runs[sub_run_index + 1].append(sample)
 
     for i, sub_run in sub_runs.items():
@@ -825,35 +881,50 @@ def load_report(report, seq_run):
     """
     if not os.path.isfile(report):
         seq_run.status = 'Error'
+        seq_run.workflow_state = 'error'
+        seq_run.failure_stage = 'cleanup'
+        seq_run.task_finished_at = datetime.now(timezone.utc)
         seq_run.errors.append('Summary report not found in blob storage.')
-        seq_run.save()
+        seq_run.save(update_fields=[
+            'status',
+            'workflow_state',
+            'failure_stage',
+            'task_finished_at',
+            'errors',
+        ])
         return None
-    summary_dict = pd.read_csv(
+    report_columns = [
+        'SeqID',
+        'SampleName',
+        'Genus',
+        'E_coli_Serotype',
+        'SISTR_serovar',
+        'GeneSeekr_Profile',
+        'Vtyper_Profile',
+        'rMLST_Result',
+        'MLST_Result',
+        'N50',
+        'NumContigs',
+        'TotalLength',
+        'AverageCoverageDepth',
+        'ConfindrContamSNVs',
+        'SequencingDate',
+        'Analyst',
+        'Flowcell',
+        'MachineName',
+        'AssemblyDate',
+        'PipelineVersion',
+        'Database',
+    ]
+    report_data = pd.read_csv(
         report,
-        names=[
-            'SeqID',
-            'SampleName',
-            'Genus',
-            'E_coli_Serotype',
-            'SISTR_serovar',
-            'GeneSeekr_Profile',
-            'Vtyper_Profile',
-            'rMLST_Result',
-            'MLST_Result',
-            'N50',
-            'NumContigs',
-            'TotalLength',
-            'AverageCoverageDepth',
-            'ConfindrContamSNVs',
-            'SequencingDate',
-            'Analyst',
-            'Flowcell',
-            'MachineName',
-            'AssemblyDate',
-            'PipelineVersion',
-            'Database'
-        ],
-        sep=',').fillna('ND').transpose().to_dict()
+        names=report_columns,
+        header=None,
+        sep=',',
+    )
+    if report_data.iloc[0].tolist() == report_columns:
+        report_data = report_data.iloc[1:]
+    summary_dict = report_data.fillna('ND').transpose().to_dict()
     SummaryMetadata.objects.update_or_create(
         sequencing_run=seq_run,
         summary_results=summary_dict)
@@ -861,7 +932,11 @@ def load_report(report, seq_run):
     return True
 
 
-@shared_task
+@shared_task(
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_kwargs={'max_retries': 3},
+)
 def cowbat_cleanup(sequencing_run_pk: int):
     """
     Perform clean up tasks for a completed sequencing run
@@ -1075,9 +1150,18 @@ def cowbat_cleanup(sequencing_run_pk: int):
     try:
         seq_run = SequencingRun.objects.get(pk=sequencing_run_pk)
         if seq_run.status != 'Error':
-            SequencingRun.objects.filter(
-                pk=sequencing_run_pk
-            ).update(status='Complete')
+            seq_run.status = 'Complete'
+            seq_run.workflow_state = 'complete'
+            seq_run.failure_stage = ''
+            seq_run.percent_complete = Decimal('100.00')
+            seq_run.task_finished_at = datetime.now(timezone.utc)
+            seq_run.save(update_fields=[
+                'status',
+                'workflow_state',
+                'failure_stage',
+                'percent_complete',
+                'task_finished_at',
+            ])
     except ObjectDoesNotExist:
         pass
 
@@ -1253,6 +1337,23 @@ def escape_ansi(line):
     return ansi_escape.sub('', line)
 
 
+def _update_run_percentage(sequencing_run, progress_message):
+    """Persist the configured percentage for a recognized pipeline message."""
+    progress_map = os.path.join(
+        os.path.dirname(__file__),
+        'cowbat_percent_complete.json',
+    )
+    with open(progress_map, 'r', encoding='utf-8') as progress_file:
+        progress_entries = json.load(progress_file)
+
+    for entry in progress_entries:
+        if entry['message'] == progress_message:
+            sequencing_run.percent_complete = Decimal(
+                str(entry['percent_complete'])
+            )
+            return
+
+
 def check_cowbat_progress(
     batch_client,
     batch_job_name,
@@ -1352,6 +1453,10 @@ def check_cowbat_progress(
                 final_line = clean_line.split('\n')[-2]
                 status = ' '.join(final_line.split(' ')[2:])
                 sequencing_run.progress = status
+                _update_run_percentage(
+                    sequencing_run=sequencing_run,
+                    progress_message=status,
+                )
                 sequencing_run.save()
             except Exception as exc:
                 sequencing_run.errors.append('Update model error:')
@@ -1401,29 +1506,45 @@ def check_cowbat_tasks():
         )
         batch_job_name = sequencing_run.job_id
 
-        # Check if all tasks associated with this job have completed
-        tasks_completed = True
+        if sequencing_run.workflow_state == 'ready':
+            handle_task_completion(
+                batch_client=batch_client,
+                sequencing_run=sequencing_run,
+                batch_job_name=batch_job_name,
+                azure_task_id=azure_task.id
+            )
+            continue
+
+        if (
+            sequencing_run.workflow_state == 'processing'
+            and sequencing_run.failure_stage == 'cleanup'
+        ):
+            AzureTask.objects.filter(id=azure_task.id).delete()
+            continue
+
         try:
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != "completed":
-                    tasks_completed = False
+            cloud_tasks = list(batch_client.task.list(batch_job_name))
         except BatchServiceError as exc:
+            if exc.status_code == 404 and sequencing_run.status == 'Resize Error':
+                _mark_resize_failure(
+                    batch_client=batch_client,
+                    sequencing_run=sequencing_run,
+                    batch_job_name=batch_job_name,
+                    azure_task_id=azure_task.id,
+                    message='Batch job disappeared after a pool resize error.',
+                )
+                continue
             sequencing_run.errors.append('Running task error:')
             sequencing_run.errors.append(str(exc))
             sequencing_run.save()
             continue
 
-        # If tasks have completed, check exit codes
-        if tasks_completed:
-            # Handle specific error case
-            if sequencing_run.status == 'Resize Error':
-                handle_resize_error(
-                    sequencing_run=sequencing_run,
-                    batch_job_name=batch_job_name,
-                    azure_task_id=azure_task.id
-                )
+        if not cloud_tasks:
+            sequencing_run.errors.append('Batch job has no tasks to monitor.')
+            sequencing_run.save()
+            continue
 
-            # Tasks are complete for the Azure task
+        if all(cloudtask.state == "completed" for cloudtask in cloud_tasks):
             handle_task_completion(
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
@@ -1439,48 +1560,66 @@ def check_cowbat_tasks():
             )
 
 
-def handle_resize_error(sequencing_run, batch_job_name, azure_task_id):
-    """
-    Handle specific error case when the status is 'Resize Error'.
+def _record_batch_error(sequencing_run, prefix, exc):
+    prefix = f'{prefix}:'
+    message = str(exc)
+    if prefix not in sequencing_run.errors:
+        sequencing_run.errors.append(prefix)
+    if message not in sequencing_run.errors:
+        sequencing_run.errors.append(message)
+    sequencing_run.save(update_fields=['errors'])
 
-    Parameters:
-    sequencing_run (SequencingRun): The sequencing run object.
-    batch_job_name (str): The name of the batch job.
-    azure_task_id (int): The ID of the Azure task.
-    """
-    # Retry!
-    if sequencing_run.nextseq:
-        digits = extract_ending_digits(
-            sequencing_run_name=str(sequencing_run)
-        )
 
-        # Remove the trailing dash followed by one or more digits from the
-        # batch job name using re
-        clean_batch_job_name = re.sub(r'-\d+$', '', batch_job_name)
-
-        # Set the name of the local folder using the digits
-        local_folder = os.path.join(
-            'olc_webportalv2',
-            'media',
-            clean_batch_job_name,
-            f'sub_sample_sheets-{digits}'
-        )
-    else:
-        # Create a configuration file to be used by the Azure batch script.
-        local_folder = os.path.join(
-            'olc_webportalv2',
-            'media',
-            str(sequencing_run)
-        )
-
-    # Resubmit the batch request
-    submit_batch(
-        run_folder=local_folder,
-        sequencing_run=sequencing_run
+def _delete_batch_resources(
+    batch_client,
+    sequencing_run,
+    batch_job_name,
+):
+    """Delete the Cowbat job and pool, treating already-missing resources as done."""
+    deletions = (
+        (
+            'Terminating job error',
+            lambda: batch_client.job.delete(job_id=batch_job_name),
+        ),
+        (
+            'Terminating pool error',
+            lambda: batch_client.pool.delete(
+                pool_id=sequencing_run.pool_id or batch_job_name
+            ),
+        ),
     )
+    deleted = True
+    for error_prefix, delete_resource in deletions:
+        try:
+            delete_resource()
+        except BatchServiceError as exc:
+            if exc.status_code == 404:
+                continue
+            _record_batch_error(sequencing_run, error_prefix, exc)
+            deleted = False
+    return deleted
 
-    # Delete task, so we don't have to keep checking up on it.
-    AzureTask.objects.filter(id=azure_task_id).delete()
+
+def _mark_resize_failure(
+    batch_client,
+    sequencing_run,
+    batch_job_name,
+    azure_task_id,
+    message,
+):
+    if message not in sequencing_run.errors:
+        sequencing_run.errors.append(message)
+    sequencing_run.status = 'Error'
+    sequencing_run.workflow_state = 'ready'
+    sequencing_run.failure_stage = 'submission'
+    sequencing_run.task_finished_at = datetime.now(timezone.utc)
+    sequencing_run.save()
+    handle_task_completion(
+        batch_client=batch_client,
+        sequencing_run=sequencing_run,
+        batch_job_name=batch_job_name,
+        azure_task_id=azure_task_id,
+    )
 
 
 def handle_task_completion(
@@ -1498,56 +1637,91 @@ def handle_task_completion(
     batch_job_name (str): The name of the batch job.
     azure_task_id (int): The ID of the Azure task.
     """
-    exit_codes_good = True
-    exit_code = 0
-    # Determine the exit code
-    try:
-        for cloudtask in batch_client.task.list(batch_job_name):
-            if cloudtask.execution_info.exit_code != 0:
-                exit_code = cloudtask.execution_info.exit_code
-                exit_codes_good = False
-                sequencing_run.errors.append('Exit code issue: ')
-                sequencing_run.errors.append(str(cloudtask.execution_info))
-    except BatchServiceError as exc:
-        sequencing_run.errors.append('Terminating task error:')
-        sequencing_run.errors.append(str(exc))
+    if sequencing_run.workflow_state != 'ready':
+        try:
+            cloud_tasks = list(batch_client.task.list(batch_job_name))
+        except BatchServiceError as exc:
+            _record_batch_error(sequencing_run, 'Terminating task error', exc)
+            return
+
+        if not cloud_tasks:
+            _record_batch_error(
+                sequencing_run,
+                'Batch task listing error',
+                'No Batch tasks were returned for a completed job.',
+            )
+            return
+
+        exit_codes = []
+        for cloudtask in cloud_tasks:
+            execution_info = cloudtask.execution_info
+            exit_code = (
+                execution_info.exit_code if execution_info is not None else None
+            )
+            if exit_code is None:
+                _record_batch_error(
+                    sequencing_run,
+                    'Batch task exit-code error',
+                    f'Task {cloudtask.id} has no recorded exit code.',
+                )
+                return
+            exit_codes.append(exit_code)
+
+        sequencing_run.exit_code = next(
+            (code for code in exit_codes if code != 0),
+            0,
+        )
+        sequencing_run.workflow_state = 'ready'
+        sequencing_run.task_finished_at = datetime.now(timezone.utc)
+        if sequencing_run.exit_code == 0:
+            sequencing_run.failure_stage = ''
+        else:
+            sequencing_run.status = 'Error'
+            sequencing_run.failure_stage = 'analysis'
+            if 'Exit code bad' not in sequencing_run.errors:
+                sequencing_run.errors.append('Exit code bad')
         sequencing_run.save()
+
+    exit_codes_good = (
+        sequencing_run.exit_code == 0
+        and sequencing_run.failure_stage != 'submission'
+    )
+    if not _delete_batch_resources(
+        batch_client=batch_client,
+        sequencing_run=sequencing_run,
+        batch_job_name=batch_job_name,
+    ):
         return
 
-    # Get rid of job and pool, so we don't waste big $$$ and do cleanup/get
-    # files downloaded in tasks.
-    try:
-        batch_client.job.delete(job_id=batch_job_name)
-    except BatchServiceError as exc:
-        sequencing_run.errors.append('Terminating job error:')
-        sequencing_run.errors.append(str(exc))
-        sequencing_run.save()
-    try:
-        batch_client.pool.delete(pool_id=sequencing_run.pool_id)
-    except BatchServiceError as exc:
-        sequencing_run.errors.append('Terminating pool error:')
-        sequencing_run.errors.append(str(exc))
-        sequencing_run.save()
-
-    # Add the exit code to the sequencing run
-    sequencing_run.exit_code = exit_code
-    sequencing_run.save()
     if exit_codes_good:
-        # Clean up the sequencing run
         try:
-            cowbat_cleanup.apply_async(
-                queue='cowbat',
-                args=(sequencing_run.pk, )
-            )
+            with transaction.atomic():
+                SequencingRun.objects.filter(
+                    pk=sequencing_run.pk
+                ).update(
+                    workflow_state='processing',
+                    failure_stage='cleanup',
+                )
+                cowbat_cleanup.apply_async(
+                    queue='cowbat',
+                    args=(sequencing_run.pk, )
+                )
         except Exception as exc:
-            sequencing_run.errors.append('Clean-up error:')
-            sequencing_run.errors.append(str(exc))
-            sequencing_run.save()
+            sequencing_run.workflow_state = 'ready'
+            sequencing_run.failure_stage = ''
+            _record_batch_error(sequencing_run, 'Clean-up error', exc)
+            return
     else:
-        # Something went wrong - update status to error so user knows.
         sequencing_run.status = 'Error'
-        sequencing_run.errors.append('Exit code bad')
-        sequencing_run.save()
+        sequencing_run.workflow_state = 'error'
+        if not sequencing_run.failure_stage:
+            sequencing_run.failure_stage = 'analysis'
+        sequencing_run.save(update_fields=[
+            'status',
+            'workflow_state',
+            'failure_stage',
+        ])
+
     try:
         # Delete task, so we don't have to keep checking up on it.
         AzureTask.objects.filter(id=azure_task_id).delete()
@@ -1576,59 +1750,88 @@ def handle_incomplete_tasks(
     try:
         pools = list(batch_client.pool.list())
     except BatchServiceError as exc:
-        sequencing_run.errors.append('Pool listing error:')
-        sequencing_run.errors.append(str(exc))
-        sequencing_run.save()
+        _record_batch_error(sequencing_run, 'Pool listing error', exc)
         return
 
-    # Determine whether the batch job is in the list of pools
-    present = batch_job_name in [pool.id for pool in pools]
-    if not present and sequencing_run.status == 'Resize Error':
-        handle_resize_error(sequencing_run, batch_job_name, azure_task_id)
-
-    # Recreate the pools generator
-    try:
-        pools = list(batch_client.pool.list())
-    except BatchServiceError as exc:
-        sequencing_run.errors.append('Pool listing error:')
-        sequencing_run.errors.append(str(exc))
-        sequencing_run.save()
+    pool = next(
+        (candidate for candidate in pools if candidate.id == batch_job_name),
+        None,
+    )
+    if pool is None:
+        if sequencing_run.status == 'Resize Error':
+            _mark_resize_failure(
+                batch_client=batch_client,
+                sequencing_run=sequencing_run,
+                batch_job_name=batch_job_name,
+                azure_task_id=azure_task_id,
+                message='Batch pool is missing after a resize error.',
+            )
+        else:
+            _record_batch_error(
+                sequencing_run,
+                'Batch pool lookup error',
+                f'Pool {batch_job_name} is not present.',
+            )
         return
 
-    # Iterate over the pools
-    for pool in pools:
-        # Ensure that the current batch job is being evaluated
-        if pool.id == batch_job_name:
-            # Proceed if there were batch resize errors. These usually happen
-            # due to the quota getting reached
-            if pool.resize_errors:
-                # Delete the pool, job, and task
-                delete_pool_job(
-                    batch_client=batch_client,
-                    batch_job_name=batch_job_name
-                )
-                # Give the pool a chance to be deleted
-                sleep(60)
-                sequencing_run.status = 'Resize Error'
-                sequencing_run.save()
+    if pool.resize_errors:
+        resize_result = retry_failed_pool_resize(
+            batch_client=batch_client,
+            pool_id=sequencing_run.pool_id or batch_job_name,
+        )
+        action = resize_result['action']
+        if action in (
+            'resize_retried',
+            'retry_throttled',
+            'resize_in_progress',
+        ):
+            if action == 'resize_retried':
+                sequencing_run.task_retry_count += 1
+            sequencing_run.status = 'Processing'
+            sequencing_run.workflow_state = 'processing'
+            sequencing_run.save(update_fields=[
+                'status',
+                'workflow_state',
+                'task_retry_count',
+            ])
+            return
+        if action == 'nodes_available':
+            check_cowbat_progress(
+                batch_client,
+                batch_job_name,
+                sequencing_run.task_id,
+                sequencing_run
+            )
+            return
+        if action in (
+            'inspection_failed',
+            'resize_request_failed',
+            'unsupported_allocation_state',
+        ):
+            _record_batch_error(
+                sequencing_run,
+                'Pool resize recovery error',
+                resize_result.get('message', action),
+            )
+            return
+        _mark_resize_failure(
+            batch_client=batch_client,
+            sequencing_run=sequencing_run,
+            batch_job_name=batch_job_name,
+            azure_task_id=azure_task_id,
+            message=(
+                f"pool resize failed ({action}): "
+                f"{resize_result.get('resize_errors', pool.resize_errors)}"
+            ),
+        )
+        return
+
     check_cowbat_progress(
         batch_client,
         batch_job_name,
         sequencing_run.task_id,
         sequencing_run
     )
-
-
-def extract_ending_digits(sequencing_run_name):
-    """
-    Check if a string ends with a dash followed by one or two digits and
-    extract those digits.
-
-    :param sequencing_run_name: Input string
-    :return: The ending digits if they exist, None otherwise
-    """
-    match = re.search(r'-([0-9]{1,2})$', sequencing_run_name)
-    return int(match.group(1)) if match else None
 
 
 def check_tree_tasks() -> None:

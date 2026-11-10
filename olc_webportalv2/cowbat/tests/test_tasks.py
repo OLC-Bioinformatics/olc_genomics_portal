@@ -1,5 +1,4 @@
 from unittest import mock
-from datetime import timedelta
 from decimal import Decimal
 import os
 import shutil
@@ -88,9 +87,8 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(nextseq_run.call_args[1]["sequencing_run"].pk, run.pk)
         run.refresh_from_db()
         self.assertIsNotNone(run.task_started_at)
-        self.assertIsNotNone(run.task_finished_at)
         self.assertEqual(run.task_queue, "cowbat")
-        self.assertEqual(run.task_retry_count, 1)
+        self.assertEqual(run.task_retry_count, 0)
 
     @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
@@ -149,10 +147,7 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(sub_run.status, "Processing")
         self.assertEqual(sub_run.workflow_state, "submitted")
         self.assertEqual(sub_run.task_submitted_at, submitted_at)
-        self.assertEqual(
-            sub_run.task_started_at,
-            submitted_at + timedelta(seconds=1),
-        )
+        self.assertIsNotNone(sub_run.task_started_at)
         self.assertEqual(sub_run.task_queue, "cowbat")
         self.assertEqual(sub_run.emails_array, ["operator@example.test"])
         self.assertEqual(cowbat_api_submit.call_count, 2)
@@ -334,7 +329,7 @@ class RunCowbatBatchTests(TestCase):
             "PipelineVersion",
             "Database",
         ]
-        values = ["SEQ-1", "Sample 1", "Escherichia"] + ["value"] * 19
+        values = ["SEQ-1", "Sample 1", "Escherichia"] + ["value"] * 18
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as report:
             report.write(",".join(headers) + "\n")
             report.write(",".join(values) + "\n")
@@ -503,8 +498,71 @@ class RunCowbatBatchTests(TestCase):
         run.refresh_from_db()
         self.assertIn("Terminating job error:", run.errors)
         self.assertIn("Terminating pool error:", run.errors)
+        self.assertEqual(AzureTask.objects.filter(pk=azure_task.id).count(), 1)
+        self.assertEqual(run.workflow_state, "ready")
+        self.assertEqual(cleanup.apply_async.call_count, 0)
+
+    @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_cleanup")
+    def test_handle_task_completion_keeps_tracker_if_cleanup_cannot_be_queued(
+        self, cleanup
+    ):
+        run = self.create_run(pool_id="pool-1", job_id="job-1")
+        azure_task = AzureTask.objects.create(
+            sequencing_run=run,
+            exit_code_file="/tmp/exit_codes.txt",
+        )
+        batch_client = mock.Mock()
+        batch_client.task.list.return_value = [
+            mock.Mock(execution_info=mock.Mock(exit_code=0)),
+        ]
+        cleanup.apply_async.side_effect = RuntimeError("queue unavailable")
+
+        handle_task_completion(
+            batch_client=batch_client,
+            sequencing_run=run,
+            batch_job_name="job-1",
+            azure_task_id=azure_task.id,
+        )
+
+        run.refresh_from_db()
+        self.assertEqual(run.workflow_state, "ready")
+        self.assertIn("Clean-up error:", run.errors)
+        self.assertEqual(AzureTask.objects.filter(pk=azure_task.id).count(), 1)
+
+    @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_cleanup")
+    @mock.patch("olc_webportalv2.cowbat.tasks.create_batch_client")
+    def test_monitor_retries_cleanup_with_missing_batch_resources(
+        self, batch_client_factory, cleanup
+    ):
+        run = self.create_run(
+            pool_id="pool-1",
+            job_id="job-1",
+            status="Processing",
+            workflow_state="ready",
+            exit_code=0,
+        )
+        azure_task = AzureTask.objects.create(
+            sequencing_run=run,
+            exit_code_file="/tmp/exit_codes.txt",
+        )
+        batch_client = batch_client_factory.return_value
+        batch_client.job.delete.side_effect = BatchServiceError(
+            404,
+            "job not found",
+        )
+        batch_client.pool.delete.side_effect = BatchServiceError(
+            404,
+            "pool not found",
+        )
+
+        check_cowbat_tasks()
+
+        batch_client.task.list.assert_not_called()
+        cleanup.apply_async.assert_called_once_with(
+            queue="cowbat",
+            args=(run.pk,),
+        )
         self.assertEqual(AzureTask.objects.filter(pk=azure_task.id).count(), 0)
-        self.assertEqual(cleanup.apply_async.call_count, 1)
 
     @mock.patch("olc_webportalv2.cowbat.tasks.check_cowbat_progress")
     def test_handle_incomplete_tasks_checks_progress_for_active_pool(
@@ -530,11 +588,16 @@ class RunCowbatBatchTests(TestCase):
             run,
         )
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.sleep")
-    @mock.patch("olc_webportalv2.cowbat.tasks.delete_pool_job")
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.retry_failed_pool_resize",
+        return_value={
+            "action": "non_retryable_resize_error",
+            "resize_errors": [{"code": "quota"}],
+        },
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.check_cowbat_progress")
     def test_handle_incomplete_tasks_marks_resize_error(
-        self, check_progress, delete_pool_job, sleep
+        self, check_progress, retry_resize
     ):
         run = self.create_run(task_id="task-1")
         azure_task = AzureTask.objects.create(
@@ -559,17 +622,47 @@ class RunCowbatBatchTests(TestCase):
         self.assertIsNotNone(run.task_finished_at)
         self.assertIn("pool resize failed", run.errors[0])
         self.assertEqual(AzureTask.objects.filter(pk=azure_task.id).count(), 0)
-        delete_pool_job.assert_called_once_with(
+        batch_client.job.delete.assert_called_once_with(job_id="job-1")
+        batch_client.pool.delete.assert_called_once_with(pool_id="job-1")
+        retry_resize.assert_called_once_with(
             batch_client=batch_client,
-            batch_job_name="job-1",
+            pool_id="job-1",
         )
-        sleep.assert_called_once_with(60)
         check_progress.assert_not_called()
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.handle_resize_error")
-    def test_missing_resize_error_pool_finalizes_run_and_deletes_task(
-        self, handle_resize_error
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.retry_failed_pool_resize",
+        return_value={"action": "resize_retried"},
+    )
+    @mock.patch("olc_webportalv2.cowbat.tasks.check_cowbat_progress")
+    def test_handle_incomplete_tasks_retries_pool_resize(
+        self, check_progress, retry_resize
     ):
+        run = self.create_run(task_id="task-1", job_id="job-1", pool_id="job-1")
+        pool = mock.Mock(id="job-1", resize_errors=["quota"])
+        batch_client = mock.Mock()
+        batch_client.pool.list.return_value = [pool]
+
+        handle_incomplete_tasks(
+            batch_client=batch_client,
+            sequencing_run=run,
+            batch_job_name="job-1",
+            azure_task_id=1,
+        )
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, "Processing")
+        self.assertEqual(run.workflow_state, "processing")
+        self.assertEqual(run.task_retry_count, 1)
+        retry_resize.assert_called_once_with(
+            batch_client=batch_client,
+            pool_id="job-1",
+        )
+        batch_client.job.delete.assert_not_called()
+        batch_client.pool.delete.assert_not_called()
+        check_progress.assert_not_called()
+
+    def test_missing_resize_error_pool_finalizes_run_and_deletes_task(self):
         run = self.create_run(
             task_id="task-1",
             job_id="job-1",
@@ -594,7 +687,8 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.status, "Error")
         self.assertEqual(run.workflow_state, "error")
         self.assertEqual(AzureTask.objects.filter(pk=azure_task.id).count(), 0)
-        handle_resize_error.assert_not_called()
+        batch_client.job.delete.assert_called_once_with(job_id="job-1")
+        batch_client.pool.delete.assert_called_once_with(pool_id="job-1")
 
     def test_check_cowbat_progress_updates_run_and_saves_task_files(self):
         run = self.create_run(task_id="task-1")
@@ -635,7 +729,7 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.status, "Processing")
         self.assertEqual(run.progress, "Running assembly")
         self.assertEqual(run.percent_complete, Decimal("0.01"))
-        self.assertEqual(batch_client.file.list_from_task.call_count, 2)
+        self.assertEqual(batch_client.file.list_from_task.call_count, 1)
         self.assertEqual(
             batch_client.file.list_from_task.call_args[1],
             {
@@ -749,12 +843,16 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(handle_incomplete.call_count, 0)
         self.assertEqual(handle_completion.call_count, 0)
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.smtplib.SMTP")
+    @mock.patch("olc_webportalv2.common.methods.smtplib.SMTP")
     @override_settings(ENVIRONMENT="PROD")
     def test_send_email_sends_message(self, smtp_class):
         server = smtp_class.return_value
 
-        send_email("Subject", "Body", "recipient@example.com")
+        send_email(
+            subject="Subject",
+            body="Body",
+            recipient="recipient@example.com",
+        )
 
         self.assertEqual(server.starttls.call_count, 1)
         self.assertEqual(server.login.call_count, 1)
