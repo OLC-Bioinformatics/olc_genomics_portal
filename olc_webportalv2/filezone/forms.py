@@ -17,31 +17,6 @@ from olc_webportalv2.filezone.models import (
 )
 
 
-class ContainerSelectForm(ModelForm):
-    
-    class Meta:
-        model = ContainerName
-
-        fields = [
-            'container_name',
-        ]
-
-        labels = {
-            'container_name': _('Container Name'),
-        }
-        widgets = {
-            'container_name': autocomplete.ModelSelect2(url='filezone:container_autocompleter'
-           )
-        }
-
-    def clean(self):
-        super().clean()
-        container_name = self.cleaned_data['container_name']
-        return {
-            'container_name': container_name
-        }
-
-
 class ContainerForm(forms.Form):
     container_name = forms.ModelChoiceField(
         queryset=ContainerName.objects.all(),
@@ -52,7 +27,7 @@ class ContainerForm(forms.Form):
                     'style': 'max-width: 18em'
                 }
             ),
-        required=False
+        required=True
     )
 
 class ContainerCreateForm(ModelForm):

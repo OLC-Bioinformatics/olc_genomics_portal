@@ -561,22 +561,15 @@ def neighbor_name(request, neighbor_request_pk):
                   })
 
 # Has to be its own view; can't be mixed with others
-class GenusAutoCompleter(autocomplete.Select2ListView):
+class GenusAutoCompleter(autocomplete.Select2QuerySetView):
     """
     Make an autocompleter for all the genera in our database
     """
-    def __init__(self, **kwargs):
-        self.category = 'run'
-        super().__init__(**kwargs)
-
-    def get_list(self):
+    def get_queryset(self):
         """
-        Modify get_list to use FileZone-specific components
+        Return each genus with its model primary key for ModelChoiceField.
         """
-        # Create a query set of all the genera in the model
         query_set = Genus.objects.all()
-        # Filter the query based on the text provided by the user in the autocomplete field
         if self.q:
-            query_set.filter(genus__icontains=self.q)
-        # Return the sorted list of all the filtered genera
-        return sorted(list(set(str(result.genus).rstrip() for result in query_set)))
+            query_set = query_set.filter(genus__icontains=self.q)
+        return query_set.order_by('genus', 'pk').distinct('genus')

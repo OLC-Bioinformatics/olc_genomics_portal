@@ -27,6 +27,9 @@
   <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
   {% endblock %}
 
+  <!-- Load jQuery and its DAL bridge before page-level form media initializes widgets. -->
+  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+  <script src="{% static 'autocomplete_light/jquery.init.js' %}"></script>
 </head>
 
 <body>
@@ -354,8 +357,7 @@
   <!-- JavaScript
     ================================================== -->
   {% block javascript %}
-  <!-- Bootstrap 5 bundle and jQuery for project plugins -->
-  <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <!-- Bootstrap 5 bundle and project JavaScript -->
   <script src="{% static 'js/bootstrap.min.js' %}"></script>
   <!-- Third-party javascript libraries go here -->
   <script src="{% static 'js/sweetalerts.js'%}"></script>

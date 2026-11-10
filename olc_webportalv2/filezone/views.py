@@ -23,7 +23,6 @@ from dal import autocomplete
 from olc_webportalv2.filezone.forms import (
     ContainerCreateForm,
     ContainerForm,
-    ContainerSelectForm,
     FileLocateForm
 )
 from olc_webportalv2.filezone.methods import (
@@ -74,12 +73,11 @@ def container_select(request):
     """
     # Create a form for the ContainerName autocomplete model
     container_form = ContainerForm()
-    container_select_form = ContainerSelectForm()
     # Perform actions on a POST
     if request.method == 'POST':
-        container_select_form = ContainerSelectForm(request.POST)
-        if container_select_form.is_valid():
-            filezone = container_select_form.save()
+        container_form = ContainerForm(request.POST)
+        if container_form.is_valid():
+            filezone = container_form.cleaned_data['container_name']
             # Redirect the view to the container view
             return redirect('filezone:container_view', filezone_pk=filezone.pk)
     return render(
@@ -87,7 +85,6 @@ def container_select(request):
         'filezone/container_select.html',
         {
             'container_form': container_form,
-            'container_select_form': container_select_form
         }
     )
 
@@ -493,25 +490,15 @@ def container_refresh(__):
 
 
 # Has to be its own view; can't be mixed with others
-class FileZoneAutoCompleter(autocomplete.Select2ListView):
+class FileZoneAutoCompleter(autocomplete.Select2QuerySetView):
     """
     Make a FileZone-specific auto-completer
     """
-    def __init__(self, **kwargs):
-        self.category = 'run'
-        super().__init__(**kwargs)
-
-    def get_list(self):
+    def get_queryset(self):
         """
-        Modify get_list to use FileZone-specific components
+        Return existing containers with database primary keys for ModelChoiceField.
         """
-        # Create a query set of all the containers in the model
         query_set = ContainerName.objects.all()
-        # Filter the query based on the text provided by the user in the
-        # autocomplete field
         if self.q:
-            query_set.filter(container_name__icontains=self.q)
-        # Return the sorted list of all the filtered containers
-        return sorted(
-            list(set(str(result.container_name) for result in query_set))
-        )
+            query_set = query_set.filter(container_name__icontains=self.q)
+        return query_set.order_by('container_name', 'pk').distinct('container_name')

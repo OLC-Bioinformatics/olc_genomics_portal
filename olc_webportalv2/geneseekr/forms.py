@@ -150,13 +150,14 @@ class GeneSeekrForm(forms.Form):
 
         # Filter based on genus if provided
         if genus is not None:
+            selected_genus = genus.genus.rstrip().upper()
             sequence_data_objects = SequenceData.objects.filter()
             for sequence_data in sequence_data_objects:
                 if exclude is True:
-                    if sequence_data.genus.upper() != genus.upper():
+                    if sequence_data.genus.upper() != selected_genus:
                         seqid_list.append(sequence_data.seqid)
                 elif exclude is False:
-                    if sequence_data.genus.upper() == genus.upper() or genus == '':
+                    if sequence_data.genus.upper() == selected_genus:
                         seqid_list.append(sequence_data.seqid)
 
         

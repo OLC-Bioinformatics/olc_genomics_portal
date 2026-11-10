@@ -1,13 +1,16 @@
 from django.test import TestCase
 from django.http import QueryDict
 from olc_webportalv2.geneseekr.forms import TreeForm, GeneSeekrForm, AMRForm, ProkkaForm, NearNeighborForm
-from olc_webportalv2.metadata.models import SequenceData
+from olc_webportalv2.metadata.models import Genus, SequenceData
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 class GeneSeekrFormTest(TestCase):
     @classmethod
     def setUpTestData(cls):
+        cls.listeria = Genus.objects.create(genus='Listeria')
+        cls.fake_genus = Genus.objects.create(genus='TotallyFakeGenus')
+        cls.salmonella = Genus.objects.create(genus='Salmonella')
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
                                                     genus='Listeria')
@@ -29,7 +32,7 @@ class GeneSeekrFormTest(TestCase):
 
     def test_valid_geneseekr_form_genus_input_fasta_text(self):
         form = GeneSeekrForm({
-            'genus': 'Listeria',
+            'genus': str(self.listeria.pk),
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA'
         })
         self.assertTrue(form.is_valid())
@@ -46,7 +49,7 @@ class GeneSeekrFormTest(TestCase):
 
     def test_valid_geneseekr_form_genus_input_fasta_file(self):
         with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
-            form = GeneSeekrForm({'genus': 'Listeria'}, {'query_file': SimpleUploadedFile(upload_file.name, upload_file.read())})
+            form = GeneSeekrForm({'genus': str(self.listeria.pk)}, {'query_file': SimpleUploadedFile(upload_file.name, upload_file.read())})
             self.assertTrue(form.is_valid())
             seqid_list, query_sequence = form.cleaned_data
             self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
@@ -65,14 +68,14 @@ class GeneSeekrFormTest(TestCase):
 
     def test_invalid_form_no_sequences_in_genus(self):
         form = GeneSeekrForm({
-            'genus': 'TotallyFakeGenus',
+            'genus': str(self.fake_genus.pk),
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA'
         })
         self.assertFalse(form.is_valid())
 
     def test_invalid_form_no_sequences_in_exclude_genus(self):
         form = GeneSeekrForm({
-            'genus': 'Listeria',
+            'genus': str(self.listeria.pk),
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA',
             'everything_but': True,
         })
@@ -80,7 +83,7 @@ class GeneSeekrFormTest(TestCase):
 
     def test_valid_form_exclude_genus(self):
         form = GeneSeekrForm({
-            'genus': 'Salmonella',
+            'genus': str(self.salmonella.pk),
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA',
             'everything_but': True,
         })

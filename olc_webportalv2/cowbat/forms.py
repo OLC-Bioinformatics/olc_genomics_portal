@@ -67,7 +67,7 @@ class RealTimeForm(forms.ModelForm):
 class RunRequestForm(forms.Form):
     run_name = forms.ModelChoiceField(
         queryset=ResearchRun.objects.all(),
-        to_field_name=_('run_name'),
+        to_field_name='run_name',
         widget=autocomplete.ModelSelect2(url='cowbat:run_autocompleter', ),
         required=False
     )

@@ -200,25 +200,18 @@ def container_refresh(request):
 
 
 # Has to be its own view; can't be mixed with others
-class COWSNPhRAutoCompleter(autocomplete.Select2ListView):
+class COWSNPhRAutoCompleter(autocomplete.Select2QuerySetView):
     """
     Make a COWSNPhR-specific autocompleter
     """
-    def __init__(self, **kwargs):
-        self.category = 'run'
-        super().__init__(**kwargs)
-
-    def get_list(self):
+    def get_queryset(self):
         """
-        Modify get_list to use COWSNPhR-specific components
+        Return existing containers with database primary keys for ModelChoiceField.
         """
-        # Create a query set of all the containers in the model
         query_set = ContainerName.objects.all()
-        # Filter the query based on the text provided by the user in the autocomplete field
         if self.q:
-            query_set.filter(container_name__icontains=self.q)
-        # Return the sorted list of all the filtered containers
-        return sorted(list(set(str(result.container_name) for result in query_set)))
+            query_set = query_set.filter(container_name__icontains=self.q)
+        return query_set.order_by('container_name', 'pk').distinct('container_name')
 
 
 @csrf_exempt  # needed or IE explodes

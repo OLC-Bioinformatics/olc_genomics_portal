@@ -8,10 +8,10 @@
 <br>
 
   <form action='' method="post">
-     {% if container_select_form.errors %}
+     {% if container_form.errors %}
      <div class="alert alert-danger" role="alert" align="center">
-     {{ container_select_form.non_field_errors|escape }}
-     {{ container_select_form.errors|escape }}
+     {{ container_form.non_field_errors|escape }}
+     {{ container_form.errors|escape }}
     </div>
    {% endif %}
    <h4>{% trans 'Select an existing container'%}</h4>
@@ -26,7 +26,6 @@
   <br>
  <a href='{% url 'filezone:refresh' %}'><button class="btn btn-secondary btn"> Refresh Containers</button></a>
 
-    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+   <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 {% endblock %}
