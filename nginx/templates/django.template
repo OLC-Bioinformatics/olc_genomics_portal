@@ -6,9 +6,9 @@ server {
     client_max_body_size 0;
     send_timeout 3600s;
 
-    location /static {
+    location /static/ {
         client_max_body_size 0;
-        alias /data/web/olc_webportalv2/static;
+        alias /data/web/staticfiles/;
         send_timeout 3600s;
     }
 

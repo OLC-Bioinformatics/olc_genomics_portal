@@ -37,7 +37,7 @@ services:
       COWSNPHR_IMAGE: ""
     ports:
       - "8000"
-    command: /bin/bash -c "gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
+    command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
 
   batch:
     restart: always

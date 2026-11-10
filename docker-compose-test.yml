@@ -40,7 +40,7 @@ services:
       - DB_PORT=5432
     ports:
       - "8000"
-    command: /bin/bash -c "gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
+    command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
 
   nginx:
     restart: always
@@ -97,5 +97,4 @@ services:
      command: ["flower", "--basic_auth=$FLOWER_USER:$FLOWER_PASSWORD","--broker=redis://redis:6379/0", "--port=8888"]
      ports:
       - 8888:8888
-
 
