@@ -1,101 +1,544 @@
 {% extends "base.html" %}
-{#Head container#}
-{% load static %}
-{% load crispy_forms_tags %}
-{% load i18n widget_tweaks %}
+{% load i18n %}
+
 {% block content %}
+<main class="container validator-form-page">
+  <div class="validator-page-heading">
+    <a class="validator-back-link" href="{% url 'primer_finder:primer_home' %}">
+      <i class="fas fa-arrow-left" aria-hidden="true"></i>
+      {% trans "PrimerFinder Home" %}
+    </a>
+    <h1>{% trans "PrimerValidator Request" %}</h1>
+  </div>
 
-<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
-<br>
-
-<h2>{%trans "PrimerVerifier Request"%}</h2>
-<form action='' enctype="multipart/form-data" method="post">
+  <form
+    method="post"
+    enctype="multipart/form-data"
+    class="validator-form"
+    data-rule-none="{% trans 'No classification or target logic selected. Use one standalone target.' %}"
+    data-rule-salmonella="{% trans 'Each sample needs an invA or stn target. Group additional targets under the same sample name if they belong to that sample.' %}"
+    data-rule-and="{% trans 'All targets in each sample must be detected. Use the same sample name to group targets; at least two targets are needed per sample.' %}"
+    data-rule-or="{% trans 'At least one target in each sample must be detected. Use the same sample name to group targets; at least two targets are needed per sample.' %}">
     {% csrf_token %}
-    {% if form.errors %}
-    <div class="alert alert-danger" role="alert" align="center">
-        {{ form.non_field_errors|escape }}
-    </div>
+    {% if form.non_field_errors or target_forms.non_form_errors %}
+      <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+        {{ target_forms.non_form_errors }}
+      </div>
     {% endif %}
-    {{ form.project_name|as_crispy_field }}
-    {{ form.forward_primer|as_crispy_field }}
-    {{ form.reverse_primer|as_crispy_field }}
 
-    <!--Probe-->
-    <div class="container">
-        <div class="row">
-            <div style="margin-right: 2em">
-                {{ form.probe_sequence|as_crispy_field}}
-            </div>
-        </div>
+    <div class="validator-project-field">
+      {{ form.project_name.label_tag }}
+      {{ form.project_name }}
+      {% if form.project_name.help_text %}<div class="form-text">{{ form.project_name.help_text }}</div>{% endif %}
+      {{ form.project_name.errors }}
     </div>
 
-    <!-- Inclusivity panel-->
-    <label>
-        {{ form.inclusivity_panel.label }}
-    </label>
-    <div class="container">
-        <div class="row">
-            <div class="btn-group">
-                {% for checkbox in form.inclusivity_panel %}
-                <label class="btn btn-success">
-                    {{ checkbox.tag }} {{ checkbox.choice_label }}
-                </label>
-                {% endfor %}
-            </div>
+    <div class="validator-panel-grid">
+      <section class="validator-panel-card validator-panel-inclusivity">
+        <h2>{{ form.inclusivity_panel.label }}</h2>
+        <p class="form-text">{% trans "Select datasets where the targets should be detected." %}</p>
+        <div class="validator-checkbox-list">
+          {{ form.inclusivity_panel }}
         </div>
+        {{ form.inclusivity_panel.errors }}
+      </section>
+      <section class="validator-panel-card validator-panel-exclusivity">
+        <h2>{{ form.exclusivity_panel.label }}</h2>
+        <p class="form-text">{% trans "Select datasets where the targets should not be detected." %}</p>
+        <div class="validator-checkbox-list">
+          {{ form.exclusivity_panel }}
+        </div>
+        {{ form.exclusivity_panel.errors }}
+      </section>
     </div>
 
-    <button type="submit" class="btn btn-primary btn-lg">{% trans "Run PrimerValidator" %}</button>
-</form>
+    <section class="validator-settings-bar" aria-label="{% trans 'Analysis settings' %}">
+      <div class="validator-settings-grid">
+        {% for field in form %}
+          {% if field.name == "mismatches" or field.name == "min_amplicon_size" or field.name == "max_amplicon_size" or field.name == "range_buffer" %}
+            <div class="validator-field">
+              {{ field.label_tag }}
+              {{ field }}
+              {{ field.errors }}
+            </div>
+          {% elif field.name == "contig_breaks" %}
+            <div class="validator-field validator-field-checkbox">
+              <div class="form-check">
+                {{ field }}
+                {{ field.label_tag }}
+              </div>
+              {{ field.errors }}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
 
+    <div class="validator-rule-grid">
+      <div class="validator-field">
+        {{ form.classification_rule.label_tag }}
+        {{ form.classification_rule }}
+        <div class="form-text">{% trans "Optional: apply the Salmonella classification rule to target results." %}</div>
+        {{ form.classification_rule.errors }}
+      </div>
+      <div class="validator-field">
+        {{ form.logic.label_tag }}
+        {{ form.logic }}
+        {% if form.logic.help_text %}<div class="form-text">{{ form.logic.help_text }}</div>{% endif %}
+        <div id="logic-rule-disabled-note" class="form-text" hidden>
+          {% trans "Disabled because the selected classification rule defines the required targets." %}
+        </div>
+        {{ form.logic.errors }}
+      </div>
+    </div>
 
-<script type="text/javascript">
-    // Create a listener for any changes in the document. Will be used to disable the corresponding checkbox in the
-    // opposite panel when a genus is selected
+    <section class="validator-exclusion-section is-disabled">
+      {{ form.gene_exclusion_categories.label_tag }}
+      <div class="validator-checkbox-list validator-exclusion-list">
+        {{ form.gene_exclusion_categories }}
+      </div>
+      <p class="form-text validator-exclusion-unavailable">{% trans "Sample exclusion gene-analysis categories are unavailable until one or more gene references are supplied." %}</p>
+      <p class="form-text">{% trans "Samples with supplied gene references matching the selected categories will be removed from summary totals and model results, but remain in the Excel report. With the Salmonella rule, only invA or stn references can cause exclusion." %}</p>
+      {{ form.gene_exclusion_categories.errors }}
+    </section>
 
-    // Filter the document for all elements with .btn-group (limited to the inclusivity/exclusivity panels)
-    const selects = document.querySelectorAll('.btn-group');
-    // Iterate through all the individual entries in the group
-    selects.forEach((elem) => {
-        // Create a listener for any changes in the page
-        elem.addEventListener('change', (event) => {
-            // Find the name of the target of the change e.g. inclusivity_panel
-            let clicked_panel = event.target.name;
-            // Extract the id of the target e.g. id_inclusivity_panel_3
-            let element_id = event.target.id;
-            // Split of the index from the end of the id e.g. id_inclusivity_panel_3 -> [id inclusivity panel 3] -> 3
-            let index = element_id.split('_')[3];
-            // Iterate through all the instances of the .btn-group
-            for (const select of selects) {
-                // Ensure that the current element is for the inclusivity panel
-                if (clicked_panel === 'inclusivity_panel') {
-                    // Javascript magic. Use the index extracted above to ensure that we're looking at non-target
-                    // genera each time. The 'children' key is used to extract the child element from the button
-                    // group. Finally, use the panel as the key to extract the object containing the checkbox
-                    // attribute
-                    let children = select['children'];
-                    for (let alternate_index = 0; alternate_index < children.length; alternate_index++) {
-                        // Ensure that we're looking at a different index than the clicked one
-                        if (alternate_index !== parseInt(index)) {
-                            // Check to see if the clicked button has a checkmark
-                            if (select['children'][index]['children'].hasOwnProperty(clicked_panel)) {
-                                // Define the non-target panel to avoid typing this out multiple times
-                                let opposing_panel = select['children'][alternate_index]['children'][clicked_panel];
-                                // If the current panel is checked, disable the opposing panel, and remove any checks
-                                if (event.target.checked) {
-                                    opposing_panel.disabled = true;
-                                    opposing_panel.checked = false;
-                                } else {
-                                    opposing_panel.disabled = false;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    <section class="validator-targets-section">
+      <div class="validator-section-heading">
+        <div>
+          <h2>{% trans "Samples and targets" %}</h2>
+          <p class="form-text">{% trans "Add one row per target. Reuse a sample name to group targets under the same diagnostic rule." %}</p>
+        </div>
+      </div>
+
+      {{ target_forms.management_form }}
+      <div id="target-forms">
+        {% for target_form in target_forms %}
+          <article class="validator-target-card">
+            <div class="validator-target-heading">
+              <h3>{% trans "Target" %} {{ forloop.counter }}</h3>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-target">
+                {% trans "Remove" %}
+              </button>
+            </div>
+            {% if target_form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {{ target_form.non_field_errors }}
+              </div>
+            {% endif %}
+            {% for hidden in target_form.hidden_fields %}{{ hidden }}{% endfor %}
+            <div class="validator-target-basic-grid">
+              <div class="validator-field">
+                {{ target_form.sample_name.label_tag }}
+                {{ target_form.sample_name }}
+                {{ target_form.sample_name.errors }}
+              </div>
+              <div class="validator-field">
+                {{ target_form.target_name.label_tag }}
+                {{ target_form.target_name }}
+                <div class="form-text validator-target-rule-note"></div>
+                {{ target_form.target_name.errors }}
+              </div>
+            </div>
+            <div class="validator-primer-grid">
+              {% for field in target_form %}
+                {% if field.name == "forward_primer" or field.name == "reverse_primer" or field.name == "probe_sequence" %}
+                  <div class="validator-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {{ field.errors }}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <div class="validator-probe-evaluation" aria-live="polite" aria-hidden="{% if target_form.probe_sequence.value %}false{% else %}true{% endif %}"{% if not target_form.probe_sequence.value %} hidden{% endif %}>
+              <div class="validator-probe-evaluation-row">
+                <span class="validator-probe-prompt">{% trans "Probe passes by:" %}</span>
+                <div class="validator-probe-choice validator-probe-percent-option">
+                  <label>{{ target_form.probe_evaluation_method.0.tag }} {% trans "Identity" %}</label>
+                  {{ target_form.probe_percent_identity }}<span class="validator-probe-unit">%</span>
+                </div>
+                <span class="validator-probe-or">{% trans "OR" %}</span>
+                <div class="validator-probe-choice validator-probe-difference-option">
+                  <label>{{ target_form.probe_evaluation_method.1.tag }} {% trans "Differences" %}</label>
+                  {{ target_form.probe_max_differences }}<span class="validator-probe-unit">{% trans "max" %}</span>
+                </div>
+              </div>
+              <div class="validator-probe-errors">
+                {{ target_form.probe_evaluation_method.errors }}
+                {{ target_form.probe_percent_identity.errors }}
+                {{ target_form.probe_max_differences.errors }}
+              </div>
+              <p class="form-text">{% trans "Identity is the minimum accepted percentage. Differences are mismatches plus gaps and must not exceed the maximum." %}</p>
+            </div>
+            <div class="validator-gene-reference-section">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary validator-add-gene-reference"
+                aria-controls="gene-reference-{{ forloop.counter0 }}"
+                aria-expanded="{% if target_form.gene_sequence.value or target_form.reference_fasta.value or target_form.gene_sequence.errors or target_form.reference_fasta.errors %}true{% else %}false{% endif %}"
+                data-closed-label="{% trans 'Add gene reference sequence' %}"
+                data-open-label="{% trans 'Hide gene reference sequence' %}">
+                {% if target_form.gene_sequence.value or target_form.reference_fasta.value or target_form.gene_sequence.errors or target_form.reference_fasta.errors %}
+                  {% trans "Hide gene reference sequence" %}
+                {% else %}
+                  {% trans "Add gene reference sequence" %}
+                {% endif %}
+              </button>
+              <div id="gene-reference-{{ forloop.counter0 }}" class="validator-gene-reference-fields"{% if not target_form.gene_sequence.value and not target_form.reference_fasta.value and not target_form.gene_sequence.errors and not target_form.reference_fasta.errors %} hidden{% endif %}>
+                <h4>{% trans "Gene reference" %}</h4>
+                <p class="form-text">{% trans "Paste a sequence or FASTA records, upload a multi-FASTA file, or use both." %}</p>
+                <div class="validator-field">
+                  {{ target_form.gene_sequence.label_tag }}
+                  {{ target_form.gene_sequence }}
+                  {{ target_form.gene_sequence.errors }}
+                </div>
+                <div class="validator-field validator-reference-upload">
+                  {{ target_form.reference_fasta.label_tag }}
+                  {{ target_form.reference_fasta }}
+                  {{ target_form.reference_fasta.errors }}
+                </div>
+              </div>
+            </div>
+            <span class="d-none">{{ target_form.DELETE }}</span>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="validator-submit-row">
+      <button type="button" id="add-target" class="btn btn-outline-success">
+        {% trans "Add another target" %}
+      </button>
+      <button type="submit" class="btn btn-primary">
+        {% trans "Run PrimerValidator" %}
+      </button>
+    </div>
+  </form>
+</main>
+
+<template id="empty-target-form">
+  <article class="validator-target-card">
+    <div class="validator-target-heading">
+      <h3>{% trans "New target" %}</h3>
+      <button type="button" class="btn btn-sm btn-outline-danger remove-target">
+        {% trans "Remove" %}
+      </button>
+    </div>
+    {% for hidden in target_forms.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <div class="validator-target-basic-grid">
+      <div class="validator-field">
+        {{ target_forms.empty_form.sample_name.label_tag }}
+        {{ target_forms.empty_form.sample_name }}
+      </div>
+      <div class="validator-field">
+        {{ target_forms.empty_form.target_name.label_tag }}
+        {{ target_forms.empty_form.target_name }}
+        <div class="form-text validator-target-rule-note"></div>
+      </div>
+    </div>
+    <div class="validator-primer-grid">
+      {% for field in target_forms.empty_form %}
+        {% if field.name == "forward_primer" or field.name == "reverse_primer" or field.name == "probe_sequence" %}
+          <div class="validator-field">
+            {{ field.label_tag }}
+            {{ field }}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="validator-probe-evaluation" aria-live="polite" aria-hidden="true" hidden>
+      <div class="validator-probe-evaluation-row">
+        <span class="validator-probe-prompt">{% trans "Probe passes by:" %}</span>
+        <div class="validator-probe-choice validator-probe-percent-option">
+          <label>{{ target_forms.empty_form.probe_evaluation_method.0.tag }} {% trans "Identity" %}</label>
+          {{ target_forms.empty_form.probe_percent_identity }}<span class="validator-probe-unit">%</span>
+        </div>
+        <span class="validator-probe-or">{% trans "OR" %}</span>
+        <div class="validator-probe-choice validator-probe-difference-option">
+          <label>{{ target_forms.empty_form.probe_evaluation_method.1.tag }} {% trans "Differences" %}</label>
+          {{ target_forms.empty_form.probe_max_differences }}<span class="validator-probe-unit">{% trans "max" %}</span>
+        </div>
+      </div>
+      <div class="validator-probe-errors">
+        {{ target_forms.empty_form.probe_evaluation_method.errors }}
+        {{ target_forms.empty_form.probe_percent_identity.errors }}
+        {{ target_forms.empty_form.probe_max_differences.errors }}
+      </div>
+      <p class="form-text">{% trans "Identity is the minimum accepted percentage. Differences are mismatches plus gaps and must not exceed the maximum." %}</p>
+    </div>
+    <div class="validator-gene-reference-section">
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-primary validator-add-gene-reference"
+        aria-controls="gene-reference-__prefix__"
+        aria-expanded="false"
+        data-closed-label="{% trans 'Add gene reference sequence' %}"
+        data-open-label="{% trans 'Hide gene reference sequence' %}">
+        {% trans "Add gene reference sequence" %}
+      </button>
+      <div id="gene-reference-__prefix__" class="validator-gene-reference-fields" hidden>
+        <h4>{% trans "Gene reference" %}</h4>
+        <p class="form-text">{% trans "Paste a sequence or FASTA records, upload a multi-FASTA file, or use both." %}</p>
+        <div class="validator-field">
+          {{ target_forms.empty_form.gene_sequence.label_tag }}
+          {{ target_forms.empty_form.gene_sequence }}
+        </div>
+        <div class="validator-field validator-reference-upload">
+          {{ target_forms.empty_form.reference_fasta.label_tag }}
+          {{ target_forms.empty_form.reference_fasta }}
+        </div>
+      </div>
+    </div>
+    <span class="d-none">{{ target_forms.empty_form.DELETE }}</span>
+  </article>
+</template>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const formContainer = document.getElementById('target-forms');
+    const totalForms = document.getElementById('id_targets-TOTAL_FORMS');
+    const emptyForm = document.getElementById('empty-target-form').innerHTML;
+    const requestForm = document.querySelector('.validator-form');
+    const classificationSelect = document.getElementById('id_classification_rule');
+    const logicSelect = document.getElementById('id_logic');
+    const logicDisabledNote = document.getElementById('logic-rule-disabled-note');
+    const exclusionSection = document.querySelector('.validator-exclusion-section');
+    const exclusionInputs = exclusionSection.querySelectorAll('input[type="checkbox"]');
+    const unavailableMessage = exclusionSection.querySelector('.validator-exclusion-unavailable');
+    const panelInputs = document.querySelectorAll(
+      '.validator-panel-inclusivity input[type="checkbox"], ' +
+      '.validator-panel-exclusivity input[type="checkbox"]'
+    );
+    const geneCategoryDescriptions = {
+      FRAME_SHIFT: "{% trans 'Frame shift: adjacent gene-reference hits are out of frame.' %}",
+      INTERNAL_STOP: "{% trans 'Internal stop: the translated gene contains a premature stop codon.' %}",
+      PARTIAL_CONTIG_END: "{% trans 'Partial contig end: the gene hit reaches the end of the contig.' %}",
+      EXTENDED: "{% trans 'Extended gene: the hit spans the reference but has no expected terminal stop.' %}"
+    };
+    const targetRuleMessages = {
+      none: requestForm.dataset.ruleNone,
+      salmonella: requestForm.dataset.ruleSalmonella,
+      AND: requestForm.dataset.ruleAnd,
+      OR: requestForm.dataset.ruleOr
+    };
+
+    function updateProbeControls(targetCard) {
+      const probe = targetCard.querySelector('[name$="-probe_sequence"]');
+      const evaluation = targetCard.querySelector('.validator-probe-evaluation');
+      if (!probe || !evaluation) return;
+
+      const methodInputs = evaluation.querySelectorAll('input[type="radio"]');
+      const percentIdentity = evaluation.querySelector('[name$="-probe_percent_identity"]');
+      const maxDifferences = evaluation.querySelector('[name$="-probe_max_differences"]');
+      const percentOption = evaluation.querySelector('.validator-probe-percent-option');
+      const differenceOption = evaluation.querySelector('.validator-probe-difference-option');
+      if (!percentIdentity || !maxDifferences || !percentOption || !differenceOption) return;
+
+      const hasProbe = Boolean(probe.value.trim());
+      let selectedMethod = evaluation.querySelector('input[type="radio"]:checked');
+      if (!selectedMethod && methodInputs.length) {
+        methodInputs[0].checked = true;
+        selectedMethod = methodInputs[0];
+      }
+      const usePercentIdentity = !selectedMethod || selectedMethod.value === 'percent_identity';
+
+      evaluation.hidden = !hasProbe;
+      evaluation.setAttribute('aria-hidden', String(!hasProbe));
+      methodInputs.forEach(function (input) {
+        input.disabled = !hasProbe;
+      });
+      percentIdentity.disabled = !hasProbe || !usePercentIdentity;
+      maxDifferences.disabled = !hasProbe || usePercentIdentity;
+      percentOption.classList.toggle('inactive', hasProbe && !usePercentIdentity);
+      differenceOption.classList.toggle('inactive', hasProbe && usePercentIdentity);
+    }
+
+    function updateGeneExclusionControls() {
+      const hasGeneReference = Array.from(
+        formContainer.querySelectorAll('.validator-target-card:not(.d-none)')
+      ).some(function (targetCard) {
+        const sequence = targetCard.querySelector('[name$="-gene_sequence"]');
+        const fastaFile = targetCard.querySelector('[name$="-reference_fasta"]');
+        return Boolean(sequence.value.trim() || (fastaFile.files && fastaFile.files.length));
+      });
+
+      exclusionInputs.forEach(function (input) {
+        input.disabled = !hasGeneReference;
+        const label = input.closest('label');
+        if (label) {
+          label.title = geneCategoryDescriptions[input.value] || '';
+        }
+      });
+      exclusionSection.classList.toggle('is-disabled', !hasGeneReference);
+      unavailableMessage.hidden = hasGeneReference;
+    }
+
+    function updateTargetRuleNotes() {
+      const rule = classificationSelect.value === 'salmonella'
+        ? 'salmonella'
+        : logicSelect.value || 'none';
+      formContainer.querySelectorAll('.validator-target-rule-note').forEach(function (note) {
+        note.textContent = targetRuleMessages[rule];
+      });
+    }
+
+    function activeTargetCount() {
+      return Array.from(
+        formContainer.querySelectorAll('.validator-target-card:not(.d-none)')
+      ).filter(function (targetCard) {
+        const deleteInput = targetCard.querySelector('input[name$="-DELETE"]');
+        return !deleteInput || !deleteInput.checked;
+      }).length;
+    }
+
+    function addTarget() {
+      const index = Number(totalForms.value);
+      formContainer.insertAdjacentHTML(
+        'beforeend',
+        emptyForm.replace(/__prefix__/g, index)
+      );
+      totalForms.value = index + 1;
+      initializeTargetCard(formContainer.lastElementChild);
+      updateGeneExclusionControls();
+      updateTargetRuleNotes();
+    }
+
+    function ensureMinimumTargets() {
+      const classificationApplied = Boolean(
+        classificationSelect.value && classificationSelect.value !== 'none'
+      );
+      const requiresMultipleTargets = classificationApplied ||
+        logicSelect.value === 'AND' || logicSelect.value === 'OR';
+      const minimum = requiresMultipleTargets ? 2 : 1;
+      while (activeTargetCount() < minimum) {
+        addTarget();
+      }
+    }
+
+    function updatePanelControls() {
+      const selectedPanels = {};
+      panelInputs.forEach(function (input) {
+        if (input.checked) selectedPanels[input.value] = input.name;
+      });
+      panelInputs.forEach(function (input) {
+        const otherPanel = input.name === 'inclusivity_panel'
+          ? 'exclusivity_panel'
+          : 'inclusivity_panel';
+        input.disabled = !input.checked && selectedPanels[input.value] === otherPanel;
+      });
+    }
+
+    function updateClassificationRule() {
+      const classificationApplied = Boolean(
+        classificationSelect.value && classificationSelect.value !== 'none'
+      );
+      if (classificationApplied) logicSelect.value = '';
+      logicSelect.disabled = classificationApplied;
+      logicDisabledNote.hidden = !classificationApplied;
+      updateTargetRuleNotes();
+      ensureMinimumTargets();
+    }
+
+    function updateLogicRule() {
+      updateTargetRuleNotes();
+      ensureMinimumTargets();
+    }
+
+    function initializeTargetCard(targetCard) {
+      const button = targetCard.querySelector('.validator-add-gene-reference');
+      const referenceFields = targetCard.querySelector('.validator-gene-reference-fields');
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      referenceFields.hidden = !expanded;
+      button.textContent = expanded ? button.dataset.openLabel : button.dataset.closedLabel;
+      updateProbeControls(targetCard);
+
+      const dropZone = targetCard.querySelector('.validator-reference-upload');
+      const fileInput = dropZone && dropZone.querySelector('input[type="file"]');
+      if (dropZone && fileInput) {
+        ['dragenter', 'dragover'].forEach(function (eventName) {
+          dropZone.addEventListener(eventName, function (event) {
+            event.preventDefault();
+            dropZone.classList.add('is-dragging');
+          });
         });
+        ['dragleave', 'drop'].forEach(function (eventName) {
+          dropZone.addEventListener(eventName, function (event) {
+            event.preventDefault();
+            dropZone.classList.remove('is-dragging');
+          });
+        });
+        dropZone.addEventListener('drop', function (event) {
+          if (event.dataTransfer.files.length) {
+            fileInput.files = event.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      }
+    }
+
+    formContainer.querySelectorAll('.validator-target-card').forEach(initializeTargetCard);
+    updateGeneExclusionControls();
+    panelInputs.forEach(function (input) {
+      input.addEventListener('change', updatePanelControls);
+    });
+    updatePanelControls();
+    classificationSelect.addEventListener('change', updateClassificationRule);
+    logicSelect.addEventListener('change', updateLogicRule);
+    updateClassificationRule();
+
+    document.getElementById('add-target').addEventListener('click', function () {
+      addTarget();
     });
 
-</script>
+    formContainer.addEventListener('click', function (event) {
+      const referenceButton = event.target.closest('.validator-add-gene-reference');
+      if (referenceButton) {
+        const referenceFields = referenceButton
+          .closest('.validator-target-card')
+          .querySelector('.validator-gene-reference-fields');
+        referenceFields.hidden = !referenceFields.hidden;
+        referenceButton.setAttribute('aria-expanded', String(!referenceFields.hidden));
+        referenceButton.textContent = referenceFields.hidden
+          ? referenceButton.dataset.closedLabel
+          : referenceButton.dataset.openLabel;
+        return;
+      }
 
+      const removeButton = event.target.closest('.remove-target');
+      if (removeButton) {
+        const row = removeButton.closest('.validator-target-card');
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) {
+          deleteInput.checked = true;
+          row.classList.add('d-none');
+          updateGeneExclusionControls();
+          ensureMinimumTargets();
+        }
+      }
+    });
+
+    formContainer.addEventListener('input', function (event) {
+      const targetCard = event.target.closest('.validator-target-card');
+      if (!targetCard) return;
+
+      if (event.target.matches('[name$="-probe_sequence"]')) {
+        updateProbeControls(targetCard);
+      } else if (event.target.matches('[name$="-gene_sequence"]')) {
+        updateGeneExclusionControls();
+      }
+    });
+
+    formContainer.addEventListener('change', function (event) {
+      const targetCard = event.target.closest('.validator-target-card');
+      if (!targetCard) return;
+
+      if (event.target.matches('[name$="-probe_evaluation_method"]')) {
+        updateProbeControls(targetCard);
+      } else if (event.target.matches('[name$="-reference_fasta"]')) {
+        updateGeneExclusionControls();
+      }
+    });
+  });
+</script>
 {% endblock %}

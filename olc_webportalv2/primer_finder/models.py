@@ -277,17 +277,43 @@ class ValidatorRequest(models.Model):
     summary = models.TextField(blank=True)
     # JSON summary of number of mismatches-specific details
     totals = models.TextField(blank=True)
+    gene_report = models.TextField(blank=True, default='')
+    gene_results = models.JSONField(default=list, blank=True)
+    validator_original_report = models.TextField(blank=True, default='')
+    gene_exclusion_categories = ArrayField(
+        models.CharField(max_length=32), blank=True, default=list
+    )
+    gene_exclusion_results = models.JSONField(default=dict, blank=True)
+    gene_exclusion_details = models.JSONField(default=dict, blank=True)
+    gene_exclusion_note = models.TextField(blank=True, default='')
     benchmark_versions = models.JSONField(default=dict, blank=True)
 
     # primer_validator.py arguments
     mismatches = models.IntegerField(
-        default=2,
+        default=3,
         validators=[MaxValueValidator(3), MinValueValidator(0)]
+    )
+    min_amplicon_size = models.IntegerField(
+        default=0,
+        validators=[MaxValueValidator(10000), MinValueValidator(0)]
+    )
+    max_amplicon_size = models.IntegerField(
+        default=1500,
+        validators=[MaxValueValidator(10000), MinValueValidator(0)]
+    )
+    contig_breaks = models.BooleanField(default=False)
+    range_buffer = models.IntegerField(
+        default=0,
+        validators=[MaxValueValidator(200), MinValueValidator(0)]
     )
 
     # Primers
     forward_primer = models.TextField(blank=False)
     reverse_primer = models.TextField(blank=False)
+    primer_sequences = models.TextField(blank=True, default='')
+    reference_fasta = models.FileField(
+        upload_to='primer_validator_inputs/', blank=True, null=True
+    )
 
     # Probe
     probe_sequence = models.TextField(blank=True)
@@ -304,8 +330,99 @@ class ValidatorRequest(models.Model):
         return self.project_name
 
     def container_namer(self):
+        if self.pk and self.samples.exists():
+            return 'primer-validator-' + str(self.pk)
         container_name = 'primer-verifier-' + str(self.pk)
         return container_name
+
+
+class ValidatorSample(models.Model):
+    LOGIC_CHOICES = (
+        ('AND', 'All targets must be present'),
+        ('OR', 'At least one target must be present'),
+    )
+    CLASSIFICATION_CHOICES = (
+        ('none', 'No classification rule'),
+        ('salmonella', 'Salmonella: invA or stn required'),
+    )
+
+    validator_request = models.ForeignKey(
+        ValidatorRequest, on_delete=models.CASCADE, related_name='samples'
+    )
+    name = models.CharField(max_length=128)
+    logic = models.CharField(
+        max_length=3, choices=LOGIC_CHOICES, default='AND'
+    )
+    classification_rule = models.CharField(
+        max_length=32, choices=CLASSIFICATION_CHOICES, default='none'
+    )
+
+    class Meta:
+        unique_together = ('validator_request', 'name')
+        ordering = ('name', 'pk')
+
+
+class ValidatorTarget(models.Model):
+    PROBE_EVALUATION_CHOICES = (
+        ('percent_identity', 'Minimum percent identity'),
+        ('max_differences', 'Maximum total differences'),
+    )
+
+    sample = models.ForeignKey(
+        ValidatorSample, on_delete=models.CASCADE, related_name='targets'
+    )
+    name = models.CharField(max_length=128)
+    forward_primer = models.CharField(max_length=10000, blank=True)
+    reverse_primer = models.CharField(max_length=10000, blank=True)
+    probe_sequence = models.CharField(max_length=10000, blank=True)
+    gene_sequence = models.TextField(blank=True)
+    reference_fasta = models.FileField(
+        upload_to='primer_validator_inputs/targets/', blank=True, null=True
+    )
+    probe_evaluation_method = models.CharField(
+        max_length=32,
+        choices=PROBE_EVALUATION_CHOICES,
+        default='percent_identity',
+    )
+    probe_percent_identity = models.FloatField(
+        default=80.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+    )
+    probe_max_differences = models.PositiveIntegerField(default=2)
+
+    class Meta:
+        unique_together = ('sample', 'name')
+        ordering = ('name', 'pk')
+
+
+class ValidatorAnalysisTask(models.Model):
+    TASK_TYPES = (
+        ('primer', 'Primer analysis'),
+        ('gene', 'Gene analysis'),
+    )
+    STATUSES = (
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('complete', 'Complete'),
+        ('error', 'Error'),
+    )
+
+    validator_request = models.ForeignKey(
+        ValidatorRequest,
+        on_delete=models.CASCADE,
+        related_name='analysis_tasks',
+    )
+    task_type = models.CharField(max_length=16, choices=TASK_TYPES)
+    status = models.CharField(max_length=16, choices=STATUSES, default='pending')
+    batch_job_id = models.CharField(max_length=128, blank=True)
+    batch_task_id = models.CharField(max_length=128, blank=True)
+    error = models.TextField(blank=True, default='')
+    input_manifest = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('validator_request', 'task_type')
+        ordering = ('task_type', 'pk')
 
 
 class ValidatorPrimerSet(models.Model):

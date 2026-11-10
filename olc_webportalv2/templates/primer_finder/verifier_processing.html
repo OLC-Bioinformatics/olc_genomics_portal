@@ -7,7 +7,7 @@
 <p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
 <br>
 
-<h2>{%trans "PrimerValidator Results"%}</h2>
+<h2>{%trans "PrimerVerifier Results"%}</h2>
 <br>
 
 
@@ -21,7 +21,7 @@
       <button class="btn btn-info w-100 progress-bar-striped progress-bar-animated" disabled>{%trans "Processing"%}</button>
       <br>
       <p>{%trans "This page will automatically refresh. Your PrimerValidator request should be complete in a few minutes."%}</p>
-      <p>{%trans "You don't have to remain on this page - this PrimerValidator request will be visible on"%} <a href="{% url 'primer_finder:primer_validator_home' %}">{%trans "PrimerValidator Home"%}</a> </p>
+      <p>{%trans "You don't have to remain on this page - this PrimerVerifier request will be visible on"%} <a href="{% url 'primer_finder:primer_verifier_home' %}">{%trans "PrimerVerifier Home"%}</a> </p>
    
     <!--Email Block--> 
       {% if request.user.email in primer_verifier_request.emails_array %}
@@ -41,19 +41,17 @@
       </form>
 
       <script>
-          const checkbox = document.getElementById('cbx').checked;
+          const checkboxElement = document.getElementById('cbx');
           const form = document.getElementById('addEmail');
-          if (checkbox != true){
-          form.style.visibility ="hidden";}
-        else {
-            form.style.visibility ="visible";}
+          if (checkboxElement && form) {
+            form.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+          }
         function cbxCheck(){
-            const checkbox = document.getElementById('cbx').checked;
+            const checkboxElement = document.getElementById('cbx');
             const form = document.getElementById('addEmail');
-            if (checkbox == true){
-            form.style.visibility ="visible";}
-          else{
-            form.style.visibility ="hidden";} 
+            if (checkboxElement && form) {
+              form.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+            }
             }
       </script>
       
@@ -76,7 +74,7 @@
   {% elif primer_verifier_request.status == 'Error' %}
     <button class="btn btn-danger w-100" disabled>{%trans "Error"%}</button>
     <br>
-    <p>{%trans "Return to "%} <a href="{% url 'primer_finder:primer_validator_home' %}">{%trans "PrimerValidator Home"%}</a> </p>
+    <p>{%trans "Return to "%} <a href="{% url 'primer_finder:primer_verifier_home' %}">{%trans "PrimerVerifier Home"%}</a> </p>
 
   {% elif primer_verifier_request.status == 'Complete' %}
     <button class="btn btn-success w-100" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
@@ -84,16 +82,16 @@
     <p>{%trans "These results will be available for 7 days."%}</p>
     <br>
     <div style="text-align: center">
-        <a href="{{ primer_verifier_request.report_download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "PrimerValidator Reports "%}</a>
+        <a href="{{ primer_verifier_request.report_download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "PrimerVerifier Reports "%}</a>
         <a href="{{ primer_verifier_request.summary_download_link }}" class="btn btn-outline-dark" role="button"><i class="fas fa-download"></i> {%trans "Summary Excel Report "%}</a>
 
         <br><br>
-        <a href="{% url 'primer_finder:primer_validator_results' validator_pk=primer_verifier_request.pk %}" class="btn btn-outline-primary" role="button"><i class="fas fa-eye"></i> {%trans "View Results"%}</a>
+        <a href="{% url 'primer_finder:primer_verifier_results' verifier_pk=primer_verifier_request.pk %}" class="btn btn-outline-primary" role="button"><i class="fas fa-eye"></i> {%trans "View Results"%}</a>
 
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "PrimerValidator report link:"%}</b> {{ primer_verifier_request.report_download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "PrimerVerifier report link:"%}</b> {{ primer_verifier_request.report_download_link }}</p>
         <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "Summary report link:"%}</b> {{ primer_verifier_request.summary_download_link }}</p>
 
     </div>

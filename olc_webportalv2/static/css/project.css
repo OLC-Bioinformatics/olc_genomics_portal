@@ -19,12 +19,6 @@ label.col-sm-2.control-label {
   line-height: 1.80rem;
 }
 
-/* Hover change on all buttons, regardless of outline */
-.btn:hover{
-  background-color: transparent;
-  color: black;
-}
-
 /* Back Button styling for editing Geneseekr/Tree names */
 .btn:hover .bkwd{
   color: white;
@@ -113,6 +107,668 @@ margin-left: -5%;
 }
 .form-control > .option{
   color:black;
+}
+
+/* PrimerValidator request form */
+.validator-form-page {
+  max-width: 1140px;
+  margin: 1.25rem auto 3rem;
+}
+
+.validator-page-heading {
+  margin-bottom: 1rem;
+}
+
+.validator-page-heading h1 {
+  margin: 0.65rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+.validator-back-link {
+  color: #337ab7;
+  text-decoration: none;
+}
+
+.validator-back-link:hover {
+  color: #23527c;
+  text-decoration: underline;
+}
+
+.validator-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.validator-project-field {
+  max-width: 32rem;
+}
+
+.validator-project-field label,
+.validator-field label,
+.validator-exclusion-section > label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+}
+
+.validator-project-field .form-control,
+.validator-field .form-control,
+.validator-field .form-select {
+  min-height: 2.25rem;
+}
+
+.validator-panel-card {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #d5d5d5;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.validator-panel-card h2,
+.validator-section-heading h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.validator-panel-card > .form-text,
+.validator-section-heading .form-text {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.validator-settings-grid,
+.validator-rule-grid,
+.validator-target-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.validator-field {
+  min-width: 0;
+}
+
+.validator-field textarea.form-control {
+  min-height: 5rem;
+}
+
+.validator-sequence-input {
+  font-family: "Courier New", Courier, monospace;
+  line-height: 1.35;
+}
+
+.validator-field textarea.validator-sequence-input {
+  min-height: 7rem;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.validator-field-checkbox {
+  align-self: center;
+}
+
+.validator-field-checkbox .form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+}
+
+.validator-field-checkbox label {
+  display: inline-block;
+  margin: 0;
+}
+
+.validator-field-checkbox .form-check span {
+  margin: 0;
+}
+
+.validator-field-checkbox .form-check-input {
+  margin: 0;
+}
+
+.validator-field-wide {
+  grid-column: 1 / -1;
+}
+
+.validator-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.validator-settings-bar {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d5d5d5;
+  border-radius: 0.25rem;
+  background: #f7f7f7;
+}
+
+.validator-settings-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.6rem 0.75rem;
+}
+
+.validator-settings-grid .validator-field label {
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.validator-rule-grid {
+  align-items: start;
+  gap: 1rem;
+}
+
+.validator-checkbox-list > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.25rem 0.75rem;
+}
+
+.validator-checkbox-list label {
+  display: flex;
+  min-width: 0;
+  min-height: 1.85rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.2rem 0.35rem;
+}
+
+.validator-checkbox-list input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.validator-panel-grid .validator-checkbox-list > div {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.35rem;
+}
+
+.validator-panel-grid .validator-checkbox-list label {
+  position: relative;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.4rem 0.3rem 1.55rem;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+
+.validator-panel-grid .validator-checkbox-list input[type="checkbox"] {
+  position: absolute;
+  top: 50%;
+  left: 0.4rem;
+  transform: translateY(-50%);
+}
+
+.validator-panel-inclusivity .validator-checkbox-list label {
+  border: 1px solid #28a745;
+  border-radius: 0.2rem;
+  background: #28a745;
+  color: #fff;
+}
+
+.validator-panel-exclusivity .validator-checkbox-list label {
+  border: 1px solid #ffc107;
+  border-radius: 0.2rem;
+  background: #ffc107;
+  color: #212529;
+}
+
+.validator-panel-inclusivity .validator-checkbox-list label:focus-within,
+.validator-panel-exclusivity .validator-checkbox-list label:focus-within {
+  outline: 2px solid #337ab7;
+  outline-offset: 2px;
+}
+
+.validator-exclusion-section {
+  padding-top: 0.6rem;
+  border-top: 1px solid #ddd;
+}
+
+.validator-exclusion-list > div {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.validator-exclusion-list label {
+  min-height: 2.25rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #d5d5d5;
+}
+
+/* Preserve the original Bootstrap 4 semantic palette after the Bootstrap 5 upgrade. */
+:root {
+  --bs-primary: #007bff;
+  --bs-primary-rgb: 0, 123, 255;
+  --bs-success: #28a745;
+  --bs-success-rgb: 40, 167, 69;
+  --bs-info: #17a2b8;
+  --bs-info-rgb: 23, 162, 184;
+  --bs-warning: #ffc107;
+  --bs-warning-rgb: 255, 193, 7;
+  --bs-dark: #343a40;
+  --bs-dark-rgb: 52, 58, 64;
+  --bs-link-color: #007bff;
+  --bs-link-color-rgb: 0, 123, 255;
+  --bs-link-hover-color: #0056b3;
+  --bs-link-hover-color-rgb: 0, 86, 179;
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #007bff;
+  --bs-btn-border-color: #007bff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #0069d9;
+  --bs-btn-hover-border-color: #0062cc;
+  --bs-btn-focus-shadow-rgb: 38, 143, 255;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #0062cc;
+  --bs-btn-active-border-color: #005cbf;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #007bff;
+  --bs-btn-disabled-border-color: #007bff;
+}
+
+.btn-success {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #28a745;
+  --bs-btn-border-color: #28a745;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #218838;
+  --bs-btn-hover-border-color: #1e7e34;
+  --bs-btn-focus-shadow-rgb: 72, 180, 97;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #1e7e34;
+  --bs-btn-active-border-color: #1c7430;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #28a745;
+  --bs-btn-disabled-border-color: #28a745;
+}
+
+.btn-info {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #17a2b8;
+  --bs-btn-border-color: #17a2b8;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #138496;
+  --bs-btn-hover-border-color: #117a8b;
+  --bs-btn-focus-shadow-rgb: 58, 176, 195;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #117a8b;
+  --bs-btn-active-border-color: #10707f;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #17a2b8;
+  --bs-btn-disabled-border-color: #17a2b8;
+}
+
+.btn-warning {
+  --bs-btn-color: #212529;
+  --bs-btn-bg: #ffc107;
+  --bs-btn-border-color: #ffc107;
+  --bs-btn-hover-color: #212529;
+  --bs-btn-hover-bg: #e0a800;
+  --bs-btn-hover-border-color: #d39e00;
+  --bs-btn-focus-shadow-rgb: 222, 170, 12;
+  --bs-btn-active-color: #212529;
+  --bs-btn-active-bg: #d39e00;
+  --bs-btn-active-border-color: #c69500;
+  --bs-btn-disabled-color: #212529;
+  --bs-btn-disabled-bg: #ffc107;
+  --bs-btn-disabled-border-color: #ffc107;
+}
+
+.btn-dark {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #343a40;
+  --bs-btn-border-color: #343a40;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #23272b;
+  --bs-btn-hover-border-color: #1d2124;
+  --bs-btn-focus-shadow-rgb: 82, 88, 93;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #1d2124;
+  --bs-btn-active-border-color: #171a1d;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #343a40;
+  --bs-btn-disabled-border-color: #343a40;
+}
+
+.table-secondary {
+  --bs-table-color: #212529;
+  --bs-table-bg: #d6d8db;
+  --bs-table-border-color: #b3b7bb;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.075);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: #c8cbcf;
+}
+
+.table-success {
+  --bs-table-color: #212529;
+  --bs-table-bg: #c3e6cb;
+  --bs-table-border-color: #8fd19e;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.075);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: #b1dfbb;
+}
+
+.table-info {
+  --bs-table-color: #212529;
+  --bs-table-bg: #bee5eb;
+  --bs-table-border-color: #86cfda;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.075);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: #abdde5;
+}
+
+.table-warning {
+  --bs-table-color: #212529;
+  --bs-table-bg: #ffeeba;
+  --bs-table-border-color: #ffdf7e;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.075);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: #ffe8a1;
+}
+
+.table-danger {
+  --bs-table-color: #212529;
+  --bs-table-bg: #f5c6cb;
+  --bs-table-border-color: #ed969e;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.075);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: #f1b0b7;
+}
+
+.alert-primary {
+  --bs-alert-color: #004085;
+  --bs-alert-bg: #cce5ff;
+  --bs-alert-border-color: #b8daff;
+  --bs-alert-link-color: #002752;
+}
+
+.alert-success {
+  --bs-alert-color: #155724;
+  --bs-alert-bg: #d4edda;
+  --bs-alert-border-color: #c3e6cb;
+  --bs-alert-link-color: #0b2e13;
+}
+
+.alert-info {
+  --bs-alert-color: #0c5460;
+  --bs-alert-bg: #d1ecf1;
+  --bs-alert-border-color: #bee5eb;
+  --bs-alert-link-color: #062c33;
+}
+
+.alert-warning {
+  --bs-alert-color: #856404;
+  --bs-alert-bg: #fff3cd;
+  --bs-alert-border-color: #ffeeba;
+  --bs-alert-link-color: #533f03;
+}
+
+.alert-danger {
+  --bs-alert-color: #721c24;
+  --bs-alert-bg: #f8d7da;
+  --bs-alert-border-color: #f5c6cb;
+  --bs-alert-link-color: #491217;
+  border-radius: 0.2rem;
+  background: #fff;
+}
+
+.validator-exclusion-section.is-disabled .validator-exclusion-list label {
+  border-color: #e0e0e0;
+  background: #f5f5f5;
+  color: #9299a1;
+  cursor: not-allowed;
+}
+
+.validator-exclusion-section.is-disabled .validator-exclusion-list input {
+  opacity: 0.55;
+}
+
+.validator-target-basic-grid,
+.validator-primer-grid {
+  display: grid;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.validator-target-basic-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 42rem;
+}
+
+.validator-primer-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.validator-probe-evaluation {
+  margin-top: -0.15rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #d5dfe6;
+  border-radius: 0.25rem;
+  background: #f7f9fa;
+}
+
+.validator-probe-evaluation[hidden],
+.validator-gene-reference-fields[hidden] {
+  display: none !important;
+}
+
+.validator-probe-evaluation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.validator-probe-prompt {
+  margin-right: 0.15rem;
+  font-weight: 600;
+}
+
+.validator-probe-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.validator-probe-choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.validator-probe-choice input[type="radio"] {
+  margin: 0;
+  accent-color: #0d6efd;
+}
+
+.validator-probe-choice input[type="number"] {
+  width: 5.2rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.validator-probe-choice.inactive input[type="number"],
+.validator-probe-unit {
+  opacity: 0.45;
+}
+
+.validator-probe-or {
+  color: #58636b;
+  font-size: 0.8rem;
+}
+
+.validator-probe-errors .errorlist {
+  margin-top: 0.2rem;
+}
+
+.validator-probe-evaluation > .form-text {
+  margin: 0.35rem 0 0;
+}
+
+.validator-gene-reference-section {
+  margin-top: 0.75rem;
+}
+
+.validator-add-gene-reference {
+  padding: 0.3rem 0.55rem;
+}
+
+.validator-gene-reference-fields {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #d5dfe6;
+  border-radius: 0.25rem;
+  background: #f7f9fa;
+}
+
+.validator-gene-reference-fields h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.validator-gene-reference-fields > .form-text {
+  margin-bottom: 0.5rem;
+}
+
+.validator-gene-reference-fields textarea.form-control {
+  min-height: 7rem;
+  font-family: monospace;
+}
+
+.validator-reference-upload {
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border: 1px dashed #9eabb5;
+  border-radius: 0.25rem;
+  background: #fff;
+  text-align: center;
+}
+
+.validator-reference-upload.is-dragging {
+  border-color: #0d6efd;
+  background: #eef6ff;
+}
+
+.validator-reference-upload label {
+  margin-bottom: 0.4rem;
+}
+
+.validator-reference-upload input[type="file"] {
+  border: 0;
+  background: transparent;
+}
+
+.validator-section-heading,
+.validator-target-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.validator-section-heading .form-text {
+  margin-bottom: 0;
+}
+
+.validator-targets-section {
+  padding-top: 0.4rem;
+}
+
+.validator-target-card {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid #d5d5d5;
+  border-radius: 0.25rem;
+  background: #fafafa;
+}
+
+.validator-target-heading {
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.validator-target-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.validator-target-rule-note {
+  margin-top: 0.3rem;
+}
+
+#logic-rule-disabled-note {
+  margin-top: 0.3rem;
+}
+
+.validator-submit-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.validator-form .errorlist {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+  color: #b02a37;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 767.98px) {
+  .validator-form-page {
+    margin-top: 1rem;
+  }
+
+  .validator-settings-grid,
+  .validator-rule-grid,
+  .validator-target-basic-grid,
+  .validator-primer-grid,
+  .validator-target-grid,
+  .validator-panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .validator-settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .validator-submit-row {
+    flex-direction: column-reverse;
+  }
+
+  .validator-submit-row .btn {
+    width: 100%;
+  }
 }
 
 /* Settings Bar styling */
