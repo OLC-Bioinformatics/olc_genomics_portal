@@ -707,6 +707,7 @@ def manage_assembly_run(request, sequencing_run_pk):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'rename':
+            form = CustomRunForm(request.POST, instance=sequencing_run)
             target_name = ''
             try:
                 target_name = normalize_research_run_name(

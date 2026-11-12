@@ -317,6 +317,14 @@ class NanoporeRunCreationTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='nanopore-create-user')
         self.client.force_authenticate(user=self.user)
+        self.storage = Mock()
+        self.storage.list_objects.return_value = []
+        storage_patcher = patch(
+            'olc_webportalv2.api.views.get_storage_client',
+            return_value=self.storage,
+        )
+        storage_patcher.start()
+        self.addCleanup(storage_patcher.stop)
         self.payload = {
             'run_name': '260916-nanopore',
             'barcode_kit': 'SQK-RBK114-24',

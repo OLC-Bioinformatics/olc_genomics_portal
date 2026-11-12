@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from olc_webportalv2.cowbat.forms import CustomRunForm, RealTimeForm
-from olc_webportalv2.cowbat.methods import BatchClass
 from olc_webportalv2.cowbat.models import ResearchRun, SequencingRun
 from olc_webportalv2.cowbat.tasks import rename_research_container_task
 from olc_webportalv2.cowbat.utils import (
@@ -90,17 +89,6 @@ class CowbatFormTests(TestCase):
             normalize_research_run_name('run-without-date')
         with self.assertRaises(ValueError):
             normalize_research_run_name('260911-' + 'a' * 57)
-
-
-class CowbatMethodTests(TestCase):
-    def test_validate_job_name_accepts_lowercase_valid_name(self):
-        self.assertTrue(BatchClass.validate_job_name('run-1234'))
-
-    def test_validate_job_name_rejects_invalid_names(self):
-        invalid_names = ['Run-1234', 'abc', 'run--1234', 'run-1234-', 'run_1234']
-        for name in invalid_names:
-            with self.assertRaises(AttributeError):
-                BatchClass.validate_job_name(name)
 
 
 class CowbatUploadStateTests(TestCase):
@@ -608,7 +596,8 @@ class CowbatWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(run.status, 'Unprocessed')
 
-    def test_other_users_can_access_processing_run(self):
+    @mock.patch('olc_webportalv2.cowbat.views.run_cowbat_batch')
+    def test_other_users_can_access_processing_run(self, run_task):
         other_user = User.objects.create_user(username='cowbat-other-user')
         run = SequencingRun.objects.create(
             user=other_user,

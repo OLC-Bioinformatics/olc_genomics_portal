@@ -1,32 +1,48 @@
 import os
 import json
-import time
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from rest_framework.test import APITestCase
 from olc_webportalv2.users.models import User
 from olc_webportalv2.cowbat.models import SequencingRun
-from olc_webportalv2.common.storage_client import get_storage_client
+
+
+class InMemoryStorage:
+    def __init__(self):
+        self.objects = {}
+
+    def ensure_container(self, _container):
+        pass
+
+    def upload_bytes(self, container, name, content, content_type=None):
+        self.objects[(container, name)] = content
+
+    def object_exists(self, container, name):
+        return (container, name) in self.objects
+
+    def get_object(self, container, name):
+        return SimpleNamespace(size=len(self.objects[(container, name)]))
+
+    def list_objects(self, container):
+        return [
+            SimpleNamespace(name=name)
+            for stored_container, name in self.objects
+            if stored_container == container
+        ]
 
 
 class TestAPI(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.storage = InMemoryStorage()
+        storage_patcher = patch(
+            'olc_webportalv2.api.views.get_storage_client',
+            return_value=self.storage,
+        )
+        storage_patcher.start()
+        self.addCleanup(storage_patcher.stop)
 
-    @classmethod
-    def setUpClass(cls):
-        # setUpClass runs only once, instead of every test case.
-        # This means we get to upload a bunch of files, and then check that they're really there.
-        # These tests have to get run in top to bottom order, so they're not (strictly speaking) unit tests,
-        # but they get run in order by default, so my worries are fairly minimal.
-        super(TestAPI, cls).setUpClass()
-        blob_client = get_storage_client()
-        # Make sure container doesn't already exist. API will autoconvert _ to - and make the whole thing lowercase
-        try:
-            blob_client.delete_container('111111-fake')
-        except Exception:
-            pass
-        # Give a bit of time for the delete operation to go through. Painfully long for a unit test, but sometimes
-        # the delete operation takes quite a while. At least it only happens once!
-        time.sleep(40)
         user = User.objects.create(username='TestUser')
         user.set_password('password')
         user.save()
@@ -51,9 +67,8 @@ class TestAPI(APITestCase):
         with open('olc_webportalv2/test_files/SampleSheet.csv', 'rb') as infile:
             response = self.client.put('/en-ca/api/upload/111111_FAKE/SampleSheet.csv', infile.read(), content_type='text/csv')
         sequencing_run = SequencingRun.objects.get(run_name='111111_FAKE')
-        blob_client = get_storage_client()
-        blob_exists = blob_client.object_exists('111111-fake', 'SampleSheet.csv')
-        self.assertTrue(blob_exists)
+        blob_exists = self.storage.object_exists('111111-fake', 'SampleSheet.csv')
+        self.assertTrue(blob_exists, self.storage.objects)
         self.assertIn('2018-SEQ-1471', sequencing_run.seqids)
         self.assertEqual(len(sequencing_run.seqids), 24)
         self.assertEqual(response.status_code, 204)
@@ -63,8 +78,7 @@ class TestAPI(APITestCase):
         with open('olc_webportalv2/test_files/2018-SEQ-1471_S1_L001_R1_001.fastq.gz', 'rb') as infile:
             response = self.client.put('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz',
                                        infile.read(), content_type='application/gzip')
-        blob_client = get_storage_client()
-        blob_exists = blob_client.object_exists(
+        blob_exists = self.storage.object_exists(
             '111111-fake', '2018-SEQ-1471_S1_L001_R1_001.fastq.gz'
         )
         self.assertTrue(blob_exists)
@@ -76,11 +90,11 @@ class TestAPI(APITestCase):
             response = self.client.put('/en-ca/api/upload/111111_FAKE/QMetricsOut.bin',
                                        infile.read(),
                                        content_type='application/octet-stream')
-        blob_client = get_storage_client()
-        blob_exists = blob_client.object_exists(
+        self.assertEqual(response.status_code, 204, response.content)
+        blob_exists = self.storage.object_exists(
             '111111-fake', 'InterOp/QMetricsOut.bin'
         )
-        self.assertTrue(blob_exists)
+        self.assertTrue(blob_exists, self.storage.objects)
         self.assertEqual(response.status_code, 204)
 
     def test_file_upload_metadata_file(self):
@@ -89,12 +103,16 @@ class TestAPI(APITestCase):
             response = self.client.put('/en-ca/api/upload/111111_FAKE/RunInfo.xml',
                                        infile.read(),
                                        content_type='text/xml')
-        blob_client = get_storage_client()
-        blob_exists = blob_client.object_exists('111111-fake', 'RunInfo.xml')
+        blob_exists = self.storage.object_exists('111111-fake', 'RunInfo.xml')
         self.assertTrue(blob_exists)
         self.assertEqual(response.status_code, 204)
 
     def test_get_interop_file_exists(self):
+        self.storage.upload_bytes(
+            '111111-fake',
+            'InterOp/QMetricsOut.bin',
+            b'fake interop data',
+        )
         self.client.login(username='TestUser', password='password')
         response = self.client.get('/en-ca/api/upload/111111_FAKE/QMetricsOut.bin')
         response_dict = json.loads(response.content.decode('utf-8'))
@@ -109,6 +127,11 @@ class TestAPI(APITestCase):
         self.assertEqual(response_dict['size'], 0)
 
     def test_get_metadata_file_exists(self):
+        self.storage.upload_bytes(
+            '111111-fake',
+            'RunInfo.xml',
+            b'<RunInfo/>',
+        )
         self.client.login(username='TestUser', password='password')
         response = self.client.get('/en-ca/api/upload/111111_FAKE/RunInfo.xml')
         response_dict = json.loads(response.content.decode('utf-8'))
@@ -123,6 +146,11 @@ class TestAPI(APITestCase):
         self.assertEqual(response_dict['size'], 0)
 
     def test_get_fastq_file_exists(self):
+        self.storage.upload_bytes(
+            '111111-fake',
+            '2018-SEQ-1471_S1_L001_R1_001.fastq.gz',
+            b'fake fastq data',
+        )
         self.client.login(username='TestUser', password='password')
         response = self.client.get('/en-ca/api/upload/111111_FAKE/2018-SEQ-1471_S1_L001_R1_001.fastq.gz')
         response_dict = json.loads(response.content.decode('utf-8'))
@@ -149,8 +177,8 @@ class TestAPI(APITestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+    @patch.dict(os.environ, {'EMAIL_RELAY_SECRET': 'secret'})
     def test_email_relay_missing_fields(self):
-        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
         payload = {
             'subject': 'Test',
             'body': 'Hello'
@@ -165,11 +193,10 @@ class TestAPI(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response_dict['status'], 'failure')
         self.assertIn('recipient', response_dict['fields'])
-        del os.environ['EMAIL_RELAY_SECRET']
 
     @patch('olc_webportalv2.api.views.send_email')
+    @patch.dict(os.environ, {'EMAIL_RELAY_SECRET': 'secret'})
     def test_email_relay_success(self, mock_send_email):
-        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
         payload = {
             'subject': 'Test',
             'body': 'Hello',
@@ -187,13 +214,13 @@ class TestAPI(APITestCase):
         mock_send_email.assert_called_once_with(
             subject='Test',
             body='Hello',
-            recipient='test@example.com'
+            recipient='test@example.com',
+            sender_name=None,
         )
-        del os.environ['EMAIL_RELAY_SECRET']
 
     @patch('olc_webportalv2.api.views.send_email')
+    @patch.dict(os.environ, {'EMAIL_RELAY_SECRET': 'secret'})
     def test_email_relay_accepts_sender_name(self, mock_send_email):
-        os.environ['EMAIL_RELAY_SECRET'] = 'secret'
         payload = {
             'subject': 'Test sender name',
             'body': 'Hello with display name',
@@ -215,7 +242,6 @@ class TestAPI(APITestCase):
             recipient='test@example.com',
             sender_name='CFIA Local Redmine'
         )
-        del os.environ['EMAIL_RELAY_SECRET']
 
     def test_start_cowbat_login_required(self):
         response = self.client.get('/en-ca/api/run_cowbat/111111_FAKE')

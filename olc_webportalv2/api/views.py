@@ -94,10 +94,6 @@ class UploadView(views.APIView):
 
         storage = get_storage_client()
 
-        # If the file has a .bin extension, it goes in the InterOp folder
-        if file_name.endswith('.bin'):
-            file_name = os.path.join('InterOp', file_name)
-
         # Get the file contents from the request
         file_obj = request.data['file']
 
@@ -218,7 +214,7 @@ class StartCowbatView(generics.RetrieveAPIView):
         sequencing_run = SequencingRun.objects.get(run_name=run_name)
         return sequencing_run
 
-    def retrieve(self, _):
+    def retrieve(self, request, *args, **kwargs):
         """
         Retrieves the run name from the GET queryset. Ensures all forward and
         reverse reads are present. Starts the assembly
