@@ -69,7 +69,9 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         response = primer_validator_processing(request, validator_pk=435)
 
         self.assertEqual(response.status_code, 200)
-        get_object.assert_called_once_with(ValidatorRequest, pk=435)
+        get_object.assert_called_once_with(
+            ValidatorRequest, pk=435, user=request.user
+        )
         args, kwargs = render.call_args
         self.assertEqual(
             args[:2],
@@ -110,7 +112,9 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         response = primer_validator_results(request, validator_pk=435)
 
         self.assertEqual(response.status_code, 200)
-        get_object.assert_called_once_with(ValidatorRequest, pk=435)
+        get_object.assert_called_once_with(
+            ValidatorRequest, pk=435, user=request.user
+        )
         filter_primers.assert_called_once_with(validator_request_id=435)
         filter_panels.assert_called_once_with(validator_request_id=435)
         args, kwargs = render.call_args
@@ -162,7 +166,9 @@ class VerifierHistoryViewTests(unittest.TestCase):
         response = primer_verifier_processing(request, verifier_pk=484)
 
         self.assertEqual(response.status_code, 200)
-        get_object.assert_called_once_with(PrimerVerifierRequest, pk=484)
+        get_object.assert_called_once_with(
+            PrimerVerifierRequest, pk=484, user=user
+        )
         args, kwargs = render.call_args
         self.assertEqual(args[:2], (
             request,
@@ -197,7 +203,9 @@ class VerifierHistoryViewTests(unittest.TestCase):
         response = primer_verifier_results(request, verifier_pk=484)
 
         self.assertEqual(response.status_code, 200)
-        get_object.assert_called_once_with(PrimerVerifierRequest, pk=484)
+        get_object.assert_called_once_with(
+            PrimerVerifierRequest, pk=484, user=user
+        )
         filter_primers.assert_called_once_with(verifier_request_id=484)
         filter_panels.assert_called_once_with(verifier_request_id=484)
         self.assertEqual(
