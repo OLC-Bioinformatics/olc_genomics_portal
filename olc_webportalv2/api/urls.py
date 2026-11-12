@@ -1,15 +1,16 @@
-"""
-URL configuration for the API app.
-"""
+"""URL patterns for the API app."""
 
 # Django imports
 from django.urls import path
+from rest_framework.authtoken.views import obtain_auth_token
 
 # Third party imports
 from rest_framework.routers import DefaultRouter
 from rest_framework.schemas import get_schema_view
 from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework.authtoken.views import obtain_auth_token
+
+# Local imports
+from olc_webportalv2.api import views
 from olc_webportalv2.api.entra import (
     EntraDesktopExchangeView,
     EntraDesktopLogoutView,
@@ -19,9 +20,6 @@ from olc_webportalv2.api.pairing import (
     PairingStartView,
     pairing_approval,
 )
-
-# Local imports
-from olc_webportalv2.api import views
 
 app_name = "api"
 

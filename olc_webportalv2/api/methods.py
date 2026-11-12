@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-"""
-API helper methods for email relay.
-"""
+"""Email relay helpers for the API."""
 
 import os
 import smtplib
@@ -10,32 +7,39 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 from time import sleep
 
-# Django imports
-from django.conf import settings
-
 
 def send_email(*, subject, body, recipient, sender_name=None):
-    """Send an email via the AWS SMTP endpoint."""
-    from_addr = 'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
+    """Send a plain-text email through the configured SMTP relay.
+
+    Args:
+        subject: Email subject.
+        body: Plain-text message body.
+        recipient: Destination email address.
+        sender_name: Optional display name for the sender.
+
+    """
+    from_addr = (
+        "cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca"
+    )
     from_display = (
         formataddr((sender_name, from_addr)) if sender_name else from_addr
     )
     to_addr = recipient
 
     msg = MIMEMultipart()
-    msg['From'] = from_display
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg["From"] = from_display
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
 
     for _ in range(50):
         server = None
         try:
-            server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
+            server = smtplib.SMTP("email-smtp.ca-central-1.amazonaws.com", 587)
             server.starttls()
             server.login(
-                user=os.environ.get('EMAIL_HOST_USER'),
-                password=os.environ.get('EMAIL_HOST_PASSWORD')
+                user=os.environ.get("EMAIL_HOST_USER"),
+                password=os.environ.get("EMAIL_HOST_PASSWORD"),
             )
             server.sendmail(from_addr, to_addr, msg.as_string())
             break
@@ -45,7 +49,7 @@ def send_email(*, subject, body, recipient, sender_name=None):
                 continue
             raise
         except smtplib.SMTPServerDisconnected as exc:
-            if 'wrong version number' in str(exc):
+            if "wrong version number" in str(exc):
                 sleep(5)
                 continue
             raise
