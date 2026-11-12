@@ -27,6 +27,8 @@ def display_name(value):
     # explicit exceptions
     if norm == "vtec":
         return "STEC"
+    if norm == "bds-stec":
+        return "BDS-STEC"
 
     parts = norm.split("-")
     if len(parts) == 1:

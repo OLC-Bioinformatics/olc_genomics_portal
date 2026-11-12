@@ -2325,6 +2325,7 @@ class ValidatorConsolidatedFormTests(TestCase):
 		self.assertEqual(display_name('vtec'), 'STEC')
 		self.assertEqual(display_name('escherichia'), 'Escherichia')
 		self.assertEqual(display_name('bds-exclusivity'), 'BDS-Exclusivity')
+		self.assertEqual(display_name('bds-stec'), 'BDS-STEC')
 		self.assertEqual(display_name('ncbi-salmonella'), 'NCBI-Salmonella')
 		self.assertEqual(display_name(''), '')
 

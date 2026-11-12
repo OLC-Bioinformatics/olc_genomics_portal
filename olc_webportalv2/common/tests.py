@@ -24,6 +24,25 @@ class BenchmarkArchiveTests(SimpleTestCase):
             INCLUSIVITY_BENCHMARK_CHOICES,
         )
 
+    def test_bds_stec_is_available_for_both_panels(self):
+        choice = ('bds-stec', 'BDS-STEC')
+        self.assertIn(choice, INCLUSIVITY_BENCHMARK_CHOICES)
+        self.assertIn(choice, EXCLUSIVITY_BENCHMARK_CHOICES)
+        self.assertEqual(
+            validate_benchmark_panel(
+                benchmark_name='bds-stec',
+                panel='inclusivity',
+            ),
+            'bds-stec',
+        )
+        self.assertEqual(
+            validate_benchmark_panel(
+                benchmark_name='bds-stec',
+                panel='exclusivity',
+            ),
+            'bds-stec',
+        )
+
     def test_shigella_is_exclusivity_only(self):
         self.assertIn(
             ('shigella-exclusivity', 'Shigella-Exclusivity'),

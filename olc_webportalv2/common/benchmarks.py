@@ -26,6 +26,7 @@ BENCHMARK_DATASETS = (
     ('shigella-exclusivity', 'Shigella-Exclusivity'),
     ('bds-salmonella', 'BDS-Salmonella'),
     ('bds-listeria', 'BDS-Listeria'),
+    ('bds-stec', 'BDS-STEC'),
     ('ncbi-salmonella', 'NCBI-Salmonella'),
     ('ncbi-reference-exclusivity', 'NCBI-Reference-Exclusivity'),
     ('vtec', 'VTEC'),
