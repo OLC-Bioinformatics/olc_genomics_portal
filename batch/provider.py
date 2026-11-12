@@ -22,6 +22,15 @@ class StorageServiceClient:
     """Small Batch-side client for the provider-neutral Storage API."""
 
     def __init__(self, base_url=None, token=None, session=None, timeout=None):
+        """Create a Storage API client.
+
+        Args:
+            base_url: Storage service URL; defaults to the environment setting.
+            token: Bearer token; defaults to configured service credentials.
+            session: Requests-compatible session for HTTP calls.
+            timeout: Request timeout in seconds.
+
+        """
         self.base_url = (
             base_url
             or os.environ.get("STORAGE_SERVICE_URL")
@@ -37,13 +46,26 @@ class StorageServiceClient:
                     hashlib.sha256,
                 ).hexdigest()
         if not self.token:
-            raise RuntimeError("Storage service authentication is not configured.")
+            raise RuntimeError(
+                "Storage service authentication is not configured."
+            )
         self.session = session or requests.Session()
         self.timeout = timeout or float(
             os.environ.get("STORAGE_REQUEST_TIMEOUT", "600")
         )
 
     def _request(self, method, path, **kwargs):
+        """Send an authenticated request to the Storage API.
+
+        Args:
+            method: HTTP method.
+            path: API endpoint path.
+            **kwargs: Additional arguments passed to the session request.
+
+        Returns:
+            The successful HTTP response.
+
+        """
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = "Bearer " + self.token
         try:
@@ -55,7 +77,9 @@ class StorageServiceClient:
                 **kwargs,
             )
         except requests.RequestException as exc:
-            raise RuntimeError(f"Storage service request failed: {exc}") from exc
+            raise RuntimeError(
+                f"Storage service request failed: {exc}"
+            ) from exc
         if not response.ok:
             try:
                 message = response.json().get("error", response.text)
@@ -69,12 +93,28 @@ class StorageServiceClient:
         return response
 
     def ensure_container(self, container):
+        """Ensure that a storage container exists.
+
+        Args:
+            container: Container name.
+
+        """
         self._request(
             "PUT",
             f"/v1/containers/{quote(container, safe='')}",
         )
 
     def list_objects(self, container, prefix=None):
+        """List objects in a container, optionally filtered by prefix.
+
+        Args:
+            container: Container name.
+            prefix: Optional object-name prefix.
+
+        Returns:
+            The Storage API's object list.
+
+        """
         response = self._request(
             "GET",
             f"/v1/containers/{quote(container, safe='')}/objects",
@@ -89,6 +129,15 @@ class StorageServiceClient:
         destination_container,
         destination_name,
     ):
+        """Copy an object between containers.
+
+        Args:
+            source_container: Name of the source container.
+            source_name: Name of the source object.
+            destination_container: Name of the destination container.
+            destination_name: Name to assign to the copied object.
+
+        """
         self._request(
             "POST",
             "/v1/objects/copy",
@@ -101,6 +150,17 @@ class StorageServiceClient:
         )
 
     def create_transfer_url(self, container, action, expires_in_seconds):
+        """Create a temporary URL for an operation on a container.
+
+        Args:
+            container: Container name.
+            action: Permitted operation, such as ``read`` or ``write``.
+            expires_in_seconds: URL lifetime in seconds.
+
+        Returns:
+            The generated transfer URL.
+
+        """
         response = self._request(
             "POST",
             "/v1/transfer-urls",
@@ -114,27 +174,32 @@ class StorageServiceClient:
 
 
 def _value(value):
+    """Unwrap Azure SDK values while preserving ordinary values."""
     if value is None:
         return None
     return getattr(value, "value", value)
 
 
 def _get(item, key, default=None):
+    """Read a dictionary key or object attribute with a default."""
     if isinstance(item, dict):
         return item.get(key, default)
     return getattr(item, key, default)
 
 
 def _isoformat(value):
+    """Convert date-like values to ISO 8601 strings."""
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
 def _resize_error(error):
+    """Serialize an Azure Batch resize error into response data."""
     details = _get(error, "details", {}) or {}
     if not isinstance(details, dict):
         details = {
-            _get(detail, "name", _get(detail, "key", "")):
-            _get(detail, "value")
+            _get(detail, "name", _get(detail, "key", "")): _get(
+                detail, "value"
+            )
             for detail in details
         }
     return {
@@ -148,11 +213,20 @@ class AzureBatchProvider:
     """Translate Azure Batch SDK operations to provider-neutral data."""
 
     def __init__(self, client=None, storage_client=None):
+        """Initialize the provider with optional service clients.
+
+        Args:
+            client: Azure Batch client; created from managed identity if
+                absent.
+            storage_client: Storage API client; created on first use if absent.
+
+        """
         self.client = client or self._create_client()
         self.storage_client = storage_client
 
     @staticmethod
     def _create_client():
+        """Create an Azure Batch client using managed identity."""
         from azure.batch import BatchServiceClient
         from msrestazure.azure_active_directory import MSIAuthentication
 
@@ -162,21 +236,33 @@ class AzureBatchProvider:
             or os.environ.get("AZURE_BATCH_URL")
         )
         if not endpoint:
-            raise RuntimeError(
-                "Azure Batch service URL is not configured"
-            )
+            raise RuntimeError("Azure Batch service URL is not configured")
         credentials = MSIAuthentication(
             resource="https://batch.core.windows.net/"
         )
         return BatchServiceClient(credentials, endpoint)
 
     def _storage(self):
+        """Return the configured Storage API client."""
         if self.storage_client is None:
             self.storage_client = StorageServiceClient()
         return self.storage_client
 
     @staticmethod
     def _submission_settings(analysis_type):
+        """Validate and return the environment settings for an analysis.
+
+        Args:
+            analysis_type: FoodPort analysis name.
+
+        Returns:
+            The VM image, node agent SKU, subnet, and storage account.
+
+        Raises:
+            SubmissionError: If the analysis type is unsupported.
+            RuntimeError: If required environment settings are missing.
+
+        """
         image_settings = {
             "COWBAT": ("VM_IMAGE", "COWBAT_NODE_AGENT_SKU"),
             "AmpliSeq": ("AMPLISEQ_IMAGE", "AMPLISEQ_NODE_AGENT_SKU"),
@@ -190,12 +276,12 @@ class AzureBatchProvider:
         image = os.environ.get(setting_names[0])
         node_agent = os.environ.get(setting_names[1])
         subnet = os.environ.get("BATCH_ACCOUNT_SUBNET")
-        storage_account = (
-            os.environ.get("AZURE_ACCOUNT_NAME")
-            or os.environ.get("STORAGE_ACCOUNT_NAME")
-        )
+        storage_account = os.environ.get(
+            "AZURE_ACCOUNT_NAME"
+        ) or os.environ.get("STORAGE_ACCOUNT_NAME")
         missing = [
-            name for name, value in (
+            name
+            for name, value in (
                 (setting_names[0], image),
                 (setting_names[1], node_agent),
                 ("BATCH_ACCOUNT_SUBNET", subnet),
@@ -212,6 +298,18 @@ class AzureBatchProvider:
 
     @staticmethod
     def _pattern_tokens(value):
+        """Parse an input pattern and its optional destination directory.
+
+        Args:
+            value: String pattern or a one/two-item list of strings.
+
+        Returns:
+            The source pattern and destination directory.
+
+        Raises:
+            SubmissionError: If the pattern has an invalid shape.
+
+        """
         if isinstance(value, str):
             tokens = value.split()
         elif isinstance(value, list) and all(
@@ -220,7 +318,8 @@ class AzureBatchProvider:
             tokens = value
         else:
             raise SubmissionError(
-                "Each input_file_pattern item must be a string or list of strings"
+                "Each input_file_pattern item must be a string "
+                "or list of strings"
             )
         if not 1 <= len(tokens) <= 2 or not tokens[0]:
             raise SubmissionError(
@@ -231,6 +330,7 @@ class AzureBatchProvider:
 
     @staticmethod
     def _pattern_prefix(pattern):
+        """Return the non-wildcard directory prefix of an object pattern."""
         wildcard = min(
             (
                 pattern.find(character)
@@ -246,6 +346,7 @@ class AzureBatchProvider:
 
     @staticmethod
     def _matches_object_pattern(name, pattern):
+        """Check whether an object name matches a path-aware pattern."""
         pattern_directory, filename_pattern = posixpath.split(
             pattern.rstrip("/")
         )
@@ -255,13 +356,25 @@ class AzureBatchProvider:
                 object_directory,
                 pattern_directory,
             )
-            if relative_directory == ".." or relative_directory.startswith("../"):
+            if relative_directory == ".." or relative_directory.startswith(
+                "../"
+            ):
                 return False
         elif object_directory:
             return False
         return fnmatch.fnmatchcase(filename, filename_pattern)
 
     def _stage_inputs(self, container, patterns):
+        """Copy matching input objects into the submission container.
+
+        Args:
+            container: Destination container for the submission.
+            patterns: Input patterns and optional destination directories.
+
+        Raises:
+            SubmissionError: If a pattern is invalid or matches no objects.
+
+        """
         storage = self._storage()
         storage.ensure_container(container)
         for item in patterns or []:
@@ -291,11 +404,9 @@ class AzureBatchProvider:
             if source_container == container:
                 continue
             for source_name in matches:
-                destination_name = (
-                    posixpath.join(
-                        destination.rstrip("/"),
-                        posixpath.basename(source_name),
-                    )
+                destination_name = posixpath.join(
+                    destination.rstrip("/"),
+                    posixpath.basename(source_name),
                 )
                 storage.copy_object(
                     source_container,
@@ -305,12 +416,25 @@ class AzureBatchProvider:
                 )
 
     def submit_batch_request(self, data):
-        """Create an Azure pool, job, and tasks for a FoodPort request."""
+        """Create an Azure pool, job, and tasks for a FoodPort request.
+
+        Args:
+            data: Validated submission parameters.
+
+        Returns:
+            Pool ID, job ID, task IDs, and submission status.
+
+        Raises:
+            SubmissionError: If the request is unsupported or invalid.
+            RuntimeError: If required Batch or Storage settings are missing.
+
+        """
         from azure.batch import models
 
         if data.get("no_tidy"):
             raise SubmissionError(
-                "no_tidy is not supported for asynchronous FoodPort submissions"
+                "no_tidy is not supported for asynchronous "
+                "FoodPort submissions"
             )
         command_value = data["command_file"]
         commands = (
@@ -320,7 +444,9 @@ class AzureBatchProvider:
         )
         commands = [command for command in commands if command.strip()]
         if not commands:
-            raise SubmissionError("command_file must contain at least one command")
+            raise SubmissionError(
+                "command_file must contain at least one command"
+            )
 
         container = data["container"]
         vm_size = data["vm_size"]
@@ -427,7 +553,9 @@ class AzureBatchProvider:
                     )
                 ),
                 upload_options=models.OutputFileUploadOptions(
-                    upload_condition=models.OutputFileUploadCondition.task_completion,
+                    upload_condition=(
+                        models.OutputFileUploadCondition.task_completion
+                    ),
                 ),
             )
             for name in ("stderr.txt", "stdout.txt")
@@ -446,7 +574,9 @@ class AzureBatchProvider:
                     ),
                     command_line=f'/bin/bash -c "{command}"',
                     resource_files=[],
-                    output_files=log_files if index == len(commands) - 1 else [],
+                    output_files=(
+                        log_files if index == len(commands) - 1 else []
+                    ),
                     user_identity=models.UserIdentity(
                         auto_user=models.AutoUserSpecification(
                             elevation_level=models.ElevationLevel.admin,
@@ -477,6 +607,7 @@ class AzureBatchProvider:
         }
 
     def _task(self, task):
+        """Translate an Azure task object into provider-neutral data."""
         execution_info = _get(task, "execution_info")
         return {
             "id": _get(task, "id"),
@@ -485,15 +616,42 @@ class AzureBatchProvider:
         }
 
     def list_tasks(self, job_id):
-        return [
-            self._task(task)
-            for task in self.client.task.list(job_id)
-        ]
+        """List tasks belonging to a job.
+
+        Args:
+            job_id: Azure Batch job ID.
+
+        Returns:
+            Provider-neutral task records.
+
+        """
+        return [self._task(task) for task in self.client.task.list(job_id)]
 
     def get_task(self, job_id, task_id):
+        """Get a task by job and task ID.
+
+        Args:
+            job_id: Azure Batch job ID.
+            task_id: Azure Batch task ID.
+
+        Returns:
+            A provider-neutral task record.
+
+        """
         return self._task(self.client.task.get(job_id, task_id))
 
     def list_task_files(self, job_id, task_id, recursive=False):
+        """List files produced by a task.
+
+        Args:
+            job_id: Azure Batch job ID.
+            task_id: Azure Batch task ID.
+            recursive: Whether to include files in subdirectories.
+
+        Returns:
+            Provider-neutral file records.
+
+        """
         files = self.client.file.list_from_task(
             job_id,
             task_id,
@@ -502,39 +660,74 @@ class AzureBatchProvider:
         result = []
         for item in files:
             properties = _get(item, "properties")
-            result.append({
-                "name": _get(item, "name"),
-                "is_directory": bool(_get(item, "is_directory", False)),
-                "content_length": _get(
-                    properties,
-                    "content_length",
-                    _get(item, "content_length"),
-                ),
-                "last_modified": _isoformat(_get(
-                    properties,
-                    "last_modified",
-                    _get(item, "last_modified"),
-                )),
-            })
+            result.append(
+                {
+                    "name": _get(item, "name"),
+                    "is_directory": bool(_get(item, "is_directory", False)),
+                    "content_length": _get(
+                        properties,
+                        "content_length",
+                        _get(item, "content_length"),
+                    ),
+                    "last_modified": _isoformat(
+                        _get(
+                            properties,
+                            "last_modified",
+                            _get(item, "last_modified"),
+                        )
+                    ),
+                }
+            )
         return result
 
     def download_task_file(self, job_id, task_id, file_path):
+        """Download a task file using the Azure Batch client.
+
+        Args:
+            job_id: Azure Batch job ID.
+            task_id: Azure Batch task ID.
+            file_path: Path of the file within the task directory.
+
+        Returns:
+            The Azure SDK download result.
+
+        """
         return self.client.file.get_from_task(job_id, task_id, file_path)
 
     def delete_job(self, job_id):
+        """Delete a Batch job.
+
+        Args:
+            job_id: Azure Batch job ID.
+
+        """
         return self.client.job.delete(job_id)
 
     def cancel_job(self, job_id):
+        """Terminate a Batch job.
+
+        Args:
+            job_id: Azure Batch job ID.
+
+        """
         return self.client.job.terminate(job_id)
 
     def list_pools(self):
+        """List Batch pools as provider-neutral records."""
         return [self._pool(pool) for pool in self.client.pool.list()]
 
     def get_pool(self, pool_id):
+        """Get a Batch pool as a provider-neutral record.
+
+        Args:
+            pool_id: Azure Batch pool ID.
+
+        """
         return self._pool(self.client.pool.get(pool_id))
 
     @staticmethod
     def _pool(pool):
+        """Translate an Azure pool object into provider-neutral data."""
         return {
             "id": _get(pool, "id"),
             "allocation_state": _value(_get(pool, "allocation_state")) or "",
@@ -557,6 +750,12 @@ class AzureBatchProvider:
         }
 
     def delete_pool(self, pool_id):
+        """Delete a Batch pool.
+
+        Args:
+            pool_id: Azure Batch pool ID.
+
+        """
         return self.client.pool.delete(pool_id)
 
     def resize_pool(
@@ -565,6 +764,14 @@ class AzureBatchProvider:
         target_dedicated_nodes,
         target_low_priority_nodes,
     ):
+        """Set a pool's target node counts.
+
+        Args:
+            pool_id: Azure Batch pool ID.
+            target_dedicated_nodes: Desired dedicated node count.
+            target_low_priority_nodes: Desired low-priority node count.
+
+        """
         from azure.batch.models import PoolResizeParameter
 
         parameters = PoolResizeParameter(
@@ -577,6 +784,15 @@ class AzureBatchProvider:
         )
 
     def list_nodes(self, pool_id):
+        """List nodes in a Batch pool.
+
+        Args:
+            pool_id: Azure Batch pool ID.
+
+        Returns:
+            Node IDs and states.
+
+        """
         return [
             {
                 "id": _get(node, "id"),
@@ -586,6 +802,14 @@ class AzureBatchProvider:
         ]
 
     def reboot_node(self, pool_id, node_id, option):
+        """Reboot a node in a Batch pool.
+
+        Args:
+            pool_id: Azure Batch pool ID.
+            node_id: Azure Batch compute node ID.
+            option: Azure Batch reboot option.
+
+        """
         return self.client.compute_node.reboot(
             pool_id,
             node_id,

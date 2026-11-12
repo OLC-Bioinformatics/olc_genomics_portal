@@ -1,24 +1,15 @@
 #!/usr/bin/env python
 
-"""
-This module is a Flask application for provider-neutral Batch operations.
+"""Expose provider-neutral Azure Batch operations through Flask.
 
-The application exposes a single endpoint, `/submit_batch_request`, which
-accepts POST requests. The POST request should contain a JSON object with
-details required to submit a batch job to Azure Batch.
-
-The submission endpoint translates the existing FoodPort payload into an
-Azure Batch pool, job, and task through the service provider.
-
-The module is designed to be run as a standalone script, but the
-`submit_batch_request` function can also be imported and used in other
-Python programs.
+The application accepts FoodPort submission requests and exposes operations
+for managing Batch jobs, tasks, pools, and files.
 """
 
 # Standard imports
-import logging
 import hashlib
 import hmac
+import logging
 import os
 from functools import wraps
 
@@ -33,31 +24,22 @@ from flask import (
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-# Initialize a new Flask application instance. The argument __name__ is a
-# special variable in Python that is automatically set to the name of the
-# module in which it is used. Flask uses the location of the module passed
-# here as a starting point when it needs to load associated resources such
-# as template files, which can be useful when you want to make your
-# application reusable.
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 app.config["BATCH_SERVICE_TOKEN"] = os.environ.get("BATCH_SERVICE_TOKEN")
 
 
-@app.route('/')
+@app.route("/")
 def home():
-    """
-    This function is a simple route that returns a greeting message.
-    """
+    """Return a greeting message."""
     return "Hello, World!"
 
 
-@app.route('/submit_batch_request', methods=['POST'])
+@app.route("/submit_batch_request", methods=["POST"])
 def submit_batch_request():
-    """
-    Accept the existing FoodPort request shape and return the established
-    pool/job/task response. FoodPort tasks run asynchronously; this endpoint
-    does not wait for task completion.
+    """Accept a FoodPort submission and return its Batch identifiers.
+
+    Tasks run asynchronously; this endpoint does not wait for completion.
     """
     # Get the data from the request
     data = _json_body()
@@ -66,21 +48,20 @@ def submit_batch_request():
 
     # Define the list of required fields
     required_fields = [
-        'container',
-        'command_file',
-        'vm_size',
-        'input_file_pattern',
-        'download_file_pattern',
-        'analysis_type'
+        "container",
+        "command_file",
+        "vm_size",
+        "input_file_pattern",
+        "download_file_pattern",
+        "analysis_type",
     ]
 
     missing_fields = [field for field in required_fields if field not in data]
 
     if missing_fields:
-        return jsonify({
-            'error': 'Missing required fields',
-            'fields': missing_fields
-        }), 400
+        return jsonify(
+            {"error": "Missing required fields", "fields": missing_fields}
+        ), 400
 
     try:
         _validate_payload(data)
@@ -100,20 +81,22 @@ def submit_batch_request():
             )
         if not isinstance(status, int) or not 400 <= status < 500:
             status = 500
-        return jsonify({
-            "error": str(exc),
-            "status": "Failure",
-            "pool_id": "None",
-            "job_id": "None",
-            "tasks": "None",
-        }), status
+        return jsonify(
+            {
+                "error": str(exc),
+                "status": "Failure",
+                "pool_id": "None",
+                "job_id": "None",
+                "tasks": "None",
+            }
+        ), status
     return jsonify(result)
 
 
 def _service_token():
-    token = (
-        app.config.get("BATCH_SERVICE_TOKEN")
-        or os.environ.get("BATCH_SERVICE_TOKEN")
+    """Return the configured Batch service token or a derived token."""
+    token = app.config.get("BATCH_SERVICE_TOKEN") or os.environ.get(
+        "BATCH_SERVICE_TOKEN"
     )
     if token:
         return token
@@ -129,11 +112,14 @@ def _service_token():
 
 @app.before_request
 def authenticate_batch_operations():
+    """Authenticate Batch API requests while leaving health checks public."""
     if request.path == "/health":
         return None
     expected = _service_token()
     if expected is None:
-        return jsonify({"error": "Batch service authentication is not configured"}), 503
+        return jsonify(
+            {"error": "Batch service authentication is not configured"}
+        ), 503
     authorization = request.headers.get("Authorization", "")
     scheme, separator, supplied = authorization.partition(" ")
     if (
@@ -147,10 +133,12 @@ def authenticate_batch_operations():
 
 @app.route("/health", methods=["GET"])
 def health():
+    """Return the service health status."""
     return jsonify({"status": "ok"})
 
 
 def _provider():
+    """Return the configured provider, initializing it if necessary."""
     injected = app.config.get("BATCH_PROVIDER")
     if injected is not None:
         return injected
@@ -165,6 +153,7 @@ def _provider():
 
 
 def _json_safe(value):
+    """Convert Azure SDK values to JSON-compatible data."""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     if isinstance(value, dict):
@@ -178,6 +167,8 @@ def _json_safe(value):
 
 
 def _provider_errors(function):
+    """Convert provider exceptions into logged JSON error responses."""
+
     @wraps(function)
     def wrapped(*args, **kwargs):
         try:
@@ -189,13 +180,18 @@ def _provider_errors(function):
             message = getattr(message, "value", message)
             message = _json_safe(message)
             details = getattr(error, "details", None)
-            if details and not isinstance(details, (dict, list, str, int, float)):
+            if details and not isinstance(
+                details,
+                (dict, list, str, int, float),
+            ):
                 details = str(details)
             elif isinstance(details, list):
                 details = [
                     (
-                        {"key": getattr(item, "key", None),
-                         "value": getattr(item, "value", None)}
+                        {
+                            "key": getattr(item, "key", None),
+                            "value": getattr(item, "value", None),
+                        }
                         if not isinstance(item, dict)
                         else item
                     )
@@ -240,10 +236,12 @@ def _provider_errors(function):
             if details:
                 payload["details"] = details
             return jsonify(payload), status
+
     return wrapped
 
 
 def _json_body():
+    """Return the request JSON object, or ``None`` for invalid input."""
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return None
@@ -251,6 +249,7 @@ def _json_body():
 
 
 def _stream_download(content):
+    """Yield byte chunks from supported Azure SDK download responses."""
     if hasattr(content, "content") and not isinstance(
         content,
         (bytes, bytearray, memoryview),
@@ -267,10 +266,12 @@ def _stream_download(content):
     if isinstance(content, (bytes, bytearray, memoryview)):
         data = bytes(content)
         for offset in range(0, len(data), 64 * 1024):
-            yield data[offset:offset + 64 * 1024]
+            yield data[offset : offset + 64 * 1024]
         return
     if hasattr(content, "iter_content"):
-        yield from (chunk for chunk in content.iter_content(64 * 1024) if chunk)
+        yield from (
+            chunk for chunk in content.iter_content(64 * 1024) if chunk
+        )
         return
     if hasattr(content, "read"):
         while True:
@@ -282,7 +283,9 @@ def _stream_download(content):
     try:
         iterator = iter(content)
     except TypeError as exc:
-        raise TypeError("Batch provider returned an unsupported file response") from exc
+        raise TypeError(
+            "Batch provider returned an unsupported file response"
+        ) from exc
     for chunk in iterator:
         if chunk:
             yield chunk if isinstance(chunk, bytes) else bytes(chunk)
@@ -291,12 +294,25 @@ def _stream_download(content):
 @app.route("/v1/jobs/<job_id>/tasks", methods=["GET"])
 @_provider_errors
 def list_tasks(job_id):
+    """List tasks in a Batch job.
+
+    Args:
+        job_id: Azure Batch job ID.
+
+    """
     return jsonify({"items": _provider().list_tasks(job_id)})
 
 
 @app.route("/v1/jobs/<job_id>/tasks/<task_id>", methods=["GET"])
 @_provider_errors
 def get_task(job_id, task_id):
+    """Return a Batch task.
+
+    Args:
+        job_id: Azure Batch job ID.
+        task_id: Azure Batch task ID.
+
+    """
     return jsonify(_provider().get_task(job_id, task_id))
 
 
@@ -306,16 +322,25 @@ def get_task(job_id, task_id):
 )
 @_provider_errors
 def list_task_files(job_id, task_id):
+    """List files produced by a Batch task.
+
+    Args:
+        job_id: Azure Batch job ID.
+        task_id: Azure Batch task ID.
+
+    """
     recursive_value = request.args.get("recursive", "false").lower()
     if recursive_value not in {"true", "false"}:
         return jsonify({"error": "recursive must be true or false"}), 400
-    return jsonify({
-        "items": _provider().list_task_files(
-            job_id,
-            task_id,
-            recursive=recursive_value == "true",
-        )
-    })
+    return jsonify(
+        {
+            "items": _provider().list_task_files(
+                job_id,
+                task_id,
+                recursive=recursive_value == "true",
+            )
+        }
+    )
 
 
 @app.route(
@@ -324,6 +349,14 @@ def list_task_files(job_id, task_id):
 )
 @_provider_errors
 def download_task_file(job_id, task_id, file_path):
+    """Stream a file produced by a Batch task.
+
+    Args:
+        job_id: Azure Batch job ID.
+        task_id: Azure Batch task ID.
+        file_path: Path of the file within the task directory.
+
+    """
     content = _provider().download_task_file(job_id, task_id, file_path)
     return Response(
         stream_with_context(_stream_download(content)),
@@ -335,6 +368,12 @@ def download_task_file(job_id, task_id, file_path):
 @app.route("/v1/jobs/<job_id>", methods=["DELETE"])
 @_provider_errors
 def delete_job(job_id):
+    """Delete a Batch job.
+
+    Args:
+        job_id: Azure Batch job ID.
+
+    """
     _provider().delete_job(job_id)
     return jsonify({"id": job_id, "status": "deleted"})
 
@@ -342,6 +381,12 @@ def delete_job(job_id):
 @app.route("/v1/jobs/<job_id>/cancel", methods=["POST"])
 @_provider_errors
 def cancel_job(job_id):
+    """Request termination of a Batch job.
+
+    Args:
+        job_id: Azure Batch job ID.
+
+    """
     _provider().cancel_job(job_id)
     return jsonify({"id": job_id, "status": "cancellation_requested"}), 202
 
@@ -349,18 +394,31 @@ def cancel_job(job_id):
 @app.route("/v1/pools", methods=["GET"])
 @_provider_errors
 def list_pools():
+    """List Batch pools."""
     return jsonify({"items": _provider().list_pools()})
 
 
 @app.route("/v1/pools/<pool_id>", methods=["GET"])
 @_provider_errors
 def get_pool(pool_id):
+    """Return a Batch pool.
+
+    Args:
+        pool_id: Azure Batch pool ID.
+
+    """
     return jsonify(_provider().get_pool(pool_id))
 
 
 @app.route("/v1/pools/<pool_id>", methods=["DELETE"])
 @_provider_errors
 def delete_pool(pool_id):
+    """Delete a Batch pool.
+
+    Args:
+        pool_id: Azure Batch pool ID.
+
+    """
     _provider().delete_pool(pool_id)
     return jsonify({"id": pool_id, "status": "deleted"})
 
@@ -368,6 +426,12 @@ def delete_pool(pool_id):
 @app.route("/v1/pools/<pool_id>/resize", methods=["POST"])
 @_provider_errors
 def resize_pool(pool_id):
+    """Set a Batch pool's target node counts.
+
+    Args:
+        pool_id: Azure Batch pool ID.
+
+    """
     data = _json_body()
     if data is None:
         return jsonify({"error": "A JSON object is required"}), 400
@@ -378,17 +442,21 @@ def resize_pool(pool_id):
         or isinstance(dedicated, bool)
         or dedicated < 0
     ):
-        return jsonify({
-            "error": "target_dedicated_nodes must be a non-negative integer"
-        }), 400
+        return jsonify(
+            {"error": "target_dedicated_nodes must be a non-negative integer"}
+        ), 400
     if (
         not isinstance(low_priority, int)
         or isinstance(low_priority, bool)
         or low_priority < 0
     ):
-        return jsonify({
-            "error": "target_low_priority_nodes must be a non-negative integer"
-        }), 400
+        return jsonify(
+            {
+                "error": (
+                    "target_low_priority_nodes must be a non-negative integer"
+                )
+            }
+        ), 400
     _provider().resize_pool(pool_id, dedicated, low_priority)
     return jsonify({"id": pool_id, "status": "resizing"}), 202
 
@@ -396,6 +464,12 @@ def resize_pool(pool_id):
 @app.route("/v1/pools/<pool_id>/nodes", methods=["GET"])
 @_provider_errors
 def list_nodes(pool_id):
+    """List compute nodes in a Batch pool.
+
+    Args:
+        pool_id: Azure Batch pool ID.
+
+    """
     return jsonify({"items": _provider().list_nodes(pool_id)})
 
 
@@ -405,6 +479,13 @@ def list_nodes(pool_id):
 )
 @_provider_errors
 def reboot_node(pool_id, node_id):
+    """Request reboot of a compute node.
+
+    Args:
+        pool_id: Azure Batch pool ID.
+        node_id: Azure Batch compute node ID.
+
+    """
     data = _json_body()
     if data is None:
         data = {}
@@ -416,7 +497,18 @@ def reboot_node(pool_id, node_id):
 
 
 def _validate_payload(data):
-    """Validate the legacy submission pattern fields."""
+    """Validate and normalize the legacy submission pattern fields.
+
+    Args:
+        data: Batch submission payload.
+
+    Returns:
+        Normalized analysis and file-pattern fields.
+
+    Raises:
+        TypeError: If a field has an invalid type or value.
+
+    """
     if not isinstance(data, dict):
         raise TypeError("Batch request payload must be a JSON object")
     normalized = {
@@ -446,9 +538,7 @@ def _validate_payload(data):
     if environment_variables is not None and (
         not isinstance(environment_variables, dict)
         or any(
-            not isinstance(name, str)
-            or not name
-            or not isinstance(value, str)
+            not isinstance(name, str) or not name or not isinstance(value, str)
             for name, value in environment_variables.items()
         )
     ):

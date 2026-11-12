@@ -1,14 +1,13 @@
 """Focused validation tests for the internal Batch submission API."""
 
-import importlib.util
 import hashlib
 import hmac
+import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-
 from provider import (
     AzureBatchProvider,
     StorageServiceClient,
@@ -103,12 +102,14 @@ class FakeProvider:
 
     def list_task_files(self, job_id, task_id, recursive=False):
         self._record("list_task_files", job_id, task_id, recursive=recursive)
-        return [{
-            "name": "stdout.txt",
-            "is_directory": False,
-            "content_length": 12,
-            "last_modified": "2026-11-06T12:00:00+00:00",
-        }]
+        return [
+            {
+                "name": "stdout.txt",
+                "is_directory": False,
+                "content_length": 12,
+                "last_modified": "2026-11-06T12:00:00+00:00",
+            }
+        ]
 
     def download_task_file(self, job_id, task_id, file_path):
         self._record("download_task_file", job_id, task_id, file_path)
@@ -137,11 +138,13 @@ class FakeProvider:
             "target_dedicated_nodes": 2,
             "current_low_priority_nodes": 1,
             "target_low_priority_nodes": 1,
-            "resize_errors": [{
-                "code": "AllocationFailed",
-                "message": "A node could not be allocated",
-                "details": {"node": "node-1"},
-            }],
+            "resize_errors": [
+                {
+                    "code": "AllocationFailed",
+                    "message": "A node could not be allocated",
+                    "details": {"node": "node-1"},
+                }
+            ],
         }
 
     def delete_pool(self, pool_id):
@@ -240,12 +243,14 @@ def test_task_file_listing_and_download_contracts(service):
     )
     assert response.status_code == 200
     assert response.json == {
-        "items": [{
-            "name": "stdout.txt",
-            "is_directory": False,
-            "content_length": 12,
-            "last_modified": "2026-11-06T12:00:00+00:00",
-        }]
+        "items": [
+            {
+                "name": "stdout.txt",
+                "is_directory": False,
+                "content_length": 12,
+                "last_modified": "2026-11-06T12:00:00+00:00",
+            }
+        ]
     }
     assert provider.calls[-1] == (
         "list_task_files",
@@ -427,17 +432,23 @@ class FakeStorageService:
             {"name": "reads/skip.txt"},
         ]
 
-    def copy_object(self, source_container, source_name, dest_container, dest_name):
-        self.calls.append((
-            "copy_object",
-            source_container,
-            source_name,
-            dest_container,
-            dest_name,
-        ))
+    def copy_object(
+        self, source_container, source_name, dest_container, dest_name
+    ):
+        self.calls.append(
+            (
+                "copy_object",
+                source_container,
+                source_name,
+                dest_container,
+                dest_name,
+            )
+        )
 
     def create_transfer_url(self, container, action, expires_in_seconds):
-        self.calls.append(("create_transfer_url", container, action, expires_in_seconds))
+        self.calls.append(
+            ("create_transfer_url", container, action, expires_in_seconds)
+        )
         return f"https://storage.example/{container}?sv=test&sig={action}"
 
 
@@ -462,7 +473,10 @@ class FakeBatchClient:
 
 def configure_submission(monkeypatch):
     for key, value in {
-        "VM_IMAGE": "/subscriptions/test/resourceGroups/images/providers/Microsoft.Compute/galleries/gallery/images/cowbat/versions/1.0.0",
+        "VM_IMAGE": (
+            "/subscriptions/test/resourceGroups/images/providers/"
+            "Microsoft.Compute/galleries/gallery/images/cowbat/versions/1.0.0"
+        ),
         "COWBAT_NODE_AGENT_SKU": "batch.node.ubuntu 22.04",
         "BATCH_ACCOUNT_SUBNET": "/subscriptions/test/subnets/batch",
         "AZURE_ACCOUNT_NAME": "storageaccount",
@@ -524,21 +538,23 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
     batch_client = FakeBatchClient()
     storage = FakeStorageService()
     provider = AzureBatchProvider(client=batch_client, storage_client=storage)
-    result = provider.submit_batch_request({
-        "analysis_type": "COWBAT",
-        "command_file": ["echo first", "echo second"],
-        "container": "target-runs",
-        "download_file_pattern": [],
-        "input_file_pattern": [
-            ["source-runs/reads/*.fasta", "imports"],
-            ["target-runs/preexisting.fasta"],
-        ],
-        "vm_size": "Standard_D4s_v3",
-        "unique_id": "FoodPort",
-        "environment_variables": {
-            "FOODPORT_INPUT_SAS_URL": "https://storage.example/input?sig=token",
-        },
-    })
+    result = provider.submit_batch_request(
+        {
+            "analysis_type": "COWBAT",
+            "command_file": ["echo first", "echo second"],
+            "container": "target-runs",
+            "download_file_pattern": [],
+            "input_file_pattern": [
+                ["source-runs/reads/*.fasta", "imports"],
+                ["target-runs/preexisting.fasta"],
+            ],
+            "vm_size": "Standard_D4s_v3",
+            "unique_id": "FoodPort",
+            "environment_variables": {
+                "FOODPORT_INPUT_SAS_URL": "https://storage.example/input?sig=token",
+            },
+        }
+    )
 
     assert result == {
         "pool_id": "target-runs",
@@ -550,14 +566,28 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
     assert storage.calls == [
         ("ensure_container", "target-runs"),
         ("list_objects", "source-runs", "reads"),
-        ("copy_object", "source-runs", "reads/one.fasta", "target-runs", "imports/one.fasta"),
-        ("copy_object", "source-runs", "reads/nested/two.fasta", "target-runs", "imports/two.fasta"),
+        (
+            "copy_object",
+            "source-runs",
+            "reads/one.fasta",
+            "target-runs",
+            "imports/one.fasta",
+        ),
+        (
+            "copy_object",
+            "source-runs",
+            "reads/nested/two.fasta",
+            "target-runs",
+            "imports/two.fasta",
+        ),
         ("list_objects", "target-runs", "preexisting.fasta"),
         ("create_transfer_url", "target-runs", "readwrite", 604800),
         ("create_transfer_url", "target-runs", "write", 604800),
     ]
     pool = batch_client.pool.calls[0][1]
-    blob_mount = pool.mount_configuration[0].azure_blob_file_system_configuration
+    blob_mount = pool.mount_configuration[
+        0
+    ].azure_blob_file_system_configuration
     assert blob_mount.account_key is None
     assert blob_mount.sas_key == "sv=test&sig=readwrite"
     assert batch_client.job.calls[0][1].id == "target-runs"
@@ -570,9 +600,7 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
         item.name: item.value for item in tasks[0].environment_settings
     } == {
         "CONDA": "/usr/bin/miniconda/bin",
-        "FOODPORT_INPUT_SAS_URL": (
-            "https://storage.example/input?sig=token"
-        ),
+        "FOODPORT_INPUT_SAS_URL": ("https://storage.example/input?sig=token"),
     }
     assert tasks[0].output_files == []
     assert [output.file_pattern for output in tasks[1].output_files] == [
@@ -586,13 +614,15 @@ def test_submission_rejects_unsupported_analysis_type_without_blob_calls():
     storage = FakeStorageService()
     provider = AzureBatchProvider(client=batch_client, storage_client=storage)
     with pytest.raises(SubmissionError, match="Unsupported analysis_type"):
-        provider.submit_batch_request({
-            "analysis_type": "Nanopore",
-            "command_file": "echo run",
-            "container": "target-runs",
-            "input_file_pattern": None,
-            "vm_size": "Standard_D4s_v3",
-        })
+        provider.submit_batch_request(
+            {
+                "analysis_type": "Nanopore",
+                "command_file": "echo run",
+                "container": "target-runs",
+                "input_file_pattern": None,
+                "vm_size": "Standard_D4s_v3",
+            }
+        )
     assert storage.calls == []
 
 
@@ -633,11 +663,14 @@ def test_storage_client_delegates_to_storage_http_contract():
         "target-runs",
         "imports/one.fasta",
     )
-    assert storage.create_transfer_url(
-        "target-runs",
-        "readwrite",
-        604800,
-    ) == "https://storage.example/target?sas"
+    assert (
+        storage.create_transfer_url(
+            "target-runs",
+            "readwrite",
+            604800,
+        )
+        == "https://storage.example/target?sas"
+    )
 
     calls = session.request.call_args_list
     assert [(item.args[0], item.args[1]) for item in calls] == [
