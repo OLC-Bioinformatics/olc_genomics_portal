@@ -470,6 +470,55 @@ def configure_submission(monkeypatch):
         monkeypatch.setenv(key, value)
 
 
+def test_create_client_uses_managed_identity(monkeypatch):
+    import azure.batch
+    import msrestazure.azure_active_directory
+
+    calls = {}
+
+    class FakeManagedIdentityAuthentication:
+        def __init__(self, **kwargs):
+            calls["credential"] = kwargs
+
+    class FakeBatchServiceClient:
+        def __init__(self, credentials, endpoint):
+            self.credentials = credentials
+            self.endpoint = endpoint
+
+    monkeypatch.setattr(
+        msrestazure.azure_active_directory,
+        "MSIAuthentication",
+        FakeManagedIdentityAuthentication,
+    )
+    monkeypatch.setattr(
+        azure.batch,
+        "BatchServiceClient",
+        FakeBatchServiceClient,
+    )
+    monkeypatch.setenv(
+        "BATCH_ACCOUNT_URL",
+        "https://batch.example.test",
+    )
+    for key in (
+        "BATCH_ACCOUNT_NAME",
+        "BATCH_ACCOUNT_KEY",
+        "AZURE_BATCH_ACCOUNT_NAME",
+        "AZURE_BATCH_ACCOUNT_KEY",
+        "AZURE_BATCH_ACCOUNT",
+        "AZURE_BATCH_ACCESS_KEY",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+    client = AzureBatchProvider._create_client()
+
+    assert calls["credential"] == {
+        "resource": "https://batch.core.windows.net/",
+    }
+    assert isinstance(client, FakeBatchServiceClient)
+    assert isinstance(client.credentials, FakeManagedIdentityAuthentication)
+    assert client.endpoint == "https://batch.example.test"
+
+
 def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
     configure_submission(monkeypatch)
     batch_client = FakeBatchClient()

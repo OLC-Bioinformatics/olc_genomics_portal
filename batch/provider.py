@@ -154,29 +154,20 @@ class AzureBatchProvider:
     @staticmethod
     def _create_client():
         from azure.batch import BatchServiceClient
-        from azure.batch.batch_auth import SharedKeyCredentials
+        from msrestazure.azure_active_directory import MSIAuthentication
 
-        account = (
-            os.environ.get("BATCH_ACCOUNT_NAME")
-            or os.environ.get("AZURE_BATCH_ACCOUNT_NAME")
-            or os.environ.get("AZURE_BATCH_ACCOUNT")
-        )
-        key = (
-            os.environ.get("BATCH_ACCOUNT_KEY")
-            or os.environ.get("AZURE_BATCH_ACCOUNT_KEY")
-            or os.environ.get("AZURE_BATCH_ACCESS_KEY")
-        )
         endpoint = (
             os.environ.get("BATCH_ACCOUNT_URL")
             or os.environ.get("AZURE_BATCH_ACCOUNT_URL")
             or os.environ.get("AZURE_BATCH_URL")
         )
-        if not account or not key or not endpoint:
+        if not endpoint:
             raise RuntimeError(
-                "Azure Batch credentials are not configured "
-                "(account, key, and service URL are required)"
+                "Azure Batch service URL is not configured"
             )
-        credentials = SharedKeyCredentials(account, key)
+        credentials = MSIAuthentication(
+            resource="https://batch.core.windows.net/"
+        )
         return BatchServiceClient(credentials, endpoint)
 
     def _storage(self):
