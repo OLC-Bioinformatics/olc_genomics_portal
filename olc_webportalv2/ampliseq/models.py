@@ -1,8 +1,5 @@
-#!/usr/env python3
+"""Database models for AmpliSeq analyses."""
 
-"""
-Create models for the AmpliSeq app
-"""
 # Standard imports
 import os
 
@@ -16,53 +13,50 @@ from olc_webportalv2.users.models import User
 
 
 def set_metadata_file_path(instance, filename):
-    """
-    Set the file path for the metadata file associated with an AmpliSeqRequest
-    instance. The file will be stored in a directory named after the primary
-    key of the instance.
+    """Build the upload path for an AmpliSeq metadata file.
+
     Args:
-        instance (AmpliSeqRequest): The AmpliSeqRequest instance for which the
-        file path is being set.
-        filename (str): The name of the file being uploaded.
+        instance: AmpliSeq request receiving the file.
+        filename: Name of the uploaded file.
+
     Returns:
-        str: The file path where the metadata file will be stored, in the
-        format '<instance.pk>/<filename>'.
+        Path containing the request primary key and filename.
+
     """
     return os.path.join(instance.pk, filename)
+
 
 def set_classifier_file_path(instance, filename):
-    """
-    Set the file path for the classifier file associated with an
-    AmpliSeqRequest instance. The file will be stored in a directory named
-    after the primary key of the instance.
+    """Build the upload path for an AmpliSeq classifier file.
+
     Args:
-        instance (AmpliSeqRequest): The AmpliSeqRequest instance for which the
-        file path is being set.
-        filename (str): The name of the file being uploaded.
+        instance: AmpliSeq request receiving the file.
+        filename: Name of the uploaded file.
+
     Returns:
-        str: The file path where the classifier file will be stored, in the
-        format '<instance.pk>/<filename>'.
+        Path containing the request primary key and filename.
+
     """
     return os.path.join(instance.pk, filename)
 
+
 class ContainerName(models.Model):
-    """
-    Model to store the container name for AmpliSeq analyses submitted to
-    Azure Batch.
-    """
+    """Store container names available to AmpliSeq analyses."""
+
     container_name = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
+        """Return the storage container name."""
         return str(self.container_name)
 
+
 class AmpliSeqRequest(models.Model):
-    """
-    Define the models for common entries and arguments
-    """
+    """Store an AmpliSeq analysis request and its results."""
+
     # Metadata information
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project_name = models.CharField(max_length=256, blank=True)
-    status = models.CharField(max_length=64, default='Unprocessed')
+    status = models.CharField(max_length=64, default="Unprocessed")
     execution_report_download_link = models.CharField(
         max_length=512, blank=True
     )
@@ -72,19 +66,14 @@ class AmpliSeqRequest(models.Model):
     execution_timeline_download_link = models.CharField(
         max_length=512, blank=True
     )
-    results_download_link = models.CharField(
-        max_length=512, blank=True
-    )
+    results_download_link = models.CharField(max_length=512, blank=True)
     created_at = models.DateField(auto_now_add=True)
     error_list = ArrayField(
         models.CharField(max_length=2048), blank=True, default=list
     )
     exit_code_file = models.CharField(max_length=2048, blank=True, null=True)
     emails_array = ArrayField(
-        models.EmailField(max_length=100),
-        blank=True,
-        null=True,
-        default=list
+        models.EmailField(max_length=100), blank=True, null=True, default=list
     )
     # Command line arguments
     """
@@ -113,41 +102,42 @@ class AmpliSeqRequest(models.Model):
     metadata = models.FileField(
         # upload_to=set_metadata_file_path,
         null=True,
-        blank=True
+        blank=True,
     )
 
-    DADA = 'dada'
-    QIIME = 'qiime'
-    QIIME_CUSTOM = 'qiime_custom'
+    DADA = "dada"
+    QIIME = "qiime"
+    QIIME_CUSTOM = "qiime_custom"
 
     TAXONOMY = [
-        (DADA, _('Train a classifier for DADA2 taxonomic assignment')),
-        (QIIME, _('Train a classifier for QIIME2 taxonomic assignment')),
-        (QIIME_CUSTOM, _(
-            'Use custom classifier for QIIME2 taxonomic assignment'
-        ))
+        (DADA, _("Train a classifier for DADA2 taxonomic assignment")),
+        (QIIME, _("Train a classifier for QIIME2 taxonomic assignment")),
+        (
+            QIIME_CUSTOM,
+            _("Use custom classifier for QIIME2 taxonomic assignment"),
+        ),
     ]
 
-    taxonomy =models.CharField(
+    taxonomy = models.CharField(
         max_length=50,
         choices=TAXONOMY,
         default=DADA,
         null=True,
     )
 
-    SILVA_132 = 'silva=132'
-    SILVA_138 = 'silva=138'
-    RDP_18 = 'rdp=18'
+    SILVA_132 = "silva=132"
+    SILVA_138 = "silva=138"
+    RDP_18 = "rdp=18"
     DADA_MODELS = [
-        (SILVA_132, _('Silva version 132')),
-        (SILVA_138, _('Silva version 138')),
-        (RDP_18, _('RDP version 18')),
+        (SILVA_132, _("Silva version 132")),
+        (SILVA_138, _("Silva version 138")),
+        (RDP_18, _("RDP version 18")),
     ]
     QIIME_MODELS = [
-        (SILVA_138, _('Silva version 138')),
-        (RDP_18, _('RDP version 18')),
+        (SILVA_138, _("Silva version 138")),
+        (RDP_18, _("RDP version 18")),
     ]
-    #-------------
+    # -------------
     # Mutually exclusive
     dada_ref_taxonomy = models.CharField(
         max_length=50,
@@ -156,17 +146,14 @@ class AmpliSeqRequest(models.Model):
         null=True,
     )
     qiime_ref_taxonomy = models.CharField(
-        max_length=50,
-        choices=QIIME_MODELS,
-        default=SILVA_138,
-        null=True
+        max_length=50, choices=QIIME_MODELS, default=SILVA_138, null=True
     )
     classifier = models.FileField(
         # upload_to=set_classifier_file_path,
         null=True,
-        blank=True
+        blank=True,
     )
-    #-------------
+    # -------------
 
     exclude_taxa = models.CharField(max_length=64, null=True, blank=True)
     # Maybe make this as a checklist? mitochondria, chloroplast
@@ -176,16 +163,14 @@ class AmpliSeqRequest(models.Model):
     upload = models.BooleanField(default=False)
 
     def __str__(self):
-        return 'ampliseq-' + str(self.pk)
+        """Return the request's display identifier."""
+        return f"ampliseq-{self.pk}"
 
 
 class AmpliSeqAzureTask(models.Model):
-    """
-    Class to store AmpliSeq analyses submitted to batch
-    """
+    """Track an AmpliSeq analysis submitted to Azure Batch."""
+
     ampliseq = models.ForeignKey(
-        AmpliSeqRequest,
-        on_delete=models.CASCADE,
-        related_name='azuretask'
+        AmpliSeqRequest, on_delete=models.CASCADE, related_name="azuretask"
     )
     exit_code_file = models.CharField(max_length=2048)

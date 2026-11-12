@@ -1,5 +1,5 @@
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 from olc_webportalv2.ampliseq.tasks import (
@@ -66,26 +66,21 @@ class AmpliSeqStorageTests(unittest.TestCase):
                     "ampliseq-1",
                     "download",
                     name=(
-                        "ampliseq-1/reports/ampliseq-1"
-                        "_execution_report.html"
+                        "ampliseq-1/reports/ampliseq-1_execution_report.html"
                     ),
                     expires_in_seconds=8 * 24 * 60 * 60,
                 ),
                 call(
                     "ampliseq-1",
                     "download",
-                    name=(
-                        "ampliseq-1/reports/ampliseq-1"
-                        "_execution_trace.txt"
-                    ),
+                    name=("ampliseq-1/reports/ampliseq-1_execution_trace.txt"),
                     expires_in_seconds=8 * 24 * 60 * 60,
                 ),
                 call(
                     "ampliseq-1",
                     "download",
                     name=(
-                        "ampliseq-1/reports/ampliseq-1"
-                        "_execution_timeline.html"
+                        "ampliseq-1/reports/ampliseq-1_execution_timeline.html"
                     ),
                     expires_in_seconds=8 * 24 * 60 * 60,
                 ),

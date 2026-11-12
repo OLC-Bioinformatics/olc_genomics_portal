@@ -1,10 +1,8 @@
-from django.contrib import admin
-from .models import (
-    AmpliSeqAzureTask,
-    AmpliSeqRequest,
-    ContainerName
-)
+"""Admin registrations for AmpliSeq models."""
 
+from django.contrib import admin
+
+from .models import AmpliSeqAzureTask, AmpliSeqRequest, ContainerName
 
 # Register your models here.
 admin.site.register(AmpliSeqRequest)

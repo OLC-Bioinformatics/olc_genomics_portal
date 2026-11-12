@@ -1,6 +1,4 @@
-"""
-Create URLs for the AmpliSeq app.
-"""
+"""URL patterns for the AmpliSeq app."""
 
 # Django imports
 from django.urls import path
@@ -51,14 +49,12 @@ urlpatterns = [
         views.ampliseq_timeline,
         name="ampliseq_timeline",
     ),
-
     # Allow user to refresh containers for autocomplete.
     path(
         _("container_refresh/"),
         views.container_refresh,
         name="refresh",
     ),
-
     # Views for autocompletion.
     path(
         _("ampliseq_autocompleter/"),
