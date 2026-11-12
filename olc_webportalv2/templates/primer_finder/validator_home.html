@@ -45,7 +45,7 @@
         {% elif primer_validator_project.status == 'Processing' %}
         <td>
             <button class="btn progress-bar-striped progress-bar-animated bg-info w-100"
-                    style="color:white;" role="button"> {% trans "Processing" %}
+                    style="color:white;" role="button" disabled> {% trans "Processing" %}
         </button>
         </td>
 
@@ -80,18 +80,19 @@
             {{ primer_validator_project.created_at|date:"Y/m/d" }}
         </td>
 
-        {% if primer_validator_project.status != 'Processing' and 'Unprocessed' %}
-        <form id="form{{primer_validator_project.pk}}" method="post">
+        {% if primer_validator_project.status != 'Processing' %}
             <td align="center">
+                <form id="form{{primer_validator_project.pk}}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" id="delete{{primer_validator_project.pk}}" name="delete"
+                           value="{{primer_validator_project.pk}}">
                 <button
                         class="btn btn-danger w-100" type="submit" id="btn{{primer_validator_project.pk}}"
-                        name="delBtn" value={{primer_validator_project.pk}}>{%  trans "Delete " %}
+                        name="delBtn" value="{{primer_validator_project.pk}}">{%  trans "Delete " %}
                     <i class="fas fa-trash-alt"></i>
                 </button>
+                </form>
             </td>
-            <input type='hidden' id="delete{{primer_validator_project.pk}}" name="delete"
-                   value={{primer_validator_project.pk}}>
-        </form>
 
         {% else %}
         <td></td>
@@ -144,29 +145,13 @@ $(".btn-danger").click(function(e) {
         reverseButtons: true
     }).then(function(result) {
         if (result.value === true) {
-            Swal.fire({
-                title: '{% trans "Deleted!" %}',
-                text: '{% trans "Your project has been deleted." %}',
-                type: 'success',
-                showConfirmButton: false
-            }).then(function(cont) {
-                if (cont.value == null) {
-                    if (bowser.name === "Internet Explorer") { //allows for page submission IE
-                        $.ajax({
-                            type:"POST",
-                            data: {"delete":btn}}).done(function(data) {
-                                location.reload();
-                            });
-                    }else {
-                        form.submit();
-                    }
-                }
-            })
+            form.submit();
         } else {
             Swal.fire({
                 title: '{% trans "Cancelled!" %}',
                 text: '{% trans "Your project is safe." %}',
                 type: 'error',
+                timer: 1500,
                 showConfirmButton: false
             })
         }
