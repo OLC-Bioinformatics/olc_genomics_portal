@@ -8,7 +8,10 @@ from olc_webportalv2.common.benchmarks import (
     normalise_benchmark_name,
 )
 from olc_webportalv2.primer_finder.forms import PrimerVerifierForm
-from olc_webportalv2.primer_finder.models import PrimerVerifierRequest
+from olc_webportalv2.primer_finder.models import (
+    PrimerValidatorAzureRequest,
+    PrimerVerifierRequest,
+)
 from olc_webportalv2.primer_finder import tasks
 
 
@@ -27,6 +30,10 @@ class PrimerQuerySelectionTaskTests(SimpleTestCase):
         self.assertEqual(
             PrimerVerifierRequest._meta.db_table,
             'primer_finder_verifierrequest',
+        )
+        self.assertEqual(
+            PrimerValidatorAzureRequest._meta.db_table,
+            'primer_finder_validatorazurerequest',
         )
         self.assertEqual(
             PrimerVerifierRequest._meta.get_field(

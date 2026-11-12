@@ -8,16 +8,25 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameModel(
-            old_name='VerifierRequest',
-            new_name='PrimerVerifierRequest',
-        ),
-        migrations.AlterModelTable(
-            name='primerverifierrequest',
-            table='primer_finder_verifierrequest',
-        ),
-        migrations.RenameModel(
-            old_name='ValidatorAzureRequest',
-            new_name='PrimerValidatorAzureRequest',
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.RenameModel(
+                    old_name='VerifierRequest',
+                    new_name='PrimerVerifierRequest',
+                ),
+                migrations.AlterModelTable(
+                    name='primerverifierrequest',
+                    table='primer_finder_verifierrequest',
+                ),
+                migrations.RenameModel(
+                    old_name='ValidatorAzureRequest',
+                    new_name='PrimerValidatorAzureRequest',
+                ),
+                migrations.AlterModelTable(
+                    name='primervalidatorazurerequest',
+                    table='primer_finder_validatorazurerequest',
+                ),
+            ],
         ),
     ]

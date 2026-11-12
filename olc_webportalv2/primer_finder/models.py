@@ -598,6 +598,9 @@ class PrimerValidatorAzureRequest(models.Model):
     )
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
 
+    class Meta:
+        db_table = 'primer_finder_validatorazurerequest'
+
     def __str__(self):
         return 'validator-azure-request-{pk}'.format(pk=self.pk)
 
