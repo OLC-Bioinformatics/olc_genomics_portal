@@ -3,7 +3,6 @@ from django.test import RequestFactory
 from test_plus.test import TestCase
 # Allows for session translation tests
 from django.test import Client
-from django.utils import translation
 
 from ..views import (
     UserRedirectView,
@@ -29,10 +28,8 @@ class TestUserRedirectView(BaseUserTestCase):
         request.user = self.user
         # Attach the request to the view
         view.request = request
-        # For session translation tests
+        # A session is available to the redirect view.
         request.session = self.client.session
-        request.session[translation.LANGUAGE_SESSION_KEY] = 'test'
-        request.session.save()
         # Expect: '/users/testuser/', as that is the default username for
         #   self.make_user()
 
@@ -56,10 +53,8 @@ class TestUserUpdateView(BaseUserTestCase):
         # Attach the request to the view
         self.view.request = request
 
-        # For session translation tests
+        # A session is available to the update view.
         request.session = self.client.session
-        request.session[translation.LANGUAGE_SESSION_KEY] = 'test'
-        request.session.save()
 
     def test_get_success_url(self):
         # Expect: '/users/testuser/', as that is the default username for

@@ -185,7 +185,7 @@ class GeneSeekrForm(forms.Form):
         # Check query sequence, if specified.
         if query_sequence != '':
             num_sequences = 0
-            sequences = SeqIO.parse(StringIO(query_sequence), 'fasta')
+            sequences = SeqIO.parse(StringIO(query_sequence), 'fasta-pearson')
             valid_bases = set('ACTGN')
             for sequence in sequences:
                 num_sequences += 1
@@ -201,7 +201,7 @@ class GeneSeekrForm(forms.Form):
             num_nucleotides = 0
             num_sequences = 0
             sequence_data = query_file.read().decode('utf-8')
-            sequences = SeqIO.parse(StringIO(sequence_data), 'fasta')
+            sequences = SeqIO.parse(StringIO(sequence_data), 'fasta-pearson')
             valid_bases = set('ACTGN')
             for sequence in sequences:
                 num_sequences += 1

@@ -219,18 +219,17 @@ def sequence_html_string(sequence, consensus_sequence):
 
 
 def sequence_consensus(sequence_list, vir_typer_pk):
-    from Bio.Align import AlignInfo
     from Bio.SeqRecord import SeqRecord
-    from Bio.Alphabet import IUPAC
     from Bio import AlignIO, SeqIO
     from Bio.Seq import Seq
+    from collections import Counter
     consensus = list()
     records = list()
     if len(sequence_list) >= 2:
         for sequence_dict in sequence_list:
             # print(sequence_dict)
             for seq_code, sequence in sequence_dict.items():
-                record = SeqRecord(Seq(sequence, IUPAC.unambiguous_dna),
+                record = SeqRecord(Seq(sequence),
                                    id=seq_code,
                                    description='')
                 records.append(record)
@@ -243,8 +242,13 @@ def sequence_consensus(sequence_list, vir_typer_pk):
             SeqIO.write(records, alignment_file, 'fasta')
         with open(file_path + 'alignment.fasta', 'r') as alignment_file:
             alignment = AlignIO.read(alignment_file, 'fasta')
-        summary_align = AlignInfo.SummaryInfo(alignment)
-        consensus = summary_align.dumb_consensus()
+        for column in range(alignment.get_alignment_length()):
+            counts = Counter(str(record.seq[column]) for record in alignment)
+            base, count = counts.most_common(1)[0]
+            consensus.append(
+                base if count / len(alignment) >= 0.7 else 'X'
+            )
+        consensus = ''.join(consensus)
     else:
         for sequence_dict in sequence_list:
             # print(sequence_dict)

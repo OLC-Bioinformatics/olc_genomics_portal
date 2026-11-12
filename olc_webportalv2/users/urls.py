@@ -23,13 +23,13 @@ urlpatterns = [
         name="redirect",
     ),
     path(
-        "<str:username>/",
-        views.UserDetailView.as_view(),
-        name="detail",
-    ),
-    path(
         "~update/",
         views.UserUpdateView.as_view(),
         name="update",
+    ),
+    path(
+        "<str:username>/",
+        views.UserDetailView.as_view(),
+        name="detail",
     ),
 ]

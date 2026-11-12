@@ -25,11 +25,13 @@ class GeneSeekrWorkflowTests(TestCase):
             seqid='2015-SEQ-0711',
             quality='Pass',
             genus='Listeria',
+            subspecies='',
         )
         SequenceData.objects.create(
             seqid='2015-SEQ-0712',
             quality='Pass',
             genus='Listeria',
+            subspecies='',
         )
         self.client.login(
             username='geneseekr-workflow-test',
@@ -73,13 +75,13 @@ class GeneSeekrWorkflowTests(TestCase):
         self.assertEqual(request.emails_array, ['alerts@example.com'])
 
     @mock.patch('olc_webportalv2.geneseekr.views.id_sync', return_value={})
-    def test_results_page_calculates_gene_summary(self, id_sync):
+    def test_results_page_displays_gene_hits(self, id_sync):
         request = GeneSeekrRequest.objects.create(
             user=self.user,
             query_sequence='>query\nACGT',
             gene_targets=['geneA'],
         )
-        TopBlastHit.objects.create(
+        hit = TopBlastHit.objects.create(
             geneseekr_request=request,
             contig_name='contig-1',
             query_coverage=90.0,
@@ -98,13 +100,7 @@ class GeneSeekrWorkflowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['gene_summaries'], [{
-            'name': 'geneA',
-            'hit_count': 1,
-            'average_identity': 95.0,
-            'best_identity': 95.0,
-            'average_coverage': 90.0,
-        }])
+        self.assertEqual(list(response.context['gene_top_hits']['geneA']), [hit])
         self.assertEqual(id_sync.call_count, 1)
 
     def test_submission_views_create_processing_requests(self):
@@ -130,7 +126,10 @@ class GeneSeekrWorkflowTests(TestCase):
         self.assertEqual(amr_request.status, 'Processing')
         self.assertEqual(run_amr_summary.apply_async.call_count, 1)
 
-        with mock.patch('olc_webportalv2.geneseekr.views.run_prokka') as run_prokka:
+        with (
+            mock.patch('olc_webportalv2.geneseekr.views.get_storage_client'),
+            mock.patch('olc_webportalv2.geneseekr.views.run_prokka') as run_prokka,
+        ):
             response = self.client.post(
                 reverse('geneseekr:prokka_request'),
                 {'seqids': '2015-SEQ-0711'},

@@ -22,7 +22,7 @@ class VirusTyperProject(TestCase):
 
     def test_project_pk_exists(self):
         vir_typer_project = VirTyperProject.objects.get(project_name='test_project')
-        self.assertEquals(vir_typer_project.project_name, 'test_project')
+        self.assertEqual(vir_typer_project.project_name, 'test_project')
 
     def test_project_pk_does_not_exist(self):
         with self.assertRaises(VirTyperProject.DoesNotExist):
@@ -90,7 +90,7 @@ class VirusTyperRequest(TestCase):
 
     def test_request_sample_names(self):
         vir_typer_samples = VirTyperRequest.objects.all()
-        self.assertEquals([sample.sample_name for sample in vir_typer_samples], ['VI482', 'VI483'])
+        self.assertEqual([sample.sample_name for sample in vir_typer_samples], ['VI482', 'VI483'])
 
     def test_request_form_single_form_create(self):
         sample = {
@@ -146,7 +146,7 @@ class VirusTyperRequest(TestCase):
         ))
         VirTyperRequest.objects.bulk_create(sample_data)
         vir_typer_samples = VirTyperRequest.objects.all()
-        self.assertEquals([sample.sample_name for sample in vir_typer_samples], ['VI482', 'VI483', 'VI484', 'VI485'])
+        self.assertEqual([sample.sample_name for sample in vir_typer_samples], ['VI482', 'VI483', 'VI484', 'VI485'])
 
 
 class VirusTyperFiles(TestCase):
@@ -200,9 +200,12 @@ class VirusTyperFiles(TestCase):
 
     def test_files_names(self):
         seq_files = VirTyperFiles.objects.all()
-        self.assertEquals([str(sample.sample_name) for sample in seq_files],
-                          ['1', '1', '1', '2'])
-        self.assertEquals(set([sample.sequence_file for sample in seq_files]),
+        sample_file_counts = {}
+        for sequence_file in seq_files:
+            sample_name = sequence_file.sample_name.sample_name
+            sample_file_counts[sample_name] = sample_file_counts.get(sample_name, 0) + 1
+        self.assertEqual(sample_file_counts, {'VI482': 3, 'VI483': 1})
+        self.assertEqual(set([sample.sequence_file for sample in seq_files]),
                           {'P19954_2019FPP00000475214_VI482_11_GI_B05_M13-R17_G10_068.ab1',
                            'P19954_2019FPP00000475214_VI482_11_GI_B04_M13-R17_F10_070.ab1',
                            'P19954_2019FPP00000475214_VI482_11_GI_B03_M13-R17_E10_072.ab1',

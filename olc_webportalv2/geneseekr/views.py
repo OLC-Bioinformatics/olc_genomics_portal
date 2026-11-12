@@ -32,7 +32,10 @@ def geneseekr_home(request):
 
     if request.method == "POST":
         if request.POST.get('delete'): 
-            query = GeneSeekrRequest.objects.filter(pk=request.POST.get('delete'))
+            query = GeneSeekrRequest.objects.filter(
+                pk=request.POST.get('delete'),
+                user=request.user,
+            )
             query.delete()
         
     return render(request,
@@ -45,7 +48,11 @@ def geneseekr_home(request):
 @login_required
 def geneseekr_name(request, geneseekr_request_pk):
     form = NameForm()
-    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+    geneseekr_request = get_object_or_404(
+        GeneSeekrRequest,
+        pk=geneseekr_request_pk,
+        user=request.user,
+    )
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():
@@ -107,7 +114,11 @@ def geneseekr_query(request):
 
 @login_required
 def geneseekr_processing(request, geneseekr_request_pk):
-    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+    geneseekr_request = get_object_or_404(
+        GeneSeekrRequest,
+        pk=geneseekr_request_pk,
+        user=request.user,
+    )
     form = EmailForm()
     if request.method == 'POST':   
         form = EmailForm(request.POST)
@@ -128,7 +139,11 @@ def geneseekr_processing(request, geneseekr_request_pk):
 
 @login_required
 def geneseekr_results(request, geneseekr_request_pk):
-    geneseekr_request = get_object_or_404(GeneSeekrRequest, pk=geneseekr_request_pk)
+    geneseekr_request = get_object_or_404(
+        GeneSeekrRequest,
+        pk=geneseekr_request_pk,
+        user=request.user,
+    )
     geneseekr_details = GeneSeekrDetail.objects.filter(geneseekr_request=geneseekr_request)
     id_dict = id_sync(geneseekr_request.seqids)
     # Create dictionary where each gene gets its own top hits
@@ -154,7 +169,10 @@ def tree_home(request):
 
     if request.method == "POST":
         if request.POST.get('delete'): 
-            query = Tree.objects.filter(pk=request.POST.get('delete'))
+            query = Tree.objects.filter(
+                pk=request.POST.get('delete'),
+                user=request.user,
+            )
             query.delete()
         
     return render(request,
@@ -208,7 +226,7 @@ def tree_request(request):
 
 @login_required
 def tree_result(request, tree_request_pk):
-    tree_request = get_object_or_404(Tree, pk=tree_request_pk)
+    tree_request = get_object_or_404(Tree, pk=tree_request_pk, user=request.user)
     id_dict = id_sync(tree_request.seqids)
     form = EmailForm()
     if request.method == 'POST':
@@ -232,7 +250,7 @@ def tree_result(request, tree_request_pk):
 @login_required
 def tree_name(request, tree_request_pk):
     form = NameForm()
-    tree_request = get_object_or_404(Tree, pk=tree_request_pk)
+    tree_request = get_object_or_404(Tree, pk=tree_request_pk, user=request.user)
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():
@@ -257,7 +275,10 @@ def amr_home(request):
 
     if request.method == "POST":
         if request.POST.get('delete'): 
-            query = AMRSummary.objects.filter(pk=request.POST.get('delete'))
+            query = AMRSummary.objects.filter(
+                pk=request.POST.get('delete'),
+                user=request.user,
+            )
             query.delete()
         
     return render(request,
@@ -307,7 +328,11 @@ def amr_request(request):
 
 @login_required
 def amr_detail(request, amr_detail_pk):
-    amr_detail_object = get_object_or_404(AMRDetail, pk=amr_detail_pk)
+    amr_detail_object = get_object_or_404(
+        AMRDetail,
+        pk=amr_detail_pk,
+        amr_request__user=request.user,
+    )
     amr_request_object = AMRSummary.objects.get(amrdetail=amr_detail_object)
     return render(request,
                   'geneseekr/amr_detail.html',
@@ -319,13 +344,17 @@ def amr_detail(request, amr_detail_pk):
 
 @login_required
 def amr_result(request, amr_request_pk):
-    amr_request_object = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    amr_request_object = get_object_or_404(
+        AMRSummary,
+        pk=amr_request_pk,
+        user=request.user,
+    )
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
-            if email not in amr_request.emails_array:
+            if email not in amr_request_object.emails_array:
                     amr_request_object.emails_array.append(email)
                     amr_request_object.save()
                     form = EmailForm()
@@ -341,7 +370,11 @@ def amr_result(request, amr_request_pk):
 @login_required
 def amr_name(request, amr_request_pk):
     form = NameForm()
-    amr_request_object = get_object_or_404(AMRSummary, pk=amr_request_pk)
+    amr_request_object = get_object_or_404(
+        AMRSummary,
+        pk=amr_request_pk,
+        user=request.user,
+    )
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():
@@ -364,7 +397,10 @@ def prokka_home(request):
     prokka_requests = ProkkaRequest.objects.filter(user=request.user).filter(created_at__gte=one_week_ago)
     if request.method == "POST":
         if request.POST.get('delete'): 
-            query = ProkkaRequest.objects.filter(pk=request.POST.get('delete'))
+            query = ProkkaRequest.objects.filter(
+                pk=request.POST.get('delete'),
+                user=request.user,
+            )
             query.delete()
         
     return render(request,
@@ -385,7 +421,7 @@ def prokka_request(request):
                                                                  seqids=seqids,
                                                                  status='Processing')
             if name is None:
-                prokka_request_object.name = prokka_request.pk
+                prokka_request_object.name = prokka_request_object.pk
             else:
                 prokka_request_object.name = name
             prokka_request_object.save()
@@ -415,13 +451,17 @@ def prokka_request(request):
 
 @login_required
 def prokka_result(request, prokka_request_pk):
-    prokka_request_object = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
+    prokka_request_object = get_object_or_404(
+        ProkkaRequest,
+        pk=prokka_request_pk,
+        user=request.user,
+    )
     form = EmailForm()
     if request.method == 'POST':
         form = EmailForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
-            if email not in prokka_request.emails_array:
+            if email not in prokka_request_object.emails_array:
                     prokka_request_object.emails_array.append(email)
                     prokka_request_object.save()
                     form = EmailForm()
@@ -437,7 +477,11 @@ def prokka_result(request, prokka_request_pk):
 @login_required
 def prokka_name(request, prokka_request_pk):
     form = NameForm()
-    prokka_request_object = get_object_or_404(ProkkaRequest, pk=prokka_request_pk)
+    prokka_request_object = get_object_or_404(
+        ProkkaRequest,
+        pk=prokka_request_pk,
+        user=request.user,
+    )
     if request.method == "POST":  
         form = NameForm(request.POST)
         if form.is_valid():
@@ -497,7 +541,11 @@ def neighbor_request(request):
 
 @login_required
 def neighbor_result(request, neighbor_request_pk):
-    neighbor_request_object = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
+    neighbor_request_object = get_object_or_404(
+        NearestNeighbors,
+        pk=neighbor_request_pk,
+        user=request.user,
+    )
     result_dict = dict()
     if neighbor_request_object.status == 'Complete':
         neighbor_details = NearNeighborDetail.objects.filter(near_neighbor_request=neighbor_request_object)
@@ -532,7 +580,10 @@ def neighbor_home(request):
 
     if request.method == "POST":
         if request.POST.get('delete'):
-            query = NearestNeighbors.objects.filter(pk=request.POST.get('delete'))
+            query = NearestNeighbors.objects.filter(
+                pk=request.POST.get('delete'),
+                user=request.user,
+            )
             query.delete()
 
     return render(request,
@@ -545,7 +596,11 @@ def neighbor_home(request):
 @login_required
 def neighbor_name(request, neighbor_request_pk):
     form = NameForm()
-    neighbor_request_object = get_object_or_404(NearestNeighbors, pk=neighbor_request_pk)
+    neighbor_request_object = get_object_or_404(
+        NearestNeighbors,
+        pk=neighbor_request_pk,
+        user=request.user,
+    )
     if request.method == "POST":
         form = NameForm(request.POST)
         if form.is_valid():
