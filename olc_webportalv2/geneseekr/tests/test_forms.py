@@ -13,11 +13,13 @@ class GeneSeekrFormTest(TestCase):
         cls.salmonella = Genus.objects.create(genus='Salmonella')
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_geneseekr_form_seqid_input_fasta_text(self):
@@ -26,7 +28,7 @@ class GeneSeekrFormTest(TestCase):
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA'
         })
         self.assertTrue(form.is_valid())
-        seqid_list, query_sequence = form.cleaned_data
+        seqid_list, query_sequence, _ = form.cleaned_data
         self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
         self.assertEqual(query_sequence, '>fasta_name\nATCGACTGACTAGTCA')
 
@@ -36,7 +38,7 @@ class GeneSeekrFormTest(TestCase):
             'query_sequence': '>fasta_name\nATCGACTGACTAGTCA'
         })
         self.assertTrue(form.is_valid())
-        seqid_list, query_sequence = form.cleaned_data
+        seqid_list, query_sequence, _ = form.cleaned_data
         self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
         self.assertEqual(query_sequence, '>fasta_name\nATCGACTGACTAGTCA')
 
@@ -44,14 +46,14 @@ class GeneSeekrFormTest(TestCase):
         with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
             form = GeneSeekrForm({'seqids': '2015-SEQ-0711 2015-SEQ-0712'}, {'query_file': SimpleUploadedFile(upload_file.name, upload_file.read())})
             self.assertTrue(form.is_valid())
-            seqid_list, query_sequence = form.cleaned_data
+            seqid_list, query_sequence, _ = form.cleaned_data
             self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_valid_geneseekr_form_genus_input_fasta_file(self):
         with open('olc_webportalv2/geneseekr/tests/good_fasta.fasta', 'rb') as upload_file:
             form = GeneSeekrForm({'genus': str(self.listeria.pk)}, {'query_file': SimpleUploadedFile(upload_file.name, upload_file.read())})
             self.assertTrue(form.is_valid())
-            seqid_list, query_sequence = form.cleaned_data
+            seqid_list, query_sequence, _ = form.cleaned_data
             self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
 
     def test_invalid_form_missing_seqid(self):
@@ -88,7 +90,7 @@ class GeneSeekrFormTest(TestCase):
             'everything_but': True,
         })
         self.assertTrue(form.is_valid())
-        seqid_list, query_sequence = form.cleaned_data
+        seqid_list, query_sequence, _ = form.cleaned_data
         self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
         self.assertEqual(query_sequence, '>fasta_name\nATCGACTGACTAGTCA')
 
@@ -105,11 +107,13 @@ class TreeFormTest(TestCase):
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_form(self):
@@ -155,11 +159,13 @@ class AMRFormTest(TestCase):
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_form(self):
@@ -194,11 +200,13 @@ class ProkkaFormTest(TestCase):
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_form(self):
@@ -231,11 +239,13 @@ class NearNeighborsFormTest(TestCase):
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_form(self):

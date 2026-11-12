@@ -62,6 +62,7 @@ class RMLST(models.Model):
 
 class SequenceData(models.Model):
     seqid = models.CharField(max_length=24)
+    subspecies = models.CharField(max_length=48, blank=True)
     quality = models.CharField(
         choices=quality_choices,
         max_length=128,

@@ -17,12 +17,12 @@ class MetadataIntegrationTest(LiveServerTestCase):
         user.set_password('password')
         user.save()
         Genus.objects.create(genus='Escherichia')
-        SequenceData.objects.create(seqid='1234-SEQ-0001', genus='Escherichia', quality='Pass')
-        SequenceData.objects.create(seqid='1234-SEQ-0002', genus='Escherichia', quality='Reference')
-        SequenceData.objects.create(seqid='1234-SEQ-0003', genus='Escherichia', quality='Fail')
-        SequenceData.objects.create(seqid='1234-SEQ-0004', genus='Listeria', quality='Pass')
-        SequenceData.objects.create(seqid='1234-SEQ-0005', genus='Listeria', quality='Reference')
-        SequenceData.objects.create(seqid='1234-SEQ-0006', genus='Listeria', quality='Fail')
+        SequenceData.objects.create(seqid='1234-SEQ-0001', genus='Escherichia', quality='Pass', subspecies='')
+        SequenceData.objects.create(seqid='1234-SEQ-0002', genus='Escherichia', quality='Reference', subspecies='')
+        SequenceData.objects.create(seqid='1234-SEQ-0003', genus='Escherichia', quality='Fail', subspecies='')
+        SequenceData.objects.create(seqid='1234-SEQ-0004', genus='Listeria', quality='Pass', subspecies='')
+        SequenceData.objects.create(seqid='1234-SEQ-0005', genus='Listeria', quality='Reference', subspecies='')
+        SequenceData.objects.create(seqid='1234-SEQ-0006', genus='Listeria', quality='Fail', subspecies='')
 
     def login(self):
         # Any page redirects us to login page
