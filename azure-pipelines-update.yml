@@ -48,8 +48,18 @@ stages:
       inputs:
         secureFile: 'prod_ssh_key'
 
+    - task: DownloadSecureFile@1
+      name: rootCA
+      inputs:
+        secureFile: 'GoC-GdC-Root-A.crt'
+
     - script: |
         chmod 600 "$(sshKey.secureFilePath)"
+        scp -o StrictHostKeyChecking=no \
+            -i "$(sshKey.secureFilePath)" \
+            -P "$(TARGET_SSH_PORT)" \
+            "$(rootCA.secureFilePath)" \
+            "$(TARGET_SSH_USER)@$(TARGET_HOST):$(REPO_DIR)/GoC-GdC-Root-A.crt"
         ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
           set -e
           cd "/home/cfiaadmin/FoodPort/olc_genomics_portal"

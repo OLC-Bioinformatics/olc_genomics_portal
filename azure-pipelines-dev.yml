@@ -854,22 +854,36 @@ stages:
           install -m 600 "$REMOTE_SECRET_DIR/env" "$env_file"
           install -m 600 "$REMOTE_SECRET_DIR/.env" "$dotenv_file"
 
-          python3 "$REMOTE_DIR/remote_deploy_env.py"
           cd "$REMOTE_DIR"
 
-          # --- Try to switch to dev branch (non-fatal if it fails) ---
-          if [ -d .git ]; then
-            echo "Attempting to checkout 'dev' branch"
-            git fetch origin dev || true
-            git checkout dev || echo "WARNING: could not checkout dev branch"
-            git pull origin dev || echo "WARNING: could not pull dev branch"
-          else
-            echo "WARNING: no .git directory present; skipping branch checkout"
+          # --- Deploy only the intended dev branch ---
+          if [ ! -d .git ]; then
+            echo "ERROR: $REMOTE_DIR is not a Git checkout; cannot verify the dev branch." >&2
+            exit 1
           fi
+          echo "Fetching origin/dev"
+          git fetch origin +refs/heads/dev:refs/remotes/origin/dev
+          if git show-ref --verify --quiet refs/heads/dev; then
+            git checkout dev
+          else
+            git checkout --track -b dev origin/dev
+          fi
+          git merge --ff-only origin/dev
+          checked_out_branch="$(git branch --show-current)"
+          checked_out_commit="$(git rev-parse HEAD)"
+          expected_commit="$(git rev-parse origin/dev)"
+          if [ "$checked_out_branch" != "dev" ] || \
+             [ "$checked_out_commit" != "$expected_commit" ]; then
+            echo "ERROR: expected origin/dev at $expected_commit, got $checked_out_branch at $checked_out_commit." >&2
+            exit 1
+          fi
+          echo "Deploying dev branch commit $checked_out_commit"
 
           # Nginx serves these public assets as www-data; restore access after checkout.
           find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
           find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
+
+          python3 "$REMOTE_DIR/remote_deploy_env.py"
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
           MAMBA_BIN="$HOME/miniconda/bin/mamba"
