@@ -15,10 +15,16 @@ from django import forms
 
 # Third-party imports
 from Bio import SeqIO
+from dal import autocomplete
 
 # Portal-specific imports
+from olc_webportalv2.common.benchmarks import (
+    EXCLUSIVITY_BENCHMARK_CHOICES,
+    INCLUSIVITY_BENCHMARK_CHOICES,
+    validate_benchmark_panel,
+)
+from olc_webportalv2.metadata.models import Genus, SequenceData
 from olc_webportalv2.primer_finder.models import (
-    genera,
     PrimerVerifierRequest,
     ValidatorRequest
 )
@@ -32,10 +38,68 @@ mismatch_choices = (
 )
 
 
+class SeqIDMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Accept Select2 values and legacy whitespace-separated SeqIDs."""
+
+    def clean(self, value):
+        if isinstance(value, str):
+            value = value.split()
+        return super().clean(value)
+
+
 class PrimerVerifierForm(ModelForm):
     """
     Form for the PrimerVerifierRequest model.
     """
+
+    inclusivity_genus = forms.ModelChoiceField(
+        queryset=Genus.objects.all(),
+        required=False,
+        label=_('Genus'),
+        widget=autocomplete.ModelSelect2(
+            url='metadata:genus_query_autocompleter',
+            attrs={'data-placeholder': _('Search genus ...')},
+        ),
+    )
+    exclusivity_genus = forms.ModelChoiceField(
+        queryset=Genus.objects.all(),
+        required=False,
+        label=_('Genus'),
+        widget=autocomplete.ModelSelect2(
+            url='metadata:genus_query_autocompleter',
+            attrs={'data-placeholder': _('Search genus ...')},
+        ),
+    )
+    inclusivity_seqids = SeqIDMultipleChoiceField(
+        queryset=SequenceData.objects.all(),
+        required=False,
+        label=_('Specific SeqIDs'),
+        widget=autocomplete.ModelSelect2Multiple(
+            url='metadata:seqid_autocompleter',
+            attrs={'data-placeholder': _('Search SeqIDs ...')},
+        ),
+    )
+    exclusivity_seqids = SeqIDMultipleChoiceField(
+        queryset=SequenceData.objects.all(),
+        required=False,
+        label=_('Specific SeqIDs'),
+        widget=autocomplete.ModelSelect2Multiple(
+            url='metadata:seqid_autocompleter',
+            attrs={'data-placeholder': _('Search SeqIDs ...')},
+        ),
+    )
+    inclusivity_benchmark = forms.ChoiceField(
+        required=False,
+        choices=(('', _('No benchmark dataset')),) +
+        INCLUSIVITY_BENCHMARK_CHOICES,
+        label=_('Benchmark dataset'),
+    )
+    exclusivity_benchmark = forms.ChoiceField(
+        required=False,
+        choices=(('', _('No benchmark dataset')),) +
+        EXCLUSIVITY_BENCHMARK_CHOICES,
+        label=_('Benchmark dataset'),
+    )
 
     class Meta:
         """
@@ -52,7 +116,13 @@ class PrimerVerifierForm(ModelForm):
             'contig_breaks',
             'range_buffer',
             'inclusivity_panel',
-            'exclusivity_panel'
+            'exclusivity_panel',
+            'inclusivity_genus',
+            'exclusivity_genus',
+            'inclusivity_seqids',
+            'exclusivity_seqids',
+            'inclusivity_benchmark',
+            'exclusivity_benchmark',
         ]
         labels = {
             "project_name": _("Project Name"),
@@ -71,6 +141,10 @@ class PrimerVerifierForm(ModelForm):
             "exclusivity_panel": _(
                 "Genus/Genera to include in exclusivity panel"
             ),
+            "inclusivity_genus": _("Genus to include in inclusivity panel"),
+            "exclusivity_genus": _("Genus to include in exclusivity panel"),
+            "inclusivity_seqids": _("Specific inclusivity SeqIDs"),
+            "exclusivity_seqids": _("Specific exclusivity SeqIDs"),
         }
         widgets = {
             "project_name": forms.TextInput(
@@ -113,12 +187,23 @@ class PrimerVerifierForm(ModelForm):
                 }
             ),
             "inclusivity_panel": forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=INCLUSIVITY_BENCHMARK_CHOICES,
             ),
             "exclusivity_panel": forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=EXCLUSIVITY_BENCHMARK_CHOICES,
             ),
         }
+
+    inclusivity_panel = forms.MultipleChoiceField(
+        required=False,
+        choices=INCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    exclusivity_panel = forms.MultipleChoiceField(
+        required=False,
+        choices=EXCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+    )
 
     @staticmethod
     def clean_primer_names(primer_name):
@@ -375,7 +460,7 @@ class PrimerVerifierForm(ModelForm):
         # Primer Validation
         primer_list = []
         primer_details = {}
-        primer_sequences = self.cleaned_data['primer_sequences']
+        primer_sequences = self.cleaned_data.get('primer_sequences', '')
         if not primer_sequences:
             error_list.append(
                 _('Please provide FASTA-formatted forward and reverse primers')
@@ -389,7 +474,9 @@ class PrimerVerifierForm(ModelForm):
 
         # Probe
         probe_sequence = \
-            self.cleaned_data["probe_sequence"].replace(" ", "").rstrip()
+            (self.cleaned_data.get("probe_sequence") or "").replace(
+                " ", ""
+            ).rstrip()
         allowed_chars = "acgt"
         if not all(char in allowed_chars for char in probe_sequence.lower()):
             error_list.append(
@@ -400,13 +487,68 @@ class PrimerVerifierForm(ModelForm):
             )
 
         # Inclusivity and Exclusivity Panels
-        inclusivity_panel = self.cleaned_data['inclusivity_panel']
-        exclusivity_panel = self.cleaned_data['exclusivity_panel']
-        if not inclusivity_panel and not exclusivity_panel:
+        inclusivity_panel = self.cleaned_data.get(
+            'inclusivity_panel', []
+        ) or []
+        exclusivity_panel = self.cleaned_data.get(
+            'exclusivity_panel', []
+        ) or []
+        inclusivity_genus, inclusivity_seqids = self._clean_query_selection(
+            'inclusivity'
+        )
+        exclusivity_genus, exclusivity_seqids = self._clean_query_selection(
+            'exclusivity'
+        )
+        inclusivity_benchmark = self.cleaned_data.get(
+            'inclusivity_benchmark', ''
+        )
+        exclusivity_benchmark = self.cleaned_data.get(
+            'exclusivity_benchmark', ''
+        )
+        if not (
+            inclusivity_panel or exclusivity_panel or
+            inclusivity_genus or exclusivity_genus or
+            inclusivity_seqids or exclusivity_seqids or
+            inclusivity_benchmark or exclusivity_benchmark
+        ):
             error_list.append(
-                _('Please select at least one genus in either the inclusivity '
-                  'or exclusivity panel.')
+                _('Select at least one benchmark, genus, or SeqID for either '
+                  'panel.')
             )
+
+        inclusivity_benchmarks = set(inclusivity_panel)
+        exclusivity_benchmarks = set(exclusivity_panel)
+        if inclusivity_benchmark:
+            inclusivity_benchmarks.add(inclusivity_benchmark)
+        if exclusivity_benchmark:
+            exclusivity_benchmarks.add(exclusivity_benchmark)
+        if inclusivity_benchmarks.intersection(exclusivity_benchmarks):
+            error_list.append(
+                _('A benchmark dataset cannot be assigned to both panels.')
+            )
+        if inclusivity_genus and exclusivity_genus and (
+            inclusivity_genus.casefold() == exclusivity_genus.casefold()
+        ):
+            error_list.append(_('A genus cannot be assigned to both panels.'))
+        if set(inclusivity_seqids).intersection(exclusivity_seqids):
+            error_list.append(_('A SeqID cannot be assigned to both panels.'))
+
+        for benchmark_name in inclusivity_benchmarks:
+            try:
+                validate_benchmark_panel(
+                    benchmark_name=benchmark_name,
+                    panel='inclusivity',
+                )
+            except ValueError as exc:
+                error_list.append(str(exc))
+        for benchmark_name in exclusivity_benchmarks:
+            try:
+                validate_benchmark_panel(
+                    benchmark_name=benchmark_name,
+                    panel='exclusivity',
+                )
+            except ValueError as exc:
+                error_list.append(str(exc))
 
         # Minimum Amplicon Size
         min_amplicon_size = self.cleaned_data.get('min_amplicon_size')
@@ -487,8 +629,33 @@ class PrimerVerifierForm(ModelForm):
             "probe_sequence": probe_sequence,
             "inclusivity_panel": inclusivity_panel,
             "exclusivity_panel": exclusivity_panel,
+            "inclusivity_genus": inclusivity_genus,
+            "exclusivity_genus": exclusivity_genus,
+            "inclusivity_seqids": inclusivity_seqids,
+            "exclusivity_seqids": exclusivity_seqids,
+            "inclusivity_benchmark": inclusivity_benchmark,
+            "exclusivity_benchmark": exclusivity_benchmark,
             "project_name": self.cleaned_data.get("project_name"),
         }
+
+    def _clean_query_selection(self, prefix):
+        genus = self.cleaned_data.get(prefix + '_genus')
+        genus = genus.genus.strip() if genus else ''
+        raw_seqids = self.cleaned_data.get(prefix + '_seqids')
+        if hasattr(raw_seqids, 'values_list'):
+            seqids = list(raw_seqids.values_list('seqid', flat=True))
+        else:
+            seqids = raw_seqids or []
+            if isinstance(seqids, str):
+                seqids = seqids.split()
+        if genus and not SequenceData.objects.filter(
+            genus__iexact=genus
+        ).exists():
+            self.add_error(
+                prefix + '_genus',
+                _('This genus is not present in the sequence database.'),
+            )
+        return genus, sorted(set(seqids))
 
 
 class PrimerValidatorForm(ModelForm):
@@ -538,7 +705,7 @@ class PrimerValidatorForm(ModelForm):
                        }
             ),
             'inclusivity_panel': forms.CheckboxSelectMultiple(
-                choices=genera,
+                choices=INCLUSIVITY_BENCHMARK_CHOICES,
             ),
         }
 
@@ -601,3 +768,367 @@ class PrimerValidatorForm(ModelForm):
             'inclusivity_panel': inclusivity_panel,
             'project_name': self.cleaned_data.get('project_name')
         }
+
+
+class ValidatorExperimentForm(forms.Form):
+    """Request-wide PrimerValidator configuration."""
+    project_name = forms.CharField(
+        required=False,
+        max_length=256,
+        help_text=_(
+            'Optional: give this experiment a name you will recognize later.'
+        ),
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    mismatches = forms.IntegerField(
+        min_value=0, max_value=3, initial=3,
+        label=_('Maximum number of mismatches'),
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+    )
+    min_amplicon_size = forms.IntegerField(
+        min_value=0,
+        max_value=10000,
+        initial=0,
+        label=_('Minimum amplicon size'),
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+    )
+    max_amplicon_size = forms.IntegerField(
+        min_value=0,
+        max_value=10000,
+        initial=1500,
+        label=_('Maximum amplicon size'),
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+    )
+    range_buffer = forms.IntegerField(
+        min_value=0,
+        max_value=200,
+        initial=0,
+        label=_('Minimum distance between amplicons'),
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+    )
+    contig_breaks = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_('Allow searching across multiple contigs'),
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+    classification_rule = forms.ChoiceField(choices=(
+        ('none', _('No classification rule')),
+        ('salmonella', _('Salmonella: invA or stn required')),
+    ), widget=forms.Select(attrs={'class': 'form-select'}))
+    logic = forms.ChoiceField(
+        choices=(('', _('No logic')), ('AND', _('All')), ('OR', _('Any'))),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text=_(
+            'Applies to targets in each sample. Leave as No logic to evaluate '
+            'targets independently.'
+        ),
+    )
+    gene_exclusion_categories = forms.MultipleChoiceField(
+        label=_('Sample exclusion gene-analysis categories:'),
+        choices=(
+            ('FRAME_SHIFT', _('Frame shift')),
+            ('INTERNAL_STOP', _('Internal stop')),
+            ('PARTIAL_CONTIG_END', _('Partial contig end')),
+            ('EXTENDED', _('Extended gene')),
+        ),
+        widget=forms.CheckboxSelectMultiple(attrs={'disabled': True}),
+        required=False,
+        initial=(
+            'FRAME_SHIFT', 'INTERNAL_STOP',
+            'PARTIAL_CONTIG_END', 'EXTENDED',
+        ),
+    )
+    inclusivity_panel = forms.MultipleChoiceField(
+        choices=INCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple(),
+        required=False,
+    )
+    exclusivity_panel = forms.MultipleChoiceField(
+        choices=EXCLUSIVITY_BENCHMARK_CHOICES,
+        widget=forms.CheckboxSelectMultiple(),
+        required=False,
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        inclusivity = set(cleaned_data.get('inclusivity_panel') or [])
+        exclusivity = set(cleaned_data.get('exclusivity_panel') or [])
+        if not inclusivity and not exclusivity:
+            raise forms.ValidationError(
+                _('Select at least one inclusivity or exclusivity panel.')
+            )
+        overlap = inclusivity.intersection(exclusivity)
+        if overlap:
+            raise forms.ValidationError(
+                _('A panel cannot be selected as both inclusivity and '
+                  'exclusivity: {0}.').format(', '.join(sorted(overlap))
+                                              )
+            )
+        minimum = cleaned_data.get('min_amplicon_size')
+        maximum = cleaned_data.get('max_amplicon_size')
+        if minimum is not None and maximum is not None and minimum > maximum:
+            raise forms.ValidationError(
+                _('Minimum amplicon size cannot exceed maximum amplicon size.')
+            )
+        if cleaned_data.get('classification_rule') == 'salmonella':
+            cleaned_data['logic'] = ''
+        return cleaned_data
+
+
+class ValidatorTargetForm(forms.Form):
+    """One sample target, with primer, probe, and optional gene references."""
+    sample_name = forms.CharField(
+        required=False, max_length=128,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': _('Sample name'),
+        }),
+    )
+    target_name = forms.CharField(
+        max_length=62,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'invA',
+        }),
+    )
+    forward_primer = forms.CharField(
+        required=False,
+        max_length=64,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control validator-sequence-input',
+            'placeholder': '5\' - 3\' primer sequence',
+        }),
+    )
+    reverse_primer = forms.CharField(
+        required=False,
+        max_length=64,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control validator-sequence-input',
+            'placeholder': '5\' - 3\' primer sequence',
+        }),
+    )
+    probe_sequence = forms.CharField(
+        required=False,
+        max_length=10000,
+        label=_('Probe (optional)'),
+        widget=forms.TextInput(attrs={
+            'class': 'form-control validator-sequence-input',
+            'placeholder': _('Optional probe sequence'),
+        }),
+    )
+    probe_evaluation_method = forms.ChoiceField(
+        required=False,
+        choices=(
+            ('percent_identity', _('Identity')),
+            ('max_differences', _('Differences')),
+        ),
+        initial='percent_identity',
+        widget=forms.RadioSelect(),
+    )
+    probe_percent_identity = forms.FloatField(
+        required=False, initial=80.0, min_value=0.0, max_value=100.0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '0',
+            'max': '100',
+            'step': '0.1',
+        }),
+    )
+    probe_max_differences = forms.IntegerField(
+        required=False, initial=2, min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '0',
+            'step': '1',
+        }),
+    )
+    gene_sequence = forms.CharField(
+        required=False,
+        max_length=100000,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control validator-sequence-input',
+            'rows': 4,
+            'placeholder': '>gene_name\nACGTACGT...',
+        }),
+    )
+    reference_fasta = forms.FileField(
+        required=False,
+        label=_('Target-specific multi-FASTA upload'),
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        target_name = canonicalize_primer_base_name(
+            cleaned_data.get('target_name')
+        )
+        if not target_name:
+            self.add_error('target_name', _('Enter a valid target name.'))
+        else:
+            cleaned_data['target_name'] = target_name
+
+        sample_name = canonicalize_primer_base_name(
+            cleaned_data.get('sample_name') or target_name
+        )
+        if not sample_name:
+            self.add_error('sample_name', _('Enter a valid sample name.'))
+        cleaned_data['sample_name'] = sample_name
+
+        for field_name, label in (
+            ('forward_primer', _('Forward primer')),
+            ('reverse_primer', _('Reverse primer')),
+        ):
+            sequence = _clean_validator_sequence(
+                cleaned_data.get(field_name), label, self
+            )
+            if not sequence:
+                self.add_error(field_name, _('This field is required.'))
+            cleaned_data[field_name] = sequence
+
+        probe = _clean_validator_sequence(
+            cleaned_data.get('probe_sequence'), _('Probe'), self,
+            required=False,
+        )
+        cleaned_data['probe_sequence'] = probe
+        method = cleaned_data.get('probe_evaluation_method') or 'percent_identity'
+        if probe and method == 'percent_identity' and (
+            cleaned_data.get('probe_percent_identity') is None
+        ):
+            self.add_error(
+                'probe_percent_identity',
+                _('Enter the minimum probe percent identity.'),
+            )
+        if probe and method == 'max_differences' and (
+            cleaned_data.get('probe_max_differences') is None
+        ):
+            self.add_error(
+                'probe_max_differences',
+                _('Enter the maximum probe differences.'),
+            )
+
+        gene_sequence = (cleaned_data.get('gene_sequence') or '').strip()
+        if gene_sequence.startswith('>'):
+            try:
+                records = list(SeqIO.parse(StringIO(gene_sequence), 'fasta'))
+            except (ValueError, TypeError):
+                records = []
+            if not records:
+                self.add_error(
+                    'gene_sequence', _('Enter a valid FASTA sequence.')
+                )
+            for record in records:
+                sequence = str(record.seq).upper()
+                if not sequence or not all(char in 'ACGTN' for char in sequence):
+                    self.add_error(
+                        'gene_sequence',
+                        _('Gene sequences may contain only A, C, G, T, or N.'),
+                    )
+        elif gene_sequence:
+            _clean_validator_sequence(
+                gene_sequence, _('Gene sequence'), self
+            )
+        cleaned_data['gene_sequence'] = gene_sequence
+        fasta_file = cleaned_data.get('reference_fasta')
+        if fasta_file:
+            _validate_gene_fasta(fasta_file, self)
+        return cleaned_data
+
+
+def _validate_gene_fasta(fasta_file, form):
+    """Validate an uploaded target FASTA without consuming its file handle."""
+    try:
+        fasta_file.seek(0)
+        contents = fasta_file.read()
+        if isinstance(contents, bytes):
+            contents = contents.decode('utf-8')
+        records = list(SeqIO.parse(StringIO(contents), 'fasta'))
+    except (UnicodeDecodeError, ValueError, TypeError):
+        form.add_error('reference_fasta', _('Upload a valid UTF-8 FASTA file.'))
+        return
+    finally:
+        try:
+            fasta_file.seek(0)
+        except (AttributeError, OSError):
+            pass
+    if not records:
+        form.add_error('reference_fasta', _('The FASTA file contains no records.'))
+        return
+    identifiers = set()
+    for record in records:
+        sequence = str(record.seq).upper()
+        if not record.id or record.id in identifiers:
+            form.add_error(
+                'reference_fasta',
+                _('FASTA record identifiers must be unique.'),
+            )
+        identifiers.add(record.id)
+        if not sequence or not all(char in 'ACGTN' for char in sequence):
+            form.add_error(
+                'reference_fasta',
+                _('FASTA sequences may contain only A, C, G, T, or N.'),
+            )
+
+
+def _clean_validator_sequence(value, label, form, required=True):
+    sequence = ''.join((value or '').split()).upper()
+    if not sequence and not required:
+        return ''
+    if sequence and not all(char in 'ACGTN' for char in sequence):
+        form.add_error(
+            None,
+            _('{0} may contain only A, C, G, T, or N.').format(label),
+        )
+    return sequence
+
+
+def canonicalize_primer_base_name(value):
+    name = str(value or '').strip()
+    name = name.replace(' ', '_').replace('-', '_')
+    name = re.sub(r'[^A-Za-z0-9_]', '_', name)
+    return re.sub(r'_+', '_', name).strip('_')
+
+
+class ValidatorTargetFormSet(forms.BaseFormSet):
+    """Ensure target names are unique and sample-level rules are applicable."""
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        seen_targets = set()
+        sample_targets = {}
+        for form in self.forms:
+            row = getattr(form, 'cleaned_data', None)
+            if not row or row.get('DELETE'):
+                continue
+            target = row.get('target_name', '').lower()
+            sample = row.get('sample_name', '').lower()
+            if target in seen_targets:
+                form.add_error('target_name', _('Target names must be unique.'))
+            seen_targets.add(target)
+            sample_targets.setdefault(sample, set()).add(target)
+        classification_rule = getattr(self, 'classification_rule', '')
+        if classification_rule == 'salmonella' and any(
+            not {'inva', 'stn'}.intersection(targets)
+            for targets in sample_targets.values()
+        ):
+            raise forms.ValidationError(
+                _('Each Salmonella sample requires an invA or stn target.')
+            )
+        if getattr(self, 'logic', '') in ('AND', 'OR'):
+            if any(len(targets) < 2 for targets in sample_targets.values()):
+                raise forms.ValidationError(
+                    _('The selected logic requires at least two targets per '
+                      'sample.')
+                )
+
+
+ValidatorTargetFormSetFactory = forms.formset_factory(
+    ValidatorTargetForm,
+    formset=ValidatorTargetFormSet,
+    extra=0,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)

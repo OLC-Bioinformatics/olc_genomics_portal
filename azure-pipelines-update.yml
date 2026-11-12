@@ -57,6 +57,10 @@ stages:
           git fetch origin
           git reset --hard origin/main
 
+          # Nginx serves these public assets as www-data; restore access after checkout.
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
+
           docker compose down
           docker compose up -d --build
         EOF

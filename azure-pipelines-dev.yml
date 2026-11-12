@@ -740,6 +740,17 @@ stages:
             "EMAIL_HOST_USER",
             "EMAIL_HOST_PASSWORD",
         )
+        optional_entra_names = (
+            "ENTRA_API_AUDIENCE",
+            "ENTRA_API_SCOPE",
+            "ENTRA_ISSUER",
+            "ENTRA_JWKS_URI",
+            "ENTRA_DESKTOP_CLIENT_ID",
+            "ENTRA_DESKTOP_ALLOWED_OBJECT_IDS",
+            "ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS",
+            "ENTRA_DESKTOP_AUTO_CREATE_USERS",
+            "FOODPORT_DESKTOP_TOKEN_TTL_SECONDS",
+        )
 
         if os.environ.get("FOODPORT_SECRET_VARIABLES_READY", "").lower() != "true":
             raise SystemExit(
@@ -781,6 +792,10 @@ stages:
         for name in secret_names:
             if "\n" in os.environ[name] or "\r" in os.environ[name]:
                 raise SystemExit(f"{name} must be a single-line value.")
+        for name in optional_entra_names:
+            value = os.environ.get(name, "")
+            if "\n" in value or "\r" in value:
+                raise SystemExit(f"{name} must be a single-line value.")
 
         output_dir = Path(sys.argv[1])
         target_host = sys.argv[2]
@@ -799,6 +814,12 @@ stages:
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
         dotenv_lines.extend(f"{name}={os.environ[name]}" for name in dotenv_names)
+        dotenv_lines.extend(
+            f"{name}={os.environ[name]}"
+            for name in optional_entra_names
+            if os.environ.get(name)
+            and os.environ[name] != f"$({name})"
+        )
         dotenv_lines.extend(("FLOWER_USER=", "FLOWER_PASSWORD="))
         (output_dir / ".env").write_text(
             "\n".join(dotenv_lines) + "\n", encoding="utf-8"
@@ -845,6 +866,10 @@ stages:
           else
             echo "WARNING: no .git directory present; skipping branch checkout"
           fi
+
+          # Nginx serves these public assets as www-data; restore access after checkout.
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
+          find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
           MAMBA_BIN="$HOME/miniconda/bin/mamba"
@@ -929,6 +954,15 @@ stages:
         ENTRA_ID_CLIENT_ID: $(ENTRA_ID_CLIENT_ID)
         ENTRA_ID_CLIENT_SECRET: $(ENTRA_ID_CLIENT_SECRET)
         ENTRA_TENANT_ID: $(ENTRA_TENANT_ID)
+        ENTRA_API_AUDIENCE: $(ENTRA_API_AUDIENCE)
+        ENTRA_API_SCOPE: $(ENTRA_API_SCOPE)
+        ENTRA_ISSUER: $(ENTRA_ISSUER)
+        ENTRA_JWKS_URI: $(ENTRA_JWKS_URI)
+        ENTRA_DESKTOP_CLIENT_ID: $(ENTRA_DESKTOP_CLIENT_ID)
+        ENTRA_DESKTOP_ALLOWED_OBJECT_IDS: $(ENTRA_DESKTOP_ALLOWED_OBJECT_IDS)
+        ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS: $(ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS)
+        ENTRA_DESKTOP_AUTO_CREATE_USERS: $(ENTRA_DESKTOP_AUTO_CREATE_USERS)
+        FOODPORT_DESKTOP_TOKEN_TTL_SECONDS: $(FOODPORT_DESKTOP_TOKEN_TTL_SECONDS)
         REDMINE_DEFAULT_FROM: $(REDMINE_DEFAULT_FROM)
         EMAIL_HOST_USER: $(EMAIL_HOST_USER)
         EMAIL_HOST_PASSWORD: $(EMAIL_HOST_PASSWORD)

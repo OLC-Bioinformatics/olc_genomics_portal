@@ -67,7 +67,7 @@ class PairingStartView(views.APIView):
         return Response({
             'pairing_id': pairing.pairing_id,
             'approval_url': request.build_absolute_uri(reverse(
-                'api:desktop_pairing_approval',
+                'localized_api:desktop_pairing_approval',
                 kwargs={'pairing_id': pairing.pairing_id},
             )),
             'expires_in': expires_in,

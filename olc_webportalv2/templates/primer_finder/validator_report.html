@@ -5,12 +5,42 @@
 
 
 <h4>Report for {{ primer_validator_request.project_name }} </h4>
+{% if primer_validator_request.gene_exclusion_note %}
+<div class="alert alert-warning" role="alert">
+    {{ primer_validator_request.gene_exclusion_note }}
+</div>
+{% endif %}
 
 <br>
 
 <h6>Forward Primer: <span style="font-family: monospace">{{ forward }}</span></h6>
 <h6>Reverse Primer: <span style="font-family: monospace">{{ reverse }}</span></h6>
 
+{% if sample_results %}
+<h5>{% trans "Sample classifications" %}</h5>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>{% trans "Sample" %}</th>
+            <th>{% trans "Panel" %}</th>
+            <th>{% trans "Sequence" %}</th>
+            <th>{% trans "Detected targets" %}</th>
+            <th>{% trans "Classification" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for result in sample_results %}
+        <tr>
+            <td>{{ result.sample }}</td>
+            <td>{{ result.panel }}</td>
+            <td>{{ result.seqid }}</td>
+            <td>{{ result.found_targets|join:", " }}</td>
+            <td>{{ result.classification }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
 
 <table class="table-striped" style="width:100%">
     <thead>
@@ -220,4 +250,3 @@
 </style>
 
 {% endblock %}
-

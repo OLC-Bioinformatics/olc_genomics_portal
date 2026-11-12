@@ -1,8 +1,12 @@
+import json
 import re
+from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from django.test import Client, override_settings
 from django.contrib.auth.hashers import check_password
+from django.utils import timezone
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from olc_webportalv2.api.models import (
@@ -74,6 +78,38 @@ class DesktopPairingTests(APITestCase):
             format='json',
         )
         self.assertEqual(second_exchange.status_code, 401)
+
+
+class DesktopLogoutTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='logout-user')
+        self.url = '/en-ca/api/auth/entra/logout/'
+
+    def test_logout_revokes_desktop_token(self):
+        token = DesktopAccessToken.objects.create(
+            user=self.user,
+            key='desktop-token',
+            expires_at=timezone.now() + timedelta(minutes=15),
+        )
+
+        response = self.client.post(
+            self.url,
+            HTTP_AUTHORIZATION='Token {0}'.format(token.key),
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(DesktopAccessToken.objects.filter(pk=token.pk).exists())
+
+    def test_logout_revokes_legacy_drf_token(self):
+        token = Token.objects.create(user=self.user)
+
+        response = self.client.post(
+            self.url,
+            HTTP_AUTHORIZATION='Token {0}'.format(token.key),
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Token.objects.filter(pk=token.pk).exists())
 
 
 class EntraDesktopExchangeTests(APITestCase):
@@ -162,12 +198,28 @@ class NanoporeLatestResultTests(APITestCase):
 
     @patch('olc_webportalv2.api.views.get_storage_client')
     def test_latest_result_returns_short_lived_read_url(self, client_class):
+        manifest = NanoporeManifest.objects.create(
+            sequencing_run=self.run,
+            files=[],
+            sha256='manifest-sha',
+            generation=1,
+        )
+        NanoporeProcessingBatch.objects.create(
+            sequencing_run=self.run,
+            manifest=manifest,
+            generation=1,
+        )
         self.client.force_authenticate(user=self.user)
         blob_client = Mock()
         blob_client.object_exists.return_value = True
         blob_client.create_transfer_url.return_value = (
             'https://storage.example/results/latest.json?sas'
         )
+        blob_client.download_bytes.return_value = json.dumps({
+            'run_id': self.run.pk,
+            'run_name': self.run.run_name,
+            'generation': 1,
+        }).encode('utf-8')
         client_class.return_value = blob_client
 
         response = self.client.get(self.url)
@@ -207,6 +259,12 @@ class NanoporeLatestResultTests(APITestCase):
         blob_client = Mock()
         blob_client.object_exists.return_value = True
         blob_client.create_transfer_url.return_value = 'https://storage/iteration'
+        blob_client.download_bytes.return_value = json.dumps({
+            'run_id': self.run.pk,
+            'run_name': self.run.run_name,
+            'generation': 2,
+            'outputs': [],
+        }).encode('utf-8')
         client_class.return_value = blob_client
 
         response = self.client.get(
@@ -302,6 +360,18 @@ class NanoporeRunCreationTests(APITestCase):
             'Every sample requires an OLNID.'
         )
 
+    def test_create_rejects_malformed_run_name(self):
+        for run_name in ('20260914-gui-test', '260916-nanopore!'):
+            with self.subTest(run_name=run_name):
+                payload = dict(self.payload, run_name=run_name)
+
+                response = self.client.post(
+                    '/en-ca/api/nanopore/runs/', payload, format='json'
+                )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('run_name', response.data)
+
     def test_duplicate_name_returns_useful_conflict(self):
         first = self.client.post(
             '/en-ca/api/nanopore/runs/', self.payload, format='json'
@@ -311,11 +381,12 @@ class NanoporeRunCreationTests(APITestCase):
         )
 
         self.assertEqual(first.status_code, 201)
-        self.assertEqual(duplicate.status_code, 400)
+        self.assertEqual(duplicate.status_code, 409)
         self.assertEqual(
-            duplicate.data['run_name'][0],
+            duplicate.data['error'],
             'A run with this name already exists.'
         )
+        self.assertEqual(duplicate.data['field'], 'run_name')
         self.assertEqual(SequencingRun.objects.count(), 1)
         self.assertEqual(NanoporeRun.objects.count(), 1)
 
@@ -364,8 +435,8 @@ class NanoporeFinalizeTests(APITestCase):
             self.run.pk
         )
 
-    @patch('olc_webportalv2.api.views.submit_nanopore_batch.apply_async')
-    def test_finalize_is_idempotent(self, submit):
+    @patch('olc_webportalv2.api.views.collect_nanopore_iteration.apply_async')
+    def test_finalize_is_idempotent(self, collect):
         self.client.force_authenticate(user=self.user)
 
         with patch(
@@ -382,11 +453,11 @@ class NanoporeFinalizeTests(APITestCase):
         )
         self.assertEqual(NanoporeManifest.objects.filter(
             sequencing_run=self.run
-        ).count(), 1)
+        ).count(), 0)
         self.assertEqual(NanoporeProcessingBatch.objects.filter(
             sequencing_run=self.run
-        ).count(), 1)
-        self.assertEqual(submit.call_count, 1)
+        ).count(), 0)
+        self.assertEqual(collect.call_count, 1)
 
     def test_finalize_unknown_run_returns_not_found(self):
         self.client.force_authenticate(user=self.user)
@@ -408,10 +479,10 @@ class NanoporeStreamingTests(APITestCase):
         NanoporeRun.objects.create(sequencing_run=self.run)
         self.client.force_authenticate(user=self.user)
 
-    @patch('olc_webportalv2.api.views.submit_nanopore_batch.apply_async')
+    @patch('olc_webportalv2.api.views.collect_nanopore_iteration.apply_async')
     @patch('olc_webportalv2.api.views.get_storage_client')
     def test_complete_claims_file_and_starts_batch(
-        self, blob_service_class, submit
+        self, blob_service_class, collect
     ):
         nanopore_file = NanoporeFile.objects.create(
             sequencing_run=self.run,
@@ -438,12 +509,13 @@ class NanoporeStreamingTests(APITestCase):
         self.run.refresh_from_db()
         self.assertEqual(nanopore_file.status, 'uploaded')
         self.assertEqual(self.run.workflow_state, 'processing')
-        self.assertIsNotNone(nanopore_file.processing_batch_id)
-        self.assertEqual(NanoporeManifest.objects.count(), 1)
-        self.assertEqual(NanoporeProcessingBatch.objects.count(), 1)
-        self.assertEqual(submit.call_count, 1)
+        self.assertIsNone(nanopore_file.processing_batch_id)
+        self.assertEqual(NanoporeManifest.objects.count(), 0)
+        self.assertEqual(NanoporeProcessingBatch.objects.count(), 0)
+        self.assertEqual(collect.call_count, 1)
 
-    def test_finalize_stops_intake_after_streaming_batch_exists(self):
+    @patch('olc_webportalv2.api.views.collect_nanopore_iteration.apply_async')
+    def test_finalize_stops_intake_after_streaming_batch_exists(self, collect):
         manifest = NanoporeManifest.objects.create(
             sequencing_run=self.run,
             files=[],
@@ -467,9 +539,13 @@ class NanoporeStreamingTests(APITestCase):
             status='uploaded',
         )
 
-        response = self.client.post(
-            '/en-ca/api/nanopore/runs/{0}/finalize/'.format(self.run.pk)
-        )
+        with patch(
+            'olc_webportalv2.api.views.transaction.on_commit',
+            side_effect=lambda callback: callback(),
+        ):
+            response = self.client.post(
+                '/en-ca/api/nanopore/runs/{0}/finalize/'.format(self.run.pk)
+            )
 
         self.assertEqual(response.status_code, 200)
         self.run.refresh_from_db()
@@ -477,12 +553,13 @@ class NanoporeStreamingTests(APITestCase):
         self.assertEqual(self.run.workflow_state, 'stopping')
         self.assertEqual(self.run.nanopore_run.status, 'stopping')
         self.assertIsNotNone(self.run.nanopore_run.termination_requested_at)
-        self.assertEqual(NanoporeProcessingBatch.objects.count(), 2)
+        self.assertEqual(NanoporeProcessingBatch.objects.count(), 1)
+        self.assertEqual(collect.call_count, 1)
 
-    @patch('olc_webportalv2.api.views.submit_nanopore_batch.apply_async')
+    @patch('olc_webportalv2.api.views.collect_nanopore_iteration.apply_async')
     @patch('olc_webportalv2.api.views.get_storage_client')
     def test_each_completed_file_is_claimed_once_in_a_generation(
-        self, blob_service_class, submit
+        self, blob_service_class, collect
     ):
         blob_service_class.return_value.get_object.return_value = Mock(size=10)
         first = NanoporeFile.objects.create(
@@ -518,13 +595,20 @@ class NanoporeStreamingTests(APITestCase):
 
         first.refresh_from_db()
         second.refresh_from_db()
-        self.assertNotEqual(first.processing_batch_id, second.processing_batch_id)
+        self.assertEqual(first.status, 'uploaded')
+        self.assertEqual(second.status, 'uploaded')
+        self.assertIsNone(first.processing_batch_id)
+        self.assertIsNone(second.processing_batch_id)
         self.assertEqual(
             NanoporeProcessingBatch.objects.filter(
                 sequencing_run=self.run
-            ).count(), 2
+            ).count(), 0
         )
-        self.assertEqual(submit.call_count, 2)
+        self.assertEqual(collect.call_count, 2)
+        self.assertEqual(
+            [call[1]['args'] for call in collect.call_args_list],
+            [(self.run.pk,), (self.run.pk,)],
+        )
 
     @patch('olc_webportalv2.api.views.get_storage_client')
     def test_processing_payload_reports_waiting_message_and_published_reports_only(
@@ -574,6 +658,14 @@ class NanoporeStreamingTests(APITestCase):
             status='complete',
             report_url='runs/260825-streaming/iterations/iteration-000001/'
             'manifests/iteration-000001.json',
+        )
+        blob_service_class.return_value.download_bytes.return_value = (
+            json.dumps({
+                'run_id': self.run.pk,
+                'run_name': self.run.run_name,
+                'generation': 1,
+                'published': True,
+            }).encode()
         )
 
         response = self.client.get(

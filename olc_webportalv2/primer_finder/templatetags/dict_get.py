@@ -19,3 +19,16 @@ def dict_get(
     Template to safely get a value from a dictionary
     """
     return dictionary.get(key, {})
+
+
+@register.filter
+def dict_get_first(
+    dictionary: dict,
+    keys: str
+) -> list:
+    """Return the first non-empty value among comma-separated dictionary keys."""
+    for key in keys.split(','):
+        value = dictionary.get(key.strip())
+        if value:
+            return value
+    return []

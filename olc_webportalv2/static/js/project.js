@@ -18,6 +18,35 @@ Issues with the above approach:
 3. Really Unforgiving: No way to override this behavior
 4. Undocumented: No mention in the documentation, or it's too hard for me to find
 */
-$('.form-group').removeClass('row');
+document.querySelectorAll('.form-group').forEach((formGroup) => {
+    formGroup.classList.remove('row');
+});
 
-jQuery.noConflict();
+if (window.jQuery) {
+    window.jQuery.noConflict();
+}
+
+document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+        return;
+    }
+
+    const toggle = target.closest('[data-primer-detail-toggle]');
+    if (!toggle) {
+        return;
+    }
+
+    const shouldShow = toggle.getAttribute('aria-expanded') !== 'true';
+    document.querySelectorAll('[data-primer-detail-row]').forEach((row) => {
+        if (
+            row.dataset.primer === toggle.dataset.primer &&
+            row.dataset.panel === toggle.dataset.panel
+        ) {
+            row.hidden = !shouldShow;
+        }
+    });
+
+    toggle.setAttribute('aria-expanded', String(shouldShow));
+    toggle.value = `${shouldShow ? 'Hide' : 'Show'} ${toggle.dataset.panel} details`;
+});

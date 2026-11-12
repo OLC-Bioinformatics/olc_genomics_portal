@@ -64,7 +64,8 @@ urlpatterns += [
     path("api-auth/", include("rest_framework.urls")),
 ]
 
-# API URLs are not included in the i18n_patterns, as they should not be translated.
+# Keep the unprefixed API routes for existing clients and expose a localized
+# alias for clients using the portal's locale-prefixed base URL.
 urlpatterns += [
     path("api/", include(("olc_webportalv2.api.urls", "api"), namespace="api")),
 ]
@@ -72,6 +73,10 @@ urlpatterns += [
 
 # Allows for URL translation.
 urlpatterns += i18n_patterns(
+    path(
+        "api/",
+        include(("olc_webportalv2.api.urls", "api"), namespace="localized_api"),
+    ),
     path(
         _("accounts/"),
         include("allauth.urls"),

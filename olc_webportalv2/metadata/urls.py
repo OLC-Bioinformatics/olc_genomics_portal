@@ -49,6 +49,16 @@ urlpatterns = [
         name="genus_autocompleter",
     ),
     path(
+        _("genus_query_autocompleter/"),
+        views.GenusQueryAutoCompleter.as_view(),
+        name="genus_query_autocompleter",
+    ),
+    path(
+        _("seqid_autocompleter/"),
+        views.SeqIDAutoCompleter.as_view(),
+        name="seqid_autocompleter",
+    ),
+    path(
         _("species_autocompleter/"),
         views.SpeciesAutoCompleter.as_view(),
         name="species_autocompleter",

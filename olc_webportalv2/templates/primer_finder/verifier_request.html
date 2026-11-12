@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#Head container#}
-{% load staticfiles %}
+{% load static %}
 {% load crispy_forms_tags %}
 {% load i18n widget_tweaks %}
 {% block content %}
@@ -44,6 +44,9 @@
             </div>
         </div>
     </div>
+    {{ form.inclusivity_genus|as_crispy_field }}
+    {{ form.inclusivity_seqids|as_crispy_field }}
+    {{ form.inclusivity_benchmark|as_crispy_field }}
 
     <!--Exclusivity panel-->
     <label>
@@ -62,6 +65,9 @@
             </div>
         </div>
     </div>
+    {{ form.exclusivity_genus|as_crispy_field }}
+    {{ form.exclusivity_seqids|as_crispy_field }}
+    {{ form.exclusivity_benchmark|as_crispy_field }}
 
     <div class="container">
         <div class="row">

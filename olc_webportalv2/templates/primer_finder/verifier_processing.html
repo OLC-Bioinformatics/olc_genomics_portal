@@ -41,19 +41,17 @@
       </form>
 
       <script>
-          const checkbox = document.getElementById('cbx').checked;
+          const checkboxElement = document.getElementById('cbx');
           const form = document.getElementById('addEmail');
-          if (checkbox != true){
-          form.style.visibility ="hidden";}
-        else {
-            form.style.visibility ="visible";}
+          if (checkboxElement && form) {
+            form.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+          }
         function cbxCheck(){
-            const checkbox = document.getElementById('cbx').checked;
+            const checkboxElement = document.getElementById('cbx');
             const form = document.getElementById('addEmail');
-            if (checkbox == true){
-            form.style.visibility ="visible";}
-          else{
-            form.style.visibility ="hidden";} 
+            if (checkboxElement && form) {
+              form.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+            }
             }
       </script>
       
@@ -93,7 +91,7 @@
         <br>
         <br>
     <div class="alert alert-primary" role="alert" align="center">
-        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "PrimerValidator report link:"%}</b> {{ primer_verifier_request.report_download_link }}</p>
+        <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "PrimerVerifier report link:"%}</b> {{ primer_verifier_request.report_download_link }}</p>
         <p style="word-wrap:break-word;"><i class="fas fa-share-alt"></i><b> {%trans "Summary report link:"%}</b> {{ primer_verifier_request.summary_download_link }}</p>
 
     </div>

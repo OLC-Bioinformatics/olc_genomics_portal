@@ -69,7 +69,7 @@ urlpatterns = [
     ),
     path(
         _("primer_verifier_report/<int:verifier_pk>/"),
-        views.primer_verifier_report,
+        views.primer_verifier_results,
         name="primer_verifier_report",
     ),
 ]

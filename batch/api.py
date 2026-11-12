@@ -442,4 +442,15 @@ def _validate_payload(data):
             raise TypeError(f"{field} must be a non-empty string")
     if "no_tidy" in data and not isinstance(data["no_tidy"], bool):
         raise TypeError("no_tidy must be a boolean")
+    environment_variables = data.get("environment_variables")
+    if environment_variables is not None and (
+        not isinstance(environment_variables, dict)
+        or any(
+            not isinstance(name, str)
+            or not name
+            or not isinstance(value, str)
+            for name, value in environment_variables.items()
+        )
+    ):
+        raise TypeError("environment_variables must map strings to strings")
     return normalized

@@ -36,6 +36,7 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorPrimers,
     ValidatorPrimerSet,
     ValidatorRequest,
+    ValidatorTarget,
     ValidatorSEQID
 )
 from olc_webportalv2.common.methods import send_email
@@ -108,9 +109,11 @@ def upload_probe(request: ValidatorRequest):
     container_name = request.container_namer()
 
     # Add a header to the probe sequence
-    probe_sequence = '>probe\r\n{sequence}'.format(
-        sequence=request.probe_sequence
-    )
+    probe_records = _validator_probe_records(request)
+    probe_sequence = '\r\n'.join(
+        '>{0}\r\n{1}'.format(name, sequence)
+        for name, sequence in probe_records
+    ) + '\r\n'
 
     # Write the bytes-encoded primer sequences to blob storage
     blob_client.ensure_container(container_name)
@@ -119,6 +122,21 @@ def upload_probe(request: ValidatorRequest):
         file_name,
         probe_sequence.encode('utf-8'),
     )
+
+
+def _validator_probe_records(request):
+    """Return all configured target probes, or the legacy single probe."""
+    if isinstance(request, ValidatorRequest):
+        target_probes = [
+            (target.name, target.probe_sequence.strip())
+            for target in ValidatorTarget.objects.filter(
+                sample__validator_request=request
+            ).exclude(probe_sequence='')
+        ]
+        if target_probes:
+            return target_probes
+    sequence = (getattr(request, 'probe_sequence', '') or '').strip()
+    return [('probe', sequence)] if sequence else []
 
 
 def populate_primer_sets(
@@ -953,6 +971,14 @@ def create_details(
 
     # Load the report data from request.report
     report = json.loads(request.report)
+    probe_configuration = {}
+    if isinstance(request, ValidatorRequest):
+        for configured_target in ValidatorTarget.objects.filter(
+            sample__validator_request=request
+        ):
+            probe_configuration[
+                configured_target.name.strip().lower()
+            ] = configured_target
 
     # Create a dictionary to store seq_dict for each genus
     seq_dict_by_genus = {}
@@ -1046,28 +1072,68 @@ def create_details(
                     totals=totals
                 )
 
-                if hit:
-                    # Increment the panel positive count
-                    panel_positive += 1
-                    total_dict.update(totals)
+                configured_target = probe_configuration.get(
+                    primer_name.strip().lower()
+                )
+                probe_accepted = not (
+                    configured_target and configured_target.probe_sequence
+                )
 
-                # Probe prevalence
+                # Probe prevalence and target-specific detection threshold.
                 probe_data = sequence_data.get('probe')
                 if probe_data and isinstance(probe_data, dict):
                     probe_total += 1
-                    # Look for probe hits
-                    probe_hit = False
-                    if 'probe' in probe_data and isinstance(
-                        probe_data['probe'], dict
-                    ):
-                        probe_info = probe_data['probe']
-                        if float(probe_info.get('percent_id', 0)) >= 90.0:
-                            probe_hit = True
-                    elif 'percent_id' in probe_data:
-                        if float(probe_data.get('percent_id', 0)) >= 90.0:
-                            probe_hit = True
+                    probe_info = probe_data.get('probe', probe_data)
+                    if not isinstance(probe_info, dict):
+                        probe_info = {}
+                    method = getattr(
+                        configured_target,
+                        'probe_evaluation_method',
+                        'percent_identity',
+                    )
+                    percent_threshold = float(getattr(
+                        configured_target,
+                        'probe_percent_identity',
+                        80.0 if configured_target else 90.0,
+                    ))
+                    difference_threshold = int(getattr(
+                        configured_target, 'probe_max_differences', 2
+                    ))
+                    try:
+                        observed_identity = float(
+                            probe_info.get(
+                                'percent_id',
+                                probe_info.get('percent_identity'),
+                            )
+                        )
+                    except (TypeError, ValueError):
+                        observed_identity = None
+                    try:
+                        differences = int(float(
+                            probe_info.get('mismatches',
+                                           probe_info.get('mismatch', 0))
+                        )) + int(float(
+                            probe_info.get('gaps', probe_info.get('gap', 0))
+                        ))
+                    except (TypeError, ValueError):
+                        differences = None
+                    if method == 'max_differences':
+                        probe_hit = (
+                            differences is not None
+                            and differences <= difference_threshold
+                        )
+                    else:
+                        probe_hit = (
+                            observed_identity is not None
+                            and observed_identity >= percent_threshold
+                        )
                     if probe_hit:
                         probe_positive += 1
+                        probe_accepted = True
+
+                if hit and probe_accepted:
+                    panel_positive += 1
+                    total_dict.update(totals)
 
             # Calculate panel percentages *after* the loop
             panel_percentages = calculate_panel_percentage_from_counts(
@@ -1113,6 +1179,107 @@ def create_details(
     )
 
     return request
+
+
+def validator_sample_results(request):
+    """Evaluate target logic and classification for each reported sequence."""
+    if not isinstance(request, ValidatorRequest) or not request.report:
+        return []
+    try:
+        report = json.loads(request.report)
+    except (TypeError, ValueError):
+        return []
+
+    results = []
+    samples = request.samples.prefetch_related('targets')
+    panels = request.panel_details.all()
+    for sample in samples:
+        targets = list(sample.targets.all())
+        target_names = {
+            target.name.strip().lower(): target for target in targets
+        }
+        required_targets = set(target_names)
+        if sample.classification_rule == 'salmonella':
+            required_targets.intersection_update(('inva', 'stn'))
+        for panel in panels:
+            panel_name = panel.panel
+            seqids = set()
+            for target in targets:
+                primer_report = report.get(target.name, {})
+                panel_report = primer_report.get(panel_name, {})
+                seqids.update(
+                    key for key in panel_report
+                    if key not in ('percent', 'positive', 'total')
+                )
+            for seqid in sorted(seqids):
+                found_targets = set()
+                for target_name, target in target_names.items():
+                    sequence_data = (
+                        report.get(target.name, {})
+                        .get(panel_name, {})
+                        .get(seqid, {})
+                    )
+                    if not isinstance(sequence_data, dict) or not (
+                        sequence_data.get('amplicon_length')
+                    ):
+                        continue
+                    if target.probe_sequence:
+                        probe = sequence_data.get('probe')
+                        if not isinstance(probe, dict):
+                            continue
+                        probe = probe.get('probe', probe)
+                        if not isinstance(probe, dict):
+                            continue
+                        try:
+                            if target.probe_evaluation_method == 'max_differences':
+                                differences = (
+                                    int(float(probe.get(
+                                        'mismatches', probe.get('mismatch', 0)
+                                    ))) +
+                                    int(float(probe.get(
+                                        'gaps', probe.get('gap', 0)
+                                    )))
+                                )
+                                if differences > target.probe_max_differences:
+                                    continue
+                            else:
+                                identity = float(probe.get(
+                                    'percent_id',
+                                    probe.get('percent_identity'),
+                                ))
+                                if identity < target.probe_percent_identity:
+                                    continue
+                        except (TypeError, ValueError):
+                            continue
+                    found_targets.add(target_name)
+
+                if sample.classification_rule == 'salmonella':
+                    classification = (
+                        'Salmonella'
+                        if found_targets.intersection(('inva', 'stn'))
+                        else 'Not Salmonella'
+                    )
+                elif sample.logic == 'AND':
+                    classification = (
+                        'Detected'
+                        if found_targets == required_targets
+                        else 'Not detected'
+                    )
+                elif sample.logic == 'OR':
+                    classification = (
+                        'Detected' if found_targets else 'Not detected'
+                    )
+                else:
+                    classification = ''
+
+                results.append({
+                    'sample': sample.name,
+                    'panel': panel_name,
+                    'seqid': seqid,
+                    'found_targets': sorted(found_targets),
+                    'classification': classification,
+                })
+    return results
 
 
 def find_shared_seqids(

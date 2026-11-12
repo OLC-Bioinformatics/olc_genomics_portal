@@ -8,8 +8,8 @@ Common methods shared between multiple apps
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from time import sleep
-from dataclasses import dataclass
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Optional
 import json
 import logging
@@ -27,30 +27,28 @@ from olc_webportalv2.common.batch_client import BatchServiceClient
 from olc_webportalv2.common.storage_client import StorageClient, get_storage_client
 
 
-_URL_PATTERN = re.compile(r"""https?://[^\s"'<>]+""")
-
-
 def _redact_sas_urls(value):
     """Redact URL query strings while preserving nested data structures."""
+    if isinstance(value, str):
+        def redact(match):
+            parts = urlsplit(match.group(0))
+            if not parts.query:
+                return match.group(0)
+            return urlunsplit((
+                parts.scheme,
+                parts.netloc,
+                parts.path,
+                "[REDACTED]",
+                parts.fragment,
+            ))
+
+        return re.sub(r"https?://[^\s\"'<>]+", redact, value)
     if isinstance(value, dict):
-        return {
-            key: _redact_sas_urls(item)
-            for key, item in value.items()
-        }
+        return {key: _redact_sas_urls(item) for key, item in value.items()}
     if isinstance(value, list):
         return [_redact_sas_urls(item) for item in value]
     if isinstance(value, tuple):
         return tuple(_redact_sas_urls(item) for item in value)
-    if isinstance(value, str):
-        def redact_url(match):
-            parts = urlsplit(match.group(0))
-            if not parts.query:
-                return match.group(0)
-            return urlunsplit(
-                (parts.scheme, parts.netloc, parts.path, "[REDACTED]", "")
-            )
-
-        return _URL_PATTERN.sub(redact_url, value)
     return value
 
 
@@ -62,7 +60,11 @@ def generic_api_submit(
     input_file_pattern: Optional[list] = None,
     unique_id: Optional[str] = None,
     download_file_pattern: Optional[list] = None,
+    output_file_pattern: Optional[list] = None,
+    output_container: Optional[str] = None,
+    output_prefix: Optional[str] = None,
     log_prefix: Optional[str] = None,
+    environment_variables: Optional[dict] = None,
 ) -> dict:
     """
     Submits a job to the Batch API.
@@ -95,11 +97,14 @@ def generic_api_submit(
         "vm_size": vm_size,
         "input_file_pattern": input_file_pattern,
         "download_file_pattern": download_file_pattern,
+        "output_file_pattern": output_file_pattern,
+        "output_container": output_container,
+        "output_prefix": output_prefix,
+        "log_prefix": log_prefix,
+        "environment_variables": environment_variables or {},
         "analysis_type": analysis_type,
-        'unique_id': unique_id
+        "unique_id": unique_id,
     }
-    if log_prefix is not None:
-        data["log_prefix"] = log_prefix
 
     # Log the dictionary
     logging_data = _redact_sas_urls(value=deepcopy(data))

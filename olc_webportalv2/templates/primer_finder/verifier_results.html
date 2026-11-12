@@ -39,11 +39,13 @@
             {% if panel == 'inclusivity' %}
             <input type="button" class="btn btn-outline-success btn-sm" style="float: right" id="{{ clean_primer }}{{ panel }}Button"
                    value="Show {{ panel }} details"
-               onclick="{{ clean_primer }}{{ panel }}hideList()"/>
+                   data-primer-detail-toggle="true" data-primer="{{ primer }}"
+                   data-panel="{{ panel }}" aria-expanded="false"/>
             {% else %}
             <input type="button" class="btn btn-outline-danger btn-sm" style="float: right" id="{{ clean_primer }}{{ panel }}Button"
                    value="Show {{ panel }} details"
-               onclick="{{ clean_primer }}{{ panel }}hideList()"/>
+                   data-primer-detail-toggle="true" data-primer="{{ primer }}"
+                   data-panel="{{ panel }}" aria-expanded="false"/>
             {% endif %}
         </td>
         <td>
@@ -160,40 +162,9 @@
 
     {% if genus|lower == sorted_genus|lower %}
 
-    <!-- style="display: none"-->
-    <tr id="{{ clean_primer }}{{ panel }}{{ genus }}Row" style="display: none">
-
-        <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-        <script type="text/javascript">
-
-            function {{ clean_primer }}{{ panel }}hideList() {
-                const genera_string = "{{genera}}"
-                let genera = [];
-                for (let s = 0; s < genera_string.split(',').length; s++) {
-                    // Strip off illegal characters, and trim to get rid of whitespace
-                    genera.push(genera_string.split(',')[s].replace(/[\[\]|&;$%@"<>()+,'#39\n]/g, "").trim())
-                }
-
-                const generaLength = genera.length;
-                for (let i = 0; i < generaLength; i++) {
-
-                    try {
-                        let x = document.getElementById("{{ clean_primer }}{{ panel }}" + genera[i] + "Row");
-                        if (x.style.display === "none") {
-                            $("#{{ clean_primer }}{{ panel }}" + genera[i] + "Row").show();
-                        } else {
-                            x.style.display = "none";
-                        }
-                    } catch (e) {}
-                }
-
-                if (document.getElementById("{{ clean_primer }}{{ panel }}Button").value === 'Show {{panel}} details') {
-                    document.getElementById("{{ clean_primer }}{{ panel }}Button").value = "Hide {{panel}} details";
-                } else {
-                    document.getElementById("{{ clean_primer }}{{ panel }}Button").value = 'Show {{panel}} details'
-                }
-            }
-        </script>
+    <tr id="{{ clean_primer }}{{ panel }}{{ genus }}Row"
+        data-primer-detail-row="true" data-primer="{{ primer }}"
+        data-panel="{{ panel }}" hidden>
 
         <td></td>
         <td>

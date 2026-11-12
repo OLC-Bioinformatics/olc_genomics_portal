@@ -10,6 +10,10 @@ import os
 import posixpath
 import shlex
 import shutil
+import csv
+import json
+from io import StringIO
+import logging
 from typing import (
     Any,
     Tuple
@@ -19,6 +23,7 @@ from typing import (
 from django.conf import settings
 
 # Third-party imports
+from Bio import SeqIO
 from celery import shared_task
 
 # Portal-specific imports
@@ -26,8 +31,14 @@ from olc_webportalv2.common.methods import (
     create_batch_client,
     generic_api_submit
 )
+from olc_webportalv2.common.benchmarks import (
+    benchmark_archive_info,
+    select_benchmark_blob,
+    validate_benchmark_panel,
+)
 from olc_webportalv2.primer_finder.methods import (
     _archive_reports_and_upload,
+    _validator_probe_records,
     create_details,
     populate_report,
     send_email,
@@ -35,19 +46,30 @@ from olc_webportalv2.primer_finder.methods import (
     upload_probe,
     _upload_summary_excel
 )
+from olc_webportalv2.primer_finder.validator_gene_reports import (
+    categorize_gene_hit_details,
+    categorize_gene_hits,
+    filter_report_by_gene_categories,
+    gene_exclusion_note,
+)
 
 from olc_webportalv2.primer_finder.models import (
     PrimerValidatorAzureRequest,
     PrimerVerifierRequest,
     ValidatorPanel,
+    ValidatorAnalysisTask,
     ValidatorPrimerSet,
     ValidatorRequest,
+    ValidatorTarget,
     VerifierAzureRequest,
     VerifierPanel,
     VerifierPrimerSet
 )
 from olc_webportalv2.common.storage_client import get_storage_client
+from olc_webportalv2.common.batch_client import BatchServiceError
+from olc_webportalv2.common.batch_recovery import batch_pool_id_from_job_id
 
+logger = logging.getLogger(__name__)
 
 @shared_task
 def run_primer_verifier(
@@ -63,7 +85,6 @@ def run_primer_verifier(
     """
     try:
         _process_primer_request(
-            panel_model=VerifierPanel,
             request_model=PrimerVerifierRequest,
             request_pk=verifier_request_pk
         )
@@ -75,12 +96,11 @@ def run_primer_verifier(
         )
 
 
-def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk: int):
+def _process_primer_request(*, request_model: Any, request_pk: int):
     """
     Process a primer validator or verifier request.
 
     Args:
-        panel_model (Any): The model class for the panel.
         request_model (Any): The request model to process.
         request_pk (int): The primary key of the request object.
     """
@@ -103,8 +123,7 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
     inclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=True,
-        panel_model=panel_model,
-        request_pk=request_pk,
+        request=primer_request,
     )
     input_blob_names.extend(inclusivity_blob_names)
 
@@ -112,8 +131,7 @@ def _process_primer_request(*, panel_model: Any, request_model: Any, request_pk:
     exclusivity_blob_names = _handle_panel_files(
         container_name=container_name,
         inclusivity=False,
-        panel_model=panel_model,
-        request_pk=request_pk,
+        request=primer_request,
     )
     input_blob_names.extend(exclusivity_blob_names)
 
@@ -332,7 +350,7 @@ def _create_primer_cmd(
 
     # Add the probe sequence. getattr() prevents AttributeError for request
     # types that do not define probe_sequence.
-    if getattr(request, "probe_sequence", None):
+    if _validator_probe_records(request):
         primer_command += " -p {probe}".format(
             probe=shlex.quote(posixpath.join(run_directory, "probe.fasta"))
         )
@@ -421,20 +439,17 @@ def _handle_panel_files(
     *,  # Force the use of keyword arguments
     container_name: str,
     inclusivity: bool,
-    panel_model: Any,
-    request_pk: int
+    request: Any,
 ) -> list:
     """
-    Handle inclusivity or exclusivity panel files. If the panel is specified,
-    copy the benchmark files to the appropriate folder. If the panel is not
-    specified, create an empty folder.
+    Copy selected benchmark archives and individual FASTA files into a panel.
+    An empty panel gets a placeholder object so the Batch task can mount it.
 
     Args:
         container_name (str): Name of the container.
         inclusivity (bool): True if handling inclusivity panel, False for
             exclusivity.
-        panel_model (Any): The model class for the panel.
-        request_pk (int): Primary key of the request.
+        request (Any): The PrimerVerifier or PrimerValidator request.
 
     Returns:
         list: Blob names of the benchmark ZIP files required by the Batch
@@ -443,30 +458,72 @@ def _handle_panel_files(
     # Determine the panel type
     panel_type = "inclusivity" if inclusivity else "exclusivity"
 
-    # Choose the correct FK field name depending on panel_model
-    if panel_model == VerifierPanel:
-        fk_name = "verifier_request_id"
-    else:
-        fk_name = "validator_request_id"
-
-    # Run queries to retrieve all objects corresponding to the appropriate
-    # panel
-    panel_filter = panel_model.objects.filter(
-        **{fk_name: request_pk, "panel": panel_type}
-    )
-
     benchmark_blob_names = []
+    selected_benchmarks = []
+    for selected_benchmark in (
+        getattr(request, panel_type + '_panel', []) or []
+    ):
+        benchmark_name = validate_benchmark_panel(
+            benchmark_name=selected_benchmark,
+            panel=panel_type,
+        )
+        if benchmark_name not in selected_benchmarks:
+            selected_benchmarks.append(benchmark_name)
 
-    # Copy the benchmark files if the panel is specified
-    if panel_filter.exists():
-        for panel in panel_filter:
-            benchmark_blob_name = copy_benchmark_files(
-                container_name=container_name,
-                genus=panel.genus.lower(),
-                panel=panel_type,
+    scalar_benchmark = getattr(request, panel_type + '_benchmark', '')
+    if scalar_benchmark:
+        benchmark_name = validate_benchmark_panel(
+            benchmark_name=scalar_benchmark,
+            panel=panel_type,
+        )
+        if benchmark_name not in selected_benchmarks:
+            selected_benchmarks.append(benchmark_name)
+
+    for benchmark_name in selected_benchmarks:
+        benchmark_blob_name = copy_benchmark_files(
+            container_name=container_name,
+            genus=benchmark_name,
+            panel=panel_type,
+        )
+        benchmark_blob_names.append(benchmark_blob_name)
+        archive_info = benchmark_archive_info(
+            blob_name=posixpath.basename(benchmark_blob_name),
+            benchmark_name=benchmark_name,
+        )
+        if archive_info and archive_info['version']:
+            versions = dict(getattr(request, 'benchmark_versions', {}) or {})
+            versions[archive_info['benchmark_name']] = archive_info['version']
+            request.benchmark_versions = versions
+            request.save(update_fields=['benchmark_versions'])
+
+    from olc_webportalv2.metadata.models import SequenceData
+
+    query_genus = getattr(request, panel_type + '_genus', '')
+    selected_seqids = set(
+        getattr(request, panel_type + '_seqids', []) or []
+    )
+    if query_genus:
+        selected_seqids.update(
+            SequenceData.objects.filter(
+                genus__iexact=query_genus
+            ).values_list('seqid', flat=True)
+        )
+        if not selected_seqids:
+            raise ValueError(
+                'No sequences were found for selected genus: {0}'.format(
+                    query_genus
+                )
             )
-            benchmark_blob_names.append(benchmark_blob_name)
-    else:
+    if selected_seqids:
+        benchmark_blob_names.extend(
+            _copy_sequence_files(
+                container_name=container_name,
+                panel=panel_type,
+                seqids=sorted(selected_seqids),
+            )
+        )
+
+    if not benchmark_blob_names:
         create_empty_folder(container_name=container_name, panel=panel_type)
 
     return benchmark_blob_names
@@ -507,15 +564,14 @@ def copy_benchmark_files(
     """
     Copy the benchmark files to the appropriate folder.
 
-    If the destination blob already exists and has the same size as the
-    benchmark source blob, the existing destination is reused. If an
-    asynchronous copy is already pending, this function waits for it to
-    complete. A failed, aborted, or mismatched destination is replaced.
+    Select the highest available numeric archive version, falling back to the
+    unversioned archive. Reuse an existing destination when its size matches;
+    replace it when the source differs.
 
     Args:
         container_name (str): The name of the container to which the benchmark
             files are to be copied.
-        genus (str): The genus for which the benchmark files are to be copied.
+        genus (str): The canonical benchmark dataset identifier.
         panel (str): The panel (inclusivity/exclusivity) for which the
             benchmark files are to be copied.
 
@@ -525,7 +581,21 @@ def copy_benchmark_files(
     blob_client = get_storage_client()
 
     source_container_name = "benchmark-datasets"
-    source_blob_name = "{genus}.zip".format(genus=genus)
+    source_objects = blob_client.list_objects(
+        source_container_name,
+        prefix=genus,
+    )
+    selected_archive = select_benchmark_blob(
+        blob_names=[item.name for item in source_objects],
+        benchmark_name=genus,
+    )
+    if selected_archive is None:
+        raise FileNotFoundError(
+            "No benchmark archive is available for dataset: {0}".format(
+                genus
+            )
+        )
+    source_blob_name = selected_archive['blob_name']
     destination_blob_name = posixpath.join(panel, source_blob_name)
 
     # Retrieve the authoritative size of the benchmark source blob.
@@ -553,6 +623,45 @@ def copy_benchmark_files(
     )
 
     return destination_blob_name
+
+
+def _copy_sequence_files(*, container_name: str, panel: str, seqids: list) -> list:
+    """Copy selected processed-data FASTA objects into a request panel."""
+    blob_client = get_storage_client()
+    source_container = 'processed-data'
+    copied_names = []
+
+    for seqid in sorted(set(seqids)):
+        source_name = '{0}.fasta'.format(seqid)
+        destination_name = posixpath.join(panel, source_name)
+        if not blob_client.object_exists(source_container, source_name):
+            raise FileNotFoundError(
+                'Selected SeqID is missing from processed-data: {0}'.format(
+                    seqid
+                )
+            )
+
+        source_size = blob_client.get_object(
+            source_container, source_name
+        ).size
+        if blob_client.object_exists(container_name, destination_name):
+            destination_size = blob_client.get_object(
+                container_name, destination_name
+            ).size
+            if destination_size == source_size:
+                copied_names.append(destination_name)
+                continue
+            blob_client.delete_object(container_name, destination_name)
+
+        blob_client.copy_object(
+            source_container,
+            source_name,
+            container_name,
+            destination_name,
+        )
+        copied_names.append(destination_name)
+
+    return copied_names
 
 
 def create_empty_folder(
@@ -894,11 +1003,7 @@ def run_primer_validator(
             ValidatorRequest object for which the analysis is to be run.
     """
     try:
-        _process_primer_request(
-            panel_model=ValidatorPanel,
-            request_model=ValidatorRequest,
-            request_pk=validator_request_pk
-        )
+        _prepare_validator_analysis(validator_request_pk=validator_request_pk)
     except Exception as exc:
         _handle_primer_error(
             exception=exc,
@@ -907,23 +1012,452 @@ def run_primer_validator(
         )
 
 
+def _prepare_validator_analysis(*, validator_request_pk):
+    """Upload shared inputs and submit separate primer and gene analyses."""
+    request = ValidatorRequest.objects.get(pk=validator_request_pk)
+    container_name, primer_file_name = upload_primers(request=request)
+    input_blob_names = [primer_file_name]
+
+    probes = _validator_probe_records(request)
+    if probes:
+        upload_probe(request=request)
+        input_blob_names.append('probe.fasta')
+        request.probe_sequence = 'configured'
+
+    for inclusivity in (True, False):
+        input_blob_names.extend(_handle_panel_files(
+            container_name=container_name,
+            inclusivity=inclusivity,
+            request=request,
+        ))
+
+    has_gene_targets = _upload_validator_gene_targets(
+        container_name=container_name,
+        request=request,
+    )
+    if has_gene_targets:
+        input_blob_names.append('targets/query.fasta')
+    input_blobs = _generate_input_blob_sas_urls(
+        container_name=container_name,
+        blob_names=input_blob_names,
+    )
+
+    primer_task, _ = ValidatorAnalysisTask.objects.get_or_create(
+        validator_request=request,
+        task_type='primer',
+    )
+    primer_task.input_manifest = input_blobs
+    primer_task.save(update_fields=['input_manifest'])
+    _submit_validator_task(
+        request=request,
+        analysis_task=primer_task,
+        command=_create_validator_primer_task_command(
+            request=request,
+            container_name=container_name,
+            file_name=primer_file_name,
+            input_blobs=input_blobs,
+        ),
+    )
+
+    if has_gene_targets:
+        gene_task, _ = ValidatorAnalysisTask.objects.get_or_create(
+            validator_request=request,
+            task_type='gene',
+        )
+        gene_task.input_manifest = input_blobs
+        gene_task.save(update_fields=['input_manifest'])
+        _submit_validator_task(
+            request=request,
+            analysis_task=gene_task,
+            command=_create_validator_gene_task_command(
+                request=request,
+                container_name=container_name,
+                input_blobs=input_blobs,
+            ),
+        )
+
+
+def _upload_validator_gene_targets(*, container_name, request):
+    """Normalize pasted/uploaded target references for GeneSeekr."""
+    records = []
+    seen = set()
+
+    def add_record(header, sequence):
+        sequence = ''.join(str(sequence or '').split()).upper()
+        header = str(header or '').strip().lstrip('>')
+        if not header or not sequence:
+            raise ValueError('Gene reference headers and sequences are required.')
+        invalid_bases = sorted(set(sequence).difference('ACGTN'))
+        if invalid_bases:
+            raise ValueError(
+                'Gene reference {0} contains invalid bases: {1}'.format(
+                    header, ', '.join(invalid_bases)
+                )
+            )
+        identifier = header.split(None, 1)[0]
+        unique_id = identifier
+        suffix = 2
+        while unique_id in seen:
+            unique_id = '{0}__{1}'.format(identifier, suffix)
+            suffix += 1
+        seen.add(unique_id)
+        records.append((unique_id, sequence))
+
+    targets = ValidatorTarget.objects.filter(
+        sample__validator_request=request
+    ).select_related('sample')
+    for target in targets:
+        prefix = '{0}__{1}'.format(target.sample.name, target.name)
+        pasted = (target.gene_sequence or '').strip()
+        if pasted:
+            if pasted.startswith('>'):
+                parsed = list(SeqIO.parse(StringIO(pasted), 'fasta'))
+                if not parsed:
+                    raise ValueError(
+                        'Unable to parse FASTA for target {0}.'.format(
+                            target.name
+                        )
+                    )
+                for record in parsed:
+                    add_record(
+                        '{0}__{1}'.format(prefix, record.id), str(record.seq)
+                    )
+            else:
+                add_record(prefix, pasted)
+
+        reference_fasta = target.reference_fasta
+        if reference_fasta:
+            try:
+                reference_fasta.open('rb')
+                contents = reference_fasta.read()
+                if isinstance(contents, bytes):
+                    contents = contents.decode('utf-8')
+            except (OSError, UnicodeDecodeError) as exc:
+                raise ValueError(
+                    'Unable to read FASTA for target {0}: {1}'.format(
+                        target.name, exc
+                    )
+                ) from exc
+            finally:
+                reference_fasta.close()
+            parsed = list(SeqIO.parse(StringIO(contents), 'fasta'))
+            if not parsed:
+                raise ValueError(
+                    'Uploaded FASTA for target {0} contains no records.'.format(
+                        target.name
+                    )
+                )
+            for record in parsed:
+                add_record(
+                    '{0}__{1}'.format(prefix, record.id), str(record.seq)
+                )
+
+    if not records:
+        return False
+    contents = ''.join('>{0}\n{1}\n'.format(name, seq) for name, seq in records)
+    storage = get_storage_client()
+    storage.ensure_container(container_name)
+    storage.upload_bytes(
+        container_name, 'targets/query.fasta', contents.encode('utf-8')
+    )
+    return True
+
+
+def _submit_validator_task(*, request, analysis_task, command):
+    job_name = '{0}-{1}'.format(
+        request.container_namer(), analysis_task.task_type
+    )
+    try:
+        submission = generic_api_submit(
+            command=command,
+            container_name=request.container_namer(),
+            vm_size='Standard_D4ds_v5',
+            unique_id=analysis_task.task_type,
+            log_prefix=analysis_task.task_type,
+        )
+        if (
+            not isinstance(submission, dict)
+            or submission.get('status') != 'Success'
+        ):
+            raise RuntimeError(
+                'Validator Batch submission failed: {0}'.format(submission)
+            )
+    except Exception as exc:
+        analysis_task.status = 'error'
+        analysis_task.error = str(exc)
+        analysis_task.save(update_fields=['status', 'error'])
+        raise
+    task_ids = submission.get('tasks') or []
+    analysis_task.batch_job_id = submission.get('job_id') or job_name
+    analysis_task.batch_task_id = task_ids[0] if task_ids else ''
+    analysis_task.status = 'submitted'
+    analysis_task.error = ''
+    analysis_task.save(update_fields=[
+        'batch_job_id', 'batch_task_id', 'status', 'error'
+    ])
+
+
+def _create_validator_primer_task_command(
+    *, request, container_name, file_name, input_blobs
+):
+    return _create_primer_cmd(
+        container_name='{0}-primer'.format(container_name),
+        file_name=file_name,
+        input_blobs=input_blobs,
+        path='$AZ_BATCH_NODE_MOUNTS_DIR/{0}'.format(container_name),
+        request=request,
+    )
+
+
+def _create_validator_gene_task_command(
+    *, request, container_name, input_blobs
+):
+    job_name = '{0}-gene'.format(container_name)
+    run_directory = '/datadrive/{0}'.format(job_name)
+    mount_dir = '$AZ_BATCH_NODE_MOUNTS_DIR/{0}'.format(container_name)
+    sequences = posixpath.join(run_directory, 'sequences')
+    targets = posixpath.join(run_directory, 'targets')
+    reports = posixpath.join(run_directory, 'reports')
+    parts = [
+        'source $CONDA/activate /envs/cowbat',
+        'set -euo pipefail',
+        'mkdir -p {0} {1} {2}'.format(
+            shlex.quote(sequences), shlex.quote(targets), shlex.quote(reports)
+        ),
+    ]
+    for item in input_blobs:
+        destination = posixpath.join(run_directory, item['blob_name'])
+        parts.extend((
+            'mkdir -p {0}'.format(
+                shlex.quote(posixpath.dirname(destination))
+            ),
+            'curl --fail --location --retry 5 --output {0} {1}'.format(
+                shlex.quote(destination), shlex.quote(item['sas_url'])
+            ),
+        ))
+    parts.extend((
+        'for archive in {0}/inclusivity/*.zip {0}/exclusivity/*.zip; do '
+        '[ -e "$archive" ] || continue; unzip -n -q "$archive" -d {1}; done'.format(
+            shlex.quote(run_directory), shlex.quote(sequences)
+        ),
+        'GeneSeekr blastn -u -s {0} -t {1} -r {2}'.format(
+            shlex.quote(sequences), shlex.quote(targets), shlex.quote(reports)
+        ),
+        'mkdir -p {0}/reports/gene'.format(mount_dir),
+        'cp -R {0}/. {1}/reports/gene/'.format(
+            shlex.quote(reports), mount_dir
+        ),
+    ))
+    return ' && '.join(parts)
+
+
+def _normalize_gene_reports(gene_reports):
+    """Normalize GeneSeekr JSON, TSV, and CSV output records."""
+    normalized = []
+    for report_path, contents in gene_reports.items():
+        lower_path = report_path.lower()
+        if lower_path.endswith('.json'):
+            try:
+                payload = json.loads(contents)
+            except (TypeError, ValueError):
+                logger.warning('Skipping invalid GeneSeekr JSON report %s', report_path)
+                continue
+            records = payload if isinstance(payload, list) else [payload]
+            for record in records:
+                if isinstance(record, dict):
+                    normalized.append(_normalize_gene_record(report_path, record))
+        elif lower_path.endswith(('.tsv', '.csv')):
+            delimiter = '\t' if lower_path.endswith('.tsv') else ','
+            try:
+                records = csv.DictReader(
+                    StringIO(contents), delimiter=delimiter
+                )
+                normalized.extend(
+                    _normalize_gene_record(report_path, record)
+                    for record in records
+                )
+            except (csv.Error, TypeError):
+                logger.warning(
+                    'Skipping malformed GeneSeekr tabular report %s',
+                    report_path,
+                    exc_info=True,
+                )
+    return [record for record in normalized if record]
+
+
+def _normalize_gene_record(report_path, record):
+    """Map GeneSeekr field-name variants to the report-analysis contract."""
+    def value(*names):
+        for name in names:
+            if record.get(name) not in ('', None):
+                return record[name]
+        return None
+
+    return {
+        'report': report_path,
+        'query': value(
+            'query', 'Query', 'query_id', 'sequence', 'Sequence', 'seqid'
+        ),
+        'target': value(
+            'target', 'Target', 'subject_id', 'gene', 'Gene', 'reference'
+        ),
+        'hit': value(
+            'hit', 'Hit', 'subject', 'Subject', 'subject_id', 'match'
+        ),
+        'identity': value(
+            'identity', 'Identity', '% identity', 'percent_identity',
+            'percent_match',
+        ),
+        'coverage': value(
+            'coverage', 'Coverage', '% coverage', 'percent_coverage'
+        ),
+        'evalue': value('evalue', 'E-value', 'Evalue'),
+        'query_start': value('query_start', 'qstart', 'contig_start'),
+        'query_end': value('query_end', 'qend', 'contig_end'),
+        'query_length': value('query_length', 'qlen', 'contig_length'),
+        'query_frame': value('query_frame', 'qframe', 'frame'),
+        'query_sequence': value(
+            'query_sequence', 'qseq', 'query_alignment'
+        ),
+        'subject_start': value('subject_start', 'sstart', 'target_start'),
+        'subject_end': value('subject_end', 'send', 'target_end'),
+        'subject_length': value(
+            'subject_length', 'slen', 'target_length'
+        ),
+        'alignment_length': value(
+            'alignment_length', 'length', 'alignment_len'
+        ),
+        'raw': record,
+    }
+
+
 def check_validator_tasks():
     """
     Check the status of ValidatorAzureRequest tasks. If a task fails, perform
     clean-up. If a task succeeds, perform necessary steps and clean-up.
     """
-    # Get all active validator tasks
     validator_tasks = PrimerValidatorAzureRequest.objects.filter()
-
-    # Create a batch client
     batch_client = create_batch_client()
 
-    # Process each validator task
+    for analysis_task in ValidatorAnalysisTask.objects.filter(
+        status='submitted'
+    ).select_related('validator_request'):
+        _process_validator_analysis_task(
+            batch_client=batch_client,
+            task=analysis_task,
+        )
+
+    for analysis_task in ValidatorAnalysisTask.objects.filter(
+        status__in=('complete', 'error')
+    ).exclude(batch_job_id='').select_related('validator_request'):
+        if _delete_validator_batch_resources(
+            batch_client=batch_client,
+            job_id=analysis_task.batch_job_id,
+        ):
+            analysis_task.batch_job_id = ''
+            analysis_task.batch_task_id = ''
+            analysis_task.save(update_fields=['batch_job_id', 'batch_task_id'])
+
     for task in validator_tasks:
         _process_validator_task(
             batch_client=batch_client,
             task=task
         )
+
+
+def _process_validator_analysis_task(*, batch_client, task):
+    """Poll one of a request's independent Batch analyses."""
+    try:
+        cloud_tasks = list(batch_client.task.list(task.batch_job_id))
+    except Exception:
+        logger.exception(
+            'Unable to poll Validator Batch task %s for request %s',
+            task.task_type,
+            task.validator_request_id,
+        )
+        return
+    if not cloud_tasks or any(item.state != 'completed' for item in cloud_tasks):
+        return
+
+    exit_codes = [
+        getattr(item.execution_info, 'exit_code', None)
+        for item in cloud_tasks
+    ]
+    successful = all(code == 0 for code in exit_codes)
+    task.status = 'complete' if successful else 'error'
+    task.error = '' if successful else (
+        'Batch task returned non-zero or missing exit codes: {0}'.format(
+            exit_codes
+        )
+    )
+    task.save(update_fields=['status', 'error'])
+
+    request = task.validator_request
+    if not successful:
+        request.status = 'Error'
+        request.errors = task.error
+        request.save(update_fields=['status', 'errors'])
+
+    try:
+        analysis_tasks = list(request.analysis_tasks.all())
+        if all(item.status not in ('pending', 'submitted') for item in analysis_tasks):
+            if any(item.status == 'error' for item in analysis_tasks):
+                _handle_failed_validator_run(validator_request=request)
+            else:
+                _handle_successful_validator_run(
+                    batch_job_name=request.container_namer(),
+                    validator_request=request,
+                )
+    except Exception as exc:
+        request.status = 'Error'
+        request.errors = 'Validator report finalization failed: {0}'.format(exc)
+        request.save(update_fields=['status', 'errors'])
+        logger.exception(
+            'Unable to finalize Validator request %s', request.pk
+        )
+    finally:
+        if _delete_validator_batch_resources(
+            batch_client=batch_client,
+            job_id=task.batch_job_id,
+        ):
+            task.batch_job_id = ''
+            task.batch_task_id = ''
+            task.save(update_fields=['batch_job_id', 'batch_task_id'])
+
+
+def _delete_validator_batch_resources(*, batch_client, job_id):
+    """Delete the completed Batch job and its conventional pool."""
+    try:
+        batch_client.job.delete(job_id=job_id)
+    except BatchServiceError as exc:
+        if exc.status_code != 404:
+            logger.warning(
+                'Batch cleanup failed for Validator job %s: %s', job_id, exc
+            )
+            return False
+    except Exception:
+        logger.exception(
+            'Batch cleanup failed for Validator job %s', job_id
+        )
+        return False
+    pool_id = batch_pool_id_from_job_id(job_id)
+    try:
+        if batch_client.pool.exists(pool_id):
+            batch_client.pool.delete(pool_id=pool_id)
+    except BatchServiceError as exc:
+        if exc.status_code != 404:
+            logger.warning(
+                'Batch pool cleanup failed for Validator job %s: %s',
+                job_id,
+                exc,
+            )
+            return False
+    except Exception:
+        logger.exception(
+            'Batch pool cleanup failed for Validator job %s', job_id
+        )
+        return False
+    return True
 
 
 def _process_validator_task(
@@ -1053,6 +1587,62 @@ def post_validator_run(
         validator_request, report_folder = populate_report(
             request=validator_request
         )
+
+        gene_reports = {}
+        gene_report_folder = os.path.join(report_folder, 'gene')
+        for root, _, filenames in os.walk(gene_report_folder):
+            for filename in filenames:
+                report_path = os.path.join(root, filename)
+                relative_path = os.path.relpath(
+                    report_path, gene_report_folder
+                )
+                try:
+                    with open(report_path, 'r', encoding='utf-8') as source:
+                        gene_reports[relative_path] = source.read()
+                except (OSError, UnicodeDecodeError):
+                    logger.warning(
+                        'Unable to read GeneSeekr output %s',
+                        report_path,
+                        exc_info=True,
+                    )
+
+        validator_request.gene_report = json.dumps(
+            gene_reports, sort_keys=True
+        )
+        validator_request.gene_results = _normalize_gene_reports(gene_reports)
+        validator_request.validator_original_report = validator_request.report
+        salmonella_classification = validator_request.samples.filter(
+            classification_rule='salmonella'
+        ).exists()
+        allowed_targets = ('inva', 'stn') if salmonella_classification else None
+        categories = categorize_gene_hits(
+            validator_request.gene_results,
+            allowed_targets=allowed_targets,
+        )
+        category_details = categorize_gene_hit_details(
+            validator_request.gene_results,
+            allowed_targets=allowed_targets,
+        )
+        selected_categories = set(
+            validator_request.gene_exclusion_categories or []
+        )
+        validator_request.gene_exclusion_results = categories
+        validator_request.gene_exclusion_details = category_details
+        validator_request.gene_exclusion_note = gene_exclusion_note(
+            selected_categories, categories
+        )
+        validator_request.report = filter_report_by_gene_categories(
+            validator_request.report, categories, selected_categories
+        )
+        validator_request.save(update_fields=[
+            'gene_report',
+            'gene_results',
+            'validator_original_report',
+            'gene_exclusion_results',
+            'gene_exclusion_details',
+            'gene_exclusion_note',
+            'report',
+        ])
 
         # Create the details for the validator request
         validator_request = create_details(

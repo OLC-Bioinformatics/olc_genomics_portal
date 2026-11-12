@@ -131,7 +131,14 @@ class CommonMethodTests(SimpleTestCase):
             input_file_pattern=[],
             unique_id='FoodPort',
             download_file_pattern=['reports/*'],
+            output_file_pattern=['output/'],
+            output_container='results',
+            output_prefix='runs/42',
             log_prefix='logs',
+            environment_variables={
+                'FOODPORT_INPUT_SAS_URL':
+                    'https://storage.example/input?sig=secret-value',
+            },
         )
 
         self.assertEqual(result, {'job_id': 'job-1'})
@@ -146,7 +153,14 @@ class CommonMethodTests(SimpleTestCase):
         self.assertEqual(payload['download_file_pattern'], ['reports/*'])
         self.assertEqual(payload['analysis_type'], 'GENESEEKR')
         self.assertEqual(payload['unique_id'], 'FoodPort')
+        self.assertEqual(payload['output_file_pattern'], ['output/'])
+        self.assertEqual(payload['output_container'], 'results')
+        self.assertEqual(payload['output_prefix'], 'runs/42')
         self.assertEqual(payload['log_prefix'], 'logs')
+        self.assertEqual(
+            payload['environment_variables']['FOODPORT_INPUT_SAS_URL'],
+            'https://storage.example/input?sig=secret-value',
+        )
         self.assertEqual(response.raise_for_status.call_count, 1)
 
     @mock.patch('olc_webportalv2.common.methods.requests.post')
