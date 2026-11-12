@@ -1,13 +1,12 @@
 """Regression tests for portal routing and form template configuration."""
 
-import unittest
-
-from django.test import Client
+from django.contrib.staticfiles import finders
+from django.test import Client, TestCase
 from django.template.loader import get_template
 from django.urls import resolve
 
 
-class PortalRoutingTests(unittest.TestCase):
+class PortalRoutingTests(TestCase):
     def test_admin_url_resolves(self):
         match = resolve("/admin/")
 
@@ -36,3 +35,24 @@ class PortalRoutingTests(unittest.TestCase):
         self.assertIn('data-bs-toggle="collapse"', html)
         self.assertIn('data-bs-toggle="dropdown"', html)
         self.assertNotIn('data-toggle="', html)
+
+    def test_base_assets_exist_and_jquery_precedes_project_javascript(self):
+        response = Client().get("/", HTTP_HOST="localhost")
+        html = response.content.decode(response.charset)
+
+        self.assertEqual(response.status_code, 200)
+        for asset in (
+            "css/bootstrap.min.css",
+            "css/bootstrap-datepicker.min.css",
+            "css/project.css",
+            "js/jquery-3.7.1.min.js",
+            "js/bootstrap.min.js",
+            "js/project.js",
+        ):
+            with self.subTest(asset=asset):
+                self.assertIsNotNone(finders.find(asset))
+
+        self.assertLess(
+            html.index("jquery-3.7.1.min.js"),
+            html.index("project.js"),
+        )

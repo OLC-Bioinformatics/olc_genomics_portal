@@ -1,5 +1,5 @@
 # filepath: /home/cfiaadmin/FoodPort/olc_genomics_portal/Dockerfile
-FROM ubuntu:26.04
+FROM ubuntu:26.04 AS portal-base
 
 # Initialize
 RUN mkdir -p /data/web
@@ -31,3 +31,9 @@ RUN pip install -r base.txt --ignore-installed
 
 # Prepare
 COPY . /data/web/
+
+FROM portal-base AS test
+
+RUN pip install --no-cache-dir -r /data/web/requirements/test.txt
+
+FROM portal-base AS production

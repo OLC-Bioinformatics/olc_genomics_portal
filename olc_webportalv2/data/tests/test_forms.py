@@ -10,11 +10,13 @@ class DataFormTest(TestCase):
     def setUpTestData(cls):
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0711',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
         sequence_data = SequenceData.objects.create(seqid='2015-SEQ-0712',
                                                     quality='Pass',
-                                                    genus='Listeria')
+                                                    genus='Listeria',
+                                                    subspecies='')
         sequence_data.save()
 
     def test_valid_form(self):
