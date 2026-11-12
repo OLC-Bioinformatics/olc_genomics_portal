@@ -801,32 +801,6 @@ def copy_blobs(
         )
 
 
-def archive_sub_run(
-    blob_service_client,
-    local_path: str,
-    sub_container_name: str
-):
-    """
-    Create an archive of the FASTQ files (and sample sheet if present) for the
-    sub-run and upload it to the destination
-    """
-    shutil.make_archive(local_path, 'zip', local_path)
-    archive = local_path + '.zip'
-    blob_file = os.path.basename(archive)
-
-    upload_blob_from_path(
-        container_name=sub_container_name,
-        blob_name=blob_file,
-        file_path=archive,
-        blob_service_client=blob_service_client,
-    )
-
-    os.remove(archive)
-    fastq_files = glob(os.path.join(local_path, '*.fastq.gz'))
-    for fastq in fastq_files:
-        os.remove(fastq)
-
-
 def no_sample_sheet(
     blob_service_client,
     blob_files: list,

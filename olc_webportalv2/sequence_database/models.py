@@ -191,10 +191,6 @@ class SequenceData(models.Model):
     def __str__(self):
         return self.seqid
 
-    def print_species(self):
-        return self.species.species
-
-
 class DatabaseRequestIDs(models.Model):
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
     cfiaids = ArrayField(models.CharField(max_length=48), blank=True, default=list)

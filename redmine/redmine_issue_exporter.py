@@ -156,33 +156,6 @@ def setup_logging(log_level=logging.INFO):
     )
 
 
-def read_last_checked(file_path):
-    """Read last checked timestamp from disk.
-
-    Args:
-        file_path (str): Path to the timestamp file.
-
-    Returns:
-        str or None: Timestamp string if file exists, otherwise None.
-    """
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return file.read().strip()
-    return None
-
-
-def write_last_checked(file_path, timestamp):
-    """Write last checked timestamp to disk.
-
-    Args:
-        file_path (str): Path to the timestamp file.
-        timestamp (str): ISO 8601 timestamp to write.
-    """
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(timestamp)
-
-
 def read_state(file_path):
     """Read JSON state file into a dict.
 

@@ -99,7 +99,8 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
         # If the delete button is pressed, delete the project from the database
         if request.POST.get('delete'):
             query = ValidatorRequest.objects.filter(
-                pk=request.POST.get('delete')
+                pk=request.POST.get('delete'),
+                user=request.user,
             )
             query.delete()
 
@@ -464,7 +465,8 @@ def primer_validator_processing(
     # Retrieve the ValidatorRequest object
     validator_request = get_object_or_404(
         ValidatorRequest,
-        pk=validator_pk
+        pk=validator_pk,
+        user=request.user,
     )
 
     # Create an instance of the EmailForm
@@ -517,7 +519,9 @@ def primer_validator_results(
 
     :return: The HTTP response object
     """
-    validator_request = get_object_or_404(ValidatorRequest, pk=validator_pk)
+    validator_request = get_object_or_404(
+        ValidatorRequest, pk=validator_pk, user=request.user
+    )
 
     # Retrieve the PrimerSet object(s) corresponding to the verifier_request
     # primary key
@@ -599,7 +603,8 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         if request.POST.get('delete'):
             query = PrimerVerifierRequest.objects.filter(
-                pk=request.POST.get('delete')
+                pk=request.POST.get('delete'),
+                user=request.user,
             )
             query.delete()
 
@@ -638,7 +643,8 @@ def primer_verifier_processing(
     # Retrieve the VerifierRequest object
     verifier_request = get_object_or_404(
         PrimerVerifierRequest,
-        pk=verifier_pk
+        pk=verifier_pk,
+        user=request.user,
     )
 
     # Create the email form
@@ -690,7 +696,7 @@ def primer_verifier_results(
     """
     # Retrieve the VerifierRequest object
     verifier_request = get_object_or_404(
-        PrimerVerifierRequest, pk=verifier_pk
+        PrimerVerifierRequest, pk=verifier_pk, user=request.user
     )
 
     primer_set = VerifierPrimerSet.objects.filter(
@@ -764,7 +770,9 @@ def primer_validator_report(request, validator_pk):
         request (object): The HTTP request object.
         validator_pk (int): The primary key of the ValidatorRequest object.
     """
-    verifier_request = get_object_or_404(ValidatorRequest, pk=validator_pk)
+    verifier_request = get_object_or_404(
+        ValidatorRequest, pk=validator_pk, user=request.user
+    )
 
     # Retrieve the PrimerSet object(s) corresponding to the validator_request
     # primary key
@@ -827,29 +835,4 @@ def primer_validator_report(request, validator_pk):
                           '\n'
                         )[1],
                       'reverse': verifier_request.reverse_primer.split('\n')[1]
-                  })
-
-
-@csrf_exempt  # needed or IE explodes
-@login_required
-def finder_home(request):
-    """
-    View for the primer finder home page.
-
-    Args:
-        request (object): The HTTP request object.
-    """
-    finder_projects = PrimerVerifierRequest.objects.filter(user=request.user)
-
-    if request.method == "POST":
-        if request.POST.get('delete'):
-            query = PrimerVerifierRequest.objects.filter(
-                pk=request.POST.get('delete')
-            )
-            query.delete()
-
-    return render(request,
-                  'primer_finder/verifier_home.html',
-                  {
-                      'finder_projects': finder_projects
                   })

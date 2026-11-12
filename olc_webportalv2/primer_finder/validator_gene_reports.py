@@ -27,63 +27,6 @@ def _gene_number(value):
         return None
 
 
-def _gene_reference_has_terminal_stop(record):
-    """Return whether a complete reference ends with TAA, TAG, or TGA."""
-    sequence = _gene_sequence(
-        record,
-        "subject_sequence",
-        "sseq",
-        "subject_alignment",
-    )
-    subject_interval = _gene_subject_interval(record)
-    subject_length = _gene_number(
-        _gene_value(
-            record,
-            "subject_length",
-            "slen",
-            "target_length",
-        )
-    )
-
-    if not sequence or subject_interval is None or subject_length is None:
-        return False
-
-    if not (subject_interval[0] <= 1 and subject_interval[1] >= subject_length):
-        return False
-
-    subject_start = _gene_number(
-        _gene_value(
-            record,
-            "subject_start",
-            "sstart",
-            "target_start",
-        )
-    )
-    subject_end = _gene_number(
-        _gene_value(
-            record,
-            "subject_end",
-            "send",
-            "target_end",
-        )
-    )
-
-    if (
-        subject_start is not None
-        and subject_end is not None
-        and subject_end < subject_start
-    ):
-        sequence = _gene_reverse_complement(sequence)
-
-    sequence = sequence.replace("-", "").upper()
-
-    return len(sequence) >= 3 and sequence[-3:] in (
-        "TAA",
-        "TAG",
-        "TGA",
-    )
-
-
 def _gene_terminal_aligned_codons(record):
     """Return corresponding terminal reference and query codons.
 
@@ -430,25 +373,6 @@ def _gene_internal_stop_evidence(record, protein):
             )
         evidence.append(item)
     return evidence
-
-
-def _gene_alignment_gap(first, second):
-    """Return the gap between two query intervals, including overlaps."""
-    first_interval = _gene_interval(
-        first, ('query_start', 'qstart', 'contig_start'),
-        ('query_end', 'qend', 'contig_end')
-    )
-    second_interval = _gene_interval(
-        second, ('query_start', 'qstart', 'contig_start'),
-        ('query_end', 'qend', 'contig_end')
-    )
-    if first_interval is None or second_interval is None:
-        return None
-    if first_interval[1] < second_interval[0]:
-        return second_interval[0] - first_interval[1]
-    if second_interval[1] < first_interval[0]:
-        return first_interval[0] - second_interval[1]
-    return 0
 
 
 def _gene_at_contig_end(record):
@@ -846,32 +770,3 @@ def gene_exclusion_note(selected, categories):
     )
 
 
-def _validator_classification_label(found_targets, required_targets, logic,
-                                    classification_rule):
-    """Apply classification precedence, then generic target logic."""
-    if classification_rule == 'salmonella':
-        return (
-            'Salmonella'
-            if set(found_targets).intersection(('inva', 'stn'))
-            else 'Not Salmonella'
-        )
-    if logic == 'AND':
-        passes = found_targets == required_targets
-    elif logic == 'OR':
-        passes = bool(found_targets)
-    else:
-        return None
-    return 'Detected' if passes else 'Not detected'
-
-
-def _validator_logic_label(found_targets, required_targets, logic):
-    """Return the human-readable result for the configured target logic."""
-    if logic == 'AND' and found_targets == required_targets:
-        return 'Pass: All targets matched'
-    if found_targets and logic == 'AND':
-        return 'Fail: At least one target matched'
-    if found_targets and logic == 'OR':
-        return 'Pass: At least one target matched'
-    if logic in ('AND', 'OR'):
-        return 'Fail: No targets matched'
-    return ''

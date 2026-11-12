@@ -223,21 +223,3 @@ def retry_failed_pool_resize(
 
     return result
 
-
-def _batch_task_exit_codes(*, batch_client, batch_job_name):
-    """Return Batch task IDs and exit codes."""
-    results = []
-
-    for cloud_task in batch_client.task.list(batch_job_name):
-        execution_info = cloud_task.execution_info
-
-        results.append(
-            {
-                "task_id": cloud_task.id,
-                "exit_code": (
-                    execution_info.exit_code if execution_info is not None else None
-                ),
-            }
-        )
-
-    return results

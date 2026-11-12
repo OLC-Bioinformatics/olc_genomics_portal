@@ -9,7 +9,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from time import sleep
 from copy import deepcopy
-from dataclasses import dataclass
 from typing import Optional
 import json
 import logging
@@ -24,7 +23,7 @@ import requests
 # Django-related imports
 from django.conf import settings
 from olc_webportalv2.common.batch_client import BatchServiceClient
-from olc_webportalv2.common.storage_client import StorageClient, get_storage_client
+from olc_webportalv2.common.storage_client import StorageClient
 
 
 def _redact_sas_urls(value):
@@ -256,52 +255,6 @@ def create_batch_client() -> BatchServiceClient:
     return BatchServiceClient()
 
 
-def create_blob_service() -> StorageClient:
-    """Return the provider-neutral client for the internal Storage service."""
-    return get_storage_client()
-
-
-@dataclass(frozen=True)
-class ObjectReference:
-    client: StorageClient
-    container: str
-    name: str
-
-
-def create_blob_client(
-    container_name: str,
-    blob_name: str,
-    blob_service_client: StorageClient
-) -> ObjectReference:
-    return ObjectReference(blob_service_client, container_name, blob_name)
-
-
-def create_blob_from_path(blob_client: ObjectReference, file_path: str) -> None:
-    blob_client.client.upload_file(
-        blob_client.container,
-        blob_client.name,
-        file_path,
-    )
-
-
-def create_blob_from_bytes(
-    container_name: str,
-    blob_name: str,
-    data: bytes,
-    blob_service_client: StorageClient
-) -> None:
-    """
-    Uploads a blob from bytes.
-
-    :param container_name: Name of the container
-    :param blob_name: Name of the blob
-    :param data: Bytes to upload
-    :param blob_service_client: Storage service client
-    :return: None
-    """
-    blob_service_client.upload_bytes(container_name, blob_name, data)
-
-
 def upload_blob_from_path(
     container_name: str,
     blob_name: str,
@@ -354,26 +307,6 @@ def generate_download_link(
         name=blob_name,
         expires_in_seconds=expiry * 86400,
         content_disposition=content_disposition,
-    )
-
-
-def generate_container_download_link(
-    blob_service_client: StorageClient,
-    container_name: str,
-    expiry: int = 8
-) -> str:
-    """
-    Generate a read-only SAS URL for a container.
-
-    :param blob_service_client: Storage service client
-    :param container_name: Name of the container
-    :param expiry: Number of days the link should be valid
-    :return: SAS URL string
-    """
-    return blob_service_client.create_transfer_url(
-        container_name,
-        "read",
-        expires_in_seconds=expiry * 86400,
     )
 
 

@@ -3,13 +3,11 @@ Tasks for the AmpliSeq app
 """
 
 # Standard imports
-from glob import glob
 import logging
 import os
 import pathlib
 import re
 import shutil
-import tarfile
 
 # Django
 from django.db import DatabaseError
@@ -111,68 +109,6 @@ def upload_file(
         file.read(),
         content_type=getattr(file, 'content_type', None),
     )
-
-
-def download_sequence_files(container_name: str):
-    """
-    Download the files in the supplied container name in blob storage
-    :param str container_name: Name of the supplied container in blob storage
-    """
-    download_dir = os.path.join(
-        os.sep,
-        'data',
-        'web',
-        'olc_webportalv2',
-        'media',
-        'files_for_upload'
-    )
-    tmp_storage_dir = os.path.join(download_dir, container_name)
-    # Delete the temporary folder if it already exists (mostly for
-    # development purposes)
-    try:
-        # Delete the temporary storage folder
-        shutil.rmtree(tmp_storage_dir)
-    except FileNotFoundError:
-        pass
-    os.makedirs(tmp_storage_dir, exist_ok=True)
-    blob_service = get_storage_client()
-    blobs = blob_service.list_objects(container_name)
-    for blob in blobs:
-        blob_service.download_file(
-            container_name,
-            blob.name,
-            os.path.join(tmp_storage_dir, os.path.split(blob.name)[1]),
-        )
-    return tmp_storage_dir
-
-
-def package_files_for_upload(container_name: str):
-    """
-    Package files into a .tar archive and upload to blob storage
-    :param str container_name: Name of the supplied container in blob storage
-    """
-    # Download the sequence files from blob
-    tmp_storage_dir = download_sequence_files(container_name=container_name)
-    # Locate all the downloaded files
-    files = glob(os.path.join(tmp_storage_dir, '*'))
-    # Set the name of the archive file
-    tar_file = os.path.join(tmp_storage_dir, container_name + '.tar')
-    # Create the archive
-    with tarfile.open(tar_file, 'w') as tar_obj:
-        for file in files:
-            tar_obj.add(
-                file,
-                arcname=os.path.basename(file)
-           )
-    # Upload the tar file to blob storage
-    with open(tar_file, 'rb') as tar:
-        upload_file(
-            file=tar,
-            container_name=container_name,
-            archive=os.path.basename(tar_file)
-        )
-    # Delete the temporary storage folder
-    shutil.rmtree(tmp_storage_dir)
 
 
 def create_system_call(ampliseq: AmpliSeqRequest):
