@@ -1,0 +1,23 @@
+services:
+  selenium:
+    image: selenium/standalone-firefox:157.0-geckodriver-0.37-grid-4.52.0-20261101
+    shm_size: 2gb
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:4444/status | grep -Eq '"ready":[[:space:]]*true'
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  test-runner:
+    depends_on:
+      selenium:
+        condition: service_healthy
+    environment:
+      FOODPORT_SELENIUM_URL: http://selenium:4444
+    command:
+      - pytest
+      - -q
+      - --tb=short
+      - olc_webportalv2/primer_finder/test_browser_ui.py
