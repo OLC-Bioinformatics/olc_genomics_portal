@@ -3,33 +3,40 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
-from django.test import Client, TestCase
 from django.template.loader import get_template
+from django.test import Client, TestCase
 from django.urls import resolve, reverse
 
 
 class PortalRoutingTests(TestCase):
+    """Verify portal routes, navigation, templates, and static assets."""
+
     def test_admin_url_resolves(self):
+        """Resolve the configured Django admin URL."""
         match = resolve("/admin/")
 
         self.assertEqual(match.namespace, "admin")
         self.assertEqual(match.url_name, "index")
 
     def test_admin_without_trailing_slash_redirects(self):
+        """Redirect the slashless admin URL to its canonical path."""
         response = Client().get("/admin", HTTP_HOST="localhost")
 
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response["Location"], "/admin/")
 
     def test_crispy_bootstrap5_template_is_available(self):
+        """Load the configured Bootstrap 5 crispy-forms template."""
         self.assertIsNotNone(get_template("bootstrap5/uni_form.html"))
 
     def test_research_assembly_template_compiles(self):
+        """Load the research assembly template without syntax errors."""
         self.assertIsNotNone(
             get_template("cowbat/research_assembly_home.html")
         )
 
     def test_home_uses_bootstrap_5_data_attributes(self):
+        """Render the home page with Bootstrap 5 navigation attributes."""
         response = Client().get("/", HTTP_HOST="localhost")
         html = response.content.decode(response.charset)
 
@@ -42,6 +49,7 @@ class PortalRoutingTests(TestCase):
         self.assertIn('aria-labelledby="dropdownMenuButton"', html)
 
     def test_navigation_menu_items_link_to_their_sections(self):
+        """Link each navigation item to a resolvable route."""
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
 
@@ -68,14 +76,16 @@ class PortalRoutingTests(TestCase):
         for route_name in menu_routes:
             with self.subTest(route=route_name):
                 target = reverse(route_name)
-                self.assertContains(response, 'href="{0}"'.format(target))
+                self.assertContains(response, f'href="{target}"')
                 self.assertIsNotNone(resolve(target))
 
     def test_navigation_shows_login_or_profile_actions(self):
+        """Show login or profile actions based on authentication state."""
         anonymous_response = self.client.get("/")
+        login_url = reverse("account_login")
         self.assertContains(
             anonymous_response,
-            'href="{0}"'.format(reverse("account_login")),
+            f'href="{login_url}"',
         )
         self.assertContains(anonymous_response, 'id="log-in-link"')
 
@@ -85,25 +95,29 @@ class PortalRoutingTests(TestCase):
         )
         self.client.force_login(user)
         authenticated_response = self.client.get("/")
+        profile_url = reverse(
+            "users:detail",
+            kwargs={"username": user.username},
+        )
+        logout_url = reverse("account_logout")
 
         self.assertContains(
             authenticated_response,
-            'href="{0}"'.format(
-                reverse("users:detail", kwargs={"username": user.username})
-            ),
+            f'href="{profile_url}"',
         )
         self.assertContains(
             authenticated_response,
-            'href="{0}"'.format(reverse("account_logout")),
+            f'href="{logout_url}"',
         )
         self.assertNotContains(authenticated_response, 'id="log-in-link"')
 
     def test_language_selector_posts_and_sets_the_selected_language(self):
+        """Post language selection and set the language cookie."""
         response = self.client.get("/")
         set_language_url = reverse("set_language")
         self.assertContains(
             response,
-            'action="{0}" method="post"'.format(set_language_url),
+            f'action="{set_language_url}" method="post"',
         )
         self.assertContains(response, 'name="language"')
 
@@ -119,6 +133,7 @@ class PortalRoutingTests(TestCase):
         )
 
     def test_base_assets_exist_and_jquery_precedes_project_javascript(self):
+        """Find base assets and ensure jQuery loads before project scripts."""
         response = Client().get("/", HTTP_HOST="localhost")
         html = response.content.decode(response.charset)
 

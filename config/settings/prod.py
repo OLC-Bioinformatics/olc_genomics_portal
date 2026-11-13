@@ -1,5 +1,4 @@
-"""
-Django settings for olc_webportalv2 project.
+"""Django settings for the olc_webportalv2 project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/dev/topics/settings/
@@ -12,108 +11,103 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 import hashlib
 import hmac
 import os
+
+import django
+import environ
 import sentry_sdk
 
 # Third-party imports
 from celery.schedules import crontab
-import django
 from django.utils.translation import gettext_lazy as language
-import environ
 from kombu import Queue
 from sentry_sdk.integrations.django import DjangoIntegration
 
 # (olc_webportalv2/config/settings/base.py - 3 = olc_webportalv2/)
 ROOT_DIR = environ.Path(__file__) - 3
-APPS_DIR = ROOT_DIR.path('olc_webportalv2')
+APPS_DIR = ROOT_DIR.path("olc_webportalv2")
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # Load operating system environment variables and then prepare to use them
 env = environ.Env()
 
 # .env file, should load only in development environment
-READ_DOT_ENV_FILE = env.bool('DJANGO_READ_DOT_ENV_FILE', default=True)
-SECRET_KEY = env('SECRET_KEY')
+READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
+SECRET_KEY = env("SECRET_KEY")
 
 if READ_DOT_ENV_FILE:
     # Operating System Environment variables have precedence over variables
     # defined in the .env file, that is to say variables from the .env files
     # will only be used if not defined as environment variables.
-    ENV_FILE = str(ROOT_DIR.path('env'))
-    print('Loading : {}'.format(ENV_FILE))
+    ENV_FILE = str(ROOT_DIR.path("env"))
+    print("Loading : {}".format(ENV_FILE))
     env.read_env(ENV_FILE)
-    print('The .env file has been loaded. See base.py for more information')
+    print("The .env file has been loaded. See base.py for more information")
 
-MICROSOFT_AUTH_ENABLED = env.bool('MICROSOFT_AUTH_ENABLED', default=True)
-print('Loaded prod settings')
+MICROSOFT_AUTH_ENABLED = env.bool("MICROSOFT_AUTH_ENABLED", default=True)
+print("Loaded prod settings")
 
 # APP CONFIGURATION
 DJANGO_APPS = [
     # Default Django apps:
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.sites',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.postgres',
-
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.sites",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # django-autocomplete-light. Has to go before admin.
-    'dal',
-    'dal_select2',
-
+    "dal",
+    "dal_select2",
     # Admin
-    'django.contrib.admin',
+    "django.contrib.admin",
 ]
 
 THIRD_PARTY_APPS = [
-    'crispy_forms',  # Form layouts
-    'crispy_bootstrap5',  # Bootstrap 5 form templates
-    'allauth',  # registration
-    'allauth.account',  # registration
-    'allauth.socialaccount',  # registration
+    "crispy_forms",  # Form layouts
+    "crispy_bootstrap5",  # Bootstrap 5 form templates
+    "allauth",  # registration
+    "allauth.account",  # registration
+    "allauth.socialaccount",  # registration
 ]
 if MICROSOFT_AUTH_ENABLED:
-    THIRD_PARTY_APPS.append('microsoft_authentication')
+    THIRD_PARTY_APPS.append("microsoft_authentication")
 
 # Apps specific for this project go here.
 LOCAL_APPS = [
     # custom users app
-    'olc_webportalv2.users.apps.UsersConfig',
+    "olc_webportalv2.users.apps.UsersConfig",
     # Your stuff: custom apps go here
-    'olc_webportalv2.cowbat.apps.CowbatConfig',
-    'olc_webportalv2.data.apps.DataConfig',
-    'olc_webportalv2.geneseekr.apps.GeneseekrConfig',
-    'olc_webportalv2.metadata.apps.MetadataConfig',
-    'olc_webportalv2.api.apps.ApiConfig',
-    'olc_webportalv2.vir_typer.apps.VirTyperConfig',
-    'olc_webportalv2.sequence_database.apps.SequenceDatabaseConfig',
-    'olc_webportalv2.primer_finder.apps.PrimerFinderConfig',
-    'olc_webportalv2.ampliseq.apps.AmpliseqConfig',
-    'olc_webportalv2.cowsnphr.apps.CowsnphrConfig',
-    'olc_webportalv2.filezone.apps.FileZoneConfig',
-    'olc_webportalv2.metadata_upload.apps.MetadataUploadConfig',
+    "olc_webportalv2.cowbat.apps.CowbatConfig",
+    "olc_webportalv2.data.apps.DataConfig",
+    "olc_webportalv2.geneseekr.apps.GeneseekrConfig",
+    "olc_webportalv2.metadata.apps.MetadataConfig",
+    "olc_webportalv2.api.apps.ApiConfig",
+    "olc_webportalv2.vir_typer.apps.VirTyperConfig",
+    "olc_webportalv2.sequence_database.apps.SequenceDatabaseConfig",
+    "olc_webportalv2.primer_finder.apps.PrimerFinderConfig",
+    "olc_webportalv2.ampliseq.apps.AmpliseqConfig",
+    "olc_webportalv2.cowsnphr.apps.CowsnphrConfig",
+    "olc_webportalv2.filezone.apps.FileZoneConfig",
+    "olc_webportalv2.metadata_upload.apps.MetadataUploadConfig",
     # Need this to get django-multiselectfield to work
-    'multiselectfield',
-
+    "multiselectfield",
     # Sortable HTML tables
-    'django_tables2',
-
+    "django_tables2",
     # Highcharts
     # 'highcharts',
-
     # django-widget-tweaks
-    'widget_tweaks',
-
+    "widget_tweaks",
     # REST!
-    'rest_framework',
-    'rest_framework.authtoken'
+    "rest_framework",
+    "rest_framework.authtoken",
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # MIDDLEWARE CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -127,13 +121,14 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-    'DEFAULT_THROTTLE_RATES': {
-        'pairing_start': '10/hour',
-        'pairing_exchange': '10/hour',
-        'entra_exchange': '10/hour',
+    "DEFAULT_PAGINATION_CLASS": (
+        "rest_framework.pagination.PageNumberPagination"
+    ),
+    "PAGE_SIZE": 10,
+    "DEFAULT_THROTTLE_RATES": {
+        "pairing_start": "10/hour",
+        "pairing_exchange": "10/hour",
+        "entra_exchange": "10/hour",
     },
 }
 
@@ -142,90 +137,87 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o766
 FILE_UPLOAD_PERMISSIONS = 0o766
 
 # MIGRATIONS CONFIGURATION
-# ------------------------------------------------------------------------------
-MIGRATION_MODULES = {
-    'sites': 'olc_webportalv2.contrib.sites.migrations'
-}
+# -----------------------------------------------------------------------------
+MIGRATION_MODULES = {"sites": "olc_webportalv2.contrib.sites.migrations"}
 
 # DEBUG
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = env.bool('DJANGO_DEBUG', True)
+DEBUG = env.bool("DJANGO_DEBUG", False)
 
 # FIXTURE CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-FIXTURE_DIRS
-FIXTURE_DIRS = (
-    str(APPS_DIR.path('fixtures')),
-)
+FIXTURE_DIRS = (str(APPS_DIR.path("fixtures")),)
 
 # EMAIL CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 EMAIL_BACKEND = env(
-    'DJANGO_EMAIL_BACKEND',
-    default='django.core.mail.backends.smtp.EmailBackend'
+    "DJANGO_EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend",
 )
 EMAIL_USE_TLS = True
 
 # EMAIL_HOST = 'smtp.gmail.com'
-DEFAULT_FROM_EMAIL = \
-    'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
-EMAIL_HOST = 'email-smtp.ca-central-1.amazonaws.com'
+DEFAULT_FROM_EMAIL = (
+    "cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca"
+)
+EMAIL_HOST = "email-smtp.ca-central-1.amazonaws.com"
 EMAIL_PORT = 587
-EMAIL_RELAY_SECRET = env('EMAIL_RELAY_SECRET')
+EMAIL_RELAY_SECRET = env("EMAIL_RELAY_SECRET")
 
 # Uncomment these when you want to have emails sent - can't be done when on
 # your local machine due to firewall? (I think)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 # MANAGER CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = [
-     ("""Adam Koziol""", 'adam.koziol@inspection.gc.ca'),
+    ("""Adam Koziol""", "adam.koziol@inspection.gc.ca"),
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 
 # DATABASE CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See:
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ['DB_NAME'],
-        'USER': os.environ['DB_USER'],
-        'PASSWORD': os.environ['DB_PASS'],
-        'HOST': os.environ['DB_SERVICE'],
-        'PORT': os.environ['DB_PORT'],
-        'OPTIONS': {
-            'sslmode': 'require',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["DB_NAME"],
+        "USER": os.environ["DB_USER"],
+        "PASSWORD": os.environ["DB_PASS"],
+        "HOST": os.environ["DB_SERVICE"],
+        "PORT": os.environ["DB_PORT"],
+        "OPTIONS": {
+            "sslmode": "require",
         },
     }
 }
 
-DATABASES['default']['ATOMIC_REQUESTS'] = True
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 
 # GENERAL CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'America/Toronto'
+TIME_ZONE = "America/Toronto"
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # LANGUAGE_CODE = 'en-ca'
 LANGUAGES = (
-    ('en-ca', language('English')),
-    ('fr', language('French')),
+    ("en-ca", language("English")),
+    ("fr", language("French")),
 )
 
-LANGUAGE_CODE = 'en-ca'
+LANGUAGE_CODE = "en-ca"
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
@@ -240,36 +232,36 @@ USE_L10N = True
 USE_TZ = True
 
 # TEMPLATE CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#templates
 TEMPLATES = [
     {
         # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
         # https://docs.djangoproject.com/en/dev/ref/settings/#template-dirs
-        'DIRS': [
-            str(APPS_DIR.path('templates')),
+        "DIRS": [
+            str(APPS_DIR.path("templates")),
         ],
-        'OPTIONS': {
+        "OPTIONS": {
             # https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
-            'debug': DEBUG,
+            "debug": DEBUG,
             # https://docs.djangoproject.com/en/dev/ref/settings/#template-loaders
             # https://docs.djangoproject.com/en/dev/ref/templates/api/#loader-types
-            'loaders': [
-                'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',
+            "loaders": [
+                "django.template.loaders.filesystem.Loader",
+                "django.template.loaders.app_directories.Loader",
             ],
             # https://docs.djangoproject.com/en/dev/ref/settings/#template-context-processors
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.template.context_processors.i18n',
-                'django.template.context_processors.media',
-                'django.template.context_processors.static',
-                'django.template.context_processors.tz',
-                'django.contrib.messages.context_processors.messages',
-                'config.context_processors.auth_settings',
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
+                "django.contrib.messages.context_processors.messages",
+                "config.context_processors.auth_settings",
                 # Your stuff: custom template context processors go here
             ],
         },
@@ -277,191 +269,191 @@ TEMPLATES = [
 ]
 
 # http://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # STATIC FILE CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#static-root
-STATIC_ROOT = str(ROOT_DIR('staticfiles'))
+STATIC_ROOT = str(ROOT_DIR("staticfiles"))
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#static-url
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 
 # Nginx serves collected assets as a separate user from the Django process.
 STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
-    'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
-        'OPTIONS': {
-            'file_permissions_mode': 0o644,
-            'directory_permissions_mode': 0o755,
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "OPTIONS": {
+            "file_permissions_mode": 0o644,
+            "directory_permissions_mode": 0o755,
         },
     },
 }
 
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [
-    str(APPS_DIR.path('static')),
+    str(APPS_DIR.path("static")),
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
 STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
 
 # MEDIA CONFIGURATION
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-root
-MEDIA_ROOT = str(APPS_DIR('media'))
+MEDIA_ROOT = str(APPS_DIR("media"))
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-url
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 
 # LOCALE CONFIGURATION
 LOCALE_PATHS = [
-    str(APPS_DIR.path('locale')),
+    str(APPS_DIR.path("locale")),
 ]
 
 # URL Configuration
-# ------------------------------------------------------------------------------
-ROOT_URLCONF = 'config.urls'
+# -----------------------------------------------------------------------------
+ROOT_URLCONF = "config.urls"
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 # PASSWORD STORAGE SETTINGS
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/topics/auth/passwords/#using-argon2-with-django
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
-    'django.contrib.auth.hashers.BCryptPasswordHasher',
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.BCryptPasswordHasher",
 ]
 
 # PASSWORD VALIDATION
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME':
-            'django.contrib.auth.password_validation.'
-            'UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation."
+        "UserAttributeSimilarityValidator",
     },
     {
-        'NAME':
-            'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": (
+            "django.contrib.auth.password_validation.MinimumLengthValidator"
+        ),
     },
     {
-        'NAME':
-            'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": (
+            "django.contrib.auth.password_validation.CommonPasswordValidator"
+        ),
     },
     {
-        'NAME':
-            'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": (
+            "django.contrib.auth.password_validation.NumericPasswordValidator"
+        ),
     },
 ]
 
 # AUTHENTICATION CONFIGURATION
 # -----------------------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 # Some really nice defaults
-ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 # ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Options are 'optional',
 # 'mandatory' and 'none'
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 
 ACCOUNT_ALLOW_REGISTRATION = env.bool(
-    'DJANGO_ACCOUNT_ALLOW_REGISTRATION',
-    True
+    "DJANGO_ACCOUNT_ALLOW_REGISTRATION", True
 )
-ACCOUNT_ADAPTER = 'olc_webportalv2.users.adapters.AccountAdapter'
-SOCIALACCOUNT_ADAPTER = 'olc_webportalv2.users.adapters.SocialAccountAdapter'
+ACCOUNT_ADAPTER = "olc_webportalv2.users.adapters.AccountAdapter"
+SOCIALACCOUNT_ADAPTER = "olc_webportalv2.users.adapters.SocialAccountAdapter"
 
 # Custom user app defaults
 # Select the correct user model
-AUTH_USER_MODEL = 'users.User'
-LOGIN_REDIRECT_URL = 'users:redirect'
-LOGIN_URL = 'account_login'
+AUTH_USER_MODEL = "users.User"
+LOGIN_REDIRECT_URL = "users:redirect"
+LOGIN_URL = "account_login"
 
 
 # SLUGLIFIER
-AUTOSLUG_SLUGIFY_FUNCTION = 'slugify.slugify'
+AUTOSLUG_SLUGIFY_FUNCTION = "slugify.slugify"
 
 # CELERY
-INSTALLED_APPS += ['olc_webportalv2.taskapp.celery.CeleryConfig']
-CELERY_broker_url = env('CELERY_broker_url', default='redis://redis:6379')
-RESULT_BACKEND = 'redis://redis:6379'
-accept_content = ['application/json']
-TASK_SERIALIZER = 'json'
-RESULT_SERIALIZER = 'json'
+INSTALLED_APPS += ["olc_webportalv2.taskapp.celery.CeleryConfig"]
+CELERY_broker_url = env("CELERY_broker_url", default="redis://redis:6379")
+RESULT_BACKEND = "redis://redis:6379"
+accept_content = ["application/json"]
+TASK_SERIALIZER = "json"
+RESULT_SERIALIZER = "json"
 # TZINFO = 'UTC'
-TIMEZONE = 'Canada/Eastern'
+TIMEZONE = "Canada/Eastern"
 # For celery
 # CELERY_ENABLE_UTC = True
 
 # Main Queues
 task_queues = (
-   Queue('default', Exchange='default', routing_key='default'),
-   Queue('geneseekr', Exchange='geneseekr', routing_key='geneseekr'),
-   Queue('cowbat', Exchange='cowbat', routing_key='cowbat'),
-   Queue('refresh', Exchange='refresh', routing_key='refresh')
+    Queue("default", Exchange="default", routing_key="default"),
+    Queue("geneseekr", Exchange="geneseekr", routing_key="geneseekr"),
+    Queue("cowbat", Exchange="cowbat", routing_key="cowbat"),
+    Queue("refresh", Exchange="refresh", routing_key="refresh"),
 )
 
 # Periodic Tasks
 beat_schedule = {
-    'monitor_tasks': {
-        'task': 'olc_webportalv2.cowbat.tasks.monitor_tasks',
-        'schedule': 30.0,
-        'options': {'queue': 'default'},
-        },
-
-    'clean_old_containers': {
-        'task': 'olc_webportalv2.cowbat.tasks.clean_old_containers',
-        'schedule': crontab(hour=2),
-        'options': {'queue': 'default'},
-        },
-    'refresh_ampliseq_containers': {
-        'task': 'olc_webportalv2.ampliseq.tasks.refresh_container_names',
-        'schedule': 6000.0,
-        'options': {
-            'queue': 'cowbat',
-        }
+    "monitor_tasks": {
+        "task": "olc_webportalv2.cowbat.tasks.monitor_tasks",
+        "schedule": 30.0,
+        "options": {"queue": "default"},
     },
-    'refresh_cowsnphr_containers': {
-        'task': 'olc_webportalv2.cowsnphr.tasks.refresh_container_names',
-        'schedule': 6000.0,
-        'options': {
-            'queue': 'cowbat',
-        }
+    "clean_old_containers": {
+        "task": "olc_webportalv2.cowbat.tasks.clean_old_containers",
+        "schedule": crontab(hour=2),
+        "options": {"queue": "default"},
+    },
+    "refresh_ampliseq_containers": {
+        "task": "olc_webportalv2.ampliseq.tasks.refresh_container_names",
+        "schedule": 6000.0,
+        "options": {
+            "queue": "cowbat",
+        },
+    },
+    "refresh_cowsnphr_containers": {
+        "task": "olc_webportalv2.cowsnphr.tasks.refresh_container_names",
+        "schedule": 6000.0,
+        "options": {
+            "queue": "cowbat",
+        },
     },
 }
 
 # END CELERY
 
 # Location of root django.contrib.admin URL, use {% url 'admin:index' %}
-ADMIN_URL = r'^admin/'
+ADMIN_URL = r"^admin/"
 
 # Your common stuff: Below this line define 3rd party library settings
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 ALLOWED_HOSTS = env.list(
-    'DJANGO_ALLOWED_HOSTS',
+    "DJANGO_ALLOWED_HOSTS",
     default=[
-        '0.0.0.0',
-        'localhost',
-        '127.0.0.1',
-        'foodport.cloud-nuage.inspection.gc.ca',
-        'foodport-dev.cloud-nuage.inspection.gc.ca',
+        "0.0.0.0",
+        "localhost",
+        "127.0.0.1",
+        "foodport.cloud-nuage.inspection.gc.ca",
+        "foodport-dev.cloud-nuage.inspection.gc.ca",
     ],
 )
 MAX_ATTEMPTS = 1
@@ -509,12 +501,14 @@ LOGGING = {
 }
 
 # Azure tenant is also used by Microsoft authentication.
-VM_TENANT = env('VM_TENANT', default="")
-SITE_URL = env('SITE_URL', default="https://foodport-dev.cloud-nuage.inspection.gc.ca")
+VM_TENANT = env("VM_TENANT", default="")
+SITE_URL = env(
+    "SITE_URL", default="https://foodport-dev.cloud-nuage.inspection.gc.ca"
+)
 if MICROSOFT_AUTH_ENABLED:
     AD_APP_ID = env("AD_APP_ID")
     AD_APP_SECRET = env("AD_APP_SECRET")
-    VM_TENANT = env('VM_TENANT')
+    VM_TENANT = env("VM_TENANT")
 else:
     AD_APP_ID = None
     AD_APP_SECRET = None
@@ -522,18 +516,15 @@ else:
 
 # Internal Batch service connection and authentication.
 BATCH_SERVICE_BASE_URL = env(
-    'BATCH_SERVICE_BASE_URL',
-    default='http://batch:5000'
+    "BATCH_SERVICE_BASE_URL", default="http://batch:5000"
 )
 BATCH_SERVICE_TOKEN = env(
-    'BATCH_SERVICE_TOKEN',
+    "BATCH_SERVICE_TOKEN",
     default=hmac.new(
-        SECRET_KEY.encode('utf-8'),
-        b'foodport-batch-service',
-        hashlib.sha256
-    ).hexdigest()
+        SECRET_KEY.encode("utf-8"), b"foodport-batch-service", hashlib.sha256
+    ).hexdigest(),
 )
-BATCH_REQUEST_TIMEOUT = env.int('BATCH_REQUEST_TIMEOUT', default=600)
+BATCH_REQUEST_TIMEOUT = env.int("BATCH_REQUEST_TIMEOUT", default=600)
 BATCH_SERVICE_URL = (
     f"{BATCH_SERVICE_BASE_URL.rstrip('/')}/submit_batch_request"
 )
@@ -543,9 +534,9 @@ BATCH_URL_HEADERS = {
 }
 
 NANOPORE_BATCH_COMMAND = env(
-    'NANOPORE_BATCH_COMMAND',
+    "NANOPORE_BATCH_COMMAND",
     default=(
-        'foodport-nanopore-task '
+        "foodport-nanopore-task "
         '--manifest-blob "{manifest_blob}" '
         '--input-container "{input_container}" '
         '--output-container "{output_container}" '
@@ -555,86 +546,77 @@ NANOPORE_BATCH_COMMAND = env(
         '--task-root "{task_root}" '
         '--manifest-prefix "{manifest_prefix}" '
         '--control-blob "{control_blob}" '
-        '--scheduler /opt/foodport/poresippr/'
-        'poresippr_incremental_dorado_scheduler.py '
-        '--device cuda:0 '
-        '--python /opt/micromamba/root/envs/poresippr/bin/python'
-    )
+        "--scheduler /opt/foodport/poresippr/"
+        "poresippr_incremental_dorado_scheduler.py "
+        "--device cuda:0 "
+        "--python /opt/micromamba/root/envs/poresippr/bin/python"
+    ),
 )
 NANOPORE_BATCH_VM_SIZE = env(
-    'NANOPORE_BATCH_VM_SIZE', default='Standard_NV18ads_A10_v5'
+    "NANOPORE_BATCH_VM_SIZE", default="Standard_NV18ads_A10_v5"
 )
 NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS = env.int(
-    'NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS', default=604800
+    "NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS", default=604800
 )
 NANOPORE_SUBMISSION_MAX_RETRIES = env.int(
-    'NANOPORE_SUBMISSION_MAX_RETRIES', default=8
+    "NANOPORE_SUBMISSION_MAX_RETRIES", default=8
 )
 NANOPORE_SUBMISSION_RETRY_DELAY = env.int(
-    'NANOPORE_SUBMISSION_RETRY_DELAY', default=60
+    "NANOPORE_SUBMISSION_RETRY_DELAY", default=60
 )
 NANOPORE_SUBMISSION_MAX_RETRY_DELAY = env.int(
-    'NANOPORE_SUBMISSION_MAX_RETRY_DELAY', default=900
+    "NANOPORE_SUBMISSION_MAX_RETRY_DELAY", default=900
 )
-NANOPORE_RAW_CONTAINER = env(
-    'NANOPORE_RAW_CONTAINER', default='nanopore-runs'
-)
+NANOPORE_RAW_CONTAINER = env("NANOPORE_RAW_CONTAINER", default="nanopore-runs")
 NANOPORE_RESULTS_CONTAINER = env(
-    'NANOPORE_RESULTS_CONTAINER', default='nanopore-results'
+    "NANOPORE_RESULTS_CONTAINER", default="nanopore-results"
 )
 NANOPORE_DORADO_MODEL = env(
-    'NANOPORE_DORADO_MODEL',
-    default='dna_r10.4.1_e8.2_400bps_fast@v5.2.0'
+    "NANOPORE_DORADO_MODEL", default="dna_r10.4.1_e8.2_400bps_fast@v5.2.0"
 )
-NANOPORE_BARCODE_KIT = env(
-    'NANOPORE_BARCODE_KIT', default='SQK-RBK114-24'
-)
-NANOPORE_BARCODE_VALUES = env(
-    'NANOPORE_BARCODE_VALUES', default='12,16,20,22'
-)
+NANOPORE_BARCODE_KIT = env("NANOPORE_BARCODE_KIT", default="SQK-RBK114-24")
+NANOPORE_BARCODE_VALUES = env("NANOPORE_BARCODE_VALUES", default="12,16,20,22")
 NANOPORE_REFERENCE = env(
-    'NANOPORE_REFERENCE',
-    default='/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta'
+    "NANOPORE_REFERENCE",
+    default="/opt/foodport/poresippr-data/PoreSippR_DB_251110.fasta",
 )
 
-ENTRA_TENANT_ID = env('ENTRA_TENANT_ID', default='')
-ENTRA_API_AUDIENCE = env('ENTRA_API_AUDIENCE', default='')
-ENTRA_ISSUER = env('ENTRA_ISSUER', default='')
-ENTRA_JWKS_URI = env('ENTRA_JWKS_URI', default='')
-ENTRA_API_SCOPE = env('ENTRA_API_SCOPE', default='')
-ENTRA_DESKTOP_CLIENT_ID = env('ENTRA_DESKTOP_CLIENT_ID', default='')
+ENTRA_TENANT_ID = env("ENTRA_TENANT_ID", default="")
+ENTRA_API_AUDIENCE = env("ENTRA_API_AUDIENCE", default="")
+ENTRA_ISSUER = env("ENTRA_ISSUER", default="")
+ENTRA_JWKS_URI = env("ENTRA_JWKS_URI", default="")
+ENTRA_API_SCOPE = env("ENTRA_API_SCOPE", default="")
+ENTRA_DESKTOP_CLIENT_ID = env("ENTRA_DESKTOP_CLIENT_ID", default="")
 ENTRA_DESKTOP_ALLOWED_OBJECT_IDS = env(
-    'ENTRA_DESKTOP_ALLOWED_OBJECT_IDS', default=''
+    "ENTRA_DESKTOP_ALLOWED_OBJECT_IDS", default=""
 )
 ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS = env(
-    'ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS', default=''
+    "ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS", default=""
 )
 ENTRA_DESKTOP_AUTO_CREATE_USERS = env.bool(
-    'ENTRA_DESKTOP_AUTO_CREATE_USERS', default=False
+    "ENTRA_DESKTOP_AUTO_CREATE_USERS", default=False
 )
 FOODPORT_DESKTOP_TOKEN_TTL_SECONDS = env.int(
-    'FOODPORT_DESKTOP_TOKEN_TTL_SECONDS', default=3600
+    "FOODPORT_DESKTOP_TOKEN_TTL_SECONDS", default=3600
 )
 
 # The Storage service uses the same deployment secret for internal
 # authentication, domain-separated by the service.
-STORAGE_SERVICE_URL = env('STORAGE_SERVICE_URL', default='http://storage:5001')
+STORAGE_SERVICE_URL = env("STORAGE_SERVICE_URL", default="http://storage:5001")
 STORAGE_SERVICE_TOKEN = env(
-    'STORAGE_SERVICE_TOKEN',
+    "STORAGE_SERVICE_TOKEN",
     default=hmac.new(
-        SECRET_KEY.encode('utf-8'),
-        b'foodport-storage-service',
-        hashlib.sha256
-    ).hexdigest()
+        SECRET_KEY.encode("utf-8"), b"foodport-storage-service", hashlib.sha256
+    ).hexdigest(),
 )
-STORAGE_REQUEST_TIMEOUT = env.int('STORAGE_REQUEST_TIMEOUT', default=600)
+STORAGE_REQUEST_TIMEOUT = env.int("STORAGE_REQUEST_TIMEOUT", default=600)
 
 try:
-    ENVIRONMENT = env('ENVIRONMENT')
+    ENVIRONMENT = env("ENVIRONMENT")
 except django.core.exceptions.ImproperlyConfigured:
-    ENVIRONMENT = 'DEV'
+    ENVIRONMENT = "DEV"
 
-sentry_sdk.init(dsn=env('SENTRY_DSN'), integrations=[DjangoIntegration()])
+sentry_sdk.init(dsn=env("SENTRY_DSN"), integrations=[DjangoIntegration()])
 
 # Tell Django to trust the X-Forwarded-Proto header that comes from the proxy
 # (nginx) and to use it to determine whether the request is secure
@@ -651,14 +633,14 @@ if MICROSOFT_AUTH_ENABLED:
         "valid_email_domains": ["inspection.gc.ca", "gmail.com"],
         "logout_uri": SITE_URL + "/",
     }
-LOGIN_URL = '/accounts/login/'
+LOGIN_URL = "/accounts/login/"
 LOGIN_EXEMPT_URLS = [
-    r'^accounts/',
-    r'^static/',
-    r'^media/',
+    r"^accounts/",
+    r"^static/",
+    r"^media/",
 ]
 if MICROSOFT_AUTH_ENABLED:
-    LOGIN_EXEMPT_URLS.append(r'^microsoft_authentication/')
+    LOGIN_EXEMPT_URLS.append(r"^microsoft_authentication/")
 # LOGIN_REDIRECT_URL = "/admin"  # optional and can be changed to any other url
 
 LOGIN_REDIRECT_URL = "/"  # optional and can be changed to any other url

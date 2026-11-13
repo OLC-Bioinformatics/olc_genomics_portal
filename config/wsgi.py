@@ -1,5 +1,4 @@
-"""
-WSGI config for olc_webportalv2 project.
+"""WSGI config for the olc_webportalv2 project.
 
 This module contains the WSGI application used by Django's development server
 and any production WSGI deployments. It should expose a module-level variable
@@ -14,11 +13,12 @@ framework.
 
 """
 
-from django.core.wsgi import get_wsgi_application
 import os
+
+from django.core.wsgi import get_wsgi_application
 
 # This application object is used by any WSGI server configured to use this
 # file. This includes Django's development server, if the WSGI_APPLICATION
 # setting points here.
-os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.prod'
+os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.prod"
 application = get_wsgi_application()

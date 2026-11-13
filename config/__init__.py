@@ -1,0 +1,1 @@
+"""FoodPort Django configuration package."""

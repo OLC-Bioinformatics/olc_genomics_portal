@@ -1,27 +1,4 @@
-"""
-This module defines the URL configurations for the Django application.
-
-The `urlpatterns` list routes URLs to views. For more information, please see:
-https://docs.djangoproject.com/en/3.1/topics/http/urls/
-
-The `i18n_patterns` function is used to add locale prefix to the specified URL
-patterns. This allows for URL translation.
-
-In debug mode, this module also configures additional URLs for error pages and
-the Django Debug Toolbar.
-
-Imports:
-- `settings`: Module that contains the settings of your Django project.
-- `include`, `url`, `path`: Functions to include and define URL patterns.
-- `static`: Function to serve static files during development.
-- `admin`: Module that provides the administrative interface.
-- `TemplateView`: Class-based view to render a given template.
-- `default_views`: Module that contains default views for error handlers.
-- `i18n_patterns`: Function to add locale prefix to URL patterns.
-
-Variables:
-- `urlpatterns`: A list of URL patterns for the Django application.
-"""
+"""Define localized routes and debug-only pages for the Django application."""
 
 from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
@@ -31,7 +8,6 @@ from django.urls import include, path, re_path
 from django.utils.translation import gettext_lazy as _
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
-
 
 urlpatterns = [
     path(
@@ -44,7 +20,6 @@ urlpatterns = [
         TemplateView.as_view(template_name="pages/about.html"),
         name="about",
     ),
-
     # Django Admin, use {% url 'admin:index' %}
     re_path(settings.ADMIN_URL, admin.site.urls),
 ]
@@ -67,7 +42,9 @@ urlpatterns += [
 # Keep the unprefixed API routes for existing clients and expose a localized
 # alias for clients using the portal's locale-prefixed base URL.
 urlpatterns += [
-    path("api/", include(("olc_webportalv2.api.urls", "api"), namespace="api")),
+    path(
+        "api/", include(("olc_webportalv2.api.urls", "api"), namespace="api")
+    ),
 ]
 
 
@@ -75,7 +52,9 @@ urlpatterns += [
 urlpatterns += i18n_patterns(
     path(
         "api/",
-        include(("olc_webportalv2.api.urls", "api"), namespace="localized_api"),
+        include(
+            ("olc_webportalv2.api.urls", "api"), namespace="localized_api"
+        ),
     ),
     path(
         _("accounts/"),
