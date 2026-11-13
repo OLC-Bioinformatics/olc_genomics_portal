@@ -2,6 +2,7 @@
 
 import json
 import logging
+import smtplib
 from unittest import mock
 
 from django.test import SimpleTestCase
@@ -16,6 +17,7 @@ from olc_webportalv2.common.benchmarks import (
 from olc_webportalv2.common.methods import (
     _redact_sas_urls,
     generic_api_submit,
+    send_email,
 )
 
 
@@ -235,3 +237,26 @@ class CommonMethodTests(SimpleTestCase):
         output = "\n".join(logs.output)
         self.assertNotIn("secret-value", output)
         self.assertIn("https://storage.example/blob?[REDACTED]", output)
+
+    @mock.patch("olc_webportalv2.common.methods.sleep")
+    @mock.patch("olc_webportalv2.common.methods.smtplib.SMTP")
+    def test_send_email_raises_when_access_denied_retries_are_exhausted(
+        self,
+        smtp,
+        sleep,
+    ):
+        server = smtp.return_value
+        server.sendmail.side_effect = smtplib.SMTPDataError(
+            554,
+            b"Access denied",
+        )
+
+        with self.assertRaises(smtplib.SMTPDataError):
+            send_email(
+                subject="Test",
+                body="Message",
+                recipient="recipient@example.com",
+            )
+
+        self.assertEqual(smtp.call_count, 50)
+        self.assertEqual(sleep.call_count, 49)

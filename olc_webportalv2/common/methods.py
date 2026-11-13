@@ -174,8 +174,9 @@ def send_email(
 ) -> None:
     """Send an email with the specified subject, body, and recipient.
 
-    Retry recognized access-denied or TLS-version errors up to 50 times,
-    waiting five seconds between attempts. Other errors are raised immediately.
+    Retry recognized access-denied or TLS-version errors for up to 50
+    attempts, waiting five seconds between attempts. Other errors are raised
+    immediately.
 
     Args:
         subject: Email subject.
@@ -201,8 +202,9 @@ def send_email(
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
-    # Attempt to send the email up to 50 times
-    for _ in range(50):
+    # Attempt to send the email up to 50 times.
+    max_attempts = 50
+    for attempt in range(max_attempts):
         server = None  # Initialize server variable
         try:
             # Connect to the SMTP server
@@ -228,8 +230,8 @@ def send_email(
         except smtplib.SMTPDataError as exc:
             # If an SMTP data error occurs...
             if exc.smtp_code == 554 and b"Access denied" in exc.smtp_error:
-                # If the error is an "Access denied" error, print a message
-                # and wait for 5 seconds before retrying
+                if attempt == max_attempts - 1:
+                    raise
                 print("Access denied error occurred, retrying...")
                 sleep(5)
             else:
@@ -238,8 +240,8 @@ def send_email(
         except smtplib.SMTPServerDisconnected as exc:
             # If the SMTP server gets disconnected...
             if "wrong version number" in str(exc):
-                # If the error is a "wrong version number" error, print a
-                # message, wait for 5 seconds, and reconnect to the server
+                if attempt == max_attempts - 1:
+                    raise
                 print("Wrong version number error occurred, retrying...")
                 sleep(5)
             else:
