@@ -142,14 +142,40 @@ previously described, and run `python3 manage.py upload_metadata SeqTracking.csv
 from those file into the portal's database. At this point, the portal should now be fully funcitonal! Woohoo!
 
 
-#### Running tests
+## Running tests
 
-This happens automatically via Travis-CI - see `.travis.yml` for the commands used to make this work if you want to run 
-tests locally.
+Run the Django test suite with its PostgreSQL test database:
 
-Often, Travis decides that the tests have failed even though they haven't actually (it'll show all tests pass, but
-build exits with a non-zero code). As far as I can tell this is completely random, so you actually have to 
-go into the Travis web UI to see if tests are passing or not.
+```bash
+docker compose -p foodport-tests \
+  -f docker-compose-test.yml \
+  run --rm test-runner
+```
+
+The browser-test overlay runs the Selenium tests and checks that representative
+CSS and JavaScript assets are served successfully by the project's Nginx
+configuration. It collects static files into a shared test volume and verifies
+the HTTP status, MIME type, and response body for each asset.
+
+Run the browser and Nginx tests with an isolated Compose project:
+
+```bash
+docker compose -p foodport-browser-tests \
+  -f docker-compose-test.yml \
+  -f docker-compose-browser-test.yml \
+  up --abort-on-container-exit --exit-code-from test-runner test-runner
+```
+
+Use `up` for this overlay so the test runner has the network alias required by
+the browser-driven Django live server. After the tests finish, remove the
+containers and network without deleting the test data volumes:
+
+```bash
+docker compose -p foodport-browser-tests \
+  -f docker-compose-test.yml \
+  -f docker-compose-browser-test.yml \
+  down
+```
 
 ## Azure DevOps deploy pipeline
 
