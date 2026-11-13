@@ -1,13 +1,8 @@
+"""Admin registrations for FileZone models."""
+
 from django.contrib import admin
 
-# Portal-specific imports
-from olc_webportalv2.filezone.models import (
-    # Blobs,
-    Regexes,
-    ContainerName
-)
+from olc_webportalv2.filezone.models import ContainerName, Regexes
 
-# Register your models here.
-# admin.site.register(Blobs)
 admin.site.register(ContainerName)
 admin.site.register(Regexes)

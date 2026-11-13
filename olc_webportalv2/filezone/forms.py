@@ -1,276 +1,324 @@
-# Standard imports
+"""Forms for selecting and managing FileZone containers and files."""
+
 import re
+from typing import Dict, List, Tuple
 
-# Django imports
-from django.utils.translation import gettext_lazy as _
-from django.forms import ModelForm
-from django import forms
-
-# Third-party imports
 from dal import autocomplete
+from django import forms
+from django.forms import ModelForm
+from django.utils.translation import gettext_lazy as _
 
-# Portal-specific imports
+from olc_webportalv2.common.storage_client import StorageServiceError
+from olc_webportalv2.filezone.models import ContainerName, Regexes
 from olc_webportalv2.filezone.tasks import find_containers
-from olc_webportalv2.filezone.models import (
-    ContainerName,
-    Regexes
-)
 
 
 class ContainerForm(forms.Form):
+    """Select an existing storage container."""
+
     container_name = forms.ModelChoiceField(
         queryset=ContainerName.objects.all(),
         widget=autocomplete.ModelSelect2(
             url='filezone:filezone_autocompleter',
             attrs={
-                    'data-placeholder': 'Autocomplete ...',
-                    'style': 'max-width: 18em'
-                }
-            ),
-        required=True
+                'data-placeholder': 'Autocomplete ...',
+                'style': 'max-width: 18em',
+            },
+        ),
+        required=True,
     )
 
+
 class ContainerCreateForm(ModelForm):
-    
+    """Validate a new storage container name."""
+
     class Meta:
+        """Configure the container-name form field."""
+
         model = ContainerName
-
-        fields = [
-            'container_name',
-        ]
-
-        labels = {
-            'container_name': _('Container Name'),
-        }
+        fields = ['container_name']
+        labels = {'container_name': _('Container Name')}
         widgets = {
             'container_name': forms.TextInput(
-                attrs={
-                    'style': 'max-width: 18em'
-                    }
+                attrs={'style': 'max-width: 18em'}
             )
         }
 
     def clean(self):
-        super().clean()
-        error_dict = {}
-        error_dict['container_name'] = []
-        container_name = self.cleaned_data['container_name']
-        # Ensure that the supplied container name follows the Azure container naming scheme
-        sanitised_container, error_dict['container_name'] = validate_container_name(
-            container_name=container_name
-        )
-        # Ensure that the container name is unique
-        error_dict = unique_container(
-            container_name=container_name,
-            error_dict=error_dict
-        )
+        """Validate and normalize the requested container name."""
+        cleaned_data = super().clean()
+        container_name = cleaned_data.get('container_name')
+        if not container_name:
+            return cleaned_data
+
+        sanitized_name, errors = validate_container_name(container_name)
+        error_dict = {'container_name': errors}
+        if not errors:
+            unique_container(sanitized_name, error_dict)
         if error_dict['container_name']:
             raise forms.ValidationError(error_dict)
-        return {
-            'container_name': sanitised_container
-        }
+
+        cleaned_data['container_name'] = sanitized_name
+        return cleaned_data
 
 
-def validate_container_name(container_name, object_type='container'):
-    """
-    Use a regex to check if the supplied name follows the guidelines for Azure nomenclature. 
-    If it doesn't, attempt to rename the container/object
-    :param container_name: type str: Name of the container/object of interest
-    :param object_type: type str: Name of the object being validated. Default is container,
-    but target container, and target path are other options
-    :return: container_name: String of sanitised container name
-    :return: errors: List of logged statements
+def validate_container_name(
+    container_name: str,
+    object_type: str = 'container',
+) -> Tuple[str, List[str]]:
+    """Validate a name and suggest a storage-compatible alternative.
+
+    Args:
+        container_name: User-supplied container or object name.
+        object_type: Name used in validation messages.
+
+    Returns:
+        The sanitized name and any validation messages. An empty sanitized
+        name is returned with errors when the input contains no valid
+        characters.
+
     """
     errors = []
-    if not re.match('^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$', container_name):
-        errors.append(_(
-            '{object_type_cap} name, {container_name} is invalid. {object_type} names must be '
-            'between 3 and 63 characters, start with a letter or number, and can contain only '
-            'letters, numbers, and the dash (-) character. Every dash (-) character must be ' 
-            'immediately preceded and followed by a letter or number; consecutive dashes are not ' 
-            'permitted in {object_type} names. All letters in a {object_type} name must be '
-            'lowercase.'.format(
-                object_type_cap=object_type.capitalize(),
-                container_name=container_name,
-                object_type=object_type
-            ))
+    valid_pattern = r'[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]'
+    if not re.fullmatch(valid_pattern, container_name):
+        errors.append(
+            _(
+                '%(object_type_cap)s name, %(container_name)s is invalid. '
+                '%(object_type)s names must be between 3 and 63 characters, '
+                'start with a letter or number, and contain only lowercase '
+                'letters, numbers, and dashes. Dashes must be surrounded by '
+                'letters or numbers, and consecutive dashes are not allowed.'
+            )
+            % {
+                'object_type_cap': object_type.capitalize(),
+                'container_name': container_name,
+                'object_type': object_type,
+            }
         )
-        # Swap out dashes for underscores, as they will be removed in the following regex
-        container_name = container_name.replace('-', '_')
-        # Use re to remove all non-word characters (including dashes)
-        container_name = re.sub(r'\W', '', container_name)
-        # Replace multiple underscores with a single one.
-        # Uses logic from: https://stackoverflow.com/a/46701355
-        # Also ensure that the container name is in lowercase
-        container_name = re.sub(r'[^\w\s]|(_)(?=\1)', '', container_name).lower()
-        # Swap out underscores for dashes
-        container_name = container_name.replace('_', '-')
-        # Ensure that the container name doesn't start or end with a dash
-        container_name = re.sub(r'^-+', '', container_name)
-        container_name = re.sub(r'-+$', '', container_name)
+        original_name = container_name
+        container_name = container_name.lower().replace('_', '-')
+        container_name = re.sub(r'[^a-z0-9-]', '', container_name)
+        container_name = re.sub(r'-{2,}', '-', container_name).strip('-')
+        if container_name != original_name:
+            errors.append(
+                _(
+                    'Attempted to fix supplied name. Please use %(name)s '
+                    'instead.'
+                )
+                % {'name': container_name}
+            )
+
+    if not container_name:
         errors.append(
-            _('Attempted to fix supplied container name. Please use {container_name} instead'
-            .format(container_name=container_name))
+            _(
+                'Fixing the %(object_type)s name left no valid characters. '
+                'Please enter a new name.'
+            )
+            % {'object_type': object_type}
         )
-    # Ensure that the container name isn't length zero, or the while loop below will be infinite
-    if len(container_name) == 0:
+        return container_name, errors
+
+    if len(container_name) > 63:
+        container_name = container_name[:63].rstrip('-')
         errors.append(
-            _('Attempting to fix the {object_type} name left zero valid characters! '\
-            'Please enter a new name.'.format(object_type=object_type)))
-        raise SystemExit
-    # If the container name is too long, slice it to be 63 characters
-    if len(container_name) >= 63:
-        errors.append(
-            _('{object_type_cap} name {container_name} was too long. '\
-            'Use {container_name[:62]} instead'.format(
-                object_type_cap=object_type.capitalize(),
-                container_name=container_name,
-                object_type=object_type)))
-        container_name = container_name[:62]
-    # If the container name is too short, keep adding the container name to itself to
-    # bump up the length
+            _('%(object_type_cap)s name was too long. Use %(name)s instead.')
+            % {
+                'object_type_cap': object_type.capitalize(),
+                'name': container_name,
+            }
+        )
+
     while len(container_name) < 3:
+        longer_name = container_name + container_name
         errors.append(
-            _('{object_type_cap} name {container_name} was too short (only {length} characters). '
-            'Use {longer_name} instead'.format(
-                object_type_cap=object_type.capitalize(),
-                container_name=container_name,
-                length=len(container_name),
-                longer_name=container_name + container_name)
-        ))
-        container_name = container_name + container_name
-    # Use the validated container name
+            _(
+                '%(object_type_cap)s name %(name)s was too short. '
+                'Use %(longer)s instead.'
+            )
+            % {
+                'object_type_cap': object_type.capitalize(),
+                'name': container_name,
+                'longer': longer_name,
+            }
+        )
+        container_name = longer_name
+
     return container_name, errors
 
 
-def unique_container(container_name, error_dict):
+def unique_container(
+    container_name: str,
+    error_dict: Dict[str, List[str]],
+) -> Dict[str, List[str]]:
+    """Add a validation error when a container already exists in storage.
+
+    Args:
+        container_name: Name to check for uniqueness.
+        error_dict: Form errors keyed by field name.
+
+    Returns:
+        The supplied form error dictionary, updated if the name exists.
+
     """
-    Ensure that the supplied container name is unique
-    """
-    container_set = find_containers()
-    if container_name in container_set:
+    try:
+        existing_containers = find_containers()
+    except StorageServiceError as exc:
+        raise forms.ValidationError(
+            {
+                'container_name': _(
+                    'Unable to verify the container name. Please try again.'
+                )
+            }
+        ) from exc
+
+    if container_name in existing_containers:
         error_dict['container_name'].append(
-            _('{container_name} is already present in blob storage. Please create a unique name.')
-            .format(container_name=container_name)
+            _(
+                '%(container_name)s is already present in blob storage. '
+                'Please create a unique name.'
+            )
+            % {'container_name': container_name}
         )
     return error_dict
 
-class FileLocateForm(ModelForm):
-    
-    class Meta:
-        model = Regexes
 
+class FileLocateForm(ModelForm):
+    """Validate the container and file patterns used by a search."""
+
+    class Meta:
+        """Configure pattern fields and their guidance text."""
+
+        model = Regexes
         fields = [
             'container_regex',
             'container_exclude_regex',
             'file_regex',
-            'file_exclude_regex'
+            'file_exclude_regex',
         ]
-
         labels = {
-            'container_regex': _('Full or Partial Container Name(s). One per line. NOTE: If supplying a partial name, you must include * somewhere in each term'),
-            'container_exclude_regex': _('Term(s) to Exclude from Container Name(s). One per line'),
+            'container_regex': _(
+                'Full or Partial Container Name(s). One per line. NOTE: If '
+                'supplying a partial name, include * in each term.'
+            ),
+            'container_exclude_regex': _(
+                'Term(s) to Exclude from Container Name(s). One per line'
+            ),
             'file_regex': _('Full or Partial File Name(s). One per line'),
-            'file_exclude_regex': _('Term(s) to Exclude from File Name(s). One per line'),
-
+            'file_exclude_regex': _(
+                'Term(s) to Exclude from File Name(s). One per line'
+            ),
         }
         widgets = {
             'container_regex': forms.Textarea(
                 attrs={
-                    'placeholder': _('Optional\nDefault is to search through all containers\n'
-                    'Only numbers, dashes, asterisks, and lowercase letters will be used\n'
-                    'Underscores and spaces will be converted to dashes\n'
-                    'Uppercase letters will be converted to lowercase\nAll illegal characters '
-                    'will be ignored\nExact matches will be used if an asterisk is not present\n'
-                    'e.g. 201114-m05722 or 2011*m05722 or *m05722'),
-                    }
+                    'placeholder': _(
+                        'Optional\nDefault is to search all containers\n'
+                        'Only numbers, dashes, asterisks, and lowercase '
+                        'letters will be used\nUnderscores and spaces become '
+                        'dashes\nUppercase letters become lowercase\n'
+                        'Illegal characters are ignored\nExact matches are '
+                        'used when no asterisk is present\n'
+                        'e.g. 201114-m05722 or 2011*m05722 or *m05722'
+                    )
+                }
             ),
             'container_exclude_regex': forms.Textarea(
                 attrs={
                     'placeholder': _(
-                        'Optional\nAll supplied exclusions will be applied to all containers\n'
-                        'e.g. -output or geneseekr')
+                        'Optional\nAll exclusions apply to all containers\n'
+                        'e.g. -output or geneseekr'
+                    )
                 }
             ),
             'file_regex': forms.Textarea(
                 attrs={
-                    'placeholder': _('Required\n'
-                    'Full or partial file name\ne.g. 2018-CAL-0033.fasta or '
-                    '2018-CAL-*.fasta or 2018-CAL*.gz or InterOp/*.bin'),
-                    }
+                    'placeholder': _(
+                        'Required\nFull or partial file name\n'
+                        'e.g. 2018-CAL-0033.fasta or 2018-CAL-*.fasta or '
+                        '2018-CAL*.gz or InterOp/*.bin'
+                    )
+                }
             ),
             'file_exclude_regex': forms.Textarea(
                 attrs={
                     'placeholder': _(
-                        'Optional\nAll supplied exclusions will be applied to all files\n'
-                        'e.g. RawData (ignores all files in a particular folder) or .txt '
-                        '(ignores all text files) or unfiltered (ignores all files containing '
-                        '"unfiltered")')
+                        'Optional\nAll exclusions apply to all files\n'
+                        'e.g. RawData (ignores files in a folder), .txt '
+                        '(ignores text files), or unfiltered (ignores files '
+                        'containing "unfiltered")'
+                    )
                 }
             ),
         }
 
     def clean(self):
-        super().clean()
+        """Normalize container patterns and require a file pattern."""
+        cleaned_data = super().clean()
         error_dict = {}
-        # Container locating terms
-        if self.cleaned_data['container_regex']:
-            container_regex_list = self.cleaned_data['container_regex'].split()
-            sanitised_container_regex_list = validate_container_regex(
-                container_regex_list=container_regex_list
+
+        container_regex = cleaned_data.get('container_regex') or '*'
+        container_regex_list = (
+            validate_container_regex(container_regex.split())
+            if container_regex != '*'
+            else ['*']
+        )
+        container_exclude_regex = (
+            cleaned_data.get('container_exclude_regex') or ''
+        )
+        container_exclude_regex_list = (
+            container_exclude_regex.split()
+            if container_exclude_regex
+            else ['']
+        )
+
+        file_regex = cleaned_data.get('file_regex') or ''
+        if not file_regex:
+            error_dict['file_regex'] = _(
+                'Please provide at least one full or partial file name.'
             )
-        else:
-            self.cleaned_data['container_regex'] = '*'
-            sanitised_container_regex_list = ['*']
-        # Container exclusion terms
-        if self.cleaned_data['container_exclude_regex']:
-            container_exclude_regex_list = self.cleaned_data['container_exclude_regex'].split()
-        else:
-            self.cleaned_data['container_exclude_regex'] = ''
-            container_exclude_regex_list = ['']
-        # File locating terms
-        try:
-            if self.cleaned_data['file_regex']:
-                file_regex_list = self.cleaned_data['file_regex'].split()
-            else:
-                error_dict['file_regex'] = \
-                    _('Please provide at least one full or partial file name')
-        except KeyError:
-            error_dict['file_regex'] = _('Please provide at least one full or partial file name')
-        # File exclusion terms
-        if self.cleaned_data['file_exclude_regex']:
-            file_exclude_regex_list = self.cleaned_data['file_exclude_regex'].split()
-        else:
-            self.cleaned_data['file_exclude_regex'] = ''
-            file_exclude_regex_list = ['']
+        file_exclude_regex = cleaned_data.get('file_exclude_regex') or ''
+        file_exclude_regex_list = (
+            file_exclude_regex.split() if file_exclude_regex else ['']
+        )
+
         if error_dict:
             raise forms.ValidationError(error_dict)
-        return {
-            'container_regex': self.cleaned_data['container_regex'],
-            'container_exclude_regex': self.cleaned_data['container_exclude_regex'],
-            'container_regex_list': sanitised_container_regex_list,
-            'container_exclude_regex_list': container_exclude_regex_list,
-            'file_regex': self.cleaned_data['file_regex'],
-            'file_exclude_regex': self.cleaned_data['file_exclude_regex'],
-            'file_regex_list': file_regex_list,
-            'file_exclude_regex_list': file_exclude_regex_list,
-        }
+
+        cleaned_data.update(
+            {
+                'container_regex': container_regex,
+                'container_exclude_regex': container_exclude_regex,
+                'container_regex_list': container_regex_list,
+                'container_exclude_regex_list': (container_exclude_regex_list),
+                'file_regex': file_regex,
+                'file_exclude_regex': file_exclude_regex,
+                'file_regex_list': file_regex.split(),
+                'file_exclude_regex_list': file_exclude_regex_list,
+            }
+        )
+        return cleaned_data
 
 
-def validate_container_regex(container_regex_list: list):
+def validate_container_regex(
+    container_regex_list: List[str],
+) -> List[str]:
+    """Normalize user-supplied container search patterns.
+
+    Args:
+        container_regex_list: Container patterns entered in the form.
+
+    Returns:
+        Lowercase patterns with spaces and underscores replaced by dashes
+        and unsupported characters removed.
+
     """
-    Validate all entries in a user-supplied container regex
-    :param list container_regex_list: List of all container regexes to use
-    :return
-    """
-    santised_regex_list = []
+    illegal_characters = set('!@#$%^&\'"?()+=[]{}\\|:;<>/,.`~')
+    sanitized_regex_list = []
     for container_regex in container_regex_list:
-        santised_regex = container_regex.lower().replace(' ', '-').replace('_', '-')
-        illegal_characters = ['!', '@', '#', '$', '%', '^', '&', '\'', '\"', '?', '(', ')',
-                              '+', '=', '[', ']', '{', '}', '\\', '|', ':', ';', '<', '>', '/'
-                              ',', '.', '`', '~']
+        sanitized_regex = (
+            container_regex.lower().replace(' ', '-').replace('_', '-')
+        )
         for illegal_character in illegal_characters:
-            santised_regex = santised_regex.replace(illegal_character, '')
-        santised_regex_list.append(santised_regex)
-    return santised_regex_list
-    
+            sanitized_regex = sanitized_regex.replace(illegal_character, '')
+        sanitized_regex_list.append(sanitized_regex)
+    return sanitized_regex_list

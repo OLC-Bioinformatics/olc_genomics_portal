@@ -1,6 +1,4 @@
-"""
-Methods for FileZone app
-"""
+"""Storage utilities and blob search logic for FileZone."""
 
 import base64
 import binascii
@@ -8,149 +6,166 @@ import hashlib
 import os
 import pathlib
 import re
+import tempfile
 from email.utils import parsedate_to_datetime
+from typing import Dict, List
 
 from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def human_bytes(byte_count: float) -> str:
-    """
-    Convert a byte count into a human-readable format with appropriate
-    unit (B, KB, MB, GB, TB).
+    """Convert a byte count to a human-readable unit.
 
-    :param byte_count: The number of bytes as a float.
-    :return: A string representing the byte count in a human-friendly format.
+    Args:
+        byte_count: Number of bytes.
+
+    Returns:
+        The size formatted in bytes, KB, MB, GB, or TB.
+
     """
     # Suffixes for units
     suffixes = ['B', 'KB', 'MB', 'GB', 'TB']
     index = 0  # Index to track the current unit
-    
+
     # Loop to convert byte_count to a higher unit if applicable
     while byte_count >= 1024 and index < len(suffixes) - 1:
         byte_count /= 1024.0  # Convert to the next higher unit
         index += 1  # Move to the next unit
-    
+
     # Return formatted string with two decimal places and unit suffix
-    return f"{byte_count:.2f} {suffixes[index]}"
+    return f'{byte_count:.2f} {suffixes[index]}'
 
 
 def generate_sas(blob_name, container_name):
-    """
-    Create a SAS URL for a supplied blob
+    """Create a week-long download URL for a blob.
+
+    Args:
+        blob_name: Object path to make downloadable.
+        container_name: Storage container holding the object.
+
+    Returns:
+        A temporary download URL.
+
     """
     return generate_download_link(
         blob_client=get_storage_client(),
         container_name=container_name,
         blob_name=blob_name,
-        expiry=7
+        expiry=7,
     )
 
 
 def generate_download_link(blob_client, container_name, blob_name, expiry=7):
+    """Generate an attachment URL for a blob.
+
+    Args:
+        blob_client: Provider-neutral storage client.
+        container_name: Container holding the blob.
+        blob_name: Object path to make downloadable.
+        expiry: Number of days the link remains valid.
+
+    Returns:
+        A temporary download URL.
+
     """
-    Generate a download link with Content-Disposition for the blob, good for
-    up to expiry days.
-    :param blob_client: Provider-neutral Storage client
-    :param container_name: Name of the container.
-    :param blob_name: Name of the blob to create a link for.
-    :param expiry: Number of days the link should be valid for.
-    :return: String of a link that allows people to download the blob.
-    """
+    filename = blob_name.split('/')[-1]
     return blob_client.create_transfer_url(
         container_name,
         'download',
         name=blob_name,
         expires_in_seconds=expiry * 24 * 60 * 60,
-        content_disposition='attachment; filename="{0}"'.format(
-            blob_name.split('/')[-1]
-        ),
+        content_disposition=f'attachment; filename="{filename}"',
     )
 
 
 def copy_blobs(
-        blob_metadata_list: list,
-        destination_container: str):
-    """
-    Copy blobs from one or more containers into a destination container
-    :param list blob_metadata_list: List metadata for blobs to be copied
-    :param str destination container: Name of the container into which the
-    blobs are to be copied
+    blob_metadata_list: List[Dict[str, str]],
+    destination_container: str,
+) -> None:
+    """Copy objects to a destination container.
+
+    Args:
+        blob_metadata_list: Source container and object path for each blob.
+        destination_container: Container receiving the copies.
+
     """
     blob_service = get_storage_client()
     blob_service.ensure_container(destination_container)
     for blob_metadata_dict in blob_metadata_list:
         blob_service.copy_object(
-            blob_metadata_dict["container_name"],
-            blob_metadata_dict["blob_name"],
+            blob_metadata_dict['container_name'],
+            blob_metadata_dict['blob_name'],
             destination_container,
-            blob_metadata_dict["blob_name"],
+            blob_metadata_dict['blob_name'],
         )
 
 
 def calculate_checksum(item):
+    """Calculate a base64-encoded MD5 checksum for an uploaded file.
+
+    Args:
+        item: Uploaded file-like object supporting read and seek.
+
+    Returns:
+        Base64-encoded MD5 digest.
+
     """
-    Calculate an Azure-style checksum for an uploaded file
-    :param request.FILES.get item: Current uploaded file
-    """
-    # Create a hashlib MD5 object to read in the file contents
     md5 = hashlib.md5()
-    # Use readlines() to load the file contents
-    contents = item.readlines()
-    # Iterate over the contents, and update the hashlib object
-    for line in contents:
-        md5.update(line)
-    # Reset the file position to the start
+    for chunk in iter(lambda: item.read(1024 * 1024), b''):
+        md5.update(chunk)
     item.seek(0)
     return base64.b64encode(md5.digest()).decode()
 
 
 class FileLocate:
-    """
-    Locate files in blob storage with an optional container regex and a
-    file regex
-    """
+    """Locate blobs by container and object-name patterns."""
 
     def main(self):
-        """
-        Run the container (optional) and file locating methods
+        """Find matching blobs and return page and AJAX data.
+
+        Returns:
+            A tuple of per-container file data and DataTables rows.
+
         """
         blob_client = FileLocate.create_blob_client()
         container_list = FileLocate.locate_container(
             blob_client=blob_client,
             expressions=self.container_regex,
             negative_expressions=self.container_exclude_regex,
-            debug=self.debug
+            debug=self.debug,
         )
         file_dict, ajax_dict = FileLocate.locate_file(
             blob_client=blob_client,
             containers=container_list,
             expressions=self.file_regex,
             negative_expressions=self.file_exclude_regex,
-            debug=self.debug
+            debug=self.debug,
         )
         return file_dict, ajax_dict
 
     @staticmethod
     def create_blob_client():
-        """
-        Create the blob client necessary for the file locating functionality
-        """
+        """Return the shared provider-neutral storage client."""
         return get_storage_client()
 
     @staticmethod
     def locate_container(
-            blob_client,
-            expressions: list,
-            negative_expressions: list,
-            debug: bool):
-        """
-        Locate containers matching the supplied regex
-        :param blob_client: Provider-neutral Storage client
-        :param list expressions: List of the regexes to use to search for
-            containers
-        :param list negative_expressions: List of regexes to use to filter
-            returned containers
-        :return list containers/container_matches: Matching storage containers
+        blob_client,
+        expressions: List[str],
+        negative_expressions: List[str],
+        debug: bool,
+    ):
+        """Return containers matching the supplied patterns.
+
+        Args:
+            blob_client: Provider-neutral storage client.
+            expressions: Patterns used to select containers.
+            negative_expressions: Terms that exclude matching containers.
+            debug: Whether to print search details.
+
+        Returns:
+            Matching storage container records.
+
         """
         # Get a list of all the containers
         containers = blob_client.list_containers()
@@ -165,14 +180,14 @@ class FileLocate:
 
         # Iterate over the list of regexes
         for expression in expressions:
-
             # Filter the containers with the current regex
             for container in containers:
                 # Reject if the match contains any of the exclusion terms
                 if negative_expressions != ['']:
                     if any(
-                        negative_expression in container.name for
-                            negative_expression in negative_expressions):
+                        negative_expression in container.name
+                        for negative_expression in negative_expressions
+                    ):
                         if debug:
                             print(
                                 f'Container {container.name} matched one of '
@@ -191,9 +206,7 @@ class FileLocate:
                     regex_expression = re.sub(r'(?<!\.)\*', '.*', expression)
                     # Use re.fullmatch to determine if the expression matches
                     # the container name
-                    if re.fullmatch(
-                            rf'{regex_expression}$',
-                            container.name):
+                    if re.fullmatch(rf'{regex_expression}$', container.name):
                         # Update the match boolean and append the container to
                         # the list of matches
                         container_matches.append(container)
@@ -212,19 +225,24 @@ class FileLocate:
 
     @staticmethod
     def locate_file(
-            blob_client,
-            containers: list,
-            expressions: list,
-            negative_expressions: list,
-            debug: bool):
-        """
-        Locate files in containers in blob storage with a supplied expression
-        :param blob_client: Provider-neutral Storage client
-        :param list containers: List of provider-neutral storage containers
-        :param list expressions: List of regexes to use to search for files
-        :param list negative_expressions: List of regexes to use to filter
-            returned files
-        :return dict files: Dictionary of expression: container_name: blob_name
+        blob_client,
+        containers: list,
+        expressions: List[str],
+        negative_expressions: List[str],
+        debug: bool,
+    ):
+        """Find matching blobs and build the page and AJAX results.
+
+        Args:
+            blob_client: Provider-neutral storage client.
+            containers: Storage containers to search.
+            expressions: Patterns used to select object paths.
+            negative_expressions: Terms that exclude matching object paths.
+            debug: Whether to print search details.
+
+        Returns:
+            A tuple containing per-container file data and DataTables rows.
+
         """
         # Initialise a dictionary to store the matches
         files = {}
@@ -274,8 +292,9 @@ class FileLocate:
                         for i, component in enumerate(components):
                             # Check for nested files/folders
                             if len(expression_components) > 1:
-                                while len(expression_components) < \
-                                        len(components):
+                                while len(expression_components) < len(
+                                    components
+                                ):
                                     expression_components.insert(-1, '*')
                                 # Reset the number of matches required to the
                                 # new length of the
@@ -284,14 +303,15 @@ class FileLocate:
                                 # Use re.sub to convert * to .* to be
                                 # consistent with regex rules
                                 regex_expression = re.sub(
-                                    r'(?<!\.)\*', '.*',
-                                    expression_components[i]
+                                    r'(?<!\.)\*',
+                                    '.*',
+                                    expression_components[i],
                                 )
                                 # If the components match, increment the
                                 # number of matches
                                 if re.fullmatch(
-                                        rf'{regex_expression}$',
-                                        component):
+                                    rf'{regex_expression}$', component
+                                ):
                                     # Set the match to the current component
                                     # to true
                                     component_matches[component] = True
@@ -304,8 +324,8 @@ class FileLocate:
                                 # If the component matches, set the match
                                 # boolean to True
                                 if re.fullmatch(
-                                        rf'{regex_expression}$',
-                                        component):
+                                    rf'{regex_expression}$', component
+                                ):
                                     match = True
                         # Check to see if the number of matches observed in a
                         # multi-component expression is the number matches
@@ -325,45 +345,43 @@ class FileLocate:
                     # Reject if the match contains any of the exclusion terms
                     if negative_expressions != ['']:
                         if any(
-                            negative_expression in filename for
-                                negative_expression in negative_expressions):
+                            negative_expression in filename
+                            for negative_expression in negative_expressions
+                        ):
                             if debug:
                                 print(
                                     f'File {container.name} / {filename} '
                                     'matched one of the '
-                                    'exclusion terms')
+                                    'exclusion terms'
+                                )
                             continue
                     # Add the match to the dictionary
                     if container.name not in files:
                         files[container.name] = []
-                    blob_size = human_bytes(
-                        byte_count=blob_file.size or 0
-                    )
+                    blob_size = human_bytes(byte_count=blob_file.size or 0)
                     sas_url = generate_sas(
-                        blob_name=blob_file.name,
-                        container_name=container.name
+                        blob_name=blob_file.name, container_name=container.name
                     )
                     modified = (
                         parsedate_to_datetime(blob_file.last_modified)
-                        if blob_file.last_modified else None
+                        if blob_file.last_modified
+                        else None
                     )
-                    blob_date = modified.strftime(
-                        "%Y/%m/%d, %H:%M:%S"
-                    ) if modified else ''
+                    blob_date = (
+                        modified.strftime('%Y/%m/%d, %H:%M:%S')
+                        if modified
+                        else ''
+                    )
                     # Extract the MD5 information
                     try:
                         blob_md5 = binascii.hexlify(
-                            bytearray(
-                                base64.b64decode(
-                                    blob_file.content_md5
-                                )
-                            )
+                            bytearray(base64.b64decode(blob_file.content_md5))
                         ).decode()
                     except (TypeError, AttributeError):
                         blob_md5 = FileLocate.calculate_md5(
                             blob_client=blob_client,
                             blob_file=blob_file,
-                            container_name=container.container_name
+                            container_name=container.container_name,
                         )
                     # Update the dictionaries with the metadata
                     files[container.name].append(
@@ -374,7 +392,7 @@ class FileLocate:
                             'blob_size': blob_size,
                             'blob_date': blob_date,
                             'blob_download_link': sas_url,
-                            'blob_md5': blob_md5
+                            'blob_md5': blob_md5,
                         }
                     )
                     ajax['data'].append(
@@ -385,7 +403,7 @@ class FileLocate:
                             'blob_size': blob_size,
                             'blob_date': blob_date,
                             'blob_download_link': sas_url,
-                            'blob_md5': blob_md5
+                            'blob_md5': blob_md5,
                         }
                     )
                     count += 1
@@ -402,29 +420,55 @@ class FileLocate:
 
     @staticmethod
     def calculate_md5(
-            blob_client,
-            blob_file,
-            container_name: str) -> str:
-        """
-        Manually calculate the MD5 checksum of a large blob in a
-            memory-efficient manner.
-        :param blob_client: Provider-neutral Storage client
-        :param blob_file: Blob from generator
-        :param container_name: Name of container holding blob of interest
-        :return: MD5 hex digest of blob
+        blob_client,
+        blob_file,
+        container_name: str,
+    ) -> str:
+        """Calculate a blob's MD5 digest without loading it into memory.
+
+        Args:
+            blob_client: Provider-neutral storage client.
+            blob_file: Storage object metadata containing its name.
+            container_name: Container holding the blob.
+
+        Returns:
+            The blob's MD5 digest as a hexadecimal string.
+
         """
         md5 = hashlib.md5()
-        chunk_size = 4096  # Define the chunk size
-
-        # Create a stream to download the blob content
-        content = blob_client.download_bytes(container_name, blob_file.name)
-        for offset in range(0, len(content), chunk_size):
-            md5.update(content[offset:offset + chunk_size])
+        with tempfile.TemporaryDirectory(prefix='filezone-md5-') as temp_dir:
+            local_path = os.path.join(temp_dir, 'blob')
+            blob_client.download_file(
+                container_name,
+                blob_file.name,
+                local_path,
+            )
+            with open(local_path, 'rb') as blob_stream:
+                for chunk in iter(
+                    lambda: blob_stream.read(1024 * 1024),
+                    b'',
+                ):
+                    md5.update(chunk)
         return md5.hexdigest()
 
     def __init__(
-            self, container_regex, container_exclude_regex, file_regex,
-            file_exclude_regex, debug=False) -> None:
+        self,
+        container_regex: List[str],
+        container_exclude_regex: List[str],
+        file_regex: List[str],
+        file_exclude_regex: List[str],
+        debug: bool = False,
+    ) -> None:
+        """Store the patterns used for a blob search.
+
+        Args:
+            container_regex: Patterns selecting storage containers.
+            container_exclude_regex: Terms excluding containers.
+            file_regex: Patterns selecting object paths.
+            file_exclude_regex: Terms excluding object paths.
+            debug: Whether to print search details.
+
+        """
         self.container_regex = container_regex
         self.container_exclude_regex = container_exclude_regex
         self.file_regex = file_regex
@@ -440,9 +484,9 @@ if __name__ == '__main__':
             '2017-SEQ-0393*',
             'Best*/2018-CAL*.fasta',
             'InterOp/Cont*',
-            '2018-CAL*.gz'
+            '2018-CAL*.gz',
         ],
         file_exclude_regex=[],
-        debug=True
+        debug=True,
     )
     file_dictionary = file_obj.main()

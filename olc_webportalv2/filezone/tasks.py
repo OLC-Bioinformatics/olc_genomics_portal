@@ -1,65 +1,47 @@
-"""
-Methods for FileZone app
-"""
+"""Tasks and storage helpers for the FileZone app."""
 
 # Standard imports
 import base64
 import binascii
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import fnmatch
 import json
-import logging
 import os
+import pathlib
+import tempfile
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from email.utils import parsedate_to_datetime
+from typing import List, Tuple
 
-# Django imports
-from django.conf import settings
-from django.db import DatabaseError
-# Celery Task Management
+# Third-party imports
 from celery import shared_task
-
-# Sentry
+from django.db import DatabaseError
 from sentry_sdk import capture_exception
 
-# Portal-specific imports
-from olc_webportalv2.cowbat.tasks import (
-    generate_download_link as generate_archive_download_link
-)
-from olc_webportalv2.filezone.methods import (
-    FileLocate,
-    generate_sas,
-    human_bytes
-)
-from olc_webportalv2.filezone.models import (
-    ContainerName,
-    Regexes
-)
+# Local imports
 from olc_webportalv2.common.storage_client import (
     StorageServiceError,
     get_storage_client,
 )
+from olc_webportalv2.cowbat.tasks import (
+    generate_download_link as generate_archive_download_link,
+)
+from olc_webportalv2.filezone.methods import (
+    FileLocate,
+    generate_sas,
+    human_bytes,
+)
+from olc_webportalv2.filezone.models import ContainerName, Regexes
 
-# Set the logging levels
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
-
-def find_containers():
-    """
-    Find all containers
-    """
+def find_containers() -> List[str]:
+    """Return sorted container names from the storage service."""
     containers = get_storage_client().list_containers()
-    # Use a set comprehension to get the container names
-    container_set = {str(container.name) for container in containers}
-    return sorted(container_set)
+    return sorted({str(container.name) for container in containers})
 
 
 @shared_task
 def refresh_container_names():
-    """
-    Clear out all the container names from the model, and refresh
-    """
+    """Refresh stored container names from the storage service."""
     try:
         # Autocompletion: clear out all the previous data
         ContainerName.objects.all().delete()
@@ -67,61 +49,62 @@ def refresh_container_names():
         container_list = find_containers()
         # Add the blobs to the model
         ContainerName.objects.bulk_create(
-            ContainerName(
-                container_name=container
-            ) for container in container_list
+            ContainerName(container_name=container)
+            for container in container_list
         )
-    except (
-            StorageServiceError,
-            DatabaseError) as exc:
+    except (StorageServiceError, DatabaseError) as exc:
         capture_exception(exc)
 
 
 def create_container(container_name):
+    """Create a container in storage, propagating service errors.
+
+    Args:
+        container_name: Name of the container to create.
+
     """
-    Create a container in Azure storage
-    """
-    try:
-        get_storage_client().ensure_container(container_name)
-    except Exception as exc:
-        return exc
+    get_storage_client().ensure_container(container_name)
 
 
 def calculate_md5_parallel(blob_client, blob, container_name):
-    """
-    Calculate MD5 in parallel for a given blob. Attempts to use the MD5
-    provided by Azure, and falls back to manual calculation if necessary.
+    """Calculate a blob's MD5 digest.
 
-    :param blob_client: Provider-neutral Storage client
-    :param blob: Blob object for which to calculate MD5
-    :param container_name: Name of the container containing the blob
-    :return: MD5 hash of the blob as a hexadecimal string
+    Use the provider-supplied checksum when available and fall back to a
+    streamed calculation when it is missing.
+
+    Args:
+        blob_client: Provider-neutral storage client.
+        blob: Storage object metadata containing its name and checksum.
+        container_name: Container holding the blob.
+
+    Returns:
+        The MD5 digest as a hexadecimal string.
+
     """
     try:
         # Attempt to use the MD5 provided by Azure
         return binascii.hexlify(
-            bytearray(
-                base64.b64decode(
-                    blob.content_md5
-                )
-            )
+            bytearray(base64.b64decode(blob.content_md5))
         ).decode()
     except (TypeError, AttributeError):
         return FileLocate.calculate_md5(
             blob_client=blob_client,
             blob_file=blob,
-            container_name=container_name
+            container_name=container_name,
         )
 
 
 def list_blobs(filezone_pk):
-    """
-    List all blobs in a specified container and calculate their MD5 hashes
-    in parallel, improving performance for containers with many files.
+    """List non-empty blobs and their metadata.
 
-    :param filezone_pk: Primary key of the FileZone object representing
-                        the container
-    :return: List of dictionaries with blob details
+    Calculate missing MD5 values in parallel for the selected container.
+
+    Args:
+        filezone_pk: Primary key of the container database record.
+
+    Returns:
+        Blob hierarchy and a mapping from row IDs to blob metadata.
+
     """
     blob_client = get_storage_client()
     # Retrieve container name using the FileZone primary key
@@ -133,7 +116,7 @@ def list_blobs(filezone_pk):
     # Filter out zero-size blobs and sort by blob name
     blobs = sorted(
         [blob for blob in blobs if (blob.size or 0) > 0],
-        key=lambda blob: blob.name
+        key=lambda blob: blob.name,
     )
 
     blob_data = []
@@ -151,7 +134,7 @@ def list_blobs(filezone_pk):
             'blob_size': None,
             'blob_date': None,
             'blob_download_link': None,
-            'blob_md5': None
+            'blob_md5': None,
         }
         blob_data.append(blob_dict)
         pk_to_blob_dict[index] = blob_dict
@@ -164,8 +147,9 @@ def list_blobs(filezone_pk):
                 calculate_md5_parallel,
                 blob_client,
                 blob,
-                container.container_name
-                ): index for index, blob in enumerate(blobs, start=1)
+                container.container_name,
+            ): index
+            for index, blob in enumerate(blobs, start=1)
         }
 
         for future in as_completed(future_to_blob_index):
@@ -174,19 +158,23 @@ def list_blobs(filezone_pk):
             blob = blobs[index - 1]  # Adjust index to 0-based for list access
 
             # Update blob details with results from parallel processing
-            blob_data[index - 1].update({
-                'blob_size': human_bytes(byte_count=blob.size or 0),
-                'blob_date': (
-                    parsedate_to_datetime(blob.last_modified).strftime(
-                        "%Y/%m/%d, %H:%M:%S"
-                    ) if blob.last_modified else ''
-                ),
-                'blob_download_link': generate_sas(
-                    blob_name=blob.name,
-                    container_name=container.container_name
-                ),
-                'blob_md5': blob_md5
-            })
+            blob_data[index - 1].update(
+                {
+                    'blob_size': human_bytes(byte_count=blob.size or 0),
+                    'blob_date': (
+                        parsedate_to_datetime(blob.last_modified).strftime(
+                            '%Y/%m/%d, %H:%M:%S'
+                        )
+                        if blob.last_modified
+                        else ''
+                    ),
+                    'blob_download_link': generate_sas(
+                        blob_name=blob.name,
+                        container_name=container.container_name,
+                    ),
+                    'blob_md5': blob_md5,
+                }
+            )
 
     # Calculate blob hierarchy
     blob_hierarchy = organize_blobs_into_hierarchy(blob_data)
@@ -195,12 +183,14 @@ def list_blobs(filezone_pk):
 
 
 def organize_blobs_into_hierarchy(blob_data):
-    """
-    Organize flat blob data into a hierarchical structure based on the full
-    path of blobs.
+    """Organize flat blob data into a path-based hierarchy.
 
-    :param blob_data: List of dictionaries with blob details.
-    :return: Hierarchical structure of blobs.
+    Args:
+        blob_data: Blob dictionaries containing full object paths.
+
+    Returns:
+        Nested dictionaries representing folders and files.
+
     """
     root = {}
 
@@ -222,16 +212,30 @@ def organize_blobs_into_hierarchy(blob_data):
 
 
 def sanitise_rename(blob_rename):
+    """Return characters that are not allowed in a new blob name.
+
+    Args:
+        blob_rename: User-supplied destination object path.
+
+    Returns:
+        The set of disallowed characters present in the new name.
+
     """
-    Ensure that the supplied text is valid for renaming
-    """
-    invalid_chars = "^@!#&<>{}[]\\~`]*$\'\"%"
+    invalid_chars = '^@!#&<>{}[]\\~`]*$\'"%'
     return set(invalid_chars).intersection(blob_rename)
 
 
 def rename_blob(blob_name, blob_rename, container_name):
-    """
-    Rename a blob with user-supplied text
+    """Copy a blob to its new name and delete the original.
+
+    Args:
+        blob_name: Current object path.
+        blob_rename: Destination object path.
+        container_name: Container holding the blob.
+
+    Returns:
+        Storage errors encountered while copying or deleting.
+
     """
     errors = []
     blob_client = get_storage_client()
@@ -239,31 +243,48 @@ def rename_blob(blob_name, blob_rename, container_name):
         blob_client.copy_object(
             container_name, blob_name, container_name, blob_rename
         )
-    except Exception as exc:
+    except StorageServiceError as exc:
         return ['Error creating blob: ' + str(exc)]
     return delete_blob(
         blob_client=blob_client,
         container_name=container_name,
         blob_name=blob_name,
-        errors=errors
+        errors=errors,
     )
 
 
 def delete_blob(blob_client, container_name, blob_name, errors):
-    """
-    Delete a blob
+    """Delete a blob and append any storage error.
+
+    Args:
+        blob_client: Provider-neutral storage client.
+        container_name: Container holding the blob.
+        blob_name: Object path to delete.
+        errors: Existing error messages to update.
+
+    Returns:
+        The error list, including any deletion error.
+
     """
     # Delete the original blob
     try:
         blob_client.delete_object(container_name, blob_name)
-    except Exception as exc:
+    except StorageServiceError as exc:
         errors.append('Error deleting blob: ' + str(exc))
     return errors
 
 
 def prep_delete_blob(blob_client, blob_list, container_name):
-    """
-    Delete blobs based on 'blob_full_path' and handle errors.
+    """Delete selected blob paths while collecting individual failures.
+
+    Args:
+        blob_client: Provider-neutral storage client.
+        blob_list: Selected objects containing ``blob_full_path``.
+        container_name: Container holding the objects.
+
+    Returns:
+        Storage errors and the paths that could not be deleted.
+
     """
     errors = []
     errored_blobs = []
@@ -273,144 +294,185 @@ def prep_delete_blob(blob_client, blob_list, container_name):
             blob_client.delete_object(
                 container_name, blob_dict['blob_full_path']
             )
-        except Exception as exc:
+        except StorageServiceError as exc:
             errors.append(exc)
             errored_blobs.append(blob_dict['blob_full_path'])
-    if errors:
-        # Optionally, log errors or handle them as needed
-        pass
     return errors, errored_blobs
 
 
 def archive(blob_client, blob_list, container_name, container_pk):
-    """
-    Download blobs to local VM, create ZIP archive, upload to Azure storage,
-    and create SAS URL
-    """
-    try:
-        archive_folder = os.path.join('olc_webportalv2', 'media', 'filezone')
-        os.makedirs(archive_folder, exist_ok=True)
-        # List all the things in the container - if it's a file in reports
-        # folder or an assembly, download it.
-        blobs = blob_client.list_objects(container_name)
-        local_files = set()
-        for blob_dict in blob_list:
-            for blob in blobs:
-                if fnmatch.fnmatch(blob.name, blob_dict['blob_full_path']):
-                    local_file = os.path.join(
-                        archive_folder, os.path.basename(blob.name)
-                    )
-                    local_files.add(local_file)
-                    blob_client.download_file(
-                        container_name, blob.name, local_file
-                    )
-        archive_file = os.path.join(
-            archive_folder,
-            f'{container_name}_{container_pk}.zip'
-        )
-        with zipfile.ZipFile(archive_file, 'w') as zip_stream:
-            for local_file in local_files:
-                zip_stream.write(
-                    local_file,
-                    arcname=os.path.basename(local_file),
-                    compress_type=zipfile.ZIP_DEFLATED
-                )
+    """Archive selected objects from one container and return a download URL.
 
-        sas_url = generate_archive_download_link(
-            blob_service_client=blob_client,
-            container_name='filezone-archives',
-            output_zipfile=archive_file
-        )
-        return sas_url
-    except Exception as exc:
-        return exc
+    Args:
+        blob_client: Provider-neutral storage client.
+        blob_list: Selected objects, each containing ``blob_full_path``.
+        container_name: Container holding the selected objects.
+        container_pk: Container database primary key for the archive name.
+
+    Returns:
+        A temporary download URL for the uploaded archive.
+
+    """
+    blob_paths = [
+        (container_name, blob_dict['blob_full_path'])
+        for blob_dict in blob_list
+    ]
+    return _create_archive(
+        blob_client=blob_client,
+        blob_paths=blob_paths,
+        archive_name=f'container_{container_pk}.zip',
+        include_container=False,
+    )
 
 
 def archive_multiple_containers(
-        blob_client,
-        blob_list,
-        container_list,
-        filezone_pk):
-    """
-    Download blobs to local VM, create ZIP archive, upload to Azure storage,
-    and create SAS URLs
-    """
-    try:
-        archive_folder = os.path.join('olc_webportalv2', 'media', 'filezone')
-        os.makedirs(archive_folder, exist_ok=True)
-        # Create a set to store the names of all the downloaded files to the
-        # archive
-        local_files = set()
-        for container_name in container_list:
-            # List all the things in the container - if it's a file in reports
-            # folder or an assembly, download it.
-            blobs = blob_client.list_objects(container_name)
-            for blob_dict in blob_list:
-                for blob in blobs:
-                    if fnmatch.fnmatch(blob.name, blob_dict['blob_name']):
-                        local_file = os.path.join(
-                            archive_folder, os.path.basename(blob.name)
-                        )
-                        local_files.add(local_file)
-                        blob_client.download_file(
-                            container_name, blob.name, local_file
-                        )
-        archive_file = os.path.join(
-            archive_folder, f'filezone_request_{filezone_pk}.zip'
-        )
-        with zipfile.ZipFile(archive_file, 'w') as zip_stream:
-            for local_file in local_files:
-                zip_stream.write(
-                    local_file,
-                    arcname=os.path.basename(local_file),
-                    compress_type=zipfile.ZIP_DEFLATED
-                )
+    blob_client,
+    blob_list,
+    filezone_pk,
+):
+    """Archive selected objects from multiple containers.
 
-        sas_url = generate_archive_download_link(
+    Args:
+        blob_client: Provider-neutral storage client.
+        blob_list: Selected objects with ``container_name`` and ``blob_name``.
+        filezone_pk: FileZone request primary key for the archive name.
+
+    Returns:
+        A temporary download URL for the uploaded archive.
+
+    """
+    blob_paths = [
+        (blob_dict['container_name'], blob_dict['blob_name'])
+        for blob_dict in blob_list
+    ]
+    return _create_archive(
+        blob_client=blob_client,
+        blob_paths=blob_paths,
+        archive_name=f'filezone_request_{filezone_pk}.zip',
+        include_container=True,
+    )
+
+
+def _create_archive(
+    blob_client,
+    blob_paths: List[Tuple[str, str]],
+    archive_name: str,
+    include_container: bool,
+) -> str:
+    """Download selected objects, archive them, and upload the ZIP.
+
+    Args:
+        blob_client: Provider-neutral storage client.
+        blob_paths: Container and object-name pairs to include.
+        archive_name: Local filename for the generated ZIP.
+        include_container: Whether to prefix members with their container.
+
+    Returns:
+        A temporary download URL for the uploaded archive.
+
+    """
+    with tempfile.TemporaryDirectory(prefix='filezone-') as archive_folder:
+        archive_file = os.path.join(archive_folder, archive_name)
+        with zipfile.ZipFile(
+            archive_file,
+            'w',
+            compression=zipfile.ZIP_DEFLATED,
+        ) as zip_stream:
+            for index, (container_name, blob_name) in enumerate(blob_paths):
+                local_file = os.path.join(
+                    archive_folder,
+                    f'download-{index}',
+                )
+                blob_client.download_file(
+                    container_name,
+                    blob_name,
+                    local_file,
+                )
+                archive_path = _archive_member_name(
+                    container_name,
+                    blob_name,
+                    include_container,
+                )
+                zip_stream.write(local_file, arcname=archive_path)
+
+        return generate_archive_download_link(
             blob_service_client=blob_client,
             container_name='filezone-archives',
-            output_zipfile=archive_file
+            output_zipfile=archive_file,
         )
-        return sas_url
-    except Exception as exc:
-        return exc
+
+
+def _archive_member_name(
+    container_name: str,
+    blob_name: str,
+    include_container: bool,
+) -> str:
+    """Build a relative ZIP member path without traversal components.
+
+    Args:
+        container_name: Container holding the object.
+        blob_name: Object path to include in the archive.
+        include_container: Whether to prefix the path with the container.
+
+    Returns:
+        A normalized relative path for the ZIP member.
+
+    """
+    path_parts = [
+        part
+        for part in pathlib.PurePosixPath(blob_name.replace('\\', '/')).parts
+        if part not in {'/', '.', '..'}
+    ]
+    if not path_parts:
+        path_parts = ['unnamed-blob']
+    if include_container:
+        container_part = pathlib.PurePosixPath(container_name).name
+        if container_part in {'', '.', '..'}:
+            container_part = 'container'
+        path_parts.insert(0, container_part)
+    return pathlib.PurePosixPath(*path_parts).as_posix()
 
 
 @shared_task
-def locate_files(
-        filezone_pk: int,
-        debug=False):
-    """
-    Run the FileLocate class method to locate containers and files using
-    supplied patterns
-    :param int filezone_pk: Primary key of the Regexes model to use
-    :param bool debug: Boolean for whether debug statements should be printed.
-        Default is False
+def locate_files(filezone_pk: int, debug=False):
+    """Locate matching containers and files for a saved search.
+
+    Args:
+        filezone_pk: Primary key of the Regexes search request.
+        debug: Whether to print search details.
+
     """
     regexes = Regexes.objects.get(pk=filezone_pk)
+    file_patterns = regexes.file_regex_list or []
+    if not file_patterns:
+        regexes.status = 'Failed'
+        regexes.save(update_fields=['status'])
+        raise ValueError(
+            f'FileZone request {filezone_pk} has no file search patterns.'
+        )
+
     file_obj = FileLocate(
-        container_regex=regexes.container_regex_list,
-        container_exclude_regex=regexes.container_exclude_regex_list,
-        file_regex=regexes.file_regex_list,
-        file_exclude_regex=regexes.file_exclude_regex_list,
-        debug=debug
+        container_regex=regexes.container_regex_list or [],
+        container_exclude_regex=(regexes.container_exclude_regex_list or ['']),
+        file_regex=file_patterns,
+        file_exclude_regex=regexes.file_exclude_regex_list or [''],
+        debug=debug,
     )
-    regexes.file_matches, regexes.file_ajax = file_obj.main()
+    file_matches, file_ajax = file_obj.main()
+    regexes.file_matches = file_matches
+    regexes.file_ajax = file_ajax
     regexes.status = 'Complete'
     regexes.save()
-    write_ajax(
-        ajax_dict=regexes.file_ajax,
-        filezone_pk=regexes.pk
-    )
+    write_ajax(ajax_dict=file_ajax, filezone_pk=regexes.pk)
 
 
-def write_ajax(
-        ajax_dict: dict,
-        filezone_pk: int):
-    """
-    Write the ajax dictionary to file in JSON format
-    :param dict ajax_dict: Dictionary of outputs ready for DataTables importing
-    :param int filezone_pk: Primary key of the FileZone Regexes request
+def write_ajax(ajax_dict: dict, filezone_pk: int):
+    """Write search results to the FileZone AJAX data file.
+
+    Args:
+        ajax_dict: DataTables-compatible search results.
+        filezone_pk: Primary key of the Regexes search request.
+
     """
     # Set the name of the path in which the JSON outputs are to be written
     ajax_path = os.path.join(
