@@ -1,13 +1,17 @@
 import json
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from olc_webportalv2.primer_finder.methods import create_blob_from_summary
 from olc_webportalv2.primer_finder.forms import ValidatorTargetFormSetFactory
+from olc_webportalv2.primer_finder.methods import create_blob_from_summary
+from olc_webportalv2.primer_finder.models import (
+    PrimerVerifierRequest,
+    ValidatorRequest,
+)
 from olc_webportalv2.primer_finder.tasks import (
     _create_primer_cmd,
     _generate_input_blob_sas_urls,
@@ -15,10 +19,6 @@ from olc_webportalv2.primer_finder.tasks import (
 from olc_webportalv2.primer_finder.validator_gene_reports import (
     filter_report_by_gene_categories,
     gene_exclusion_note,
-)
-from olc_webportalv2.primer_finder.models import (
-    PrimerVerifierRequest,
-    ValidatorRequest,
 )
 from olc_webportalv2.primer_finder.views import (
     primer_validator_home,
@@ -31,13 +31,13 @@ from olc_webportalv2.primer_finder.views import (
 
 
 class ValidatorHistoryViewTests(unittest.TestCase):
-    @patch("olc_webportalv2.primer_finder.views.render")
+    @patch('olc_webportalv2.primer_finder.views.render')
     @patch(
-        "olc_webportalv2.primer_finder.views.ValidatorRequest.objects.filter"
+        'olc_webportalv2.primer_finder.views.ValidatorRequest.objects.filter'
     )
     def test_home_lists_validator_requests(self, filter_requests, render):
         user = SimpleNamespace(is_authenticated=True)
-        request = RequestFactory().get("/primer_finder/primer_validator/")
+        request = RequestFactory().get('/primer_finder/primer_validator/')
         request.user = user
         projects = [SimpleNamespace(pk=377)]
         filter_requests.return_value = projects
@@ -49,17 +49,17 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         filter_requests.assert_called_once_with(user=user)
         render.assert_called_once_with(
             request,
-            "primer_finder/validator_home.html",
-            {"validator_projects": projects},
+            'primer_finder/validator_home.html',
+            {'validator_projects': projects},
         )
 
-    @patch("olc_webportalv2.primer_finder.views.render")
-    @patch("olc_webportalv2.primer_finder.views.get_object_or_404")
+    @patch('olc_webportalv2.primer_finder.views.render')
+    @patch('olc_webportalv2.primer_finder.views.get_object_or_404')
     def test_processing_passes_validator_request_to_template(
         self, get_object, render
     ):
         request = RequestFactory().get(
-            "/primer_finder/primer_validator_processing/435/"
+            '/primer_finder/primer_validator_processing/435/'
         )
         request.user = SimpleNamespace(is_authenticated=True)
         validator_request = SimpleNamespace(emails_array=[])
@@ -75,23 +75,21 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         args, kwargs = render.call_args
         self.assertEqual(
             args[:2],
-            (request, "primer_finder/validator_processing.html"),
+            (request, 'primer_finder/validator_processing.html'),
         )
         self.assertIs(
-            args[2]["primer_validator_request"],
+            args[2]['primer_validator_request'],
             validator_request,
         )
-        self.assertIn("form", args[2])
+        self.assertIn('form', args[2])
         self.assertFalse(kwargs)
 
-    @patch("olc_webportalv2.primer_finder.views.render")
-    @patch("olc_webportalv2.primer_finder.views.get_object_or_404")
+    @patch('olc_webportalv2.primer_finder.views.render')
+    @patch('olc_webportalv2.primer_finder.views.get_object_or_404')
     @patch(
-        "olc_webportalv2.primer_finder.views.ValidatorPrimerSet.objects.filter"
+        'olc_webportalv2.primer_finder.views.ValidatorPrimerSet.objects.filter'
     )
-    @patch(
-        "olc_webportalv2.primer_finder.views.ValidatorPanel.objects.filter"
-    )
+    @patch('olc_webportalv2.primer_finder.views.ValidatorPanel.objects.filter')
     def test_results_render_validator_template_and_models(
         self,
         filter_panels,
@@ -100,10 +98,10 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         render,
     ):
         request = RequestFactory().get(
-            "/primer_finder/primer_validator_results/435/"
+            '/primer_finder/primer_validator_results/435/'
         )
         request.user = SimpleNamespace(is_authenticated=True)
-        validator_request = SimpleNamespace(pk=435, summary="{}")
+        validator_request = SimpleNamespace(pk=435, summary='{}')
         filter_panels.return_value = []
         filter_primers.return_value = []
         get_object.return_value = validator_request
@@ -120,22 +118,22 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         args, kwargs = render.call_args
         self.assertEqual(
             args[:2],
-            (request, "primer_finder/validator_results.html"),
+            (request, 'primer_finder/validator_results.html'),
         )
-        self.assertIs(args[2]["primer_validator_request"], validator_request)
-        self.assertNotIn("sample_results", args[2])
+        self.assertIs(args[2]['primer_validator_request'], validator_request)
+        self.assertNotIn('sample_results', args[2])
         self.assertFalse(kwargs)
 
 
 class VerifierHistoryViewTests(unittest.TestCase):
-    @patch("olc_webportalv2.primer_finder.views.render")
+    @patch('olc_webportalv2.primer_finder.views.render')
     @patch(
-        "olc_webportalv2.primer_finder.views."
-        "PrimerVerifierRequest.objects.filter"
+        'olc_webportalv2.primer_finder.views.'
+        'PrimerVerifierRequest.objects.filter'
     )
     def test_home_lists_verifier_requests(self, filter_requests, render):
         user = SimpleNamespace(is_authenticated=True)
-        request = RequestFactory().get("/primer_finder/primer_verifier/")
+        request = RequestFactory().get('/primer_finder/primer_verifier/')
         request.user = user
         projects = [SimpleNamespace(pk=484)]
         filter_requests.return_value = projects
@@ -147,16 +145,16 @@ class VerifierHistoryViewTests(unittest.TestCase):
         filter_requests.assert_called_once_with(user=user)
         render.assert_called_once_with(
             request,
-            "primer_finder/verifier_home.html",
-            {"verifier_projects": projects},
+            'primer_finder/verifier_home.html',
+            {'verifier_projects': projects},
         )
 
-    @patch("olc_webportalv2.primer_finder.views.render")
-    @patch("olc_webportalv2.primer_finder.views.get_object_or_404")
+    @patch('olc_webportalv2.primer_finder.views.render')
+    @patch('olc_webportalv2.primer_finder.views.get_object_or_404')
     def test_processing_uses_verifier_request(self, get_object, render):
         user = SimpleNamespace(is_authenticated=True)
         request = RequestFactory().get(
-            "/primer_finder/primer_verifier_processing/484/"
+            '/primer_finder/primer_verifier_processing/484/'
         )
         request.user = user
         verifier_request = SimpleNamespace(emails_array=[])
@@ -170,31 +168,34 @@ class VerifierHistoryViewTests(unittest.TestCase):
             PrimerVerifierRequest, pk=484, user=user
         )
         args, kwargs = render.call_args
-        self.assertEqual(args[:2], (
-            request,
-            "primer_finder/verifier_processing.html",
-        ))
-        self.assertIs(args[2]["primer_verifier_request"], verifier_request)
-        self.assertIn("form", args[2])
+        self.assertEqual(
+            args[:2],
+            (
+                request,
+                'primer_finder/verifier_processing.html',
+            ),
+        )
+        self.assertIs(args[2]['primer_verifier_request'], verifier_request)
+        self.assertIn('form', args[2])
         self.assertFalse(kwargs)
 
-    @patch("olc_webportalv2.primer_finder.views.VerifierPanel.objects.filter")
+    @patch('olc_webportalv2.primer_finder.views.VerifierPanel.objects.filter')
     @patch(
-        "olc_webportalv2.primer_finder.views.VerifierPrimerSet.objects.filter"
+        'olc_webportalv2.primer_finder.views.VerifierPrimerSet.objects.filter'
     )
-    @patch("olc_webportalv2.primer_finder.views.get_object_or_404")
-    @patch("olc_webportalv2.primer_finder.views.render")
+    @patch('olc_webportalv2.primer_finder.views.get_object_or_404')
+    @patch('olc_webportalv2.primer_finder.views.render')
     def test_results_use_verifier_child_models(
         self, render, get_object, filter_primers, filter_panels
     ):
         user = SimpleNamespace(is_authenticated=True)
         request = RequestFactory().get(
-            "/primer_finder/primer_verifier_results/484/"
+            '/primer_finder/primer_verifier_results/484/'
         )
         request.user = user
-        verifier_request = SimpleNamespace(pk=484, summary="{}")
-        primer = SimpleNamespace(primer_name="primer-a")
-        panel = SimpleNamespace(panel="inclusivity", genus="Example")
+        verifier_request = SimpleNamespace(pk=484, summary='{}')
+        primer = SimpleNamespace(primer_name='primer-a')
+        panel = SimpleNamespace(panel='inclusivity', genus='Example')
         get_object.return_value = verifier_request
         filter_primers.return_value = [primer]
         filter_panels.return_value = [panel]
@@ -210,7 +211,7 @@ class VerifierHistoryViewTests(unittest.TestCase):
         filter_panels.assert_called_once_with(verifier_request_id=484)
         self.assertEqual(
             render.call_args.args[1],
-            "primer_finder/verifier_results.html",
+            'primer_finder/verifier_results.html',
         )
 
 
@@ -239,76 +240,76 @@ class PrimerFinderStorageTests(unittest.TestCase):
             command,
         )
 
-    @patch("olc_webportalv2.primer_finder.tasks.get_storage_client")
+    @patch('olc_webportalv2.primer_finder.tasks.get_storage_client')
     def test_input_urls_are_deduplicated_and_expiring(self, get_client):
         client = get_client.return_value
         client.object_exists.return_value = True
-        client.create_transfer_url.side_effect = ["first-url", "second-url"]
+        client.create_transfer_url.side_effect = ['first-url', 'second-url']
 
         result = _generate_input_blob_sas_urls(
-            container_name="primer-run",
-            blob_names=["panel.json", "primers.csv", "panel.json"],
+            container_name='primer-run',
+            blob_names=['panel.json', 'primers.csv', 'panel.json'],
         )
 
         self.assertEqual(
             result,
             [
-                {"blob_name": "panel.json", "sas_url": "first-url"},
-                {"blob_name": "primers.csv", "sas_url": "second-url"},
+                {'blob_name': 'panel.json', 'sas_url': 'first-url'},
+                {'blob_name': 'primers.csv', 'sas_url': 'second-url'},
             ],
         )
         self.assertEqual(
             client.object_exists.call_args_list,
             [
-                call("primer-run", "panel.json"),
-                call("primer-run", "primers.csv"),
+                call('primer-run', 'panel.json'),
+                call('primer-run', 'primers.csv'),
             ],
         )
         self.assertEqual(
             client.create_transfer_url.call_args_list,
             [
                 call(
-                    "primer-run",
-                    "download",
-                    name="panel.json",
+                    'primer-run',
+                    'download',
+                    name='panel.json',
                     expires_in_seconds=12 * 60 * 60,
                 ),
                 call(
-                    "primer-run",
-                    "download",
-                    name="primers.csv",
+                    'primer-run',
+                    'download',
+                    name='primers.csv',
                     expires_in_seconds=12 * 60 * 60,
                 ),
             ],
         )
 
-    @patch("olc_webportalv2.primer_finder.tasks.get_storage_client")
+    @patch('olc_webportalv2.primer_finder.tasks.get_storage_client')
     def test_input_url_generation_rejects_missing_blob(self, get_client):
         client = get_client.return_value
         client.object_exists.return_value = False
 
         with self.assertRaisesRegex(
-            FileNotFoundError, "primer-run/missing.json"
+            FileNotFoundError, 'primer-run/missing.json'
         ):
             _generate_input_blob_sas_urls(
-                container_name="primer-run",
-                blob_names=["missing.json"],
+                container_name='primer-run',
+                blob_names=['missing.json'],
             )
 
         client.create_transfer_url.assert_not_called()
 
-    @patch("olc_webportalv2.primer_finder.methods.get_storage_client")
+    @patch('olc_webportalv2.primer_finder.methods.get_storage_client')
     def test_summary_is_uploaded_through_storage_client(self, get_client):
         request = SimpleNamespace(
-            container_namer=Mock(return_value="primer-run"),
+            container_namer=Mock(return_value='primer-run'),
             summary='{"status": "complete"}',
         )
 
         create_blob_from_summary(request=request)
 
         get_client.return_value.upload_bytes.assert_called_once_with(
-            "primer-run",
-            "reports/primer-run_summary_report.json",
+            'primer-run',
+            'reports/primer-run_summary_report.json',
             b'{"status": "complete"}',
         )
 
@@ -363,22 +364,26 @@ class ValidatorGeneReportTests(unittest.TestCase):
             'targets-MIN_NUM_FORMS': '1',
             'targets-MAX_NUM_FORMS': '1000',
         }
-        for index, (sample, target) in enumerate((
-            ('sample-a', 'invA'),
-            ('sample-b', 'other'),
-        )):
-            data.update({
-                f'targets-{index}-sample_name': sample,
-                f'targets-{index}-target_name': target,
-                f'targets-{index}-forward_primer': 'ACGTACGT',
-                f'targets-{index}-reverse_primer': 'TGCATGCA',
-                f'targets-{index}-probe_sequence': '',
-                f'targets-{index}-probe_evaluation_method':
-                    'percent_identity',
-                f'targets-{index}-probe_percent_identity': '80',
-                f'targets-{index}-probe_max_differences': '2',
-                f'targets-{index}-gene_sequence': '',
-            })
+        for index, (sample, target) in enumerate(
+            (
+                ('sample-a', 'invA'),
+                ('sample-b', 'other'),
+            )
+        ):
+            data.update(
+                {
+                    f'targets-{index}-sample_name': sample,
+                    f'targets-{index}-target_name': target,
+                    f'targets-{index}-forward_primer': 'ACGTACGT',
+                    f'targets-{index}-reverse_primer': 'TGCATGCA',
+                    f'targets-{index}-probe_sequence': '',
+                    f'targets-{index}-probe_'
+                    'evaluation_method': 'percent_identity',
+                    f'targets-{index}-probe_percent_identity': '80',
+                    f'targets-{index}-probe_max_differences': '2',
+                    f'targets-{index}-gene_sequence': '',
+                }
+            )
         formset = ValidatorTargetFormSetFactory(data, prefix='targets')
         formset.classification_rule = 'salmonella'
         formset.logic = ''

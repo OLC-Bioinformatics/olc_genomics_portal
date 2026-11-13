@@ -5,17 +5,16 @@ Forms for the primer_finder app
 """
 
 # Standard imports
-from io import StringIO
 import re
-
-# Django imports
-from django.utils.translation import gettext_lazy as _
-from django.forms import ModelForm
-from django import forms
+from io import StringIO
 
 # Third-party imports
 from Bio import SeqIO
 from dal import autocomplete
+from django import forms
+from django.forms import ModelForm
+from django.utils.text import format_lazy
+from django.utils.translation import gettext_lazy as _
 
 # Portal-specific imports
 from olc_webportalv2.common.benchmarks import (
@@ -26,15 +25,14 @@ from olc_webportalv2.common.benchmarks import (
 from olc_webportalv2.metadata.models import Genus, SequenceData
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
-    ValidatorRequest
+    ValidatorRequest,
 )
-
 
 mismatch_choices = (
     ('0', _('Zero')),
     ('1', _('One')),
     ('2', _('Two')),
-    ('3', _('Three'))
+    ('3', _('Three')),
 )
 
 
@@ -42,6 +40,7 @@ class SeqIDMultipleChoiceField(forms.ModelMultipleChoiceField):
     """Accept Select2 values and legacy whitespace-separated SeqIDs."""
 
     def clean(self, value):
+        """Normalize legacy SeqID strings before model-choice validation."""
         if isinstance(value, str):
             value = value.split()
         return super().clean(value)
@@ -90,14 +89,14 @@ class PrimerVerifierForm(ModelForm):
     )
     inclusivity_benchmark = forms.ChoiceField(
         required=False,
-        choices=(('', _('No benchmark dataset')),) +
-        INCLUSIVITY_BENCHMARK_CHOICES,
+        choices=(('', _('No benchmark dataset')),)
+        + INCLUSIVITY_BENCHMARK_CHOICES,
         label=_('Benchmark dataset'),
     )
     exclusivity_benchmark = forms.ChoiceField(
         required=False,
-        choices=(('', _('No benchmark dataset')),) +
-        EXCLUSIVITY_BENCHMARK_CHOICES,
+        choices=(('', _('No benchmark dataset')),)
+        + EXCLUSIVITY_BENCHMARK_CHOICES,
         label=_('Benchmark dataset'),
     )
 
@@ -105,6 +104,7 @@ class PrimerVerifierForm(ModelForm):
         """
         Meta class for the PrimerVerifierRequest form.
         """
+
         model = PrimerVerifierRequest
         fields = [
             'project_name',
@@ -125,71 +125,65 @@ class PrimerVerifierForm(ModelForm):
             'exclusivity_benchmark',
         ]
         labels = {
-            "project_name": _("Project Name"),
-            "primer_sequences": _("Primer Sequence(s)"),
-            "probe_sequence": _("Probe Sequence"),
-            "mismatches": _("Maximum Number of Mismatches"),
-            "min_amplicon_size": _("Minimum Amplicon Size"),
-            "max_amplicon_size": _("Maximum Amplicon Size"),
-            "contig_breaks": _(
-                "Allow searching for amplicons over multiple contigs?"
+            'project_name': _('Project Name'),
+            'primer_sequences': _('Primer Sequence(s)'),
+            'probe_sequence': _('Probe Sequence'),
+            'mismatches': _('Maximum Number of Mismatches'),
+            'min_amplicon_size': _('Minimum Amplicon Size'),
+            'max_amplicon_size': _('Maximum Amplicon Size'),
+            'contig_breaks': _(
+                'Allow searching for amplicons over multiple contigs?'
             ),
-            "range_buffer": _("Minimum distance between amplicons"),
-            "inclusivity_panel": _(
-                "Genus/Genera to include in inclusivity panel"
+            'range_buffer': _('Minimum distance between amplicons'),
+            'inclusivity_panel': _(
+                'Genus/Genera to include in inclusivity panel'
             ),
-            "exclusivity_panel": _(
-                "Genus/Genera to include in exclusivity panel"
+            'exclusivity_panel': _(
+                'Genus/Genera to include in exclusivity panel'
             ),
-            "inclusivity_genus": _("Genus to include in inclusivity panel"),
-            "exclusivity_genus": _("Genus to include in exclusivity panel"),
-            "inclusivity_seqids": _("Specific inclusivity SeqIDs"),
-            "exclusivity_seqids": _("Specific exclusivity SeqIDs"),
+            'inclusivity_genus': _('Genus to include in inclusivity panel'),
+            'exclusivity_genus': _('Genus to include in exclusivity panel'),
+            'inclusivity_seqids': _('Specific inclusivity SeqIDs'),
+            'exclusivity_seqids': _('Specific exclusivity SeqIDs'),
         }
         widgets = {
-            "project_name": forms.TextInput(
+            'project_name': forms.TextInput(
                 attrs={
-                    "placeholder": _("Optional"),
-                    "style": "max-width: 18em"
+                    'placeholder': _('Optional'),
+                    'style': 'max-width: 18em',
                 }
             ),
-            "primer_sequences": forms.Textarea(
+            'primer_sequences': forms.Textarea(
                 attrs={
-                    "placeholder": _(
-                        ">Primer_Sequence1-F \n ACGTACGT... \n "
-                        ">Primer_Sequence1-R \n ACATGCC.... \n "
-                        ">Primer_Sequence2-F \n ...."
+                    'placeholder': _(
+                        '>Primer_Sequence1-F \n ACGTACGT... \n '
+                        '>Primer_Sequence1-R \n ACATGCC.... \n '
+                        '>Primer_Sequence2-F \n ....'
                     )
                 }
             ),
-            "probe_sequence": forms.TextInput(
+            'probe_sequence': forms.TextInput(
                 attrs={
-                    "placeholder": _("Optional"),
-                    "style": "max-width: 18em"
+                    'placeholder': _('Optional'),
+                    'style': 'max-width: 18em',
                 }
             ),
-            "mismatches": forms.Select(
-                choices=mismatch_choices, attrs={"style": "max-width: 18em"}
+            'mismatches': forms.Select(
+                choices=mismatch_choices, attrs={'style': 'max-width: 18em'}
             ),
-            "min_amplicon_size": forms.TextInput(
-                attrs={
-                    "style": "max-width: 18em"
-                }
+            'min_amplicon_size': forms.TextInput(
+                attrs={'style': 'max-width: 18em'}
             ),
-            "max_amplicon_size": forms.TextInput(
-                attrs={
-                    "style": "max-width: 18em"
-                }
+            'max_amplicon_size': forms.TextInput(
+                attrs={'style': 'max-width: 18em'}
             ),
-            "range_buffer": forms.TextInput(
-                attrs={
-                    "style": "max-width: 18em"
-                }
+            'range_buffer': forms.TextInput(
+                attrs={'style': 'max-width: 18em'}
             ),
-            "inclusivity_panel": forms.CheckboxSelectMultiple(
+            'inclusivity_panel': forms.CheckboxSelectMultiple(
                 choices=INCLUSIVITY_BENCHMARK_CHOICES,
             ),
-            "exclusivity_panel": forms.CheckboxSelectMultiple(
+            'exclusivity_panel': forms.CheckboxSelectMultiple(
                 choices=EXCLUSIVITY_BENCHMARK_CHOICES,
             ),
         }
@@ -212,21 +206,21 @@ class PrimerVerifierForm(ModelForm):
         Replace spaces/hyphens and non-word chars with underscores.
         """
         if primer_name is None:
-            return ""
+            return ''
         name = str(primer_name).strip()
         # Replace spaces and hyphens with underscore in the base
-        name = name.replace(" ", "_").replace("-", "_")
+        name = name.replace(' ', '_').replace('-', '_')
         # Collapse other disallowed characters to underscore
-        name = re.sub(r"[^A-Za-z0-9_]", "_", name)
+        name = re.sub(r'[^A-Za-z0-9_]', '_', name)
         # Collapse multiple underscores
-        name = re.sub(r"_+", "_", name).strip("_")
+        name = re.sub(r'_+', '_', name).strip('_')
         return name
 
     @staticmethod
     def _canonicalize_header(
         *,  # Enforce keyword args
         header,
-        error_list
+        error_list,
     ) -> tuple:
         """
         Canonicalize a FASTA header to Base-Dir where Dir in {F,R}.
@@ -238,36 +232,37 @@ class PrimerVerifierForm(ModelForm):
         :return: Tuple of (canonical header or None, error_list).
         """
         if header is None:
-            error_list.append(_("Empty primer header"))
+            error_list.append(_('Empty primer header'))
             return None, error_list
 
         raw = str(header).strip()
         # Normalize legacy suffixes
-        if raw.endswith("_F"):
-            raw = raw[:-2] + "-F"
-        elif raw.endswith("_R"):
-            raw = raw[:-2] + "-R"
+        if raw.endswith('_F'):
+            raw = raw[:-2] + '-F'
+        elif raw.endswith('_R'):
+            raw = raw[:-2] + '-R'
 
         # Must end with -F or -R
-        if not (raw.endswith("-F") or raw.endswith("-R")):
+        if not (raw.endswith('-F') or raw.endswith('-R')):
             error_list.append(
-                _(
-                    "Primer {name} must end with -F or -R (e.g., zraS1-F)"
-                ).format(
-                    name=header
+                format_lazy(
+                    _('Primer {name} must end with -F or -R (e.g., zraS1-F)'),
+                    name=header,
                 )
             )
             return None, error_list
 
         # Split once at the last hyphen (direction separator)
         try:
-            base, dir_flag = raw.rsplit("-", 1)
+            base, dir_flag = raw.rsplit('-', 1)
         except ValueError:
             error_list.append(
-                _(
-                    "Primer {name} must contain exactly one hyphen before F/R"
-                ).format(
-                    name=header
+                format_lazy(
+                    _(
+                        'Primer {name} must contain exactly one hyphen '
+                        'before F/R'
+                    ),
+                    name=header,
                 )
             )
             return None, error_list
@@ -276,22 +271,27 @@ class PrimerVerifierForm(ModelForm):
         base_clean = PrimerVerifierForm.clean_primer_names(base)
         if not base_clean:
             error_list.append(
-                _(
-                    "Primer {name} has an empty base name before the suffix"
-                ).format(
-                    name=header
+                format_lazy(
+                    _(
+                        'Primer {name} has an empty base name before the '
+                        'suffix'
+                    ),
+                    name=header,
                 )
             )
             return None, error_list
 
         dir_flag = dir_flag.upper()
-        if dir_flag not in ("F", "R"):
+        if dir_flag not in ('F', 'R'):
             error_list.append(
-                _("Primer {name} must end with -F or -R").format(name=header)
+                format_lazy(
+                    _('Primer {name} must end with -F or -R'),
+                    name=header,
+                )
             )
             return None, error_list
 
-        canonical = f"{base_clean}-{dir_flag}"
+        canonical = f'{base_clean}-{dir_flag}'
 
         return canonical, error_list
 
@@ -313,7 +313,7 @@ class PrimerVerifierForm(ModelForm):
                 primer details.
         """
         fasta_io = StringIO(primer_sequences)
-        records = SeqIO.parse(fasta_io, "fasta")
+        records = SeqIO.parse(fasta_io, 'fasta')
         primer_set = set()
         primer_dict = {}
         primer_details = {}
@@ -326,8 +326,7 @@ class PrimerVerifierForm(ModelForm):
         for record in records:
             # Canonicalize header up front
             canonical, error_list = PrimerVerifierForm._canonicalize_header(
-                header=record.id,
-                error_list=error_list
+                header=record.id, error_list=error_list
             )
             if not canonical:
                 # Skip this record; error already added
@@ -336,15 +335,18 @@ class PrimerVerifierForm(ModelForm):
             # Deduplicate headers if necessary
             if canonical in seen_headers:
                 error_list.append(
-                    _("Duplicate primer header {name}").format(name=canonical)
+                    format_lazy(
+                        _('Duplicate primer header {name}'),
+                        name=canonical,
+                    )
                 )
                 continue
             seen_headers.add(canonical)
 
             # Parse direction and base from canonical
-            base_primer, dir_flag = canonical.rsplit("-", 1)
-            direction = "forward" if dir_flag == "F" else "reverse"
-            if direction == "forward":
+            base_primer, dir_flag = canonical.rsplit('-', 1)
+            direction = 'forward' if dir_flag == 'F' else 'reverse'
+            if direction == 'forward':
                 found_forward = True
             else:
                 found_reverse = True
@@ -358,44 +360,48 @@ class PrimerVerifierForm(ModelForm):
             # Sequence validations
             if not record.seq:
                 error_list.append(
-                    _("Primer {name} does not have any sequence data").format(
-                        name=canonical
+                    format_lazy(
+                        _('Primer {name} does not have any sequence data'),
+                        name=canonical,
                     )
                 )
             illegal_nts = {}
             for iterator, nuc in enumerate(record.seq):
                 if nuc.upper() not in [
-                    "A",
-                    "C",
-                    "G",
-                    "T",
-                    "R",
-                    "Y",
-                    "S",
-                    "W",
-                    "K",
-                    "M",
-                    "B",
-                    "D",
-                    "H",
-                    "V",
-                    "N",
+                    'A',
+                    'C',
+                    'G',
+                    'T',
+                    'R',
+                    'Y',
+                    'S',
+                    'W',
+                    'K',
+                    'M',
+                    'B',
+                    'D',
+                    'H',
+                    'V',
+                    'N',
                 ]:
                     illegal_nts[iterator + 1] = nuc
             if len(illegal_nts) == 1:
                 error_list.append(
-                    _(
-                        "Primer {name} has an illegal character:\n{info}"
-                    ).format(
-                        name=canonical, info=illegal_nts
+                    format_lazy(
+                        _('Primer {name} has an illegal character:\n{info}'),
+                        name=canonical,
+                        info=illegal_nts,
                     )
                 )
             if len(illegal_nts) > 1:
                 error_list.append(
-                    _(
-                        "Primer {name} has multiple illegal characters:"
-                        "\n{info}").format(
-                        name=canonical, info=illegal_nts
+                    format_lazy(
+                        _(
+                            'Primer {name} has multiple illegal characters:'
+                            '\n{info}'
+                        ),
+                        name=canonical,
+                        info=illegal_nts,
                     )
                 )
 
@@ -404,20 +410,23 @@ class PrimerVerifierForm(ModelForm):
                 primer_details[base_primer] = dict()
             record.id = canonical
             primer_details[base_primer][record.id] = record.seq
-            primer_string += f">{record.id}\r\n{record.seq}\r\n"
+            primer_string += f'>{record.id}\r\n{record.seq}\r\n'
 
         if not primer_set:
-            error_list.append(_("No valid primers supplied"))
+            error_list.append(_('No valid primers supplied'))
 
         # Require both directions per base when unidirectional=True (default)
         for base_primer, directions in primer_dict.items():
-            for direction in ["forward", "reverse"]:
+            for direction in ['forward', 'reverse']:
                 if direction not in directions and unidirectional:
                     error_list.append(
-                        _(
-                            "Primer set {name} is missing a {direction} primer"
-                        ).format(
-                            name=base_primer, direction=direction
+                        format_lazy(
+                            _(
+                                'Primer set {name} is missing a {direction} '
+                                'primer'
+                            ),
+                            name=base_primer,
+                            direction=direction,
                         )
                     )
 
@@ -425,15 +434,11 @@ class PrimerVerifierForm(ModelForm):
         if unidirectional and (not found_forward or not found_reverse):
             if not found_forward:
                 error_list.append(
-                    _(
-                        "At least one forward primer (-F) is required"
-                    )
+                    _('At least one forward primer (-F) is required')
                 )
             if not found_reverse:
                 error_list.append(
-                    _(
-                        "At least one reverse primer (-R) is required"
-                    )
+                    _('At least one reverse primer (-R) is required')
                 )
 
         fasta_io.close()
@@ -464,33 +469,34 @@ class PrimerVerifierForm(ModelForm):
                 _('Please provide FASTA-formatted forward and reverse primers')
             )
         else:
-            primer_sequences, error_list, primer_list, primer_details = \
+            primer_sequences, error_list, primer_list, primer_details = (
                 PrimerVerifierForm.validate_primers(
-                    primer_sequences=primer_sequences,
-                    error_list=error_list
+                    primer_sequences=primer_sequences, error_list=error_list
                 )
+            )
 
         # Probe
-        probe_sequence = \
-            (self.cleaned_data.get("probe_sequence") or "").replace(
-                " ", ""
-            ).rstrip()
-        allowed_chars = "acgt"
+        probe_sequence = (
+            (self.cleaned_data.get('probe_sequence') or '')
+            .replace(' ', '')
+            .rstrip()
+        )
+        allowed_chars = 'acgt'
         if not all(char in allowed_chars for char in probe_sequence.lower()):
             error_list.append(
                 _(
-                    "Only the following characters are allowed in the probe "
-                    "sequence: A, C, G, and T"
+                    'Only the following characters are allowed in the probe '
+                    'sequence: A, C, G, and T'
                 )
             )
 
         # Inclusivity and Exclusivity Panels
-        inclusivity_panel = self.cleaned_data.get(
-            'inclusivity_panel', []
-        ) or []
-        exclusivity_panel = self.cleaned_data.get(
-            'exclusivity_panel', []
-        ) or []
+        inclusivity_panel = (
+            self.cleaned_data.get('inclusivity_panel', []) or []
+        )
+        exclusivity_panel = (
+            self.cleaned_data.get('exclusivity_panel', []) or []
+        )
         inclusivity_genus, inclusivity_seqids = self._clean_query_selection(
             'inclusivity'
         )
@@ -504,14 +510,21 @@ class PrimerVerifierForm(ModelForm):
             'exclusivity_benchmark', ''
         )
         if not (
-            inclusivity_panel or exclusivity_panel or
-            inclusivity_genus or exclusivity_genus or
-            inclusivity_seqids or exclusivity_seqids or
-            inclusivity_benchmark or exclusivity_benchmark
+            inclusivity_panel
+            or exclusivity_panel
+            or inclusivity_genus
+            or exclusivity_genus
+            or inclusivity_seqids
+            or exclusivity_seqids
+            or inclusivity_benchmark
+            or exclusivity_benchmark
         ):
             error_list.append(
-                _('Select at least one benchmark, genus, or SeqID for either '
-                  'panel.')
+                _(
+                    'Select at least one benchmark, genus, or SeqID '
+                    'for either '
+                    'panel.'
+                )
             )
 
         inclusivity_benchmarks = set(inclusivity_panel)
@@ -524,8 +537,10 @@ class PrimerVerifierForm(ModelForm):
             error_list.append(
                 _('A benchmark dataset cannot be assigned to both panels.')
             )
-        if inclusivity_genus and exclusivity_genus and (
-            inclusivity_genus.casefold() == exclusivity_genus.casefold()
+        if (
+            inclusivity_genus
+            and exclusivity_genus
+            and (inclusivity_genus.casefold() == exclusivity_genus.casefold())
         ):
             error_list.append(_('A genus cannot be assigned to both panels.'))
         if set(inclusivity_seqids).intersection(exclusivity_seqids):
@@ -557,13 +572,23 @@ class PrimerVerifierForm(ModelForm):
                 )
             if min_amplicon_size > self.MAX_AMPLICON_SIZE:
                 error_list.append(
-                    _('The minimum amplicon size cannot be greater than {max} '
-                      'bp'.format(max=self.MAX_AMPLICON_SIZE))
+                    format_lazy(
+                        _(
+                            'The minimum amplicon size cannot be greater '
+                            'than {max} bp'
+                        ),
+                        max=self.MAX_AMPLICON_SIZE,
+                    )
                 )
         except TypeError:
             error_list.append(
-                _('Please enter an integer between 0 and {max} for the minimum '
-                  'amplicon size'.format(max=self.MAX_AMPLICON_SIZE))
+                format_lazy(
+                    _(
+                        'Please enter an integer between 0 and {max} for '
+                        'the minimum amplicon size'
+                    ),
+                    max=self.MAX_AMPLICON_SIZE,
+                )
             )
 
         # Maximum Amplicon Size
@@ -575,16 +600,22 @@ class PrimerVerifierForm(ModelForm):
                 )
             if max_amplicon_size > self.MAX_AMPLICON_SIZE:
                 error_list.append(
-                    _('The maximum amplicon size cannot be greater than {max} '
-                      'bp'.format(max=self.MAX_AMPLICON_SIZE))
+                    format_lazy(
+                        _(
+                            'The maximum amplicon size cannot be greater '
+                            'than {max} bp'
+                        ),
+                        max=self.MAX_AMPLICON_SIZE,
+                    )
                 )
         except TypeError:
             error_list.append(
-                _(
-                    'Please enter an integer between 0 and {max} for the '
-                    'maximum amplicon size'.format(
-                        max=self.MAX_AMPLICON_SIZE
-                    )
+                format_lazy(
+                    _(
+                        'Please enter an integer between 0 and {max} for '
+                        'the maximum amplicon size'
+                    ),
+                    max=self.MAX_AMPLICON_SIZE,
                 )
             )
 
@@ -600,20 +631,22 @@ class PrimerVerifierForm(ModelForm):
                 )
             if range_buffer > self.RANGE_BUFFER:
                 error_list.append(
-                    _(
-                        'The minimum distance between amplicons cannot be '
-                        'greater than {max} bp'.format(
-                            max=self.RANGE_BUFFER
-                        )
+                    format_lazy(
+                        _(
+                            'The minimum distance between amplicons '
+                            'cannot be greater than {max} bp'
+                        ),
+                        max=self.RANGE_BUFFER,
                     )
                 )
         except TypeError:
             error_list.append(
-                _(
-                    'Please enter an integer between 0 and {max} for the '
-                    'minimum distance between amplicons'.format(
-                        max=self.RANGE_BUFFER
-                    )
+                format_lazy(
+                    _(
+                        'Please enter an integer between 0 and {max} for '
+                        'the minimum distance between amplicons'
+                    ),
+                    max=self.RANGE_BUFFER,
                 )
             )
 
@@ -621,19 +654,19 @@ class PrimerVerifierForm(ModelForm):
         if error_list:
             raise forms.ValidationError(error_list)
         return {
-            "primer_list": primer_list,
-            "primer_sequences": primer_sequences,
-            "primer_details": primer_details,
-            "probe_sequence": probe_sequence,
-            "inclusivity_panel": inclusivity_panel,
-            "exclusivity_panel": exclusivity_panel,
-            "inclusivity_genus": inclusivity_genus,
-            "exclusivity_genus": exclusivity_genus,
-            "inclusivity_seqids": inclusivity_seqids,
-            "exclusivity_seqids": exclusivity_seqids,
-            "inclusivity_benchmark": inclusivity_benchmark,
-            "exclusivity_benchmark": exclusivity_benchmark,
-            "project_name": self.cleaned_data.get("project_name"),
+            'primer_list': primer_list,
+            'primer_sequences': primer_sequences,
+            'primer_details': primer_details,
+            'probe_sequence': probe_sequence,
+            'inclusivity_panel': inclusivity_panel,
+            'exclusivity_panel': exclusivity_panel,
+            'inclusivity_genus': inclusivity_genus,
+            'exclusivity_genus': exclusivity_genus,
+            'inclusivity_seqids': inclusivity_seqids,
+            'exclusivity_seqids': exclusivity_seqids,
+            'inclusivity_benchmark': inclusivity_benchmark,
+            'exclusivity_benchmark': exclusivity_benchmark,
+            'project_name': self.cleaned_data.get('project_name'),
         }
 
     def _clean_query_selection(self, prefix):
@@ -646,9 +679,10 @@ class PrimerVerifierForm(ModelForm):
             seqids = raw_seqids or []
             if isinstance(seqids, str):
                 seqids = seqids.split()
-        if genus and not SequenceData.objects.filter(
-            genus__iexact=genus
-        ).exists():
+        if (
+            genus
+            and not SequenceData.objects.filter(genus__iexact=genus).exists()
+        ):
             self.add_error(
                 prefix + '_genus',
                 _('This genus is not present in the sequence database.'),
@@ -660,10 +694,12 @@ class PrimerValidatorForm(ModelForm):
     """
     PrimerValidatorForm class for the ValidatorRequest model.
     """
+
     class Meta:
         """
         Meta class for the PrimerValidatorForm.
         """
+
         model = ValidatorRequest
 
         fields = [
@@ -679,28 +715,31 @@ class PrimerValidatorForm(ModelForm):
             'reverse_primer': _('Reverse Primer Sequence'),
             'probe_sequence': _('Probe Sequence'),
             'inclusivity_panel': _('Inclusivity panel'),
-
         }
         widgets = {
             'project_name': forms.TextInput(
-                attrs={'placeholder': _('Optional'),
-                       'style': 'max-width: 18em'
-                       }
+                attrs={
+                    'placeholder': _('Optional'),
+                    'style': 'max-width: 18em',
+                }
             ),
             'forward_primer': forms.TextInput(
-                attrs={'placeholder': _('ACGTACGT...'),
-                       'style': 'max-width: 18em'
-                       }
+                attrs={
+                    'placeholder': _('ACGTACGT...'),
+                    'style': 'max-width: 18em',
+                }
             ),
             'reverse_primer': forms.TextInput(
-                attrs={'placeholder': _('ACGTACGT...'),
-                       'style': 'max-width: 18em'
-                       }
+                attrs={
+                    'placeholder': _('ACGTACGT...'),
+                    'style': 'max-width: 18em',
+                }
             ),
             'probe_sequence': forms.TextInput(
-                attrs={'placeholder': _('Optional'),
-                       'style': 'max-width: 18em'
-                       }
+                attrs={
+                    'placeholder': _('Optional'),
+                    'style': 'max-width: 18em',
+                }
             ),
             'inclusivity_panel': forms.CheckboxSelectMultiple(
                 choices=INCLUSIVITY_BENCHMARK_CHOICES,
@@ -720,23 +759,28 @@ class PrimerValidatorForm(ModelForm):
         reverse_primer = self.cleaned_data.get('reverse_primer')
         if forward_primer is None or reverse_primer is None:
             return self.cleaned_data
-        forward_primer, error_list, primer_list, forward_primer_details = \
+        forward_primer, error_list, primer_list, forward_primer_details = (
             PrimerVerifierForm.validate_primers(
                 primer_sequences=f'>primer-F\r\n{forward_primer}',
                 error_list=error_list,
-                unidirectional=False)
-        reverse_primer, error_list, primer_list, reverse_primer_details = \
+                unidirectional=False,
+            )
+        )
+        reverse_primer, error_list, primer_list, reverse_primer_details = (
             PrimerVerifierForm.validate_primers(
                 primer_sequences=f'>primer-R\r\n{reverse_primer}',
                 error_list=error_list,
-                unidirectional=False)
+                unidirectional=False,
+            )
+        )
         primer_details.update(forward_primer_details)
         primer_details.update(reverse_primer_details)
         # Probe
-        probe_sequence = \
-            (self.cleaned_data.get('probe_sequence') or '').replace(
-                ' ', ''
-            ).rstrip()
+        probe_sequence = (
+            (self.cleaned_data.get('probe_sequence') or '')
+            .replace(' ', '')
+            .rstrip()
+        )
         allowed_chars = 'acgt'
         if not all(char in allowed_chars for char in probe_sequence.lower()):
             error_list.append(
@@ -760,12 +804,13 @@ class PrimerValidatorForm(ModelForm):
             'primer_details': primer_details,
             'probe_sequence': probe_sequence,
             'inclusivity_panel': inclusivity_panel,
-            'project_name': self.cleaned_data.get('project_name')
+            'project_name': self.cleaned_data.get('project_name'),
         }
 
 
 class ValidatorExperimentForm(forms.Form):
     """Request-wide PrimerValidator configuration."""
+
     project_name = forms.CharField(
         required=False,
         max_length=256,
@@ -775,7 +820,9 @@ class ValidatorExperimentForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control'}),
     )
     mismatches = forms.IntegerField(
-        min_value=0, max_value=3, initial=3,
+        min_value=0,
+        max_value=3,
+        initial=3,
         label=_('Maximum number of mismatches'),
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
     )
@@ -806,10 +853,13 @@ class ValidatorExperimentForm(forms.Form):
         label=_('Allow searching across multiple contigs'),
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
-    classification_rule = forms.ChoiceField(choices=(
-        ('none', _('No classification rule')),
-        ('salmonella', _('Salmonella: invA or stn required')),
-    ), widget=forms.Select(attrs={'class': 'form-select'}))
+    classification_rule = forms.ChoiceField(
+        choices=(
+            ('none', _('No classification rule')),
+            ('salmonella', _('Salmonella: invA or stn required')),
+        ),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
     logic = forms.ChoiceField(
         choices=(('', _('No logic')), ('AND', _('All')), ('OR', _('Any'))),
         required=False,
@@ -830,8 +880,10 @@ class ValidatorExperimentForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'disabled': True}),
         required=False,
         initial=(
-            'FRAME_SHIFT', 'INTERNAL_STOP',
-            'PARTIAL_CONTIG_END', 'EXTENDED',
+            'FRAME_SHIFT',
+            'INTERNAL_STOP',
+            'PARTIAL_CONTIG_END',
+            'EXTENDED',
         ),
     )
     inclusivity_panel = forms.MultipleChoiceField(
@@ -846,6 +898,7 @@ class ValidatorExperimentForm(forms.Form):
     )
 
     def clean(self):
+        """Validate panel choices and amplicon size bounds."""
         cleaned_data = super().clean()
         inclusivity = set(cleaned_data.get('inclusivity_panel') or [])
         exclusivity = set(cleaned_data.get('exclusivity_panel') or [])
@@ -856,9 +909,13 @@ class ValidatorExperimentForm(forms.Form):
         overlap = inclusivity.intersection(exclusivity)
         if overlap:
             raise forms.ValidationError(
-                _('A panel cannot be selected as both inclusivity and '
-                  'exclusivity: {0}.').format(', '.join(sorted(overlap))
-                                              )
+                format_lazy(
+                    _(
+                        'A panel cannot be selected as both inclusivity and '
+                        'exclusivity: {0}.'
+                    ),
+                    ', '.join(sorted(overlap)),
+                )
             )
         minimum = cleaned_data.get('min_amplicon_size')
         maximum = cleaned_data.get('max_amplicon_size')
@@ -873,44 +930,56 @@ class ValidatorExperimentForm(forms.Form):
 
 class ValidatorTargetForm(forms.Form):
     """One sample target, with primer, probe, and optional gene references."""
+
     sample_name = forms.CharField(
-        required=False, max_length=128,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': _('Sample name'),
-        }),
+        required=False,
+        max_length=128,
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': _('Sample name'),
+            }
+        ),
     )
     target_name = forms.CharField(
         max_length=62,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'invA',
-        }),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'invA',
+            }
+        ),
     )
     forward_primer = forms.CharField(
         required=False,
         max_length=64,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control validator-sequence-input',
-            'placeholder': '5\' - 3\' primer sequence',
-        }),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control validator-sequence-input',
+                'placeholder': "5' - 3' primer sequence",
+            }
+        ),
     )
     reverse_primer = forms.CharField(
         required=False,
         max_length=64,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control validator-sequence-input',
-            'placeholder': '5\' - 3\' primer sequence',
-        }),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control validator-sequence-input',
+                'placeholder': "5' - 3' primer sequence",
+            }
+        ),
     )
     probe_sequence = forms.CharField(
         required=False,
         max_length=10000,
         label=_('Probe (optional)'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control validator-sequence-input',
-            'placeholder': _('Optional probe sequence'),
-        }),
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control validator-sequence-input',
+                'placeholder': _('Optional probe sequence'),
+            }
+        ),
     )
     probe_evaluation_method = forms.ChoiceField(
         required=False,
@@ -922,30 +991,41 @@ class ValidatorTargetForm(forms.Form):
         widget=forms.RadioSelect(),
     )
     probe_percent_identity = forms.FloatField(
-        required=False, initial=80.0, min_value=0.0, max_value=100.0,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '0',
-            'max': '100',
-            'step': '0.1',
-        }),
+        required=False,
+        initial=80.0,
+        min_value=0.0,
+        max_value=100.0,
+        widget=forms.NumberInput(
+            attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '100',
+                'step': '0.1',
+            }
+        ),
     )
     probe_max_differences = forms.IntegerField(
-        required=False, initial=2, min_value=0,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '0',
-            'step': '1',
-        }),
+        required=False,
+        initial=2,
+        min_value=0,
+        widget=forms.NumberInput(
+            attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '1',
+            }
+        ),
     )
     gene_sequence = forms.CharField(
         required=False,
         max_length=100000,
-        widget=forms.Textarea(attrs={
-            'class': 'form-control validator-sequence-input',
-            'rows': 4,
-            'placeholder': '>gene_name\nACGTACGT...',
-        }),
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control validator-sequence-input',
+                'rows': 4,
+                'placeholder': '>gene_name\nACGTACGT...',
+            }
+        ),
     )
     reference_fasta = forms.FileField(
         required=False,
@@ -954,6 +1034,7 @@ class ValidatorTargetForm(forms.Form):
     )
 
     def clean(self):
+        """Normalize target fields and validate optional sequence uploads."""
         cleaned_data = super().clean()
         target_name = canonicalize_primer_base_name(
             cleaned_data.get('target_name')
@@ -982,20 +1063,28 @@ class ValidatorTargetForm(forms.Form):
             cleaned_data[field_name] = sequence
 
         probe = _clean_validator_sequence(
-            cleaned_data.get('probe_sequence'), _('Probe'), self,
+            cleaned_data.get('probe_sequence'),
+            _('Probe'),
+            self,
             required=False,
         )
         cleaned_data['probe_sequence'] = probe
-        method = cleaned_data.get('probe_evaluation_method') or 'percent_identity'
-        if probe and method == 'percent_identity' and (
-            cleaned_data.get('probe_percent_identity') is None
+        method = (
+            cleaned_data.get('probe_evaluation_method') or 'percent_identity'
+        )
+        if (
+            probe
+            and method == 'percent_identity'
+            and (cleaned_data.get('probe_percent_identity') is None)
         ):
             self.add_error(
                 'probe_percent_identity',
                 _('Enter the minimum probe percent identity.'),
             )
-        if probe and method == 'max_differences' and (
-            cleaned_data.get('probe_max_differences') is None
+        if (
+            probe
+            and method == 'max_differences'
+            and (cleaned_data.get('probe_max_differences') is None)
         ):
             self.add_error(
                 'probe_max_differences',
@@ -1014,15 +1103,15 @@ class ValidatorTargetForm(forms.Form):
                 )
             for record in records:
                 sequence = str(record.seq).upper()
-                if not sequence or not all(char in 'ACGTN' for char in sequence):
+                if not sequence or not all(
+                    char in 'ACGTN' for char in sequence
+                ):
                     self.add_error(
                         'gene_sequence',
                         _('Gene sequences may contain only A, C, G, T, or N.'),
                     )
         elif gene_sequence:
-            _clean_validator_sequence(
-                gene_sequence, _('Gene sequence'), self
-            )
+            _clean_validator_sequence(gene_sequence, _('Gene sequence'), self)
         cleaned_data['gene_sequence'] = gene_sequence
         fasta_file = cleaned_data.get('reference_fasta')
         if fasta_file:
@@ -1039,7 +1128,9 @@ def _validate_gene_fasta(fasta_file, form):
             contents = contents.decode('utf-8')
         records = list(SeqIO.parse(StringIO(contents), 'fasta'))
     except (UnicodeDecodeError, ValueError, TypeError):
-        form.add_error('reference_fasta', _('Upload a valid UTF-8 FASTA file.'))
+        form.add_error(
+            'reference_fasta', _('Upload a valid UTF-8 FASTA file.')
+        )
         return
     finally:
         try:
@@ -1047,7 +1138,9 @@ def _validate_gene_fasta(fasta_file, form):
         except (AttributeError, OSError):
             pass
     if not records:
-        form.add_error('reference_fasta', _('The FASTA file contains no records.'))
+        form.add_error(
+            'reference_fasta', _('The FASTA file contains no records.')
+        )
         return
     identifiers = set()
     for record in records:
@@ -1066,18 +1159,31 @@ def _validate_gene_fasta(fasta_file, form):
 
 
 def _clean_validator_sequence(value, label, form, required=True):
+    """Normalize a target sequence and add a form error for illegal bases."""
     sequence = ''.join((value or '').split()).upper()
     if not sequence and not required:
         return ''
     if sequence and not all(char in 'ACGTN' for char in sequence):
         form.add_error(
             None,
-            _('{0} may contain only A, C, G, T, or N.').format(label),
+            format_lazy(
+                _('{0} may contain only A, C, G, T, or N.'),
+                label,
+            ),
         )
     return sequence
 
 
 def canonicalize_primer_base_name(value):
+    """Normalize a target name to letters, digits, and underscores.
+
+    Args:
+        value: User-provided target name.
+
+    Returns:
+        The canonical target name, or an empty string if no valid characters
+        remain.
+    """
     name = str(value or '').strip()
     name = name.replace(' ', '_').replace('-', '_')
     name = re.sub(r'[^A-Za-z0-9_]', '_', name)
@@ -1086,7 +1192,9 @@ def canonicalize_primer_base_name(value):
 
 class ValidatorTargetFormSet(forms.BaseFormSet):
     """Ensure target names are unique and sample-level rules are applicable."""
+
     def clean(self):
+        """Reject duplicate targets and invalid sample-level logic."""
         super().clean()
         if any(self.errors):
             return
@@ -1099,7 +1207,9 @@ class ValidatorTargetFormSet(forms.BaseFormSet):
             target = row.get('target_name', '').lower()
             sample = row.get('sample_name', '').lower()
             if target in seen_targets:
-                form.add_error('target_name', _('Target names must be unique.'))
+                form.add_error(
+                    'target_name', _('Target names must be unique.')
+                )
             seen_targets.add(target)
             sample_targets.setdefault(sample, set()).add(target)
         classification_rule = getattr(self, 'classification_rule', '')
@@ -1113,8 +1223,10 @@ class ValidatorTargetFormSet(forms.BaseFormSet):
         if getattr(self, 'logic', '') in ('AND', 'OR'):
             if any(len(targets) < 2 for targets in sample_targets.values()):
                 raise forms.ValidationError(
-                    _('The selected logic requires at least two targets per '
-                      'sample.')
+                    _(
+                        'The selected logic requires at least two targets per '
+                        'sample.'
+                    )
                 )
 
 

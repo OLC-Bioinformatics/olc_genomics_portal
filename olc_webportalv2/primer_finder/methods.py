@@ -6,45 +6,42 @@ Methods for the primer_finder app
 
 # Standard imports
 import json
+import logging
 import os
 import shutil
 import tempfile
-from typing import (
-    Any,
-    Dict,
-    Tuple,
-    Type,
-    Union
-)
+from typing import Any, Dict, Tuple, Type, Union
+
+# Third-party imports
+import xlsxwriter
 
 # Django-related imports
 from django.db.models.query import QuerySet
 
-
-# Third-party imports
-import xlsxwriter
+from olc_webportalv2.common.methods import send_email as send_email
 from olc_webportalv2.common.storage_client import get_storage_client
 
 # Portal-specific imports
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
-    VerifierPrimerSet,
-    VerifierPrimers,
-    VerifierPanel,
-    VerifierSEQID,
     ValidatorPanel,
     ValidatorPrimers,
     ValidatorPrimerSet,
     ValidatorRequest,
+    ValidatorSEQID,
     ValidatorTarget,
-    ValidatorSEQID
+    VerifierPanel,
+    VerifierPrimers,
+    VerifierPrimerSet,
+    VerifierSEQID,
 )
-from olc_webportalv2.common.methods import send_email
+
+logger = logging.getLogger(__name__)
 
 
 def upload_primers(
     *,  # Enforce keyword arguments
-    request: Any
+    request: Any,
 ):
     """
     Create a local folder to store the batch config file, and upload the
@@ -55,11 +52,7 @@ def upload_primers(
     """
     # Set the container name appropriately
     container_name = request.container_namer()
-    run_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
-        f'{container_name}'
-    )
+    run_folder = os.path.join('olc_webportalv2', 'media', f'{container_name}')
 
     # Create the run folder as necessary
     os.makedirs(run_folder, exist_ok=True)
@@ -78,8 +71,9 @@ def upload_primers(
     try:
         primer_sequences = request.primer_sequences
     except AttributeError:
-        primer_sequences = f'{request.forward_primer}\r\n{request.reverse_primer}\r\n'\
-            
+        primer_sequences = (
+            f'{request.forward_primer}\r\n{request.reverse_primer}\r\n'
+        )
 
     # Write the bytes-encoded primer sequences to blob storage
     blob_client.upload_bytes(
@@ -95,8 +89,9 @@ def upload_probe(request: ValidatorRequest):
     """
     Upload the probe sequence to blob storage
 
-    Parameters
-        request: ValidatorRequest object
+    Args:
+        request: Validator request containing the probe sequence and
+            storage-container name.
     """
     # The probe sequence is stored with a generic file name
     file_name = 'probe.fasta'
@@ -109,10 +104,12 @@ def upload_probe(request: ValidatorRequest):
 
     # Add a header to the probe sequence
     probe_records = _validator_probe_records(request)
-    probe_sequence = '\r\n'.join(
-        f'>{name}\r\n{sequence}'
-        for name, sequence in probe_records
-    ) + '\r\n'
+    probe_sequence = (
+        '\r\n'.join(
+            f'>{name}\r\n{sequence}' for name, sequence in probe_records
+        )
+        + '\r\n'
+    )
 
     # Write the bytes-encoded primer sequences to blob storage
     blob_client.ensure_container(container_name)
@@ -142,8 +139,9 @@ def populate_primer_sets(
     *,  # Ensure that the following arguments are keyword arguments
     pk: int,
     primer_list: list,
-    model: Type[Union[VerifierPrimerSet, ValidatorPrimerSet]] =
-        VerifierPrimerSet
+    model: Type[
+        Union[VerifierPrimerSet, ValidatorPrimerSet]
+    ] = VerifierPrimerSet,
 ):
     """
     Populate the database using the PrimerSet model.
@@ -155,8 +153,11 @@ def populate_primer_sets(
         model (models.Model): PrimerSet model to populate. Default is
             VerifierPrimerSet.
     """
-    id_string = 'verifier_request_id' if model == VerifierPrimerSet \
+    id_string = (
+        'verifier_request_id'
+        if model == VerifierPrimerSet
         else 'validator_request_id'
+    )
 
     # Fetch existing primer sets in a single query
     existing_primers = model.objects.filter(**{id_string: pk}).values_list(
@@ -185,7 +186,7 @@ def populate_primer_details(
     *,  # Ensure that the following arguments are keyword arguments
     details: dict,
     query: QuerySet,
-    model: Type[Union[VerifierPrimers, ValidatorPrimers]] = VerifierPrimers
+    model: Type[Union[VerifierPrimers, ValidatorPrimers]] = VerifierPrimers,
 ):
     """
     Populate the database using the Primers model.
@@ -205,8 +206,9 @@ def populate_primer_details(
 
     # Prepare a set of existing primer details for quick lookups
     existing_primer_details = set(
-        model.objects.filter(primer_id__in=query)
-        .values_list('primer_id', 'primer_header')
+        model.objects.filter(primer_id__in=query).values_list(
+            'primer_id', 'primer_header'
+        )
     )
 
     # Iterate through all the primer sets
@@ -222,8 +224,11 @@ def populate_primer_details(
             if (primer_set.pk, primer_name) not in existing_primer_details:
                 # Create a new primer object
                 new_primer_objects.append(
-                    model(primer_id=primer_set.pk, primer_header=primer_name,
-                          primer_sequence=primer_sequence)
+                    model(
+                        primer_id=primer_set.pk,
+                        primer_header=primer_name,
+                        primer_sequence=primer_sequence,
+                    )
                 )
 
     # Use bulk_create to efficiently add all new primer objects
@@ -235,7 +240,7 @@ def populate_panel(
     genera: list,
     panel_type: str,
     pk: int,
-    panel: Type[Union[VerifierPanel, ValidatorPanel]] = VerifierPanel
+    panel: Type[Union[VerifierPanel, ValidatorPanel]] = VerifierPanel,
 ):
     """
     Populate the database using the supplied panel.
@@ -249,8 +254,11 @@ def populate_panel(
         panel (models.Model): Panel model to populate. Default is
             VerifierPanel.
     """
-    id_string = 'verifier_request_id' if panel == VerifierPanel else \
-        'validator_request_id'
+    id_string = (
+        'verifier_request_id'
+        if panel == VerifierPanel
+        else 'validator_request_id'
+    )
 
     # Fetch existing panels in a single query
     existing_panels = panel.objects.filter(
@@ -292,17 +300,15 @@ def retrieve_panel_seqids(
     :return: seq_dictionary: Dictionary of genus: list of SEQIDs
     """
     # Construct the path to the seqids.txt file
-    seqids_file = os.path.join(
-        run_folder, f"{genus}_seqids.txt"
-    )
+    seqids_file = os.path.join(run_folder, f'{genus}_seqids.txt')
 
     # Check if the file exists
     if not os.path.exists(seqids_file):
-        print(f"Warning: {seqids_file} not found.")
+        logger.warning('Sequence ID file %s was not found', seqids_file)
         return seq_dictionary
 
     # Read the SEQIDs from the file
-    with open(seqids_file, "r", encoding='utf-8') as f:
+    with open(seqids_file, 'r', encoding='utf-8') as f:
         seqids = [line.strip() for line in f]
 
     # Initialise the genus key in the dictionaries as required
@@ -324,7 +330,7 @@ def retrieve_panel_seqids(
 
 def populate_report(
     *,  # Ensure that the following arguments are keyword arguments
-    request: Type[Union[PrimerVerifierRequest, ValidatorRequest]]
+    request: Type[Union[PrimerVerifierRequest, ValidatorRequest]],
 ) -> Tuple[Union[PrimerVerifierRequest, ValidatorRequest], str]:
     """
     Download the JSON-formatted report from blob storage, parse it, and store
@@ -340,31 +346,26 @@ def populate_report(
     try:
         container_name = request.container_namer()
         run_folder = os.path.join(
-            'olc_webportalv2',
-            'media',
-            f'{container_name}'
+            'olc_webportalv2', 'media', f'{container_name}'
         )
         report_folder = os.path.join(run_folder, 'reports')
 
         if not os.path.isdir(report_folder) and not request.report:
             _download_reports(
-                container_name=container_name,
-                run_folder=run_folder
+                container_name=container_name, run_folder=run_folder
             )
 
         if not request.report:
             request = _load_and_store_report(
-                report_folder=report_folder,
-                request=request
+                report_folder=report_folder, request=request
             )
 
         return request, report_folder
 
-    except Exception as exc:
-        print(
-            'Error in populate_report for %s: %s',
+    except Exception:
+        logger.exception(
+            'Error while populating report for %s',
             request.container_namer(),
-            str(exc),
         )
         raise
 
@@ -372,7 +373,7 @@ def populate_report(
 def _download_reports(
     *,  # Ensure that the following arguments are keyword arguments
     container_name: str,
-    run_folder: str
+    run_folder: str,
 ):
     """
     Download the reports from Azure Blob Storage.
@@ -395,7 +396,7 @@ def _download_reports(
 def _load_and_store_report(
     *,  # Ensure that the following arguments are keyword arguments
     report_folder: str,
-    request: PrimerVerifierRequest
+    request: PrimerVerifierRequest,
 ) -> PrimerVerifierRequest:
     """
     Load the JSON report and store it in the PrimerVerifierRequest model.
@@ -409,22 +410,17 @@ def _load_and_store_report(
     """
     # Set the path to the JSON report file
     json_report_file = os.path.join(
-        report_folder,
-        'inclusivity_exclusivity_report.json'
+        report_folder, 'inclusivity_exclusivity_report.json'
     )
 
     # Load the JSON report
     with open(json_report_file, 'r', encoding='utf-8') as report_object:
-
         # Use json.load to load the JSON report
         json_report = json.load(report_object)
 
         # Store the JSON report in the request object
         request.report = json.dumps(
-            json_report,
-            sort_keys=True,
-            indent=4,
-            separators=(',', ': ')
+            json_report, sort_keys=True, indent=4, separators=(',', ': ')
         )
         request.save()
     return request
@@ -434,7 +430,7 @@ def retrieve_sets(
     request: Union[PrimerVerifierRequest, ValidatorRequest],
     primer_set_model: Union[VerifierPrimerSet, ValidatorPrimerSet],
     panel_model: Union[VerifierPanel, ValidatorPanel],
-    analysis: str
+    analysis: str,
 ):
     """
     Extract the primer and panel query sets from models using the primary key
@@ -444,7 +440,7 @@ def retrieve_sets(
     ValidatorRequest filtered by primary key of current request
     :param primer_set_model: type django.db.models.Model: VerifierPrimerSet or
     ValidatorPrimerSet
-    :param panel_model: django.db.models.Model: VerifierPanel or ValidatorPanel
+    :param panel_model: VerifierPanel or ValidatorPanel model class.
     :param analysis: type str: String of the current analysis type.
 
     :return: report: JSON-formatted PrimerValidator report
@@ -462,10 +458,8 @@ def retrieve_sets(
         id_string = 'validator_request_id'
     else:
         pass
-    keyword_dict = {
-        id_string: request.pk
-    }
-    # Retrieve the PrimerSet object(s) corresponding to the request primary key
+    keyword_dict = {id_string: request.pk}
+    # Retrieve primer-set objects for the request.
     primer_set = primer_set_model.objects.filter(**keyword_dict)
     # Retrieve the Panel object(s) corresponding to the request primary key
     panel_set = panel_model.objects.filter(**keyword_dict)
@@ -487,7 +481,7 @@ def initialize_primer_data(
     *,  # Ensure that the following arguments are keyword arguments
     details: Dict,
     primer_name: str,
-    totals: Dict
+    totals: Dict,
 ) -> Tuple[Dict, Dict]:
     """
     Initializes data structures for a specific primer.
@@ -506,7 +500,7 @@ def initialize_primer_data(
 
 def sort_mismatch_details(
     *,  # Ensure that the following arguments are keyword arguments
-    details: Dict
+    details: Dict,
 ) -> None:
     """
     Sorts mismatch details by count in descending order.
@@ -518,8 +512,11 @@ def sort_mismatch_details(
             for location in [
                 location_data.get(genus, {})
                 for genus in location_data
-                if (genus != 'percent' and genus != 'positive'
-                    and genus != 'total')
+                if (
+                    genus != 'percent'
+                    and genus != 'positive'
+                    and genus != 'total'
+                )
             ] + [location_data.get('combined', {})]:
                 for mismatch_type in ['forward', 'reverse']:
                     mismatches_key = f'{mismatch_type}_mismatches'
@@ -530,7 +527,7 @@ def sort_mismatch_details(
                                 location[mismatches_key] = sorted(
                                     location[mismatches_key].items(),
                                     key=lambda x: x[1],
-                                    reverse=True
+                                    reverse=True,
                                 )
                             except AttributeError:
                                 pass
@@ -539,7 +536,7 @@ def sort_mismatch_details(
                                 location[details_key] = sorted(
                                     location[details_key].items(),
                                     key=lambda x: x[1],
-                                    reverse=True
+                                    reverse=True,
                                 )
                             except AttributeError:
                                 pass
@@ -547,7 +544,7 @@ def sort_mismatch_details(
 
 def create_blob_from_summary(
     *,  # Ensure that the following arguments are keyword arguments
-    request: PrimerVerifierRequest
+    request: PrimerVerifierRequest,
 ) -> None:
     """
     Creates a blob from the summary report in Azure Blob Storage.
@@ -559,8 +556,8 @@ def create_blob_from_summary(
     blob_client.upload_bytes(
         container_name,
         os.path.join(
-            'reports',
-            f'{request.container_namer()}_summary_report.json'),
+            'reports', f'{request.container_namer()}_summary_report.json'
+        ),
         request.summary.encode('utf-8'),
     )
 
@@ -570,7 +567,7 @@ def create_details(
     panel_model: Type[Union[VerifierPanel, ValidatorPanel]],
     primer_set_model: Type[Union[VerifierPrimerSet, ValidatorPrimerSet]],
     request: Type[Union[PrimerVerifierRequest, ValidatorRequest]],
-    analysis: str = 'verifier'
+    analysis: str = 'verifier',
 ) -> Type[Union[PrimerVerifierRequest, ValidatorRequest]]:
     """
     Parses the report to extract panel- and genus-specific details.
@@ -588,7 +585,7 @@ def create_details(
         request=request,
         primer_set_model=primer_set_model,
         panel_model=panel_model,
-        analysis=analysis
+        analysis=analysis,
     )
 
     details, totals = initialize_data_structures()
@@ -600,18 +597,16 @@ def create_details(
         for configured_target in ValidatorTarget.objects.filter(
             sample__validator_request=request
         ):
-            probe_configuration[
-                configured_target.name.strip().lower()
-            ] = configured_target
+            probe_configuration[configured_target.name.strip().lower()] = (
+                configured_target
+            )
 
     # Create a dictionary to store seq_dict for each genus
     seq_dict_by_genus = {}
 
     # Populate seq_dict for each genus
     run_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
-        f'{request.container_namer()}'
+        'olc_webportalv2', 'media', f'{request.container_namer()}'
     )
 
     seq_dict = {}
@@ -631,9 +626,7 @@ def create_details(
     for primer in primer_set:
         primer_name = primer.primer_name
         details, totals = initialize_primer_data(
-            details=details,
-            primer_name=primer_name,
-            totals=totals
+            details=details, primer_name=primer_name, totals=totals
         )
 
         for panel in panel_set:
@@ -664,14 +657,11 @@ def create_details(
 
             # Iterate over a copy of the seqids dictionary
             for seqid in seqids:
-
                 # Extract the sequence data from the report
-                sequence_data = report.get(
-                    primer_name, {}
-                ).get(
-                    panel_name, {}
-                ).get(
-                    seqid, {}
+                sequence_data = (
+                    report.get(primer_name, {})
+                    .get(panel_name, {})
+                    .get(seqid, {})
                 )
 
                 # Increment the panel total
@@ -692,7 +682,7 @@ def create_details(
                     primer_name=primer_name,
                     panel_name=panel_name,
                     genus=genus,
-                    totals=totals
+                    totals=totals,
                 )
 
                 configured_target = probe_configuration.get(
@@ -714,14 +704,16 @@ def create_details(
                         'probe_evaluation_method',
                         'percent_identity',
                     )
-                    percent_threshold = float(getattr(
-                        configured_target,
-                        'probe_percent_identity',
-                        80.0 if configured_target else 90.0,
-                    ))
-                    difference_threshold = int(getattr(
-                        configured_target, 'probe_max_differences', 2
-                    ))
+                    percent_threshold = float(
+                        getattr(
+                            configured_target,
+                            'probe_percent_identity',
+                            80.0 if configured_target else 90.0,
+                        )
+                    )
+                    difference_threshold = int(
+                        getattr(configured_target, 'probe_max_differences', 2)
+                    )
                     try:
                         observed_identity = float(
                             probe_info.get(
@@ -732,12 +724,20 @@ def create_details(
                     except (TypeError, ValueError):
                         observed_identity = None
                     try:
-                        differences = int(float(
-                            probe_info.get('mismatches',
-                                           probe_info.get('mismatch', 0))
-                        )) + int(float(
-                            probe_info.get('gaps', probe_info.get('gap', 0))
-                        ))
+                        differences = int(
+                            float(
+                                probe_info.get(
+                                    'mismatches',
+                                    probe_info.get('mismatch', 0),
+                                )
+                            )
+                        ) + int(
+                            float(
+                                probe_info.get(
+                                    'gaps', probe_info.get('gap', 0)
+                                )
+                            )
+                        )
                     except (TypeError, ValueError):
                         differences = None
                     if method == 'max_differences':
@@ -760,46 +760,47 @@ def create_details(
 
             # Calculate panel percentages *after* the loop
             panel_percentages = calculate_panel_percentage_from_counts(
-                panel_total=panel_total,
-                panel_positive=panel_positive
+                panel_total=panel_total, panel_positive=panel_positive
             )
 
             # Update the details dictionary with the calculated percentages
             details[primer_name][panel_name][genus]['percent'] = (
-                panel_percentages['percent'])
+                panel_percentages['percent']
+            )
             details[primer_name][panel_name][genus]['positive'] = (
-                panel_percentages['positive'])
+                panel_percentages['positive']
+            )
             details[primer_name][panel_name][genus]['total'] = (
-                panel_percentages['total'])
+                panel_percentages['total']
+            )
 
-            # Store probe prevalence stats if any probe data was found 
+            # Store probe prevalence stats if any probe data was found
             if probe_total > 0:
                 try:
                     probe_percent = float(
-                        f"{probe_positive / panel_total * 100:.2f}"
+                        f'{probe_positive / panel_total * 100:.2f}'
                     )
                 except ZeroDivisionError:
                     probe_percent = 0.00
-                details[primer_name][panel_name][genus]["probe_prevalence"] = {
-                    "percent": probe_percent,
-                    "positive": probe_positive,
-                    "total": panel_total,
+                genus_details = details[primer_name][panel_name][genus]
+                genus_details['probe_prevalence'] = {
+                    'percent': probe_percent,
+                    'positive': probe_positive,
+                    'total': panel_total,
                 }
 
-    sort_mismatch_details(
-        details=details
-    )
+    sort_mismatch_details(details=details)
 
     request.summary = json.dumps(
-        details, sort_keys=True, indent=4, separators=(',', ': '))
+        details, sort_keys=True, indent=4, separators=(',', ': ')
+    )
     request.totals = json.dumps(
-        totals, sort_keys=True, indent=4, separators=(',', ': '))
+        totals, sort_keys=True, indent=4, separators=(',', ': ')
+    )
     request.save()
 
     # Create a blob from the summary report
-    create_blob_from_summary(
-        request=request
-    )
+    create_blob_from_summary(request=request)
 
     return request
 
@@ -831,7 +832,8 @@ def validator_sample_results(request):
                 primer_report = report.get(target.name, {})
                 panel_report = primer_report.get(panel_name, {})
                 seqids.update(
-                    key for key in panel_report
+                    key
+                    for key in panel_report
                     if key not in ('percent', 'positive', 'total')
                 )
             for seqid in sorted(seqids):
@@ -854,22 +856,31 @@ def validator_sample_results(request):
                         if not isinstance(probe, dict):
                             continue
                         try:
-                            if target.probe_evaluation_method == 'max_differences':
-                                differences = (
-                                    int(float(probe.get(
-                                        'mismatches', probe.get('mismatch', 0)
-                                    ))) +
-                                    int(float(probe.get(
-                                        'gaps', probe.get('gap', 0)
-                                    )))
+                            if (
+                                target.probe_evaluation_method
+                                == 'max_differences'
+                            ):
+                                differences = int(
+                                    float(
+                                        probe.get(
+                                            'mismatches',
+                                            probe.get('mismatch', 0),
+                                        )
+                                    )
+                                ) + int(
+                                    float(
+                                        probe.get('gaps', probe.get('gap', 0))
+                                    )
                                 )
                                 if differences > target.probe_max_differences:
                                     continue
                             else:
-                                identity = float(probe.get(
-                                    'percent_id',
-                                    probe.get('percent_identity'),
-                                ))
+                                identity = float(
+                                    probe.get(
+                                        'percent_id',
+                                        probe.get('percent_identity'),
+                                    )
+                                )
                                 if identity < target.probe_percent_identity:
                                     continue
                         except (TypeError, ValueError):
@@ -895,19 +906,21 @@ def validator_sample_results(request):
                 else:
                     classification = ''
 
-                results.append({
-                    'sample': sample.name,
-                    'panel': panel_name,
-                    'seqid': seqid,
-                    'found_targets': sorted(found_targets),
-                    'classification': classification,
-                })
+                results.append(
+                    {
+                        'sample': sample.name,
+                        'panel': panel_name,
+                        'seqid': seqid,
+                        'found_targets': sorted(found_targets),
+                        'classification': classification,
+                    }
+                )
     return results
 
 
 def find_shared_seqids(
     *,  # Ensure that the following arguments are keyword arguments
-    seq_dictionary: Dict
+    seq_dictionary: Dict,
 ) -> Dict:
     """
     Finds seqids that are present in more than one genus-specific list.
@@ -938,7 +951,7 @@ def find_shared_seqids(
             genera_str = ','.join(sorted(genera))
             shared_seqids[genera_str] = seqid
 
-    print(f'shared_seqids: {shared_seqids}')
+    logger.debug('Shared sequence IDs: %s', shared_seqids)
     return shared_seqids
 
 
@@ -949,7 +962,7 @@ def process_sequence_data_from_report(
     primer_name: str,
     panel_name: str,
     genus: str,
-    totals: Dict
+    totals: Dict,
 ) -> Dict:
     """
     Processes sequence data from the report and updates details and totals.
@@ -966,8 +979,9 @@ def process_sequence_data_from_report(
     try:
         amplicon_length = sequence_data.get('amplicon_length')
     except AttributeError:
-        print("Error: amplicon_length not found in sequence_data")
-        # print(sequence_data)
+        logger.exception(
+            'Sequence report data does not contain amplicon_length'
+        )
         raise
     if not amplicon_length:
         return totals, details, False
@@ -977,15 +991,15 @@ def process_sequence_data_from_report(
         primer_name=primer_name,
         totals=totals,
         panel_name=panel_name,
-        genus=genus
+        genus=genus,
     )
-    
+
     details = update_mismatch_details_from_report(
         sequence_data=sequence_data,
         details=details,
         primer_name=primer_name,
         panel_name=panel_name,
-        genus=genus
+        genus=genus,
     )
     # details = update_mismatch_details_from_report(
     #     sequence_data=sequence_data,
@@ -995,10 +1009,8 @@ def process_sequence_data_from_report(
     #     genus=genus,
     #     mismatch_type='reverse'
     # )
-    
-    print(f'process_sequence_data_from_report totals: {totals}')
-    # print('process_sequence_data_from_report details: {}'.format(details))
-    
+
+    logger.debug('Primer report totals: %s', totals)
     return totals, details, True
 
 
@@ -1008,7 +1020,7 @@ def calculate_totals_from_report(
     totals: Dict[str, Any],
     primer_name: str,
     panel_name: str,
-    genus: str
+    genus: str,
 ) -> Dict[str, Any]:
     """
     Calculates totals from sequence data in the report.
@@ -1034,44 +1046,51 @@ def calculate_totals_from_report(
     total_mismatch = int(sequence_data.get('total_mismatch', 0))
 
     # Initialize total mismatch dictionaries
-    genus_mismatch_totals = genus_totals.setdefault(
-        'total_mismatch', {})
+    genus_mismatch_totals = genus_totals.setdefault('total_mismatch', {})
     combined_mismatch_totals = combined_totals.setdefault(
-        'total_mismatch', {})
+        'total_mismatch',
+        {},
+    )
 
     # Initialize mismatch counts dictionaries
     genus_mismatch_counts = genus_mismatch_totals.setdefault(
-        total_mismatch, {})
+        total_mismatch, {}
+    )
     combined_mismatch_counts = combined_mismatch_totals.setdefault(
-        total_mismatch, {})
+        total_mismatch, {}
+    )
 
     # Increment the total counts
     genus_mismatch_counts['totals'] = (
-        genus_mismatch_counts.get('totals', 0) + 1)
+        genus_mismatch_counts.get('totals', 0) + 1
+    )
     combined_mismatch_counts['totals'] = (
-        combined_mismatch_counts.get('totals', 0) + 1)
+        combined_mismatch_counts.get('totals', 0) + 1
+    )
 
     # Get forward and reverse mismatch details
     forward_mismatch_details = sequence_data.get(
-        'forward_mismatch_details', '0')
+        'forward_mismatch_details', '0'
+    )
     reverse_mismatch_details = sequence_data.get(
-        'reverse_mismatch_details', '0')
+        'reverse_mismatch_details', '0'
+    )
 
     # Combine mismatch details
-    total_details = '{forward}, {reverse}'.format(
-        forward=(
-            forward_mismatch_details if forward_mismatch_details else '0'
-        ),
-        reverse=(
-            reverse_mismatch_details if reverse_mismatch_details else '0'
+    total_details = ', '.join(
+        (
+            forward_mismatch_details or '0',
+            reverse_mismatch_details or '0',
         )
     )
 
     # Increment the mismatch details counts
     genus_mismatch_counts[total_details] = (
-        genus_mismatch_counts.get(total_details, 0) + 1)
+        genus_mismatch_counts.get(total_details, 0) + 1
+    )
     combined_mismatch_counts[total_details] = (
-        combined_mismatch_counts.get(total_details, 0) + 1)
+        combined_mismatch_counts.get(total_details, 0) + 1
+    )
 
     return totals
 
@@ -1082,7 +1101,7 @@ def update_mismatch_details_from_report(
     genus: str,
     panel_name: str,
     primer_name: str,
-    sequence_data: Dict[str, Any]
+    sequence_data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Updates mismatch details in the details dictionary.
 
@@ -1101,9 +1120,9 @@ def update_mismatch_details_from_report(
     for mismatch_type in ['forward', 'reverse']:
         # Get mismatch details and count from sequence data
         mismatch_details = sequence_data.get(
-            f'{mismatch_type}_mismatch_details')
-        mismatch = sequence_data.get(
-            f'{mismatch_type}_mismatch')
+            f'{mismatch_type}_mismatch_details'
+        )
+        mismatch = sequence_data.get(f'{mismatch_type}_mismatch')
 
         # If no mismatch details, continue
         if not mismatch_details:
@@ -1116,31 +1135,59 @@ def update_mismatch_details_from_report(
 
             # Initialize mismatch details dictionary if necessary
             mismatch_details_key = f'{mismatch_type}_details'
-            if mismatch_details_key not in details[primer_name][panel_name][location]:
-                details[primer_name][panel_name][location][mismatch_details_key] = {}
+            if (
+                mismatch_details_key
+                not in details[primer_name][panel_name][location]
+            ):
+                details[primer_name][panel_name][location][
+                    mismatch_details_key
+                ] = {}
 
             # Initialize mismatch counts dictionary if necessary
             mismatch_counts_key = f'{mismatch_type}_mismatches'
-            if mismatch_counts_key not in details[primer_name][panel_name][location]:
-                details[primer_name][panel_name][location][mismatch_counts_key] = {}
+            if (
+                mismatch_counts_key
+                not in details[primer_name][panel_name][location]
+            ):
+                details[primer_name][panel_name][location][
+                    mismatch_counts_key
+                ] = {}
 
             # Increment the mismatch details count
-            if mismatch_details not in details[primer_name][panel_name][location][mismatch_details_key]:
-                details[primer_name][panel_name][location][mismatch_details_key][mismatch_details] = 0
-            details[primer_name][panel_name][location][mismatch_details_key][mismatch_details] += 1
+            if (
+                mismatch_details
+                not in details[primer_name][panel_name][location][
+                    mismatch_details_key
+                ]
+            ):
+                details[primer_name][panel_name][location][
+                    mismatch_details_key
+                ][mismatch_details] = 0
+            details[primer_name][panel_name][location][mismatch_details_key][
+                mismatch_details
+            ] += 1
 
             # Increment the mismatch count
             if mismatch:
-                if mismatch not in details[primer_name][panel_name][location][mismatch_counts_key]:
-                    details[primer_name][panel_name][location][mismatch_counts_key][mismatch] = 0
-                details[primer_name][panel_name][location][mismatch_counts_key][mismatch] += 1
+                if (
+                    mismatch
+                    not in details[primer_name][panel_name][location][
+                        mismatch_counts_key
+                    ]
+                ):
+                    details[primer_name][panel_name][location][
+                        mismatch_counts_key
+                    ][mismatch] = 0
+                details[primer_name][panel_name][location][
+                    mismatch_counts_key
+                ][mismatch] += 1
     return details
 
 
 def calculate_panel_percentage_from_counts(
     *,  # Ensure that the following arguments are keyword arguments
     panel_total: int,
-    panel_positive: int
+    panel_positive: int,
 ) -> Dict:
     """
     Calculates and returns panel percentage.
@@ -1153,18 +1200,14 @@ def calculate_panel_percentage_from_counts(
         Dict: Panel percentage details.
     """
     try:
-        percent = float(
-            f'{panel_positive / panel_total * 100:.2f}')
+        percent = float(f'{panel_positive / panel_total * 100:.2f}')
     except ZeroDivisionError:
         percent = 0.00
-
-    print(f"panel_total: {panel_total}")
-    print(f"panel_positive: {panel_positive}")
 
     return {
         'percent': percent,
         'positive': panel_positive,
-        'total': panel_total
+        'total': panel_total,
     }
 
 
@@ -1176,21 +1219,6 @@ def exclusivity_panel_retrieve(inclusivity):
     The query returns a list containing the genus in the appropriate panel
     (e.g. ['escherichia'])
     """
-    # Dictionary to store the inclusivity: exclusivity validation panels
-    # Iterate through all the genera within the desired panel
-    inclusivity_exclusivity_dict = {
-        'Campylobacter': ['Escherichia', 'Listeria', 'Salmonella'],
-        'Escherichia': ['Campylobacter', 'Listeria', 'Salmonella'],
-        'Listeria': ['Campylobacter', 'Escherichia', 'Salmonella'],
-        'Salmonella': ['Campylobacter', 'Escherichia', 'Listeria'],
-        'Vtec': ['Escherichia']
-    }
-    # The genera in the model are lowercase, so they must be manipulated to
-    # the desired formatting e.g. Escherichia
-    inclusivity = inclusivity.capitalize()
-    # Extract the exclusivity panel from the dictionary
-    exclusivity_panel = inclusivity_exclusivity_dict[inclusivity]
-    return exclusivity_panel
 
 
 def _upload_summary_excel(blob_client, container_name, request):
@@ -1205,7 +1233,7 @@ def _upload_summary_excel(blob_client, container_name, request):
     if xlsxwriter is None:
         return
 
-    report_text = getattr(request, "report", None)
+    report_text = getattr(request, 'report', None)
     if not report_text:
         return
 
@@ -1218,16 +1246,16 @@ def _upload_summary_excel(blob_client, container_name, request):
         return
 
     primer_fields = [
-        ("amplicon length", "amplicon_length"),
-        ("contig", "contig"),
-        ("location", "location"),
-        ("direction", "direction"),
-        ("forward mismatch", "forward_mismatch"),
-        ("forward mismatch details", "forward_mismatch_details"),
-        ("reverse mismatch", "reverse_mismatch"),
-        ("reverse mismatch details", "reverse_mismatch_details"),
-        ("pseudoalignment", "pseudoalignment"),
-        ("Total Mismatches", "total_mismatch"),
+        ('amplicon length', 'amplicon_length'),
+        ('contig', 'contig'),
+        ('location', 'location'),
+        ('direction', 'direction'),
+        ('forward mismatch', 'forward_mismatch'),
+        ('forward mismatch details', 'forward_mismatch_details'),
+        ('reverse mismatch', 'reverse_mismatch'),
+        ('reverse mismatch details', 'reverse_mismatch_details'),
+        ('pseudoalignment', 'pseudoalignment'),
+        ('Total Mismatches', 'total_mismatch'),
     ]
 
     def _get_field(data, names, default=None):
@@ -1241,7 +1269,7 @@ def _upload_summary_excel(blob_client, container_name, request):
 
     def _clean_sequence(value):
         """Remove formatting whitespace from a sequence string."""
-        return "".join(str(value or "").split()).upper()
+        return ''.join(str(value or '').split()).upper()
 
     def _decode_details(value):
         """Decode HTML entities such as ``&gt;`` in mismatch details."""
@@ -1251,30 +1279,30 @@ def _upload_summary_excel(blob_client, container_name, request):
             from HTMLParser import HTMLParser
 
             unescape = HTMLParser().unescape
-        return unescape(str(value or ""))
+        return unescape(str(value or ''))
 
     def _primer_direction(header):
         """Determine whether a primer header is forward or reverse."""
-        header = str(header or "").strip().lower()
+        header = str(header or '').strip().lower()
         forward_suffixes = (
-            "-f",
-            "_f",
-            ".f",
-            " forward",
-            "_forward",
+            '-f',
+            '_f',
+            '.f',
+            ' forward',
+            '_forward',
         )
         reverse_suffixes = (
-            "-r",
-            "_r",
-            ".r",
-            " reverse",
-            "_reverse",
+            '-r',
+            '_r',
+            '.r',
+            ' reverse',
+            '_reverse',
         )
 
         if header.endswith(forward_suffixes):
-            return "forward"
+            return 'forward'
         if header.endswith(reverse_suffixes):
-            return "reverse"
+            return 'reverse'
         return None
 
     def _target_from_details(primer_sequence, details):
@@ -1289,12 +1317,12 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         primer_sequence = _clean_sequence(primer_sequence)
         if not primer_sequence:
-            return ""
+            return ''
 
         target = list(primer_sequence)
         detail_text = _decode_details(details)
         substitutions = re.findall(
-            r"(\d+)\s*([A-Za-z-])\s*>\s*([A-Za-z-])",
+            r'(\d+)\s*([A-Za-z-])\s*>\s*([A-Za-z-])',
             detail_text,
         )
 
@@ -1304,7 +1332,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             if 0 <= index < len(target):
                 target[index] = target_base.upper()
 
-        return "".join(target)
+        return ''.join(target)
 
     def _pseudoalignment(primer_sequence, target_sequence, details):
         """Return a three-line, BLAST-like primer/target alignment."""
@@ -1318,20 +1346,24 @@ def _upload_summary_excel(blob_client, container_name, request):
             )
 
         if not primer_sequence or not target_sequence:
-            return _decode_details(details) or "ND"
+            return _decode_details(details) or 'ND'
 
         length = max(len(primer_sequence), len(target_sequence))
-        primer_sequence = primer_sequence.ljust(length, "-")
-        target_sequence = target_sequence.ljust(length, "-")
-        match_line = "".join(
-            "|" if primer_base == target_base else " "
+        primer_sequence = primer_sequence.ljust(length, '-')
+        target_sequence = target_sequence.ljust(length, '-')
+        match_line = ''.join(
+            '|' if primer_base == target_base else ' '
             for primer_base, target_base in zip(
                 primer_sequence,
                 target_sequence,
             )
         )
 
-        return f"Primer: {primer_sequence}\n        {match_line}\nTarget: {target_sequence}"
+        return (
+            f'Primer: {primer_sequence}\n'
+            f'        {match_line}\n'
+            f'Target: {target_sequence}'
+        )
 
     def _combined_pseudoalignment(
         forward_query,
@@ -1352,11 +1384,11 @@ def _upload_summary_excel(blob_client, container_name, request):
             reverse_target,
             reverse_details,
         )
-        return f"FORWARD\n{forward_alignment}\n\nREVERSE\n{reverse_alignment}"
+        return f'FORWARD\n{forward_alignment}\n\nREVERSE\n{reverse_alignment}'
 
     def _parse_mismatch(value):
         """Convert a mismatch value to an integer when possible."""
-        if value in (None, "", "ND"):
+        if value in (None, '', 'ND'):
             return None
         try:
             return int(value)
@@ -1367,30 +1399,30 @@ def _upload_summary_excel(blob_client, container_name, request):
                 return None
 
     def _location(data, model_object):
-        """Return the explicit location or construct start-stop coordinates."""
+        """Return an explicit location or constructed coordinates."""
         value = _get_field(
             data,
-            ["location", "amplicon_range", "GenomeLocation"],
+            ['location', 'amplicon_range', 'GenomeLocation'],
         )
-        if value not in (None, ""):
+        if value not in (None, ''):
             return value
 
-        start = _get_field(data, ["start_pos"])
-        stop = _get_field(data, ["stop_pos"])
+        start = _get_field(data, ['start_pos'])
+        stop = _get_field(data, ['stop_pos'])
         if model_object is not None:
             start = start or model_object.start_pos
             stop = stop or model_object.stop_pos
 
-        if start not in (None, "") and stop not in (None, ""):
-            return f"{start}-{stop}"
-        return "ND"
+        if start not in (None, '') and stop not in (None, ''):
+            return f'{start}-{stop}'
+        return 'ND'
 
     # Collect one worksheet entry per panel/SEQID and retain per-primer data.
     entries = {}
     primer_names = set()
 
     for primer_name, primer_data in report.items():
-        if primer_name == "validator_version":
+        if primer_name == 'validator_version':
             continue
         if not isinstance(primer_data, dict):
             continue
@@ -1402,14 +1434,14 @@ def _upload_summary_excel(blob_client, container_name, request):
 
             panel_name = str(panel_name).upper()
             for seqid, sequence_data in panel_data.items():
-                if seqid in ("percent", "positive", "total"):
+                if seqid in ('percent', 'positive', 'total'):
                     continue
 
                 entry = entries.setdefault(
                     (panel_name, seqid),
-                    {"per_primer": {}},
+                    {'per_primer': {}},
                 )
-                entry["per_primer"][primer_name] = (
+                entry['per_primer'][primer_name] = (
                     sequence_data if isinstance(sequence_data, dict) else {}
                 )
 
@@ -1420,21 +1452,21 @@ def _upload_summary_excel(blob_client, container_name, request):
     if isinstance(request, PrimerVerifierRequest):
         sequence_model = VerifierSEQID
         primer_set_model = VerifierPrimerSet
-        request_filter = "panel__verifier_request_id"
-        primer_request_filter = "verifier_request_id"
+        request_filter = 'panel__verifier_request_id'
+        primer_request_filter = 'verifier_request_id'
     else:
         sequence_model = ValidatorSEQID
         primer_set_model = ValidatorPrimerSet
-        request_filter = "panel__validator_request_id"
-        primer_request_filter = "validator_request_id"
+        request_filter = 'panel__validator_request_id'
+        primer_request_filter = 'validator_request_id'
 
     sequence_query = (
         sequence_model.objects.filter(**{request_filter: request.pk})
         .select_related(
-            "panel",
-            "primer",
+            'panel',
+            'primer',
         )
-        .prefetch_related("primer__primer")
+        .prefetch_related('primer__primer')
     )
 
     model_values = {}
@@ -1457,7 +1489,7 @@ def _upload_summary_excel(blob_client, container_name, request):
     primer_sequences = {}
     primer_set_query = primer_set_model.objects.filter(
         **{primer_request_filter: request.pk}
-    ).prefetch_related("primer")
+    ).prefetch_related('primer')
 
     for primer_set in primer_set_query:
         directional_sequences = {}
@@ -1468,18 +1500,20 @@ def _upload_summary_excel(blob_client, container_name, request):
             if direction is None:
                 unresolved_sequences.append(primer_object.primer_sequence)
             else:
-                directional_sequences[direction] = primer_object.primer_sequence
+                directional_sequences[direction] = (
+                    primer_object.primer_sequence
+                )
 
         # Some uploaded primer headers do not end with -F/-R. For a standard
         # two-primer set, use model order as a deterministic fallback.
-        if "forward" not in directional_sequences and unresolved_sequences:
-            directional_sequences["forward"] = unresolved_sequences.pop(0)
-        if "reverse" not in directional_sequences and unresolved_sequences:
-            directional_sequences["reverse"] = unresolved_sequences.pop(0)
+        if 'forward' not in directional_sequences and unresolved_sequences:
+            directional_sequences['forward'] = unresolved_sequences.pop(0)
+        if 'reverse' not in directional_sequences and unresolved_sequences:
+            directional_sequences['reverse'] = unresolved_sequences.pop(0)
 
         primer_sequences[primer_set.primer_name] = directional_sequences
 
-    def _model_value(model_object, attribute, default=""):
+    def _model_value(model_object, attribute, default=''):
         """Read an attribute from an optional model object."""
         if model_object is None:
             return default
@@ -1493,68 +1527,74 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         forward_mismatch = _get_field(
             data,
-            ["forward_mismatch", "ForwardMismatches"],
-            _model_value(model_object, "forward_mismatch"),
+            ['forward_mismatch', 'ForwardMismatches'],
+            _model_value(model_object, 'forward_mismatch'),
         )
         reverse_mismatch = _get_field(
             data,
-            ["reverse_mismatch", "ReverseMismatches"],
-            _model_value(model_object, "reverse_mismatch"),
+            ['reverse_mismatch', 'ReverseMismatches'],
+            _model_value(model_object, 'reverse_mismatch'),
         )
         forward_details = _get_field(
             data,
-            ["forward_mismatch_details", "ForwardMismatchDetails"],
-            _model_value(model_object, "forward_mismatch_details"),
+            ['forward_mismatch_details', 'ForwardMismatchDetails'],
+            _model_value(model_object, 'forward_mismatch_details'),
         )
         reverse_details = _get_field(
             data,
-            ["reverse_mismatch_details", "ReverseMismatchDetails"],
-            _model_value(model_object, "reverse_mismatch_details"),
+            ['reverse_mismatch_details', 'ReverseMismatchDetails'],
+            _model_value(model_object, 'reverse_mismatch_details'),
         )
         total_mismatch = _get_field(
             data,
-            ["total_mismatch", "TotalMismatches"],
-            _model_value(model_object, "total_mismatch"),
+            ['total_mismatch', 'TotalMismatches'],
+            _model_value(model_object, 'total_mismatch'),
         )
 
-        if total_mismatch in (None, ""):
+        if total_mismatch in (None, ''):
             forward_value = _parse_mismatch(forward_mismatch)
             reverse_value = _parse_mismatch(reverse_mismatch)
             if forward_value is not None or reverse_value is not None:
                 total_mismatch = (forward_value or 0) + (reverse_value or 0)
 
-        forward_primer = sequences.get("forward", "")
-        reverse_primer = sequences.get("reverse", "")
-        forward_target = _model_value(model_object, "forward_ref")
-        reverse_target = _model_value(model_object, "reverse_ref")
+        forward_primer = sequences.get('forward', '')
+        reverse_primer = sequences.get('reverse', '')
+        forward_target = _model_value(model_object, 'forward_ref')
+        reverse_target = _model_value(model_object, 'reverse_ref')
 
         # Prefer stored aligned query strings where available. Otherwise use
         # the original primer sequence from VerifierPrimers/ValidatorPrimers.
-        forward_query = _model_value(model_object, "forward_query") or forward_primer
-        reverse_query = _model_value(model_object, "reverse_query") or reverse_primer
+        forward_query = (
+            _model_value(model_object, 'forward_query') or forward_primer
+        )
+        reverse_query = (
+            _model_value(model_object, 'reverse_query') or reverse_primer
+        )
 
         return {
-            "amplicon_length": _get_field(
+            'amplicon_length': _get_field(
                 data,
-                ["amplicon_length", "amplicon_size", "AmpliconSize"],
-                _model_value(model_object, "amplicon_length"),
+                ['amplicon_length', 'amplicon_size', 'AmpliconSize'],
+                _model_value(model_object, 'amplicon_length'),
             ),
-            "contig": _get_field(
+            'contig': _get_field(
                 data,
-                ["contig", "Contig"],
-                _model_value(model_object, "contig"),
+                ['contig', 'Contig'],
+                _model_value(model_object, 'contig'),
             ),
-            "location": _location(data, model_object),
-            "direction": _get_field(
+            'location': _location(data, model_object),
+            'direction': _get_field(
                 data,
-                ["direction", "orientation"],
-                _model_value(model_object, "direction"),
+                ['direction', 'orientation'],
+                _model_value(model_object, 'direction'),
             ),
-            "forward_mismatch": forward_mismatch,
-            "forward_mismatch_details": _decode_details(forward_details) or "ND",
-            "reverse_mismatch": reverse_mismatch,
-            "reverse_mismatch_details": _decode_details(reverse_details) or "ND",
-            "pseudoalignment": _combined_pseudoalignment(
+            'forward_mismatch': forward_mismatch,
+            'forward_mismatch_details': _decode_details(forward_details)
+            or 'ND',
+            'reverse_mismatch': reverse_mismatch,
+            'reverse_mismatch_details': _decode_details(reverse_details)
+            or 'ND',
+            'pseudoalignment': _combined_pseudoalignment(
                 forward_query,
                 forward_target,
                 forward_details,
@@ -1562,11 +1602,11 @@ def _upload_summary_excel(blob_client, container_name, request):
                 reverse_target,
                 reverse_details,
             ),
-            "total_mismatch": total_mismatch,
+            'total_mismatch': total_mismatch,
         }
 
     temp_file = tempfile.NamedTemporaryFile(
-        suffix=".xlsx",
+        suffix='.xlsx',
         delete=False,
     )
     temp_path = temp_file.name
@@ -1576,41 +1616,41 @@ def _upload_summary_excel(blob_client, container_name, request):
         workbook = xlsxwriter.Workbook(temp_path)
         header_format = workbook.add_format(
             {
-                "bold": True,
-                "bg_color": "#D9EAD3",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-                "text_wrap": True,
+                'bold': True,
+                'bg_color': '#D9EAD3',
+                'border': 1,
+                'align': 'center',
+                'valign': 'vcenter',
+                'text_wrap': True,
             }
         )
         cell_format = workbook.add_format(
             {
-                "border": 1,
-                "valign": "vcenter",
+                'border': 1,
+                'valign': 'vcenter',
             }
         )
         alignment_format = workbook.add_format(
             {
-                "border": 1,
-                "font_name": "Courier New",
-                "font_size": 9,
-                "valign": "vcenter",
-                "text_wrap": True,
+                'border': 1,
+                'font_name': 'Courier New',
+                'font_size': 9,
+                'valign': 'vcenter',
+                'text_wrap': True,
             }
         )
 
-        worksheet = workbook.add_worksheet("PrimerVerifierResults")
-        headers = ["SEQID", "PANEL"]
+        worksheet = workbook.add_worksheet('PrimerVerifierResults')
+        headers = ['SEQID', 'PANEL']
         for primer_name in primer_names:
             for field_label, field_name in primer_fields:
                 del field_name
-                headers.append(f"{field_label}  {primer_name}")
+                headers.append(f'{field_label}  {primer_name}')
 
         for column, header in enumerate(headers):
             worksheet.write(0, column, header, header_format)
 
-        panel_order = {"INCLUSIVITY": 0, "EXCLUSIVITY": 1}
+        panel_order = {'INCLUSIVITY': 0, 'EXCLUSIVITY': 1}
         sorted_keys = sorted(
             entries,
             key=lambda item: (
@@ -1629,8 +1669,10 @@ def _upload_summary_excel(blob_client, container_name, request):
             row_has_alignment = False
 
             for primer_name in primer_names:
-                report_data = entry["per_primer"].get(primer_name, {})
-                model_object = model_values.get((panel_name, seqid, primer_name))
+                report_data = entry['per_primer'].get(primer_name, {})
+                model_object = model_values.get(
+                    (panel_name, seqid, primer_name)
+                )
                 has_hit = bool(report_data) or model_object is not None
                 result = _result(
                     panel_name,
@@ -1641,14 +1683,14 @@ def _upload_summary_excel(blob_client, container_name, request):
 
                 for field_label, field_name in primer_fields:
                     del field_label
-                    value = result.get(field_name) if has_hit else "ND"
-                    if value in (None, ""):
-                        value = "ND"
+                    value = result.get(field_name) if has_hit else 'ND'
+                    if value in (None, ''):
+                        value = 'ND'
 
                     output_format = cell_format
-                    if field_name == "pseudoalignment":
+                    if field_name == 'pseudoalignment':
                         output_format = alignment_format
-                        if isinstance(value, str) and "\n" in value:
+                        if isinstance(value, str) and '\n' in value:
                             row_has_alignment = True
 
                     worksheet.write(
@@ -1677,11 +1719,11 @@ def _upload_summary_excel(blob_client, container_name, request):
             del primer_name
             for field_label, field_name in primer_fields:
                 del field_label
-                if field_name == "pseudoalignment":
+                if field_name == 'pseudoalignment':
                     worksheet.set_column(column, column, 48)
-                elif field_name == "contig":
+                elif field_name == 'contig':
                     worksheet.set_column(column, column, 22)
-                elif field_name == "location":
+                elif field_name == 'location':
                     worksheet.set_column(column, column, 18)
                 else:
                     worksheet.set_column(column, column, 15)
@@ -1689,14 +1731,14 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         workbook.close()
 
-        blob_name = f"reports/{container_name}_summary_report.xlsx"
+        blob_name = f'reports/{container_name}_summary_report.xlsx'
         blob_client.upload_file(
             container_name,
             blob_name,
             temp_path,
             content_type=(
-                "application/vnd.openxmlformats-officedocument."
-                "spreadsheetml.sheet"
+                'application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.sheet'
             ),
         )
     finally:
@@ -1709,7 +1751,7 @@ def _upload_summary_excel(blob_client, container_name, request):
 def _archive_reports_and_upload(
     *,  # Force keyword args
     blob_client,
-    container_name: str
+    container_name: str,
 ):
     """
     Download all blobs under reports/, zip them, and upload the archive to the
@@ -1718,43 +1760,43 @@ def _archive_reports_and_upload(
 
     # Collect the list of report blobs (prefix 'reports/')
     report_blobs = [
-        b
-        for b in blob_client.list_objects(
-            container_name, prefix="reports/"
-        )
+        b for b in blob_client.list_objects(container_name, prefix='reports/')
     ]
 
     if not report_blobs:
         # Nothing to archive
-        return f"{container_name}_reports.zip"
+        return f'{container_name}_reports.zip'
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Local base "reports" dir to mirror the virtual folder
-        local_reports_dir = os.path.join(tmpdir, "reports")
+        local_reports_dir = os.path.join(tmpdir, 'reports')
         os.makedirs(local_reports_dir)
 
         # Download each blob to the temp dir
         for b in report_blobs:
-            local_path = os.path.join(tmpdir, b.name)  # includes 'reports/...' in path
+            local_path = os.path.join(
+                tmpdir, b.name
+            )  # includes 'reports/...' in path
             local_dir = os.path.dirname(local_path)
             if not os.path.isdir(local_dir):
                 os.makedirs(local_dir)
             blob_client.download_file(container_name, b.name, local_path)
 
         # Create zip archive that includes the "reports" folder at top-level
-        base_name = os.path.join(tmpdir, f"{container_name}_reports")
+        base_name = os.path.join(tmpdir, f'{container_name}_reports')
         archive_path = shutil.make_archive(
-            base_name=base_name, format="zip",
+            base_name=base_name,
+            format='zip',
             root_dir=tmpdir,
-            base_dir="reports"
+            base_dir='reports',
         )
 
         # Upload to the container root
-        zip_blob_name = f"{container_name}_reports.zip"
+        zip_blob_name = f'{container_name}_reports.zip'
         blob_client.upload_file(
             container_name,
             zip_blob_name,
             archive_path,
-            content_type="application/zip",
+            content_type='application/zip',
         )
         return zip_blob_name

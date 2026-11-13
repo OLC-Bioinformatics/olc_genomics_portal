@@ -7,12 +7,12 @@ from olc_webportalv2.common.benchmarks import (
     benchmark_panel_storage_name,
     normalise_benchmark_name,
 )
+from olc_webportalv2.primer_finder import tasks
 from olc_webportalv2.primer_finder.forms import PrimerVerifierForm
 from olc_webportalv2.primer_finder.models import (
     PrimerValidatorAzureRequest,
     PrimerVerifierRequest,
 )
-from olc_webportalv2.primer_finder import tasks
 
 
 class PrimerQuerySelectionTaskTests(SimpleTestCase):

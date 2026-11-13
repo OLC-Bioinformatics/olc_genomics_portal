@@ -1,23 +1,25 @@
 #!/usr/bin/env python
 
+"""Register Primer Finder models in the Django admin."""
+
 # Django imports
 from django.contrib import admin
 
 # Portal-specific imports
-from olc_webportalv2.primer_finder.models import \
-    PrimerVerifierRequest, \
-    VerifierPanel, \
-    VerifierSEQID, \
-    VerifierPrimerSet, \
-    VerifierPrimers, \
-    VerifierAzureRequest, \
-    ValidatorRequest, \
-    ValidatorPanel, \
-    ValidatorPrimerSet, \
-    ValidatorPrimers, \
-    ValidatorSEQID, \
-    PrimerValidatorAzureRequest
-
+from olc_webportalv2.primer_finder.models import (
+    PrimerValidatorAzureRequest,
+    PrimerVerifierRequest,
+    ValidatorPanel,
+    ValidatorPrimers,
+    ValidatorPrimerSet,
+    ValidatorRequest,
+    ValidatorSEQID,
+    VerifierAzureRequest,
+    VerifierPanel,
+    VerifierPrimers,
+    VerifierPrimerSet,
+    VerifierSEQID,
+)
 
 admin.site.register(PrimerVerifierRequest)
 admin.site.register(VerifierPrimerSet)

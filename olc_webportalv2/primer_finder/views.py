@@ -13,30 +13,24 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
-from django.shortcuts import (
-    get_object_or_404,
-    redirect,
-    render
-)
 from django.views.decorators.csrf import csrf_exempt
 
-# Portal-specific imports
-from olc_webportalv2.geneseekr.forms import EmailForm
 from olc_webportalv2.common.benchmarks import (
     benchmark_panel_storage_name,
     normalise_benchmark_name,
 )
 
+# Portal-specific imports
+from olc_webportalv2.geneseekr.forms import EmailForm
 from olc_webportalv2.primer_finder.forms import (
-    PrimerValidatorForm,
     PrimerVerifierForm,
     ValidatorExperimentForm,
     ValidatorTargetFormSetFactory,
     canonicalize_primer_base_name,
 )
 from olc_webportalv2.primer_finder.methods import (
-    exclusivity_panel_retrieve,
     populate_panel,
     populate_primer_details,
     populate_primer_sets,
@@ -51,12 +45,11 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorSample,
     ValidatorTarget,
     VerifierPanel,
-    VerifierPrimerSet
+    VerifierPrimerSet,
 )
-
 from olc_webportalv2.primer_finder.tasks import (
     run_primer_validator,
-    run_primer_verifier
+    run_primer_verifier,
 )
 
 
@@ -72,11 +65,7 @@ def primer_home(request: HttpRequest) -> HttpResponse:
     :return: The HTTP response object
     """
     # Render the home page
-    return render(
-        request,
-        'primer_finder/primer_home.html',
-        {}
-    )
+    return render(request, 'primer_finder/primer_home.html', {})
 
 
 @csrf_exempt  # needed or IE explodes
@@ -94,8 +83,7 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
     # Retrieve all the projects from the database that are associated with the
     # current user
     validator_projects = ValidatorRequest.objects.filter(user=request.user)
-    if request.method == "POST":
-
+    if request.method == 'POST':
         # If the delete button is pressed, delete the project from the database
         if request.POST.get('delete'):
             query = ValidatorRequest.objects.filter(
@@ -107,9 +95,7 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         'primer_finder/validator_home.html',
-        {
-            'validator_projects': validator_projects
-        }
+        {'validator_projects': validator_projects},
     )
 
 
@@ -130,7 +116,7 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
         object: The HTTP response object.
     """
     form = PrimerVerifierForm()
-    if request.method == "POST":
+    if request.method == 'POST':
         form = PrimerVerifierForm(request.POST)
         if form.is_valid():
             # Save the form but don't commit yet
@@ -182,10 +168,11 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
 
             # Give the project a name if it was not provided
             if not validator_request.project_name:
-                validator_request.project_name = \
+                validator_request.project_name = (
                     PrimerVerifierRequest.objects.get(
                         pk=validator_request.pk
                     ).container_namer()
+                )
             validator_request.save()
 
             # Extract the list of all primer base names
@@ -193,8 +180,7 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
 
             # Enter the list of primer base names into the database
             populate_primer_sets(
-                pk=validator_request.pk,
-                primer_list=primer_list
+                pk=validator_request.pk, primer_list=primer_list
             )
 
             # Populate the database with the details of the primers
@@ -206,17 +192,16 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
             )
 
             # Populate the database with the details of the primers
-            populate_primer_details(
-                query=primer_query,
-                details=primer_details
-            )
+            populate_primer_details(query=primer_query, details=primer_details)
 
             # Create queries for the list of the entries in the
             # inclusivity_panel and exclusivity_panel
             inclusivity_query = PrimerVerifierRequest.objects.filter(
-                pk=validator_request.pk)[0].inclusivity_panel
+                pk=validator_request.pk
+            )[0].inclusivity_panel
             exclusivity_query = PrimerVerifierRequest.objects.filter(
-                pk=validator_request.pk)[0].exclusivity_panel
+                pk=validator_request.pk
+            )[0].exclusivity_panel
             inclusivity_query = [
                 normalise_benchmark_name(benchmark_name=benchmark)
                 for benchmark in inclusivity_query
@@ -232,9 +217,7 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
                 benchmark = form.cleaned_data.get(field_name)
                 if benchmark:
                     panel_values.append(
-                        normalise_benchmark_name(
-                            benchmark_name=benchmark
-                        )
+                        normalise_benchmark_name(benchmark_name=benchmark)
                     )
                 panel_values[:] = list(dict.fromkeys(panel_values))
 
@@ -243,18 +226,16 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
             populate_panel(
                 genera=inclusivity_query,
                 pk=validator_request.pk,
-                panel_type='inclusivity'
+                panel_type='inclusivity',
             )
             populate_panel(
                 genera=exclusivity_query,
                 pk=validator_request.pk,
-                panel_type='exclusivity'
+                panel_type='exclusivity',
             )
             for panel_type in ('inclusivity', 'exclusivity'):
                 query_generas = []
-                query_genus = form.cleaned_data.get(
-                    panel_type + '_genus'
-                )
+                query_genus = form.cleaned_data.get(panel_type + '_genus')
                 if query_genus:
                     query_generas.append(query_genus)
                 if form.cleaned_data.get(panel_type + '_seqids'):
@@ -270,25 +251,33 @@ def _primer_verifier_request(request: HttpRequest) -> HttpResponse:
             run_primer_verifier.apply_async(
                 queue='cowbat',
                 kwargs={'verifier_request_pk': validator_request.pk},
-                countdown=10
+                countdown=10,
             )
             # Redirect the view to verifier_processing
             return redirect(
                 'primer_finder:primer_verifier_processing',
-                verifier_pk=validator_request.pk
+                verifier_pk=validator_request.pk,
             )
     return render(
         request,
         'primer_finder/verifier_request.html',
         {
             'form': form,
-        }
+        },
     )
 
 
 @csrf_exempt
 @login_required
 def primer_validator_request(request: HttpRequest) -> HttpResponse:
+    """Render and process a new primer-validator analysis request.
+
+    Args:
+        request: The current HTTP request.
+
+    Returns:
+        The form page or a redirect to the processing page.
+    """
     post_data = request.POST.copy() if request.method == 'POST' else None
     if post_data is not None:
         post_data.setdefault('mismatches', '3')
@@ -303,11 +292,13 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
     form_valid = form.is_valid() if request.method == 'POST' else False
     target_forms.classification_rule = (
         form.cleaned_data.get('classification_rule', '')
-        if form_valid else request.POST.get('classification_rule', '')
+        if form_valid
+        else request.POST.get('classification_rule', '')
     )
     target_forms.logic = (
         form.cleaned_data.get('logic', '')
-        if form_valid else request.POST.get('logic', '')
+        if form_valid
+        else request.POST.get('logic', '')
     )
     target_forms_valid = (
         target_forms.is_valid() if request.method == 'POST' else False
@@ -315,7 +306,8 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
 
     if request.method == 'POST' and form_valid and target_forms_valid:
         rows = [
-            row for row in target_forms.cleaned_data
+            row
+            for row in target_forms.cleaned_data
             if row and not row.get('DELETE')
         ]
         first = rows[0]
@@ -348,12 +340,8 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
             )
             samples = {}
             for row in rows:
-                sample_name = canonicalize_primer_base_name(
-                    row['sample_name']
-                )
-                target_name = canonicalize_primer_base_name(
-                    row['target_name']
-                )
+                sample_name = canonicalize_primer_base_name(row['sample_name'])
+                target_name = canonicalize_primer_base_name(row['target_name'])
                 sample = samples.get(sample_name)
                 if sample is None:
                     sample = ValidatorSample.objects.create(
@@ -391,12 +379,14 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                     target.reference_fasta = row['reference_fasta']
                     target.save(update_fields=['reference_fasta'])
 
-                primer_lines.extend((
-                    f'>{target_name}-F',
-                    row['forward_primer'],
-                    f'>{target_name}-R',
-                    row['reverse_primer'],
-                ))
+                primer_lines.extend(
+                    (
+                        f'>{target_name}-F',
+                        row['forward_primer'],
+                        f'>{target_name}-R',
+                        row['reverse_primer'],
+                    )
+                )
                 primer_set = ValidatorPrimerSet.objects.create(
                     validator_request=validator_request,
                     primer_name=target_name,
@@ -413,8 +403,9 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                 )
 
             if not validator_request.project_name:
-                validator_request.project_name = \
+                validator_request.project_name = (
                     validator_request.container_namer()
+                )
             validator_request.primer_sequences = '\n'.join(primer_lines)
             validator_request.save()
             populate_panel(
@@ -450,8 +441,7 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_validator_processing(
-    request: HttpRequest,
-    validator_pk: int
+    request: HttpRequest, validator_pk: int
 ) -> HttpResponse:
     """
     View for the primer validator processing page. This view is responsible for
@@ -478,7 +468,6 @@ def primer_validator_processing(
 
         # Form validation
         if form.is_valid():
-
             # Save the email to the database
             email_address = form.cleaned_data.get('email')
 
@@ -492,22 +481,18 @@ def primer_validator_processing(
                     validator_request.emails_array.append(email_address)
                     validator_request.save()
                     form = EmailForm()
-                    messages.success(request, _("Email saved"))
+                    messages.success(request, _('Email saved'))
     return render(
         request,
         'primer_finder/validator_processing.html',
-        {
-            'primer_validator_request': validator_request,
-            'form': form
-        }
+        {'primer_validator_request': validator_request, 'form': form},
     )
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_validator_results(
-    request: HttpRequest,
-    validator_pk: int
+    request: HttpRequest, validator_pk: int
 ) -> HttpResponse:
     """
     View for the primer validator results page. This view is responsible for
@@ -545,7 +530,6 @@ def primer_validator_results(
     # in the HTML involved using variables, the primers cannot have certain
     # characters, or start with a digit
     for primer in primer_list:
-
         # Initialise the clean primer as the primer
         clean_primer = primer
 
@@ -568,16 +552,10 @@ def primer_validator_results(
             'primers': primer_list,
             'clean_primers': clean_primers,
             'panels': sorted(
-                {
-                    panel.panel for panel in panel_set
-                }, reverse=True
+                {panel.panel for panel in panel_set}, reverse=True
             ),
-            'genera': sorted(
-                {
-                    panel.genus.lower() for panel in panel_set
-                }
-            )
-        }
+            'genera': sorted({panel.genus.lower() for panel in panel_set}),
+        },
     )
 
 
@@ -595,12 +573,10 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: The HTTP response object.
     """
-    verifier_projects = PrimerVerifierRequest.objects.filter(
-        user=request.user
-    )
+    verifier_projects = PrimerVerifierRequest.objects.filter(user=request.user)
 
     # Handle project deletion
-    if request.method == "POST":
+    if request.method == 'POST':
         if request.POST.get('delete'):
             query = PrimerVerifierRequest.objects.filter(
                 pk=request.POST.get('delete'),
@@ -608,26 +584,31 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
             )
             query.delete()
 
-    return render(request,
-                  'primer_finder/verifier_home.html',
-                  {
-                      'verifier_projects': verifier_projects
-                  })
+    return render(
+        request,
+        'primer_finder/verifier_home.html',
+        {'verifier_projects': verifier_projects},
+    )
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
-def primer_verifier_request(
-    request: HttpRequest
-) -> HttpResponse:
+def primer_verifier_request(request: HttpRequest) -> HttpResponse:
+    """Render and process a new primer-verifier analysis request.
+
+    Args:
+        request: The current HTTP request.
+
+    Returns:
+        The form page or a redirect to the processing page.
+    """
     return _primer_verifier_request(request)
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_verifier_processing(
-    request: HttpRequest,
-    verifier_pk: int
+    request: HttpRequest, verifier_pk: int
 ) -> HttpResponse:
     """
     View for the primer verifier processing page. This view is responsible for
@@ -668,20 +649,18 @@ def primer_verifier_processing(
                     verifier_request.emails_array.append(email_address)
                     verifier_request.save()
                     form = EmailForm()
-                    messages.success(request, _("Email saved"))
-    return render(request,
-                  'primer_finder/verifier_processing.html',
-                  {
-                      'primer_verifier_request': verifier_request,
-                      'form': form
-                  })
+                    messages.success(request, _('Email saved'))
+    return render(
+        request,
+        'primer_finder/verifier_processing.html',
+        {'primer_verifier_request': verifier_request, 'form': form},
+    )
 
 
 @csrf_exempt  # needed or IE explodes
 @login_required
 def primer_verifier_results(
-    request: HttpRequest,
-    verifier_pk: int
+    request: HttpRequest, verifier_pk: int
 ) -> HttpResponse:
     """
     View for the primer verifier results page. This view is responsible for
@@ -708,13 +687,7 @@ def primer_verifier_results(
     )
 
     # Create a list of all the primer names
-    primer_list = sorted(
-        list(
-            {
-                primer.primer_name for primer in primer_set
-            }
-        )
-    )
+    primer_list = sorted(list({primer.primer_name for primer in primer_set}))
 
     # Initialise a dictionary to hold the cleaned primer names
     clean_primers = {}
@@ -739,24 +712,16 @@ def primer_verifier_results(
         'primer_finder/verifier_results.html',
         {
             'request': verifier_request,
-            'mismatch_details': json.loads(
-                verifier_request.summary
-            ),
+            'mismatch_details': json.loads(verifier_request.summary),
             'primers': primer_list,
             'clean_primers': clean_primers,
-            'panels': sorted(list(
-                {
-                    panel.panel for panel in panel_set
-                }
-            ), reverse=True),
+            'panels': sorted(
+                list({panel.panel for panel in panel_set}), reverse=True
+            ),
             'genera': sorted(
-                list(
-                    {
-                        panel.genus.lower() for panel in panel_set
-                    }
-                )
-            )
-        }
+                list({panel.genus.lower() for panel in panel_set})
+            ),
+        },
     )
 
 
@@ -785,9 +750,7 @@ def primer_validator_report(request, validator_pk):
         validator_request_id=verifier_request.pk
     )
     primer_list = sorted(
-        list(
-            set([primer.primer_name for primer in primer_set])
-        )
+        list(set([primer.primer_name for primer in primer_set]))
     )
     clean_primers = {}
 
@@ -806,33 +769,22 @@ def primer_validator_report(request, validator_pk):
                 if clean_primer[:1].isdigit():
                     clean_primer = 'a' + clean_primer
         clean_primers[primer] = clean_primer
-    return render(request,
-                  'primer_finder/validator_report.html',
-                  {
-                      'primer_validator_request': verifier_request,
-                      'mismatch_details': json.loads(verifier_request.summary),
-                      'totals': json.loads(verifier_request.totals),
-                      'sample_results': validator_sample_results(
-                          verifier_request
-                      ),
-                      'allowed_mismatches': [6, 5, 4, 3, 2, 1],
-                      'primers': primer_list,
-                      'clean_primers': clean_primers,
-                      'panels': sorted(
-                          list(
-                              set(
-                                  [panel.panel for panel in panel_set])),
-                          reverse=True
-                        ),
-                      'genera': sorted(
-                          list(
-                              set(
-                                  [panel.genus for panel in panel_set]
-                                )
-                            )
-                        ),
-                      'forward': verifier_request.forward_primer.split(
-                          '\n'
-                        )[1],
-                      'reverse': verifier_request.reverse_primer.split('\n')[1]
-                  })
+    return render(
+        request,
+        'primer_finder/validator_report.html',
+        {
+            'primer_validator_request': verifier_request,
+            'mismatch_details': json.loads(verifier_request.summary),
+            'totals': json.loads(verifier_request.totals),
+            'sample_results': validator_sample_results(verifier_request),
+            'allowed_mismatches': [6, 5, 4, 3, 2, 1],
+            'primers': primer_list,
+            'clean_primers': clean_primers,
+            'panels': sorted(
+                list(set([panel.panel for panel in panel_set])), reverse=True
+            ),
+            'genera': sorted(list(set([panel.genus for panel in panel_set]))),
+            'forward': verifier_request.forward_primer.split('\n')[1],
+            'reverse': verifier_request.reverse_primer.split('\n')[1],
+        },
+    )

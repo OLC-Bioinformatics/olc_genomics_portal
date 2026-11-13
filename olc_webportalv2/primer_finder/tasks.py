@@ -6,45 +6,56 @@ requests.
 """
 
 # Standard imports
+import csv
+import json
+import logging
 import os
 import posixpath
 import shlex
 import shutil
-import csv
-import json
 from io import StringIO
-import logging
-from typing import (
-    Any,
-    Tuple
-)
-
-# Django imports
-from django.conf import settings
+from typing import Any, Tuple
 
 # Third-party imports
 from Bio import SeqIO
 from celery import shared_task
 
-# Portal-specific imports
-from olc_webportalv2.common.methods import (
-    create_batch_client,
-    generic_api_submit
-)
+# Django imports
+from olc_webportalv2.common.batch_client import BatchServiceError
+from olc_webportalv2.common.batch_recovery import batch_pool_id_from_job_id
 from olc_webportalv2.common.benchmarks import (
     benchmark_archive_info,
     select_benchmark_blob,
     validate_benchmark_panel,
 )
+
+# Portal-specific imports
+from olc_webportalv2.common.methods import (
+    create_batch_client,
+    generic_api_submit,
+)
+from olc_webportalv2.common.storage_client import get_storage_client
 from olc_webportalv2.primer_finder.methods import (
     _archive_reports_and_upload,
+    _upload_summary_excel,
     _validator_probe_records,
     create_details,
     populate_report,
     send_email,
     upload_primers,
     upload_probe,
-    _upload_summary_excel
+)
+from olc_webportalv2.primer_finder.models import (
+    PrimerValidatorAzureRequest,
+    PrimerVerifierRequest,
+    ValidatorAnalysisTask,
+    ValidatorPanel,
+    ValidatorPrimerSet,
+    ValidatorRequest,
+    ValidatorTarget,
+    VerifierAzureRequest,
+    VerifierPanel,
+    VerifierPrimerSet,
 )
 from olc_webportalv2.primer_finder.validator_gene_reports import (
     categorize_gene_hit_details,
@@ -53,28 +64,13 @@ from olc_webportalv2.primer_finder.validator_gene_reports import (
     gene_exclusion_note,
 )
 
-from olc_webportalv2.primer_finder.models import (
-    PrimerValidatorAzureRequest,
-    PrimerVerifierRequest,
-    ValidatorPanel,
-    ValidatorAnalysisTask,
-    ValidatorPrimerSet,
-    ValidatorRequest,
-    ValidatorTarget,
-    VerifierAzureRequest,
-    VerifierPanel,
-    VerifierPrimerSet
-)
-from olc_webportalv2.common.storage_client import get_storage_client
-from olc_webportalv2.common.batch_client import BatchServiceError
-from olc_webportalv2.common.batch_recovery import batch_pool_id_from_job_id
-
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def run_primer_verifier(
     *,  # Force the use of keyword arguments
-    verifier_request_pk: int
+    verifier_request_pk: int,
 ):
     """
     Run the PrimerVerifier analysis.
@@ -86,13 +82,13 @@ def run_primer_verifier(
     try:
         _process_primer_request(
             request_model=PrimerVerifierRequest,
-            request_pk=verifier_request_pk
+            request_pk=verifier_request_pk,
         )
     except Exception as exc:
         _handle_primer_error(
             exception=exc,
             request_model=PrimerVerifierRequest,
-            request_pk=verifier_request_pk
+            request_pk=verifier_request_pk,
         )
 
 
@@ -115,9 +111,9 @@ def _process_primer_request(*, request_model: Any, request_pk: int):
 
     # If a probe sequence is provided, upload it and add it to the list of
     # blobs that the Batch node must download.
-    if getattr(primer_request, "probe_sequence", None):
+    if getattr(primer_request, 'probe_sequence', None):
         upload_probe(request=primer_request)
-        input_blob_names.append("probe.fasta")
+        input_blob_names.append('probe.fasta')
 
     # Handle the inclusivity panel files
     inclusivity_blob_names = _handle_panel_files(
@@ -145,7 +141,7 @@ def _process_primer_request(*, request_model: Any, request_pk: int):
 
     # Set the path to the mounted container in the Azure Batch VM. The mount
     # remains in use for copying outputs back to Azure Blob Storage.
-    path = f"$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}"
+    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
 
     # Create the PrimerValidator system call after all input blobs have been
     # prepared and their SAS URLs generated.
@@ -162,23 +158,28 @@ def _process_primer_request(*, request_model: Any, request_pk: int):
         command=cmd,
         container_name=container_name,
         input_file_pattern=None,
-        vm_size="Standard_D4ds_v5",
-        unique_id="FoodPort",
+        vm_size='Standard_D4ds_v5',
+        unique_id='FoodPort',
     )
 
     # Create the appropriate AzureRequest tracking row.
     if request_model == PrimerVerifierRequest:
         VerifierAzureRequest.objects.create(
-            verifier_request=primer_request, exit_code_file="NA"
+            verifier_request=primer_request, exit_code_file='NA'
         )
     else:
         PrimerValidatorAzureRequest.objects.create(
-            validator_request=primer_request, exit_code_file="NA"
+            validator_request=primer_request, exit_code_file='NA'
         )
 
 
 def _create_primer_cmd(
-    *, container_name: str, file_name: str, input_blobs: list, path: str, request: Any
+    *,
+    container_name: str,
+    file_name: str,
+    input_blobs: list,
+    path: str,
+    request: Any,
 ) -> str:
     """
     Create the system call.
@@ -205,67 +206,74 @@ def _create_primer_cmd(
         str: The complete shell command submitted to Azure Batch.
     """
     # Fallback defaults for fields that may not exist on ValidatorRequest.
-    mismatches = getattr(request, "mismatches", 2)
-    min_amplicon_size = getattr(request, "min_amplicon_size", 0)
-    max_amplicon_size = getattr(request, "max_amplicon_size", 1500)
-    range_buffer = getattr(request, "range_buffer", 0)
+    mismatches = getattr(request, 'mismatches', 2)
+    min_amplicon_size = getattr(request, 'min_amplicon_size', 0)
+    max_amplicon_size = getattr(request, 'max_amplicon_size', 1500)
+    range_buffer = getattr(request, 'range_buffer', 0)
 
-    run_directory = f"/datadrive/{container_name}"
+    run_directory = f'/datadrive/{container_name}'
 
-    inclusivity_directory = posixpath.join(run_directory, "inclusivity")
-    exclusivity_directory = posixpath.join(run_directory, "exclusivity")
-    reports_directory = posixpath.join(run_directory, "reports")
+    inclusivity_directory = posixpath.join(run_directory, 'inclusivity')
+    exclusivity_directory = posixpath.join(run_directory, 'exclusivity')
+    reports_directory = posixpath.join(run_directory, 'reports')
 
     # Begin the command by activating the PrimerValidator environment and
     # enabling strict shell error handling.
     command_parts = [
-        "source $CONDA/activate /envs/primer_validator",
-        "set -euo pipefail",
+        'source $CONDA/activate /envs/primer_validator',
+        'set -euo pipefail',
         # Define the output mount in the shell so that the environment
         # variable is expanded on the Batch node.
         f'mount_dir="{path}"',
         # Remove local files from an earlier execution of this request.
         # This affects only the node's local SSD and does not delete blobs.
-        f"rm -rf {shlex.quote(run_directory)}",
+        f'rm -rf {shlex.quote(run_directory)}',
         # Create local directories even when no inclusivity or exclusivity
         # panel was selected.
-        f"mkdir -p {shlex.quote(inclusivity_directory)} {shlex.quote(exclusivity_directory)} {shlex.quote(reports_directory)}",
+        (
+            f'mkdir -p {shlex.quote(inclusivity_directory)} '
+            f'{shlex.quote(exclusivity_directory)} '
+            f'{shlex.quote(reports_directory)}'
+        ),
     ]
 
     # Download every required input blob directly to the node's local SSD.
     # shlex.quote() is essential because SAS URLs contain shell
     # metacharacters, including ampersands.
     for input_blob in input_blobs:
-        blob_name = input_blob["blob_name"]
-        sas_url = input_blob["sas_url"]
+        blob_name = input_blob['blob_name']
+        sas_url = input_blob['sas_url']
 
         destination_path = posixpath.join(run_directory, blob_name)
         destination_directory = posixpath.dirname(destination_path)
-        partial_path = f"{destination_path}.part"
+        partial_path = f'{destination_path}.part'
 
         command_parts.extend(
             [
-                f"mkdir -p {shlex.quote(destination_directory)}",
+                f'mkdir -p {shlex.quote(destination_directory)}',
                 # Download to a temporary filename. Curl follows redirects,
                 # fails on HTTP errors, and retries transient failures.
                 (
-                    "curl "
-                    "--fail "
-                    "--location "
-                    "--retry 5 "
-                    "--retry-delay 10 "
-                    "--connect-timeout 60 "
-                    "--continue-at - "
-                    f"--output {shlex.quote(partial_path)} "
-                    f"{shlex.quote(sas_url)}"
+                    'curl '
+                    '--fail '
+                    '--location '
+                    '--retry 5 '
+                    '--retry-delay 10 '
+                    '--connect-timeout 60 '
+                    '--continue-at - '
+                    f'--output {shlex.quote(partial_path)} '
+                    f'{shlex.quote(sas_url)}'
                 ),
-                # Verify that curl produced a nonempty local file before moving
+                # Check that curl produced a nonempty file before moving it.
                 # it to its final name.
-                f"test -s {shlex.quote(partial_path)}",
+                f'test -s {shlex.quote(partial_path)}',
                 # Rename the completed download to its final name.
-                f"mv {shlex.quote(partial_path)} {shlex.quote(destination_path)}",
+                (
+                    f'mv {shlex.quote(partial_path)} '
+                    f'{shlex.quote(destination_path)}'
+                ),
                 # Verify the final file as an additional safeguard.
-                f"test -s {shlex.quote(destination_path)}",
+                f'test -s {shlex.quote(destination_path)}',
             ]
         )
 
@@ -273,16 +281,18 @@ def _create_primer_cmd(
     # passing a literal glob pattern to unzip when the directory is empty.
     command_parts.append(
         (
-            f"for zip_file in {shlex.quote(inclusivity_directory)}/*.zip; do "
+            f'for zip_file in {shlex.quote(inclusivity_directory)}/*.zip; do '
             '[ -e "$zip_file" ] || continue; '
             'archive_name=$(basename "$zip_file" .zip); '
             'unzip -tq "$zip_file"; '
-            f'unzip -n -q "$zip_file" -d {shlex.quote(inclusivity_directory)}; '
+            f'unzip -n -q "$zip_file" -d '
+            f'{shlex.quote(inclusivity_directory)}; '
             'unzip -Z1 "$zip_file" '
             '| sed -n "s/\\.fasta$//p" '
-            "| sort -u "
-            f'> {shlex.quote(run_directory)}/"${{archive_name}}"_seqids.txt; '
-            "done"
+            '| sort -u '
+            f'> {shlex.quote(run_directory)}/'
+            '"${archive_name}"_seqids.txt; '
+            'done'
         )
     )
 
@@ -290,42 +300,43 @@ def _create_primer_cmd(
     # exclusivity directory to be empty.
     command_parts.append(
         (
-            f"for zip_file in {shlex.quote(exclusivity_directory)}/*.zip; do "
+            f'for zip_file in {shlex.quote(exclusivity_directory)}/*.zip; do '
             '[ -e "$zip_file" ] || continue; '
             'archive_name=$(basename "$zip_file" .zip); '
             'unzip -tq "$zip_file"; '
-            f'unzip -n -q "$zip_file" -d {shlex.quote(exclusivity_directory)}; '
+            f'unzip -n -q "$zip_file" -d '
+            f'{shlex.quote(exclusivity_directory)}; '
             'unzip -Z1 "$zip_file" '
             '| sed -n "s/\\.fasta$//p" '
-            "| sort -u "
-            f'> {shlex.quote(run_directory)}/"${{archive_name}}"_seqids.txt; '
-            "done"
+            '| sort -u '
+            f'> {shlex.quote(run_directory)}/'
+            '"${archive_name}"_seqids.txt; '
+            'done'
         )
     )
 
     # Create the PrimerValidator system call using the supplied arguments.
     primer_command = (
-        "primer_validator.py "
-        f"-i {shlex.quote(inclusivity_directory)} "
-        f"-e {shlex.quote(exclusivity_directory)} "
-        f"-pf {shlex.quote(posixpath.join(run_directory, file_name))} "
-        f"-r {shlex.quote(reports_directory)} "
-        f"-m {shlex.quote(str(mismatches))} "
-        f"-min {shlex.quote(str(min_amplicon_size))} "
-        f"-max {shlex.quote(str(max_amplicon_size))} "
-        f"-rb {shlex.quote(str(range_buffer))}"
+        'primer_validator.py '
+        f'-i {shlex.quote(inclusivity_directory)} '
+        f'-e {shlex.quote(exclusivity_directory)} '
+        f'-pf {shlex.quote(posixpath.join(run_directory, file_name))} '
+        f'-r {shlex.quote(reports_directory)} '
+        f'-m {shlex.quote(str(mismatches))} '
+        f'-min {shlex.quote(str(min_amplicon_size))} '
+        f'-max {shlex.quote(str(max_amplicon_size))} '
+        f'-rb {shlex.quote(str(range_buffer))}'
     )
 
     # If contig breaks are to be permitted, add the flag to the command.
-    if getattr(request, "contig_breaks", False):
-        primer_command += " -cb"
+    if getattr(request, 'contig_breaks', False):
+        primer_command += ' -cb'
 
     # Add the probe sequence. getattr() prevents AttributeError for request
     # types that do not define probe_sequence.
     if _validator_probe_records(request):
-        primer_command += " -p {probe}".format(
-            probe=shlex.quote(posixpath.join(run_directory, "probe.fasta"))
-        )
+        probe_path = posixpath.join(run_directory, 'probe.fasta')
+        primer_command += f' -p {shlex.quote(probe_path)}'
 
     command_parts.append(primer_command)
     command_parts.append(
@@ -337,16 +348,17 @@ def _create_primer_cmd(
     # when no panel ZIP archives were selected.
     command_parts.append(
         (
-            f"for seqids_file in {shlex.quote(run_directory)}/*_seqids.txt; do "
+            f'for seqids_file in {shlex.quote(run_directory)}/*_seqids.txt; '
+            'do '
             '[ -e "$seqids_file" ] || continue; '
             'cp "$seqids_file" "$mount_dir/"; '
-            "done"
+            'done'
         )
     )
 
     # Join every operation so that the task stops at the first failed
     # download, archive validation, extraction, analysis, or result copy.
-    return " && ".join(command_parts)
+    return ' && '.join(command_parts)
 
 
 def _generate_input_blob_sas_urls(
@@ -387,18 +399,18 @@ def _generate_input_blob_sas_urls(
     for blob_name in unique_blob_names:
         if not blob_client.object_exists(container_name, blob_name):
             raise FileNotFoundError(
-                "Required Batch input blob does not exist: "
-                f"{container_name}/{blob_name}"
+                'Required Batch input blob does not exist: '
+                f'{container_name}/{blob_name}'
             )
 
         sas_url = blob_client.create_transfer_url(
             container_name,
-            "download",
+            'download',
             name=blob_name,
             expires_in_seconds=expiry_hours * 60 * 60,
         )
 
-        input_blobs.append({"blob_name": blob_name, "sas_url": sas_url})
+        input_blobs.append({'blob_name': blob_name, 'sas_url': sas_url})
 
     return input_blobs
 
@@ -424,7 +436,7 @@ def _handle_panel_files(
             task. The list is empty when no panel was selected.
     """
     # Determine the panel type
-    panel_type = "inclusivity" if inclusivity else "exclusivity"
+    panel_type = 'inclusivity' if inclusivity else 'exclusivity'
 
     benchmark_blob_names = []
     selected_benchmarks = []
@@ -467,13 +479,11 @@ def _handle_panel_files(
     from olc_webportalv2.metadata.models import SequenceData
 
     query_genus = getattr(request, panel_type + '_genus', '')
-    selected_seqids = set(
-        getattr(request, panel_type + '_seqids', []) or []
-    )
+    selected_seqids = set(getattr(request, panel_type + '_seqids', []) or [])
     if query_genus:
         selected_seqids.update(
             SequenceData.objects.filter(
-                genus__iexact=query_genus
+                genus__iexact=query_genus,
             ).values_list('seqid', flat=True)
         )
         if not selected_seqids:
@@ -499,21 +509,19 @@ def _handle_primer_error(
     *,  # Force the use of keyword arguments
     exception: Exception,
     request_model: Any,
-    request_pk: int
+    request_pk: int,
 ):
     """
     Handle errors during PrimerVerifier analysis.
 
     Args:
-        exc (Exception): The exception that occurred.
-        request_model (Any): The request model instance.
-        request_pk (int): Primary key of the request.
+        exception: The exception raised during processing.
+        request_model: The request model containing the failed request.
+        request_pk: Primary key of the failed request.
     """
     # Retrieve the request object corresponding to the
     # request primary key
-    request = request_model.objects.get(
-        pk=request_pk
-    )
+    request = request_model.objects.get(pk=request_pk)
 
     # Update the model with the error status
     request.status = 'Error'
@@ -525,7 +533,7 @@ def copy_benchmark_files(
     *,  # Force the use of keyword arguments
     container_name: str,
     genus: str,
-    panel: str
+    panel: str,
 ) -> str:
     """
     Copy the benchmark files to the appropriate folder.
@@ -546,7 +554,7 @@ def copy_benchmark_files(
     """
     blob_client = get_storage_client()
 
-    source_container_name = "benchmark-datasets"
+    source_container_name = 'benchmark-datasets'
     source_objects = blob_client.list_objects(
         source_container_name,
         prefix=genus,
@@ -557,7 +565,7 @@ def copy_benchmark_files(
     )
     if selected_archive is None:
         raise FileNotFoundError(
-            f"No benchmark archive is available for dataset: {genus}"
+            f'No benchmark archive is available for dataset: {genus}'
         )
     source_blob_name = selected_archive['blob_name']
     destination_blob_name = posixpath.join(panel, source_blob_name)
@@ -589,7 +597,9 @@ def copy_benchmark_files(
     return destination_blob_name
 
 
-def _copy_sequence_files(*, container_name: str, panel: str, seqids: list) -> list:
+def _copy_sequence_files(
+    *, container_name: str, panel: str, seqids: list
+) -> list:
     """Copy selected processed-data FASTA objects into a request panel."""
     blob_client = get_storage_client()
     source_container = 'processed-data'
@@ -629,7 +639,7 @@ def _copy_sequence_files(*, container_name: str, panel: str, seqids: list) -> li
 def create_empty_folder(
     *,  # Force the use of keyword arguments
     container_name: str,
-    panel: str
+    panel: str,
 ):
     """
     Create an empty folder in the specified container
@@ -661,16 +671,13 @@ def check_verifier_tasks():
     batch_client = create_batch_client()
 
     for task in verifier_tasks:
-        _process_verifier_task(
-            batch_client=batch_client,
-            task=task
-        )
+        _process_verifier_task(batch_client=batch_client, task=task)
 
 
 def _process_verifier_task(
     *,  # Force the use of keyword arguments
     batch_client,
-    task: VerifierAzureRequest
+    task: VerifierAzureRequest,
 ):
     """
     Process an individual verifier task.
@@ -685,14 +692,12 @@ def _process_verifier_task(
         )
         batch_job_name = verifier_request.container_namer()
         tasks_completed = _check_tasks_completed(
-            batch_client=batch_client,
-            batch_job_name=batch_job_name
+            batch_client=batch_client, batch_job_name=batch_job_name
         )
 
         if tasks_completed:
             exit_codes_good = _check_exit_codes(
-                batch_client=batch_client,
-                batch_job_name=batch_job_name
+                batch_client=batch_client, batch_job_name=batch_job_name
             )
             batch_client.job.delete(job_id=batch_job_name)
             batch_client.pool.delete(pool_id=batch_job_name)
@@ -700,7 +705,7 @@ def _process_verifier_task(
             if exit_codes_good:
                 _handle_successful_verifier_run(
                     batch_job_name=batch_job_name,
-                    verifier_request=verifier_request
+                    verifier_request=verifier_request,
                 )
             else:
                 _handle_failed_verifier_run(verifier_request=verifier_request)
@@ -717,7 +722,7 @@ def _process_verifier_task(
 def _check_tasks_completed(
     *,  # Force the use of keyword arguments
     batch_client,
-    batch_job_name: str
+    batch_job_name: str,
 ) -> bool:
     """
     Check if all tasks in the batch job have completed.
@@ -731,7 +736,7 @@ def _check_tasks_completed(
     """
     try:
         for cloud_task in batch_client.task.list(batch_job_name):
-            if cloud_task.state != "completed":
+            if cloud_task.state != 'completed':
                 return False
         return True
     except Exception:
@@ -741,7 +746,7 @@ def _check_tasks_completed(
 def _check_exit_codes(
     *,  # Force the use of keyword arguments
     batch_client,
-    batch_job_name: str
+    batch_job_name: str,
 ) -> bool:
     """
     Check if all tasks in the batch job have an exit code of 0.
@@ -755,7 +760,6 @@ def _check_exit_codes(
     """
     # Iterate through the tasks associated with the name of the batch job
     for cloud_task in batch_client.task.list(batch_job_name):
-
         # Check if the exit code is 0
         if cloud_task.execution_info.exit_code != 0:
             return False
@@ -765,7 +769,7 @@ def _check_exit_codes(
 def _handle_successful_verifier_run(
     *,  # Force the use of keyword arguments
     batch_job_name: str,
-    verifier_request: PrimerVerifierRequest
+    verifier_request: PrimerVerifierRequest,
 ):
     """
     Handle a successful PrimerVerifier run.
@@ -775,13 +779,14 @@ def _handle_successful_verifier_run(
         verifier_request (PrimerVerifierRequest): The request object.
     """
     report_sas_url, summary_sas_url, run_folder = post_verifier_run(
-        batch_job_name=batch_job_name,
-        verifier_request=verifier_request
+        batch_job_name=batch_job_name, verifier_request=verifier_request
     )
     email_list = verifier_request.emails_array
     for email in email_list:
-        subject = 'PrimerVerifier Analysis ' \
-        f'"{verifier_request.project_name}" Complete'
+        subject = (
+            'PrimerVerifier Analysis '
+            f'"{verifier_request.project_name}" Complete'
+        )
         body = (
             f'Dear {verifier_request.user},\n'
             f'Your PrimerVerifier analysis, '
@@ -801,7 +806,7 @@ def _handle_successful_verifier_run(
 
 def _handle_failed_verifier_run(
     *,  # Force the use of keyword arguments
-    verifier_request: PrimerVerifierRequest
+    verifier_request: PrimerVerifierRequest,
 ):
     """
     Handle a failed PrimerVerifier run.
@@ -812,8 +817,8 @@ def _handle_failed_verifier_run(
     # Extract the email list from the request
     email_list = verifier_request.emails_array
     for email in email_list:
-        subject = f'PrimerVerifier Analysis ' \
-                  f'"{verifier_request.project_name}" Failed'
+        project_name = verifier_request.project_name
+        subject = f'PrimerVerifier Analysis "{project_name}" Failed'
         body = (
             f'Dear {verifier_request.user},\n'
             f'Your PrimerVerifier analysis, '
@@ -831,7 +836,7 @@ def _handle_failed_verifier_run(
 def post_verifier_run(
     *,  # Force the use of keyword arguments
     batch_job_name: str,
-    verifier_request: PrimerVerifierRequest
+    verifier_request: PrimerVerifierRequest,
 ) -> Tuple[str, str, str]:
     """
     Post-run steps for the PrimerVerifier analysis.
@@ -851,8 +856,7 @@ def post_verifier_run(
 
         # Delete .fasta and .zip files from the container
         _cleanup_blob_container(
-            blob_client=blob_client,
-            container_name=batch_job_name
+            blob_client=blob_client, container_name=batch_job_name
         )
 
         # Download the blob container, and store the JSON-formatted report
@@ -860,7 +864,7 @@ def post_verifier_run(
         verifier_request, report_folder = populate_report(
             request=verifier_request
         )
-        print('Report folder:', report_folder)
+        logger.debug('Primer verifier report folder: %s', report_folder)
 
         # Create a JSON-formatted summary report
         verifier_request = create_details(
@@ -878,8 +882,7 @@ def post_verifier_run(
 
         # Archive reports/ and upload the ZIP to the container root
         _archive_reports_and_upload(
-            blob_client=blob_client,
-            container_name=batch_job_name
+            blob_client=blob_client, container_name=batch_job_name
         )
 
         # Generate SAS URLs (Excel summary, archived reports ZIP)
@@ -896,11 +899,10 @@ def post_verifier_run(
 
         return archive_sas_url, excel_sas_url, report_folder
 
-    except Exception as exc:
-        print(
-            'Error in post_verifier_run for %s: %s',
+    except Exception:
+        logger.exception(
+            'Error in post_verifier_run for %s',
             batch_job_name,
-            str(exc),
         )
         raise
 
@@ -908,7 +910,7 @@ def post_verifier_run(
 def _cleanup_blob_container(
     *,  # Force the use of keyword arguments
     blob_client,
-    container_name: str
+    container_name: str,
 ):
     """
     Delete .fasta and .zip files from the blob container.
@@ -926,7 +928,7 @@ def _cleanup_blob_container(
 def _generate_sas_urls(
     *,  # Force the use of keyword arguments
     blob_client,
-    container_name: str
+    container_name: str,
 ) -> Tuple[str, str]:
     """
     Generate SAS URLs for the report and summary files.
@@ -938,15 +940,19 @@ def _generate_sas_urls(
     Returns:
         Tuple[str, str]: The report and summary SAS URLs.
     """
-    excel_blob_name = f"reports/{container_name}_summary_report.xlsx"
-    archive_blob_name = f"{container_name}_reports.zip"
+    excel_blob_name = f'reports/{container_name}_summary_report.xlsx'
+    archive_blob_name = f'{container_name}_reports.zip'
 
     excel_sas_url = blob_client.create_transfer_url(
-        container_name, "download", name=excel_blob_name,
+        container_name,
+        'download',
+        name=excel_blob_name,
         expires_in_seconds=8 * 24 * 60 * 60,
     )
     archive_sas_url = blob_client.create_transfer_url(
-        container_name, "download", name=archive_blob_name,
+        container_name,
+        'download',
+        name=archive_blob_name,
         expires_in_seconds=8 * 24 * 60 * 60,
     )
     return excel_sas_url, archive_sas_url
@@ -955,7 +961,7 @@ def _generate_sas_urls(
 @shared_task
 def run_primer_validator(
     *,  # Force the use of keyword arguments
-    validator_request_pk: int
+    validator_request_pk: int,
 ):
     """
     Run the PrimerValidator analysis.
@@ -987,11 +993,13 @@ def _prepare_validator_analysis(*, validator_request_pk):
         request.probe_sequence = 'configured'
 
     for inclusivity in (True, False):
-        input_blob_names.extend(_handle_panel_files(
-            container_name=container_name,
-            inclusivity=inclusivity,
-            request=request,
-        ))
+        input_blob_names.extend(
+            _handle_panel_files(
+                container_name=container_name,
+                inclusivity=inclusivity,
+                request=request,
+            )
+        )
 
     has_gene_targets = _upload_validator_gene_targets(
         container_name=container_name,
@@ -1048,13 +1056,14 @@ def _upload_validator_gene_targets(*, container_name, request):
         sequence = ''.join(str(sequence or '').split()).upper()
         header = str(header or '').strip().lstrip('>')
         if not header or not sequence:
-            raise ValueError('Gene reference headers and sequences are required.')
+            raise ValueError(
+                'Gene reference headers and sequences are required.'
+            )
         invalid_bases = sorted(set(sequence).difference('ACGTN'))
         if invalid_bases:
             raise ValueError(
-                'Gene reference {0} contains invalid bases: {1}'.format(
-                    header, ', '.join(invalid_bases)
-                )
+                f'Gene reference {header} contains invalid bases: '
+                f'{", ".join(invalid_bases)}'
             )
         identifier = header.split(None, 1)[0]
         unique_id = identifier
@@ -1079,9 +1088,7 @@ def _upload_validator_gene_targets(*, container_name, request):
                         f'Unable to parse FASTA for target {target.name}.'
                     )
                 for record in parsed:
-                    add_record(
-                        f'{prefix}__{record.id}', str(record.seq)
-                    )
+                    add_record(f'{prefix}__{record.id}', str(record.seq))
             else:
                 add_record(prefix, pasted)
 
@@ -1101,12 +1108,11 @@ def _upload_validator_gene_targets(*, container_name, request):
             parsed = list(SeqIO.parse(StringIO(contents), 'fasta'))
             if not parsed:
                 raise ValueError(
-                    f'Uploaded FASTA for target {target.name} contains no records.'
+                    f'Uploaded FASTA for target {target.name} '
+                    'contains no records.'
                 )
             for record in parsed:
-                add_record(
-                    f'{prefix}__{record.id}', str(record.seq)
-                )
+                add_record(f'{prefix}__{record.id}', str(record.seq))
 
     if not records:
         return False
@@ -1146,9 +1152,9 @@ def _submit_validator_task(*, request, analysis_task, command):
     analysis_task.batch_task_id = task_ids[0] if task_ids else ''
     analysis_task.status = 'submitted'
     analysis_task.error = ''
-    analysis_task.save(update_fields=[
-        'batch_job_id', 'batch_task_id', 'status', 'error'
-    ])
+    analysis_task.save(
+        update_fields=['batch_job_id', 'batch_task_id', 'status', 'error']
+    )
 
 
 def _create_validator_primer_task_command(
@@ -1175,25 +1181,38 @@ def _create_validator_gene_task_command(
     parts = [
         'source $CONDA/activate /envs/cowbat',
         'set -euo pipefail',
-        f'mkdir -p {shlex.quote(sequences)} {shlex.quote(targets)} {shlex.quote(reports)}',
+        (
+            f'mkdir -p {shlex.quote(sequences)} '
+            f'{shlex.quote(targets)} {shlex.quote(reports)}'
+        ),
     ]
     for item in input_blobs:
         destination = posixpath.join(run_directory, item['blob_name'])
-        parts.extend((
-            f'mkdir -p {shlex.quote(posixpath.dirname(destination))}',
-            'curl --fail --location --retry 5 --output {0} {1}'.format(
-                shlex.quote(destination), shlex.quote(item['sas_url'])
+        parts.extend(
+            (
+                f'mkdir -p {shlex.quote(posixpath.dirname(destination))}',
+                (
+                    'curl --fail --location --retry 5 --output '
+                    f'{shlex.quote(destination)} '
+                    f'{shlex.quote(item["sas_url"])}'
+                ),
+            )
+        )
+    parts.extend(
+        (
+            (
+                f'for archive in '
+                f'{shlex.quote(run_directory)}/inclusivity/*.zip '
+                f'{shlex.quote(run_directory)}/exclusivity/*.zip; do '
+                '[ -e "$archive" ] || continue; '
+                f'unzip -n -q "$archive" -d {shlex.quote(sequences)}; done'
             ),
-        ))
-    parts.extend((
-        'for archive in {0}/inclusivity/*.zip {0}/exclusivity/*.zip; do '
-        '[ -e "$archive" ] || continue; unzip -n -q "$archive" -d {1}; done'.format(
-            shlex.quote(run_directory), shlex.quote(sequences)
-        ),
-        f'GeneSeekr blastn -u -s {shlex.quote(sequences)} -t {shlex.quote(targets)} -r {shlex.quote(reports)}',
-        f'mkdir -p {mount_dir}/reports/gene',
-        f'cp -R {shlex.quote(reports)}/. {mount_dir}/reports/gene/',
-    ))
+            f'GeneSeekr blastn -u -s {shlex.quote(sequences)} '
+            f'-t {shlex.quote(targets)} -r {shlex.quote(reports)}',
+            f'mkdir -p {mount_dir}/reports/gene',
+            f'cp -R {shlex.quote(reports)}/. {mount_dir}/reports/gene/',
+        )
+    )
     return ' && '.join(parts)
 
 
@@ -1206,12 +1225,16 @@ def _normalize_gene_reports(gene_reports):
             try:
                 payload = json.loads(contents)
             except (TypeError, ValueError):
-                logger.warning('Skipping invalid GeneSeekr JSON report %s', report_path)
+                logger.warning(
+                    'Skipping invalid GeneSeekr JSON report %s', report_path
+                )
                 continue
             records = payload if isinstance(payload, list) else [payload]
             for record in records:
                 if isinstance(record, dict):
-                    normalized.append(_normalize_gene_record(report_path, record))
+                    normalized.append(
+                        _normalize_gene_record(report_path, record)
+                    )
         elif lower_path.endswith(('.tsv', '.csv')):
             delimiter = '\t' if lower_path.endswith('.tsv') else ','
             try:
@@ -1233,6 +1256,7 @@ def _normalize_gene_reports(gene_reports):
 
 def _normalize_gene_record(report_path, record):
     """Map GeneSeekr field-name variants to the report-analysis contract."""
+
     def value(*names):
         for name in names:
             if record.get(name) not in ('', None):
@@ -1251,7 +1275,10 @@ def _normalize_gene_record(report_path, record):
             'hit', 'Hit', 'subject', 'Subject', 'subject_id', 'match'
         ),
         'identity': value(
-            'identity', 'Identity', '% identity', 'percent_identity',
+            'identity',
+            'Identity',
+            '% identity',
+            'percent_identity',
             'percent_match',
         ),
         'coverage': value(
@@ -1262,14 +1289,10 @@ def _normalize_gene_record(report_path, record):
         'query_end': value('query_end', 'qend', 'contig_end'),
         'query_length': value('query_length', 'qlen', 'contig_length'),
         'query_frame': value('query_frame', 'qframe', 'frame'),
-        'query_sequence': value(
-            'query_sequence', 'qseq', 'query_alignment'
-        ),
+        'query_sequence': value('query_sequence', 'qseq', 'query_alignment'),
         'subject_start': value('subject_start', 'sstart', 'target_start'),
         'subject_end': value('subject_end', 'send', 'target_end'),
-        'subject_length': value(
-            'subject_length', 'slen', 'target_length'
-        ),
+        'subject_length': value('subject_length', 'slen', 'target_length'),
         'alignment_length': value(
             'alignment_length', 'length', 'alignment_len'
         ),
@@ -1293,22 +1316,23 @@ def check_validator_tasks():
             task=analysis_task,
         )
 
-    for analysis_task in ValidatorAnalysisTask.objects.filter(
-        status__in=('complete', 'error')
-    ).exclude(batch_job_id='').select_related('validator_request'):
+    for analysis_task in (
+        ValidatorAnalysisTask.objects.filter(status__in=('complete', 'error'))
+        .exclude(batch_job_id='')
+        .select_related('validator_request')
+    ):
         if _delete_validator_batch_resources(
             batch_client=batch_client,
             job_id=analysis_task.batch_job_id,
         ):
             analysis_task.batch_job_id = ''
             analysis_task.batch_task_id = ''
-            analysis_task.save(update_fields=['batch_job_id', 'batch_task_id'])
+            analysis_task.save(
+                update_fields=['batch_job_id', 'batch_task_id'],
+            )
 
     for task in validator_tasks:
-        _process_validator_task(
-            batch_client=batch_client,
-            task=task
-        )
+        _process_validator_task(batch_client=batch_client, task=task)
 
 
 def _process_validator_analysis_task(*, batch_client, task):
@@ -1322,17 +1346,20 @@ def _process_validator_analysis_task(*, batch_client, task):
             task.validator_request_id,
         )
         return
-    if not cloud_tasks or any(item.state != 'completed' for item in cloud_tasks):
+    if not cloud_tasks or any(
+        item.state != 'completed' for item in cloud_tasks
+    ):
         return
 
     exit_codes = [
-        getattr(item.execution_info, 'exit_code', None)
-        for item in cloud_tasks
+        getattr(t.execution_info, 'exit_code', None) for t in cloud_tasks
     ]
     successful = all(code == 0 for code in exit_codes)
     task.status = 'complete' if successful else 'error'
-    task.error = '' if successful else (
-        f'Batch task returned non-zero or missing exit codes: {exit_codes}'
+    task.error = (
+        ''
+        if successful
+        else (f'Batch task failed or lacked exit codes: {exit_codes}')
     )
     task.save(update_fields=['status', 'error'])
 
@@ -1344,7 +1371,10 @@ def _process_validator_analysis_task(*, batch_client, task):
 
     try:
         analysis_tasks = list(request.analysis_tasks.all())
-        if all(item.status not in ('pending', 'submitted') for item in analysis_tasks):
+        if all(
+            item.status not in ('pending', 'submitted')
+            for item in analysis_tasks
+        ):
             if any(item.status == 'error' for item in analysis_tasks):
                 _handle_failed_validator_run(validator_request=request)
             else:
@@ -1357,7 +1387,7 @@ def _process_validator_analysis_task(*, batch_client, task):
         request.errors = f'Validator report finalization failed: {exc}'
         request.save(update_fields=['status', 'errors'])
         logger.exception(
-            'Unable to finalize Validator request %s', request.pk
+            'Validator finalization failed for request %s', request.pk
         )
     finally:
         if _delete_validator_batch_resources(
@@ -1380,9 +1410,7 @@ def _delete_validator_batch_resources(*, batch_client, job_id):
             )
             return False
     except Exception:
-        logger.exception(
-            'Batch cleanup failed for Validator job %s', job_id
-        )
+        logger.exception('Batch cleanup failed for Validator job %s', job_id)
         return False
     pool_id = batch_pool_id_from_job_id(job_id)
     try:
@@ -1407,7 +1435,7 @@ def _delete_validator_batch_resources(*, batch_client, job_id):
 def _process_validator_task(
     *,  # Force the use of keyword arguments
     batch_client,
-    task: PrimerValidatorAzureRequest
+    task: PrimerValidatorAzureRequest,
 ):
     """
     Process an individual validator task.
@@ -1440,7 +1468,7 @@ def _process_validator_task(
             if exit_codes_good:
                 _handle_successful_validator_run(
                     batch_job_name=batch_job_name,
-                    validator_request=validator_request
+                    validator_request=validator_request,
                 )
             else:
                 _handle_failed_validator_run(
@@ -1451,7 +1479,7 @@ def _process_validator_task(
 
     except Exception as exc:
         ValidatorRequest.objects.filter(pk=task.validator_request.pk).update(
-            status="Error", errors=exc
+            status='Error', errors=exc
         )
         PrimerValidatorAzureRequest.objects.filter(id=task.id).delete()
 
@@ -1459,7 +1487,7 @@ def _process_validator_task(
 def _handle_successful_validator_run(
     *,  # Force the use of keyword arguments
     batch_job_name: str,
-    validator_request: ValidatorRequest
+    validator_request: ValidatorRequest,
 ):
     """
     Handle a successful PrimerValidator run.
@@ -1469,17 +1497,19 @@ def _handle_successful_validator_run(
     )
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = f'PrimerValidator Analysis ' \
+        subject = (
+            f'PrimerValidator Analysis '
             f'"{validator_request.project_name}" Complete'
+        )
         body = (
-            f"Dear {validator_request.user},\n"
-            f"Your PrimerValidator analysis, "
+            f'Dear {validator_request.user},\n'
+            f'Your PrimerValidator analysis, '
             f'"{validator_request.project_name}", is complete.\n'
-            f"Raw PrimerValidator outputs are available "
+            f'Raw PrimerValidator outputs are available '
             f'here: {report_sas_url}.\n\n'
-            f"Summarised outputs are available here: {summary_sas_url}.\n\n"
-            "Best regards,\n"
-            "The FoodPort development team"
+            f'Summarised outputs are available here: {summary_sas_url}.\n\n'
+            'Best regards,\n'
+            'The FoodPort development team'
         )
         send_email(subject=subject, body=body, recipient=email)
     if validator_request.report:
@@ -1488,31 +1518,33 @@ def _handle_successful_validator_run(
 
 def _handle_failed_validator_run(
     *,  # Force the use of keyword arguments
-    validator_request: ValidatorRequest
+    validator_request: ValidatorRequest,
 ):
     """
     Handle a failed PrimerValidator run.
     """
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = f'PrimerValidator Analysis ' \
-                  f'"{validator_request.project_name}" Failed'
+        subject = (
+            f'PrimerValidator Analysis '
+            f'"{validator_request.project_name}" Failed'
+        )
         body = (
-            f"Dear {validator_request.user},\n"
+            f'Dear {validator_request.user},\n'
             f'Your PrimerValidator analysis, '
             f'"{validator_request.project_name}", has failed.\n'
-            "Sorry for the inconvenience,\n"
-            "The FoodPort development team"
+            'Sorry for the inconvenience,\n'
+            'The FoodPort development team'
         )
         send_email(subject=subject, body=body, recipient=email)
-    validator_request.status = "Error"
+    validator_request.status = 'Error'
     validator_request.save()
 
 
 def post_validator_run(
     *,  # Force the use of keyword arguments
     batch_job_name: str,
-    validator_request: ValidatorRequest
+    validator_request: ValidatorRequest,
 ) -> Tuple[str, str, str]:
     """
     Post-run steps for the PrimerValidator analysis.
@@ -1522,8 +1554,7 @@ def post_validator_run(
 
         # Remove the .fasta and .zip files from the container
         _cleanup_blob_container(
-            blob_client=blob_client,
-            container_name=batch_job_name
+            blob_client=blob_client, container_name=batch_job_name
         )
 
         # Download the blob container, and store the JSON-formatted report
@@ -1558,7 +1589,9 @@ def post_validator_run(
         salmonella_classification = validator_request.samples.filter(
             classification_rule='salmonella'
         ).exists()
-        allowed_targets = ('inva', 'stn') if salmonella_classification else None
+        allowed_targets = (
+            ('inva', 'stn') if salmonella_classification else None
+        )
         categories = categorize_gene_hits(
             validator_request.gene_results,
             allowed_targets=allowed_targets,
@@ -1578,22 +1611,24 @@ def post_validator_run(
         validator_request.report = filter_report_by_gene_categories(
             validator_request.report, categories, selected_categories
         )
-        validator_request.save(update_fields=[
-            'gene_report',
-            'gene_results',
-            'validator_original_report',
-            'gene_exclusion_results',
-            'gene_exclusion_details',
-            'gene_exclusion_note',
-            'report',
-        ])
+        validator_request.save(
+            update_fields=[
+                'gene_report',
+                'gene_results',
+                'validator_original_report',
+                'gene_exclusion_results',
+                'gene_exclusion_details',
+                'gene_exclusion_note',
+                'report',
+            ]
+        )
 
         # Create the details for the validator request
         validator_request = create_details(
             request=validator_request,
             primer_set_model=ValidatorPrimerSet,
             panel_model=ValidatorPanel,
-            analysis="validator"
+            analysis='validator',
         )
 
         # Generate the Excel summary and upload it next to the JSON reports
@@ -1615,14 +1650,13 @@ def post_validator_run(
         )
         validator_request.report_download_link = archive_sas_url
         validator_request.summary_download_link = excel_sas_url
-        validator_request.status = "Complete"
+        validator_request.status = 'Complete'
         validator_request.save()
 
         return archive_sas_url, excel_sas_url, report_folder
-    except Exception as exc:
-        print(
-            "Error in post_validator_run for %s: %s",
+    except Exception:
+        logger.exception(
+            'Error in post_validator_run for %s',
             batch_job_name,
-            str(exc),
         )
         raise
