@@ -12,7 +12,7 @@ class SequenceDataSerializer(serializers.HyperlinkedModelSerializer):
 
 class SeqIDListingField(serializers.RelatedField):
     def to_representation(self, value):
-        return '{}: {}'.format(value.seqid, value.quality)
+        return f'{value.seqid}: {value.quality}'
 
 
 class OLNSerializer(serializers.ModelSerializer):

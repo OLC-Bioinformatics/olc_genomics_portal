@@ -368,16 +368,16 @@ class ValidatorGeneReportTests(unittest.TestCase):
             ('sample-b', 'other'),
         )):
             data.update({
-                'targets-{0}-sample_name'.format(index): sample,
-                'targets-{0}-target_name'.format(index): target,
-                'targets-{0}-forward_primer'.format(index): 'ACGTACGT',
-                'targets-{0}-reverse_primer'.format(index): 'TGCATGCA',
-                'targets-{0}-probe_sequence'.format(index): '',
-                'targets-{0}-probe_evaluation_method'.format(index):
+                f'targets-{index}-sample_name': sample,
+                f'targets-{index}-target_name': target,
+                f'targets-{index}-forward_primer': 'ACGTACGT',
+                f'targets-{index}-reverse_primer': 'TGCATGCA',
+                f'targets-{index}-probe_sequence': '',
+                f'targets-{index}-probe_evaluation_method':
                     'percent_identity',
-                'targets-{0}-probe_percent_identity'.format(index): '80',
-                'targets-{0}-probe_max_differences'.format(index): '2',
-                'targets-{0}-gene_sequence'.format(index): '',
+                f'targets-{index}-probe_percent_identity': '80',
+                f'targets-{index}-probe_max_differences': '2',
+                f'targets-{index}-gene_sequence': '',
             })
         formset = ValidatorTargetFormSetFactory(data, prefix='targets')
         formset.classification_rule = 'salmonella'

@@ -20,7 +20,7 @@ def get_assembled_data(data_request_pk):
     print('Assembled data request')
     data_request = DataRequest.objects.get(pk=data_request_pk)
     try:
-        data_dir = 'olc_webportalv2/media/data_request_{}'.format(data_request_pk)
+        data_dir = f'olc_webportalv2/media/data_request_{data_request_pk}'
         if not os.path.isdir(data_dir):
             os.makedirs(data_dir)
         container_name = 'processed-data'
@@ -50,7 +50,7 @@ def get_assembled_data(data_request_pk):
         # may have to implement via cronjob or something
         # Make container to put results into and upload the zip as a blob
         print('Uploading Zip')
-        data_request_container = 'data-request-{}'.format(data_request_pk)
+        data_request_container = f'data-request-{data_request_pk}'
         blob_client.ensure_container(data_request_container)
         blob_name = os.path.split(data_dir + '.zip')[1]
         blob_client.upload_file(
@@ -84,7 +84,7 @@ def get_assembled_data(data_request_pk):
 @shared_task
 def get_raw_data(data_request_pk):
     data_request = DataRequest.objects.get(pk=data_request_pk)
-    data_dir = 'olc_webportalv2/media/data_request_{}'.format(data_request_pk)
+    data_dir = f'olc_webportalv2/media/data_request_{data_request_pk}'
     try:
         print('Raw data request')
         if not os.path.isdir(data_dir):
@@ -134,7 +134,7 @@ def get_raw_data(data_request_pk):
         # may have to implement via cronjob or something
         # Make container to put results into and upload the zip as a blob
         print('Uploading Zip')
-        data_request_container = 'data-request-{}'.format(data_request_pk)
+        data_request_container = f'data-request-{data_request_pk}'
         blob_client.ensure_container(data_request_container)
         blob_name = os.path.split(data_dir + '.zip')[1]
         blob_client.upload_file(

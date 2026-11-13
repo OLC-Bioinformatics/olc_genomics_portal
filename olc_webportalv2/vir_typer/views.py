@@ -78,8 +78,8 @@ def vir_typer_request(request):
                     try:
                         VirTyperRequest.objects.bulk_create(sample_data)
                         message_str = _('You have created project ')
-                        messages.success(request, message_str + '{project}'
-                                         .format(project=vir_typer_project.project_name))
+                        messages.success(request, message_str + f'{vir_typer_project.project_name}'
+                                         )
 
                         return redirect('vir_typer:vir_typer_upload',
                                         vir_typer_pk=vir_typer_project.pk)
@@ -204,15 +204,14 @@ def sequence_html_string(sequence, consensus_sequence):
             try:
                 html_code = consensus_span_dict[nt.upper()]
             except KeyError:
-                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>" \
-                    .format(nt=nt.upper())
+                html_code = f"<span style='color:purple;background-color:white;font-family:courier;'>{nt.upper()}</span>" \
+                    
         else:
             variable_locations += 1
             try:
                 html_code = no_match_span_dict[nt.upper()]
             except KeyError:
-                html_code = "<span style='color:purple;background-color:white;font-family:courier;'>{nt}</span>".format(
-                    nt=nt.upper())
+                html_code = f"<span style='color:purple;background-color:white;font-family:courier;'>{nt.upper()}</span>"
         html_string += html_code
 
     return html_string, variable_locations
@@ -233,7 +232,7 @@ def sequence_consensus(sequence_list, vir_typer_pk):
                                    id=seq_code,
                                    description='')
                 records.append(record)
-        file_path = 'olc_webportalv2/media/vir_typer/{pk}/'.format(pk=vir_typer_pk)
+        file_path = f'olc_webportalv2/media/vir_typer/{vir_typer_pk}/'
         try:
             os.makedirs(file_path)
         except FileExistsError:
@@ -322,7 +321,7 @@ def vir_typer_results(request, vir_typer_pk):
                 sample_dict['sample_project'] = pn
                 sample_dict['sample_name'] = sample.sample_name
                 sample_dict['lsts'] = sample.LSTS_ID
-                sample_dict['date_received'] = '{:%Y-%m-%d}'.format(sample.date_received)
+                sample_dict['date_received'] = f'{sample.date_received:%Y-%m-%d}'
                 sample_dict['isolate_source'] = sample.isolate_source
                 sample_dict['organism'] = sample.putative_classification
                 try:
@@ -366,10 +365,10 @@ def vir_typer_results(request, vir_typer_pk):
                         sample_dict['sequence'].append(html_string + '\n')
                 full_results['data'].append(sample_dict)
                 outputs.append(sample_dict)
-    json_path = 'olc_webportalv2/static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
-    data_tables_path = '../../../../static/ajax/vir_typer/{pk}/arrays.txt'.format(pk=vir_typer_pk)
-    os.makedirs('olc_webportalv2/static/ajax/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
-    os.makedirs('olc_webportalv2/media/vir_typer/{pk}'.format(pk=vir_typer_pk), exist_ok=True)
+    json_path = f'olc_webportalv2/static/ajax/vir_typer/{vir_typer_pk}/arrays.txt'
+    data_tables_path = f'../../../../static/ajax/vir_typer/{vir_typer_pk}/arrays.txt'
+    os.makedirs(f'olc_webportalv2/static/ajax/vir_typer/{vir_typer_pk}', exist_ok=True)
+    os.makedirs(f'olc_webportalv2/media/vir_typer/{vir_typer_pk}', exist_ok=True)
     # Create the JSON-formatted output file
     with open(json_path, 'w') as json_out:
         json.dump(full_results, json_out)
@@ -378,7 +377,7 @@ def vir_typer_results(request, vir_typer_pk):
         html_string = render_to_string('vir_typer/vir_typer_results_to_pdf.html',
                                        {
                                            'vir_typer_project': vir_typer_project,
-                                           'date': '{:%Y-%m-%d}'.format(datetime.datetime.now()),
+                                           'date': f'{datetime.datetime.now():%Y-%m-%d}',
                                            'codes': sorted(list(codes)),
                                            'results': outputs,
                                            'vir_typer_samples': vir_typer_samples,
@@ -399,17 +398,17 @@ def vir_typer_results(request, vir_typer_pk):
         #                stylesheets=[bootstrap_css, project_css, all_css, page_css],
         #                presentational_hints=True)
         # Download
-        fs = FileSystemStorage('olc_webportalv2/media/vir_typer/{pk}/'.format(pk=vir_typer_pk))
-        with fs.open("VirusTyperReport_{pn}.pdf".format(pn=vir_typer_project.project_name)) as pdf:
+        fs = FileSystemStorage(f'olc_webportalv2/media/vir_typer/{vir_typer_pk}/')
+        with fs.open(f"VirusTyperReport_{vir_typer_project.project_name}.pdf") as pdf:
             response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="VirusTyperReport_{pn}.pdf"' \
-                .format(pn=vir_typer_project.project_name)
+            response['Content-Disposition'] = f'attachment; filename="VirusTyperReport_{vir_typer_project.project_name}.pdf"' \
+                
             return response
     return render(request,
                   'vir_typer/vir_typer_results.html',
                   {
                       'vir_typer_project': vir_typer_project,
-                      'date': '{:%Y-%m-%d}'.format(datetime.datetime.now()),
+                      'date': f'{datetime.datetime.now():%Y-%m-%d}',
                       'codes': sorted(list(codes)),
                       'json_results': data_tables_path,
                       'results': outputs,

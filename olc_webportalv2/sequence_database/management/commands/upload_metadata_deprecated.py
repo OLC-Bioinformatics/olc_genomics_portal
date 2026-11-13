@@ -74,7 +74,7 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
     for seqid in seqdata_dict:
         # If we don't have actual sequence data associated, don't upload metadata.
         if seqid not in seqids_in_cloud:
-            print('WARNING: SeqID {} was listed on metadata sheet, but is not stored in cloud.'.format(seqid))
+            print(f'WARNING: SeqID {seqid} was listed on metadata sheet, but is not stored in cloud.')
             continue
 
         # Check if we need to add to our lists of Genera, Species, Serotype, MLST, RMLST for autocompletion

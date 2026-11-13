@@ -95,7 +95,7 @@ class LoadDatabase(object):
         :param dictionary:
         :param name_only:
         """
-        print('Reading {ss}'.format(ss=spreadsheet))
+        print(f'Reading {spreadsheet}')
         data_dict = pandas.read_excel(spreadsheet, sheet).fillna('ND').set_index(key).T.to_dict()
         for identifier, nested_dict in data_dict.items():
             identifier = str(identifier)

@@ -109,7 +109,7 @@ def generic_autocompleter(non_target_dict):
         if query:
             # Set the kwargs as the table lookup: query e.g. rmlst__rmlst: 2124
             kwargs = {
-                str('{db_table}'.format(db_table=lookup_dict[field])): str(query)
+                str(f'{lookup_dict[field]}'): str(query)
             }
             # Update the Q object with the kwargs
             q = q & Q(**kwargs)
@@ -319,7 +319,7 @@ def database_filter(request):
                     # Create the kwargs based on the category, the appropriate table and the query,
                     # e.g. genus, Escherichia will create a dictionary entry of genus__genus__iexact: Escherichia
                     kwargs = {
-                        str('{db_table}'.format(db_table=lookup_dict[field])): str(query)
+                        str(f'{lookup_dict[field]}'): str(query)
                     }
                     # Update the Q object with the kwargs
                     q = q & Q(**kwargs)
@@ -435,8 +435,7 @@ def database_query(request):
                         # Create a kwargs dictionary entry of the table name__qualifier: query
                         # e.g. genus__genus__icontains: Escherichia
                         kwargs = {
-                            str('{db_table}__{qualifier}'.format(db_table=field,
-                                                                 qualifier=qualifier)): str(query)
+                            str(f'{field}__{qualifier}'): str(query)
                         }
                         # Update the Q object appropriately depending on the operator
                         if operator == 'AND':

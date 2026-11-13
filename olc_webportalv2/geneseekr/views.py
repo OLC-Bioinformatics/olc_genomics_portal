@@ -200,7 +200,7 @@ def tree_request(request):
                 tree_request.number_diversitree_strains = 0
             else:
                 tree_request.number_diversitree_strains = number_diversitree_strains
-            container_name = 'tree-{}'.format(tree_request.pk)
+            container_name = f'tree-{tree_request.pk}'
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
@@ -302,7 +302,7 @@ def amr_request(request):
                 amr_request_object.name = amr_request_object.pk
             else:
                 amr_request_object.name = name
-            container_name = 'amrsummary-{}'.format(amr_request_object.pk)
+            container_name = f'amrsummary-{amr_request_object.pk}'
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
                 file_name = os.path.join(container_name, other_file.name)
@@ -425,7 +425,7 @@ def prokka_request(request):
             else:
                 prokka_request_object.name = name
             prokka_request_object.save()
-            container_name = 'prokka-{}'.format(prokka_request_object.pk)
+            container_name = f'prokka-{prokka_request_object.pk}'
             storage = get_storage_client()
             storage.ensure_container(container_name)
             file_names = list()
@@ -521,7 +521,7 @@ def neighbor_request(request):
                                                                     status='Processing')
             nearest_neighbor_task.save()
             if uploaded_file_name != '':
-                container_name = 'neighbor-{}'.format(nearest_neighbor_task.pk)
+                container_name = f'neighbor-{nearest_neighbor_task.pk}'
                 storage = get_storage_client()
                 storage.ensure_container(container_name)
                 storage.upload_bytes(

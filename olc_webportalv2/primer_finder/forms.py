@@ -291,7 +291,7 @@ class PrimerVerifierForm(ModelForm):
             )
             return None, error_list
 
-        canonical = "{0}-{1}".format(base_clean, dir_flag)
+        canonical = f"{base_clean}-{dir_flag}"
 
         return canonical, error_list
 
@@ -404,9 +404,7 @@ class PrimerVerifierForm(ModelForm):
                 primer_details[base_primer] = dict()
             record.id = canonical
             primer_details[base_primer][record.id] = record.seq
-            primer_string += ">{header}\r\n{sequence}\r\n".format(
-                header=record.id, sequence=record.seq
-            )
+            primer_string += f">{record.id}\r\n{record.seq}\r\n"
 
         if not primer_set:
             error_list.append(_("No valid primers supplied"))
@@ -724,16 +722,12 @@ class PrimerValidatorForm(ModelForm):
             return self.cleaned_data
         forward_primer, error_list, primer_list, forward_primer_details = \
             PrimerVerifierForm.validate_primers(
-                primer_sequences='>primer-F\r\n{forward}'.format(
-                    forward=forward_primer
-                ),
+                primer_sequences=f'>primer-F\r\n{forward_primer}',
                 error_list=error_list,
                 unidirectional=False)
         reverse_primer, error_list, primer_list, reverse_primer_details = \
             PrimerVerifierForm.validate_primers(
-                primer_sequences='>primer-R\r\n{reverse}'.format(
-                    reverse=reverse_primer
-                ),
+                primer_sequences=f'>primer-R\r\n{reverse_primer}',
                 error_list=error_list,
                 unidirectional=False)
         primer_details.update(forward_primer_details)

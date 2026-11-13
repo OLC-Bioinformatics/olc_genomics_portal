@@ -31,9 +31,7 @@ def human_bytes(byte_count: float) -> str:
         index += 1  # Move to the next unit
     
     # Return formatted string with two decimal places and unit suffix
-    return "{value:.2f} {suffix}".format(
-        value=byte_count, suffix=suffixes[index]
-    )
+    return f"{byte_count:.2f} {suffixes[index]}"
 
 
 def generate_sas(blob_name, container_name):
@@ -177,10 +175,8 @@ class FileLocate:
                             negative_expression in negative_expressions):
                         if debug:
                             print(
-                                'Container {container_name} matched one of '
-                                'the exclusion terms'.format(
-                                    container_name=container.name
-                                )
+                                f'Container {container.name} matched one of '
+                                'the exclusion terms'
                             )
                         continue
                 # If the expression contains non-alphanumeric characters
@@ -196,9 +192,7 @@ class FileLocate:
                     # Use re.fullmatch to determine if the expression matches
                     # the container name
                     if re.fullmatch(
-                            r'{regex_expression}$'.format(
-                                regex_expression=regex_expression
-                            ),
+                            rf'{regex_expression}$',
                             container.name):
                         # Update the match boolean and append the container to
                         # the list of matches
@@ -296,9 +290,7 @@ class FileLocate:
                                 # If the components match, increment the
                                 # number of matches
                                 if re.fullmatch(
-                                        r'{regex_expression}$'.format(
-                                            regex_expression=regex_expression
-                                        ),
+                                        rf'{regex_expression}$',
                                         component):
                                     # Set the match to the current component
                                     # to true
@@ -312,9 +304,7 @@ class FileLocate:
                                 # If the component matches, set the match
                                 # boolean to True
                                 if re.fullmatch(
-                                        r'{regex_expression}$'.format(
-                                            regex_expression=regex_expression
-                                        ),
+                                        rf'{regex_expression}$',
                                         component):
                                     match = True
                         # Check to see if the number of matches observed in a
@@ -339,12 +329,9 @@ class FileLocate:
                                 negative_expression in negative_expressions):
                             if debug:
                                 print(
-                                    'File {container_name} / {filename} '
+                                    f'File {container.name} / {filename} '
                                     'matched one of the '
-                                    'exclusion terms'.format(
-                                        container_name=container.name,
-                                        filename=filename
-                                    ))
+                                    'exclusion terms')
                             continue
                     # Add the match to the dictionary
                     if container.name not in files:

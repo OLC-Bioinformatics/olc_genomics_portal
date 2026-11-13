@@ -30,18 +30,17 @@ class ResearchAssemblyUiActionTests(TestCase):
             with self.subTest(route=route_name):
                 self.assertContains(
                     response,
-                    'href="{0}"'.format(reverse(route_name)),
+                    f'href="{reverse(route_name)}"',
                 )
 
     def test_open_run_form_targets_the_run_manager(self):
         response = self.client.get(reverse("cowbat:manage_assembly"))
 
         self.assertEqual(response.status_code, 200)
+        manager_url = reverse("cowbat:manage_assembly")
         self.assertContains(
             response,
-            '<form method="get" action="{0}"'.format(
-                reverse("cowbat:manage_assembly")
-            ),
+            f'<form method="get" action="{manager_url}"',
         )
         self.assertContains(response, 'type="submit">Open run</button>')
 
@@ -72,12 +71,15 @@ class ResearchAssemblyUiActionTests(TestCase):
             '<input type="hidden" name="action" value="rename">',
         )
         self.assertContains(response, 'id="rename-button"')
-        self.assertContains(response, 'action="{0}"'.format(delete_url))
+        self.assertContains(response, f'action="{delete_url}"')
         self.assertContains(response, 'id="select-all"')
         self.assertContains(response, 'name="delete_all" value="1"')
         self.assertContains(response, 'id="upload-dropzone"')
         self.assertContains(response, 'role="button" tabindex="0"')
-        self.assertContains(response, 'id="upload-files" class="btn btn-primary" type="button" disabled')
+        self.assertContains(
+            response,
+            'id="upload-files" class="btn btn-primary" type="button" disabled',
+        )
         self.assertContains(
             response,
             '<input type="hidden" name="action" value="submit">',

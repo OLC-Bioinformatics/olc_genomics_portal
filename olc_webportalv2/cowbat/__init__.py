@@ -1,0 +1,1 @@
+"""COWBAT sequencing workflow application."""

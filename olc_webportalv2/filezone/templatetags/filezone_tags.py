@@ -30,17 +30,17 @@ def render_blob_hierarchy(data, level=0, path=''):
             )
         )
         for key, value in items:
-            current_path = "{path}/{key}".format(path=path, key=key) if path else key
+            current_path = f"{path}/{key}" if path else key
             if value.get('__type__') == 'folder':
-                folder_html = ('<tr class="folder" data-level="{level}" data-path="{path}">'
-                               '<td><input type="checkbox" class="folder-checkbox" data-level="{level}" onchange="checkChildren(this, {level})"></td>'
-                               '<td style="padding-left: {indent}px;"><i class="fa fa-folder" aria-hidden="true"></i> {name}</td>'
+                folder_html = (f'<tr class="folder" data-level="{level}" data-path="{current_path}">'
+                               f'<td><input type="checkbox" class="folder-checkbox" data-level="{level}" onchange="checkChildren(this, {level})"></td>'
+                               f'<td style="padding-left: {level * 20}px;"><i class="fa fa-folder" aria-hidden="true"></i> {key}</td>'
                                '<td></td>'  # Empty <td> for column 3
                                '<td></td>'  # Empty <td> for column 4
                                '<td></td>'  # Empty <td> for column 5
                                '<td></td>'  # Empty <td> for column 6
                                '<td></td>'  # Empty <td> for column 7
-                               '</tr>').format(level=level, path=current_path, indent=level * 20, name=key)
+                               '</tr>')
                 html_output.append(folder_html)
                 html_output.extend(render_items(value['contents'], level + 1, current_path))
             else:

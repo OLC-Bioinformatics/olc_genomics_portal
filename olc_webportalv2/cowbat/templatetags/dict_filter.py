@@ -1,6 +1,4 @@
-"""
-Register template tags
-"""
+"""Register template tags."""
 
 from django import template
 
@@ -10,8 +8,7 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    """
-    Custom template filter to get a dictionary item with a variable key.
+    """Return the dictionary value for a variable key.
 
     Args:
         dictionary (dict): The dictionary to get the item from.
@@ -20,6 +17,7 @@ def get_item(dictionary, key):
     Returns:
         The item from the dictionary with the given key, or None if the key is
         not in the dictionary.
+
     """
     # Return the item from the dictionary with the given key
     return dictionary.get(key)

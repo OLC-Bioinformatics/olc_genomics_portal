@@ -1,30 +1,32 @@
-from unittest import mock
-from decimal import Decimal
 import os
 import shutil
 import tempfile
+from decimal import Decimal
+from unittest import mock
 
 from django.test import TestCase, override_settings
 from django.utils import timezone as django_timezone
 
 from olc_webportalv2.common.batch_client import BatchServiceError
-from olc_webportalv2.cowbat.models import AzureTask
-from olc_webportalv2.cowbat.models import SequencingRun
-from olc_webportalv2.cowbat.models import SummaryMetadata
+from olc_webportalv2.cowbat.models import (
+    AzureTask,
+    SequencingRun,
+    SummaryMetadata,
+)
 from olc_webportalv2.cowbat.tasks import (
-    cowbat_api_submit,
-    check_cowbat_progress,
-    check_sample_sheet_format,
-    no_sample_sheet,
-    nextseq_run,
-    read_sections,
-    run_cowbat_batch,
     add_read_filenames_to_metadata,
+    check_cowbat_progress,
     check_cowbat_tasks,
+    check_sample_sheet_format,
+    cowbat_api_submit,
     cowbat_cleanup,
     handle_incomplete_tasks,
     handle_task_completion,
     load_report,
+    nextseq_run,
+    no_sample_sheet,
+    read_sections,
+    run_cowbat_batch,
     send_email,
     submit_batch,
 )
@@ -44,7 +46,9 @@ class RunCowbatBatchTests(TestCase):
         defaults.update(kwargs)
         return SequencingRun.objects.create(**defaults)
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     def test_marks_run_upload_error_when_read_pair_is_incomplete(
         self, storage_client_factory, isdir
@@ -62,7 +66,9 @@ class RunCowbatBatchTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(run.status, "UploadError")
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.nextseq_run")
     def test_nextseq_run_uses_nextseq_branch(
@@ -83,14 +89,18 @@ class RunCowbatBatchTests(TestCase):
         run_cowbat_batch.run(run.pk)
 
         self.assertEqual(nextseq_run.call_count, 1)
-        self.assertEqual(nextseq_run.call_args[1]["container_name"], "191218-cal")
+        self.assertEqual(
+            nextseq_run.call_args[1]["container_name"], "191218-cal"
+        )
         self.assertEqual(nextseq_run.call_args[1]["sequencing_run"].pk, run.pk)
         run.refresh_from_db()
         self.assertIsNotNone(run.task_started_at)
         self.assertEqual(run.task_queue, "cowbat")
         self.assertEqual(run.task_retry_count, 0)
 
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.submit_batch")
     def test_submits_complete_non_nextseq_run(
@@ -111,9 +121,12 @@ class RunCowbatBatchTests(TestCase):
         run_cowbat_batch.run(run.pk)
 
         self.assertEqual(submit_batch.call_count, 1)
-        self.assertEqual(submit_batch.call_args[1]["sequencing_run"].pk, run.pk)
         self.assertEqual(
-            submit_batch.call_args[1]["run_folder"], "olc_webportalv2/media/191218_CAL"
+            submit_batch.call_args[1]["sequencing_run"].pk, run.pk
+        )
+        self.assertEqual(
+            submit_batch.call_args[1]["run_folder"],
+            "olc_webportalv2/media/191218_CAL",
         )
 
     @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_api_submit")
@@ -155,8 +168,8 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.copy_blobs")
     @mock.patch(
         "olc_webportalv2.cowbat.tasks.create_sub_container",
-        side_effect=lambda blob_service_client, container_name, i: "{}-{}".format(
-            container_name, i
+        side_effect=lambda blob_service_client, container_name, i: (
+            f"{container_name}-{i}"
         ),
     )
     def test_no_sample_sheet_groups_samples_and_copies_reads(
@@ -180,21 +193,25 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(result, {1: ["SAMPLE-A"], 2: ["SAMPLE-B"]})
         self.assertEqual(create_sub_container.call_count, 2)
         self.assertEqual(copy_blobs.call_count, 2)
-        self.assertEqual(copy_blobs.call_args_list[0][1]["sample_name"], "SAMPLE-A")
-        self.assertEqual(copy_blobs.call_args_list[1][1]["sample_name"], "SAMPLE-B")
+        self.assertEqual(
+            copy_blobs.call_args_list[0][1]["sample_name"], "SAMPLE-A"
+        )
+        self.assertEqual(
+            copy_blobs.call_args_list[1][1]["sample_name"], "SAMPLE-B"
+        )
 
     @mock.patch("olc_webportalv2.cowbat.tasks.copy_blobs")
     @mock.patch(
         "olc_webportalv2.cowbat.tasks.create_sub_container",
-        side_effect=lambda blob_service_client, container_name, i: "{}-{}".format(
-            container_name, i
+        side_effect=lambda blob_service_client, container_name, i: (
+            f"{container_name}-{i}"
         ),
     )
     def test_no_sample_sheet_balances_samples_across_subruns(
         self, create_sub_container, copy_blobs
     ):
         blob_files = [
-            "SAMPLE-{0:03d}_R{1}.fastq.gz".format(sample, read)
+            f"SAMPLE-{sample:03d}_R{read}.fastq.gz"
             for sample in range(96)
             for read in (1, 2)
         ]
@@ -268,7 +285,9 @@ class RunCowbatBatchTests(TestCase):
         )
 
     def test_check_sample_sheet_format_detects_target(self):
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as sample_sheet:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False
+        ) as sample_sheet:
             sample_sheet.write("[Header]\n[BCLConvert_Data]\n")
             path = sample_sheet.name
 
@@ -280,7 +299,9 @@ class RunCowbatBatchTests(TestCase):
 
     def test_read_sections_parses_simple_sections(self):
         content = "[Header]\nRunName,Run-1\n\n[Reads]\nRead1Cycles,151\n"
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as sample_sheet:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False
+        ) as sample_sheet:
             sample_sheet.write(content)
             path = sample_sheet.name
 
@@ -303,7 +324,9 @@ class RunCowbatBatchTests(TestCase):
 
         run.refresh_from_db()
         self.assertEqual(run.status, "Error")
-        self.assertEqual(run.errors, ["Summary report not found in blob storage."])
+        self.assertEqual(
+            run.errors, ["Summary report not found in blob storage."]
+        )
 
     def test_load_report_creates_summary_metadata(self):
         headers = [
@@ -391,7 +414,9 @@ class RunCowbatBatchTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(run.errors, [])
 
-    def test_add_read_filenames_preserves_existing_and_reports_ambiguous_reads(self):
+    def test_add_read_filenames_preserves_existing_and_reports_ambiguous_reads(
+        self,
+    ):
         run = self.create_run()
         with tempfile.TemporaryDirectory() as reports_folder:
             report_path = os.path.join(reports_folder, "combinedMetadata.csv")
@@ -416,12 +441,16 @@ class RunCowbatBatchTests(TestCase):
             with open(report_path) as report:
                 report_contents = report.read()
 
-        self.assertIn("existing_R1.fastq.gz,SEQ-1_R2.fastq.gz", report_contents)
+        self.assertIn(
+            "existing_R1.fastq.gz,SEQ-1_R2.fastq.gz", report_contents
+        )
         self.assertIn("SEQ-1_R1_a.fastq.gz", run.errors[0])
         self.assertIn("SEQ-1_R1_b.fastq.gz", run.errors[0])
 
     @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_cleanup")
-    def test_handle_task_completion_schedules_cleanup_for_success(self, cleanup):
+    def test_handle_task_completion_schedules_cleanup_for_success(
+        self, cleanup
+    ):
         run = self.create_run(pool_id="pool-1", job_id="job-1")
         azure_task = AzureTask.objects.create(
             sequencing_run=run,
@@ -448,7 +477,9 @@ class RunCowbatBatchTests(TestCase):
         batch_client.pool.delete.assert_called_once_with(pool_id="pool-1")
 
     @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_cleanup")
-    def test_handle_task_completion_marks_run_error_for_failed_task(self, cleanup):
+    def test_handle_task_completion_marks_run_error_for_failed_task(
+        self, cleanup
+    ):
         run = self.create_run(pool_id="pool-1", job_id="job-1")
         azure_task = AzureTask.objects.create(
             sequencing_run=run,
@@ -474,7 +505,9 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(cleanup.apply_async.call_count, 0)
 
     @mock.patch("olc_webportalv2.cowbat.tasks.cowbat_cleanup")
-    def test_handle_task_completion_records_azure_cleanup_errors(self, cleanup):
+    def test_handle_task_completion_records_azure_cleanup_errors(
+        self, cleanup
+    ):
         run = self.create_run(pool_id="pool-1", job_id="job-1")
         azure_task = AzureTask.objects.create(
             sequencing_run=run,
@@ -638,7 +671,9 @@ class RunCowbatBatchTests(TestCase):
     def test_handle_incomplete_tasks_retries_pool_resize(
         self, check_progress, retry_resize
     ):
-        run = self.create_run(task_id="task-1", job_id="job-1", pool_id="job-1")
+        run = self.create_run(
+            task_id="task-1", job_id="job-1", pool_id="job-1"
+        )
         pool = mock.Mock(id="job-1", resize_errors=["quota"])
         batch_client = mock.Mock()
         batch_client.pool.list.return_value = [pool]
@@ -865,7 +900,9 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.load_report", return_value=True)
     @mock.patch("olc_webportalv2.cowbat.tasks.add_read_filenames_to_metadata")
     @mock.patch("olc_webportalv2.cowbat.tasks.os.listdir", return_value=[])
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.send_email")
     @override_settings(ENVIRONMENT="PROD")
@@ -896,7 +933,8 @@ class RunCowbatBatchTests(TestCase):
             mock.Mock(name=blob_name) for blob_name in blob_names
         ]
         for blob, blob_name in zip(
-            blob_service_class.return_value.list_objects.return_value, blob_names
+            blob_service_class.return_value.list_objects.return_value,
+            blob_names,
         ):
             blob.name = blob_name
         generate_link.return_value = "https://example.test/run.zip"
@@ -907,7 +945,9 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(run.status, "Complete")
         self.assertEqual(run.percent_complete, Decimal("100.00"))
         self.assertEqual(run.download_link, "https://example.test/run.zip")
-        self.assertEqual(blob_service_class.return_value.download_file.call_count, 7)
+        self.assertEqual(
+            blob_service_class.return_value.download_file.call_count, 7
+        )
         self.assertEqual(add_read_filenames.call_count, 1)
         self.assertEqual(load_report_mock.call_count, 1)
         self.assertEqual(make_archive.call_count, 1)
@@ -920,8 +960,12 @@ class RunCowbatBatchTests(TestCase):
     @mock.patch("olc_webportalv2.cowbat.tasks.generate_download_link")
     @mock.patch("olc_webportalv2.cowbat.tasks.add_read_filenames_to_metadata")
     @mock.patch("olc_webportalv2.cowbat.tasks.os.listdir", return_value=[])
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isfile", return_value=False)
-    @mock.patch("olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True)
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isfile", return_value=False
+    )
+    @mock.patch(
+        "olc_webportalv2.cowbat.tasks.os.path.isdir", return_value=True
+    )
     @mock.patch("olc_webportalv2.cowbat.tasks.get_storage_client")
     @mock.patch("olc_webportalv2.cowbat.tasks.send_email")
     def test_cowbat_cleanup_records_missing_summary_report(
@@ -946,7 +990,9 @@ class RunCowbatBatchTests(TestCase):
 
         run.refresh_from_db()
         self.assertEqual(run.status, "Error")
-        self.assertEqual(run.errors, ["Summary report not found in blob storage."])
+        self.assertEqual(
+            run.errors, ["Summary report not found in blob storage."]
+        )
         self.assertEqual(send_email_mock.call_count, 0)
         self.assertEqual(make_archive.call_count, 1)
         self.assertEqual(generate_link.call_count, 1)

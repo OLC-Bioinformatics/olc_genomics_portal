@@ -57,11 +57,11 @@ class PrimerValidatorUiActionTests(TestCase):
             "primer_finder:primer_validator_processing",
             kwargs={"validator_pk": complete.pk},
         )
-        self.assertContains(response, 'href="{0}"'.format(processing_url))
+        self.assertContains(response, f'href="{processing_url}"')
         self.assertContains(response, 'href="/reports/complete.zip"')
         self.assertContains(
             response,
-            'id="row{0}"'.format(processing.pk),
+            f'id="row{processing.pk}"',
         )
         self.assertContains(response, "disabled> Processing")
         self.assertContains(
@@ -70,11 +70,11 @@ class PrimerValidatorUiActionTests(TestCase):
         )
         self.assertNotContains(
             response,
-            'id="form{0}"'.format(processing.pk),
+            f'id="form{processing.pk}"',
         )
         self.assertContains(
             response,
-            'id="form{0}"'.format(unprocessed.pk),
+            f'id="form{unprocessed.pk}"',
         )
         self.assertContains(
             response,
@@ -104,9 +104,7 @@ class PrimerValidatorUiActionTests(TestCase):
         )
         html = response.content.decode(response.charset)
         form_match = re.search(
-            r'<form id="form{0}" method="post">(.*?)</form>'.format(
-                own_request.pk
-            ),
+            rf'<form id="form{own_request.pk}" method="post">(.*?)</form>',
             html,
             re.DOTALL,
         )
@@ -114,7 +112,7 @@ class PrimerValidatorUiActionTests(TestCase):
         self.assertIsNotNone(form_match)
         self.assertRegex(
             form_match.group(1),
-            r'name="delete"\s+value="{0}"'.format(own_request.pk),
+            rf'name="delete"\s+value="{own_request.pk}"',
         )
         self.assertNotIn("other-project", html)
 
@@ -174,7 +172,7 @@ class PrimerFinderLandingUiTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertContains(
                 response,
-                'href="{0}"'.format(reverse(create_route)),
+                f'href="{reverse(create_route)}"',
             )
 
     def test_create_forms_render_fields_and_submit_buttons(self):
@@ -239,7 +237,7 @@ class PrimerVerifierUiActionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="/reports/verifier.zip"')
-        self.assertContains(response, 'id="row{0}"'.format(complete.pk))
+        self.assertContains(response, f'id="row{complete.pk}"')
         self.assertContains(
             response,
             'href="{0}"'.format(
@@ -260,8 +258,8 @@ class PrimerVerifierUiActionTests(TestCase):
         )
         self.assertContains(response, "disabled> Processing")
         self.assertContains(response, "disabled> Unprocessed")
-        self.assertNotContains(response, 'id="form{0}"'.format(processing.pk))
-        self.assertContains(response, 'id="form{0}"'.format(unprocessed.pk))
+        self.assertNotContains(response, f'id="form{processing.pk}"')
+        self.assertContains(response, f'id="form{unprocessed.pk}"')
 
     def test_delete_form_contains_hidden_id_and_deletes_selected_request(self):
         own_request = PrimerVerifierRequest.objects.create(
@@ -280,9 +278,7 @@ class PrimerVerifierUiActionTests(TestCase):
         )
         html = response.content.decode(response.charset)
         form_match = re.search(
-            r'<form id="form{0}" method="post">(.*?)</form>'.format(
-                own_request.pk
-            ),
+            rf'<form id="form{own_request.pk}" method="post">(.*?)</form>',
             html,
             re.DOTALL,
         )
@@ -290,7 +286,7 @@ class PrimerVerifierUiActionTests(TestCase):
         self.assertIsNotNone(form_match)
         self.assertRegex(
             form_match.group(1),
-            r'name="delete"\s+value="{0}"'.format(own_request.pk),
+            rf'name="delete"\s+value="{own_request.pk}"',
         )
         self.assertNotIn("foreign-verifier", html)
 

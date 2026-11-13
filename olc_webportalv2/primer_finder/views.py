@@ -392,9 +392,9 @@ def primer_validator_request(request: HttpRequest) -> HttpResponse:
                     target.save(update_fields=['reference_fasta'])
 
                 primer_lines.extend((
-                    '>{0}-F'.format(target_name),
+                    f'>{target_name}-F',
                     row['forward_primer'],
-                    '>{0}-R'.format(target_name),
+                    f'>{target_name}-R',
                     row['reverse_primer'],
                 ))
                 primer_set = ValidatorPrimerSet.objects.create(

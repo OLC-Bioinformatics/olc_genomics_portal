@@ -130,10 +130,7 @@ class VerifierPrimerSet(models.Model):
     primer_name = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return 'primer-set-{primer_name}-{pk}'.format(
-            primer_name=self.primer_name,
-            pk=str(self.pk)
-        )
+        return f'primer-set-{self.primer_name}-{str(self.pk)}'
 
 
 class VerifierPrimers(models.Model):
@@ -148,8 +145,7 @@ class VerifierPrimers(models.Model):
     primer_sequence = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return 'primer-{header}-{pk}'.format(header=self.primer_header,
-                                             pk=str(self.pk))
+        return f'primer-{self.primer_header}-{str(self.pk)}'
 
     class Meta:
         """
@@ -171,10 +167,8 @@ class VerifierPanel(models.Model):
     panel = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return '{panel_type}-panel-{genus}-{pk}'\
-            .format(panel_type=self.panel,
-                    genus=self.genus,
-                    pk=str(self.pk))
+        return f'{self.panel}-panel-{self.genus}-{str(self.pk)}'\
+            
 
 
 class VerifierSEQID(models.Model):
@@ -226,11 +220,8 @@ class VerifierSEQID(models.Model):
     total_mismatch = models.CharField(max_length=64, blank=True, default=str())
 
     def __str__(self):
-        return 'sequence-details-{seqid}-{primer}-{panel}-{pk}'\
-            .format(seqid=self.seqid,
-                    panel=self.panel,
-                    primer=self.primer,
-                    pk=str(self.pk))
+        return f'sequence-details-{self.seqid}-{self.primer}-{self.panel}-{str(self.pk)}'\
+            
 
     class Meta:
         """
@@ -255,7 +246,7 @@ class VerifierAzureRequest(models.Model):
     exit_code_file = models.CharField(max_length=256, blank=True, null=True)
 
     def __str__(self):
-        return 'verifier-azure-request-{pk}'.format(pk=self.pk)
+        return f'verifier-azure-request-{self.pk}'
 
 
 class VerifierAnalysisTask(models.Model):
@@ -463,10 +454,7 @@ class ValidatorPrimerSet(models.Model):
     primer_name = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return 'primer-set-{primer_name}-{pk}'.format(
-            primer_name=self.primer_name,
-            pk=str(self.pk)
-        )
+        return f'primer-set-{self.primer_name}-{str(self.pk)}'
 
 
 class ValidatorPrimers(models.Model):
@@ -481,8 +469,7 @@ class ValidatorPrimers(models.Model):
     primer_sequence = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return 'primer-{header}-{pk}'.format(header=self.primer_header,
-                                             pk=str(self.pk))
+        return f'primer-{self.primer_header}-{str(self.pk)}'
 
     class Meta:
         """
@@ -504,10 +491,8 @@ class ValidatorPanel(models.Model):
     panel = models.CharField(max_length=64, blank=False)
 
     def __str__(self):
-        return '{panel_type}-panel-{genus}-{pk}' \
-            .format(panel_type=self.panel,
-                    genus=self.genus,
-                    pk=str(self.pk))
+        return f'{self.panel}-panel-{self.genus}-{str(self.pk)}' \
+            
 
 
 class ValidatorSEQID(models.Model):
@@ -576,10 +561,8 @@ class ValidatorSEQID(models.Model):
     )
 
     def __str__(self):
-        return 'sequence-details-{seqid}-{panel}-{pk}'\
-            .format(seqid=self.seqid,
-                    panel=self.panel,
-                    pk=str(self.pk))
+        return f'sequence-details-{self.seqid}-{self.panel}-{str(self.pk)}'\
+            
 
     class Meta:
         """
@@ -602,7 +585,7 @@ class PrimerValidatorAzureRequest(models.Model):
         db_table = 'primer_finder_validatorazurerequest'
 
     def __str__(self):
-        return 'validator-azure-request-{pk}'.format(pk=self.pk)
+        return f'validator-azure-request-{self.pk}'
 
 
 class PrimerFinderRequest(models.Model):

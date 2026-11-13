@@ -58,7 +58,7 @@ def upload_primers(
     run_folder = os.path.join(
         'olc_webportalv2',
         'media',
-        '{container_name}'.format(container_name=container_name)
+        f'{container_name}'
     )
 
     # Create the run folder as necessary
@@ -78,9 +78,8 @@ def upload_primers(
     try:
         primer_sequences = request.primer_sequences
     except AttributeError:
-        primer_sequences = '{forward_primer}\r\n{reverse_primer}\r\n'\
-            .format(forward_primer=request.forward_primer,
-                    reverse_primer=request.reverse_primer)
+        primer_sequences = f'{request.forward_primer}\r\n{request.reverse_primer}\r\n'\
+            
 
     # Write the bytes-encoded primer sequences to blob storage
     blob_client.upload_bytes(
@@ -111,7 +110,7 @@ def upload_probe(request: ValidatorRequest):
     # Add a header to the probe sequence
     probe_records = _validator_probe_records(request)
     probe_sequence = '\r\n'.join(
-        '>{0}\r\n{1}'.format(name, sequence)
+        f'>{name}\r\n{sequence}'
         for name, sequence in probe_records
     ) + '\r\n'
 
@@ -294,12 +293,12 @@ def retrieve_panel_seqids(
     """
     # Construct the path to the seqids.txt file
     seqids_file = os.path.join(
-        run_folder, "{genus}_seqids.txt".format(genus=genus)
+        run_folder, f"{genus}_seqids.txt"
     )
 
     # Check if the file exists
     if not os.path.exists(seqids_file):
-        print("Warning: {seqids} not found.".format(seqids=seqids_file))
+        print(f"Warning: {seqids_file} not found.")
         return seq_dictionary
 
     # Read the SEQIDs from the file
@@ -343,7 +342,7 @@ def populate_report(
         run_folder = os.path.join(
             'olc_webportalv2',
             'media',
-            '{container_name}'.format(container_name=container_name)
+            f'{container_name}'
         )
         report_folder = os.path.join(run_folder, 'reports')
 
@@ -523,12 +522,8 @@ def sort_mismatch_details(
                     and genus != 'total')
             ] + [location_data.get('combined', {})]:
                 for mismatch_type in ['forward', 'reverse']:
-                    mismatches_key = '{mismatch_type}_mismatches'.format(
-                        mismatch_type=mismatch_type
-                    )
-                    details_key = '{mismatch_type}_details'.format(
-                        mismatch_type=mismatch_type
-                    )
+                    mismatches_key = f'{mismatch_type}_mismatches'
+                    details_key = f'{mismatch_type}_details'
                     if isinstance(location, dict):
                         if mismatches_key in location:
                             try:
@@ -565,8 +560,7 @@ def create_blob_from_summary(
         container_name,
         os.path.join(
             'reports',
-            '{name}_summary_report.json'.format(
-                name=request.container_namer())),
+            f'{request.container_namer()}_summary_report.json'),
         request.summary.encode('utf-8'),
     )
 
@@ -617,8 +611,7 @@ def create_details(
     run_folder = os.path.join(
         'olc_webportalv2',
         'media',
-        '{container_name}'.format(
-            container_name=request.container_namer())
+        f'{request.container_namer()}'
     )
 
     seq_dict = {}
@@ -783,7 +776,7 @@ def create_details(
             if probe_total > 0:
                 try:
                     probe_percent = float(
-                        "{:.2f}".format(probe_positive / panel_total * 100)
+                        f"{probe_positive / panel_total * 100:.2f}"
                     )
                 except ZeroDivisionError:
                     probe_percent = 0.00
@@ -945,7 +938,7 @@ def find_shared_seqids(
             genera_str = ','.join(sorted(genera))
             shared_seqids[genera_str] = seqid
 
-    print('shared_seqids: {}'.format(shared_seqids))
+    print(f'shared_seqids: {shared_seqids}')
     return shared_seqids
 
 
@@ -1003,7 +996,7 @@ def process_sequence_data_from_report(
     #     mismatch_type='reverse'
     # )
     
-    print('process_sequence_data_from_report totals: {}'.format(totals))
+    print(f'process_sequence_data_from_report totals: {totals}')
     # print('process_sequence_data_from_report details: {}'.format(details))
     
     return totals, details, True
@@ -1108,10 +1101,9 @@ def update_mismatch_details_from_report(
     for mismatch_type in ['forward', 'reverse']:
         # Get mismatch details and count from sequence data
         mismatch_details = sequence_data.get(
-            '{mismatch_type}_mismatch_details'.format(
-                mismatch_type=mismatch_type))
+            f'{mismatch_type}_mismatch_details')
         mismatch = sequence_data.get(
-            '{mismatch_type}_mismatch'.format(mismatch_type=mismatch_type))
+            f'{mismatch_type}_mismatch')
 
         # If no mismatch details, continue
         if not mismatch_details:
@@ -1123,14 +1115,12 @@ def update_mismatch_details_from_report(
                 details[primer_name][panel_name][location] = {}
 
             # Initialize mismatch details dictionary if necessary
-            mismatch_details_key = '{mismatch_type}_details'.format(
-                mismatch_type=mismatch_type)
+            mismatch_details_key = f'{mismatch_type}_details'
             if mismatch_details_key not in details[primer_name][panel_name][location]:
                 details[primer_name][panel_name][location][mismatch_details_key] = {}
 
             # Initialize mismatch counts dictionary if necessary
-            mismatch_counts_key = '{mismatch_type}_mismatches'.format(
-                mismatch_type=mismatch_type)
+            mismatch_counts_key = f'{mismatch_type}_mismatches'
             if mismatch_counts_key not in details[primer_name][panel_name][location]:
                 details[primer_name][panel_name][location][mismatch_counts_key] = {}
 
@@ -1164,12 +1154,12 @@ def calculate_panel_percentage_from_counts(
     """
     try:
         percent = float(
-            '{:.2f}'.format(panel_positive / panel_total * 100))
+            f'{panel_positive / panel_total * 100:.2f}')
     except ZeroDivisionError:
         percent = 0.00
 
-    print("panel_total: {}".format(panel_total))
-    print("panel_positive: {}".format(panel_positive))
+    print(f"panel_total: {panel_total}")
+    print(f"panel_positive: {panel_positive}")
 
     return {
         'percent': percent,
@@ -1341,11 +1331,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             )
         )
 
-        return "Primer: {0}\n        {1}\nTarget: {2}".format(
-            primer_sequence,
-            match_line,
-            target_sequence,
-        )
+        return f"Primer: {primer_sequence}\n        {match_line}\nTarget: {target_sequence}"
 
     def _combined_pseudoalignment(
         forward_query,
@@ -1366,10 +1352,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             reverse_target,
             reverse_details,
         )
-        return "FORWARD\n{0}\n\nREVERSE\n{1}".format(
-            forward_alignment,
-            reverse_alignment,
-        )
+        return f"FORWARD\n{forward_alignment}\n\nREVERSE\n{reverse_alignment}"
 
     def _parse_mismatch(value):
         """Convert a mismatch value to an integer when possible."""
@@ -1399,7 +1382,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             stop = stop or model_object.stop_pos
 
         if start not in (None, "") and stop not in (None, ""):
-            return "{0}-{1}".format(start, stop)
+            return f"{start}-{stop}"
         return "ND"
 
     # Collect one worksheet entry per panel/SEQID and retain per-primer data.
@@ -1622,7 +1605,7 @@ def _upload_summary_excel(blob_client, container_name, request):
         for primer_name in primer_names:
             for field_label, field_name in primer_fields:
                 del field_name
-                headers.append("{0}  {1}".format(field_label, primer_name))
+                headers.append(f"{field_label}  {primer_name}")
 
         for column, header in enumerate(headers):
             worksheet.write(0, column, header, header_format)
@@ -1706,7 +1689,7 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         workbook.close()
 
-        blob_name = "reports/{0}_summary_report.xlsx".format(container_name)
+        blob_name = f"reports/{container_name}_summary_report.xlsx"
         blob_client.upload_file(
             container_name,
             blob_name,
@@ -1743,7 +1726,7 @@ def _archive_reports_and_upload(
 
     if not report_blobs:
         # Nothing to archive
-        return "{0}_reports.zip".format(container_name)
+        return f"{container_name}_reports.zip"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Local base "reports" dir to mirror the virtual folder
@@ -1759,7 +1742,7 @@ def _archive_reports_and_upload(
             blob_client.download_file(container_name, b.name, local_path)
 
         # Create zip archive that includes the "reports" folder at top-level
-        base_name = os.path.join(tmpdir, "{0}_reports".format(container_name))
+        base_name = os.path.join(tmpdir, f"{container_name}_reports")
         archive_path = shutil.make_archive(
             base_name=base_name, format="zip",
             root_dir=tmpdir,
@@ -1767,7 +1750,7 @@ def _archive_reports_and_upload(
         )
 
         # Upload to the container root
-        zip_blob_name = "{0}_reports.zip".format(container_name)
+        zip_blob_name = f"{container_name}_reports.zip"
         blob_client.upload_file(
             container_name,
             zip_blob_name,

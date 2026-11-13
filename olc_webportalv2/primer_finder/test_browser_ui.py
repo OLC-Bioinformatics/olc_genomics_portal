@@ -150,9 +150,9 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
                     status="Complete",
                 )
                 self.open_page(route)
-                row = self.browser.find_element(By.ID, "row{0}".format(project.pk))
+                row = self.browser.find_element(By.ID, f"row{project.pk}")
                 self.browser.find_element(
-                    By.ID, "btn{0}".format(project.pk)
+                    By.ID, f"btn{project.pk}"
                 ).click()
                 self.wait.until(
                     EC.visibility_of_element_located(
@@ -173,8 +173,8 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
         )
         self.authenticate_browser()
         self.open_page("primer_finder:primer_verifier_home")
-        row = self.browser.find_element(By.ID, "row{0}".format(project.pk))
-        self.browser.find_element(By.ID, "btn{0}".format(project.pk)).click()
+        row = self.browser.find_element(By.ID, f"row{project.pk}")
+        self.browser.find_element(By.ID, f"btn{project.pk}").click()
         self.wait.until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, ".swal2-popup"))
         )

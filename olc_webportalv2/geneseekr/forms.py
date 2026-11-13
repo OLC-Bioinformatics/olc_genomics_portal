@@ -265,7 +265,7 @@ class TreeForm(forms.Form):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
             raise forms.ValidationError('One or more of the SEQIDs you entered was not found in our database. '
-                                        'SEQIDs not found: {}'.format(bad_seqids))
+                                        f'SEQIDs not found: {bad_seqids}')
         # Diversitree strains can't be greater than total strains
         if number_diversitree_strains is not None:
             if len(seqid_list) + len(other_files) < number_diversitree_strains:

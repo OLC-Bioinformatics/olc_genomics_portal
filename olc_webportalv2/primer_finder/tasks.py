@@ -145,7 +145,7 @@ def _process_primer_request(*, request_model: Any, request_pk: int):
 
     # Set the path to the mounted container in the Azure Batch VM. The mount
     # remains in use for copying outputs back to Azure Blob Storage.
-    path = "$AZ_BATCH_NODE_MOUNTS_DIR/{container}".format(container=container_name)
+    path = f"$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}"
 
     # Create the PrimerValidator system call after all input blobs have been
     # prepared and their SAS URLs generated.
@@ -210,7 +210,7 @@ def _create_primer_cmd(
     max_amplicon_size = getattr(request, "max_amplicon_size", 1500)
     range_buffer = getattr(request, "range_buffer", 0)
 
-    run_directory = "/datadrive/{run_name}".format(run_name=container_name)
+    run_directory = f"/datadrive/{container_name}"
 
     inclusivity_directory = posixpath.join(run_directory, "inclusivity")
     exclusivity_directory = posixpath.join(run_directory, "exclusivity")
@@ -223,17 +223,13 @@ def _create_primer_cmd(
         "set -euo pipefail",
         # Define the output mount in the shell so that the environment
         # variable is expanded on the Batch node.
-        'mount_dir="{path}"'.format(path=path),
+        f'mount_dir="{path}"',
         # Remove local files from an earlier execution of this request.
         # This affects only the node's local SSD and does not delete blobs.
-        "rm -rf {run_directory}".format(run_directory=shlex.quote(run_directory)),
+        f"rm -rf {shlex.quote(run_directory)}",
         # Create local directories even when no inclusivity or exclusivity
         # panel was selected.
-        "mkdir -p {inclusivity} {exclusivity} {reports}".format(
-            inclusivity=shlex.quote(inclusivity_directory),
-            exclusivity=shlex.quote(exclusivity_directory),
-            reports=shlex.quote(reports_directory),
-        ),
+        f"mkdir -p {shlex.quote(inclusivity_directory)} {shlex.quote(exclusivity_directory)} {shlex.quote(reports_directory)}",
     ]
 
     # Download every required input blob directly to the node's local SSD.
@@ -245,13 +241,11 @@ def _create_primer_cmd(
 
         destination_path = posixpath.join(run_directory, blob_name)
         destination_directory = posixpath.dirname(destination_path)
-        partial_path = "{destination}.part".format(destination=destination_path)
+        partial_path = f"{destination_path}.part"
 
         command_parts.extend(
             [
-                "mkdir -p {directory}".format(
-                    directory=shlex.quote(destination_directory)
-                ),
+                f"mkdir -p {shlex.quote(destination_directory)}",
                 # Download to a temporary filename. Curl follows redirects,
                 # fails on HTTP errors, and retries transient failures.
                 (
@@ -262,23 +256,16 @@ def _create_primer_cmd(
                     "--retry-delay 10 "
                     "--connect-timeout 60 "
                     "--continue-at - "
-                    "--output {partial} "
-                    "{source}"
-                ).format(
-                    partial=shlex.quote(partial_path), source=shlex.quote(sas_url)
+                    f"--output {shlex.quote(partial_path)} "
+                    f"{shlex.quote(sas_url)}"
                 ),
                 # Verify that curl produced a nonempty local file before moving
                 # it to its final name.
-                "test -s {partial}".format(partial=shlex.quote(partial_path)),
+                f"test -s {shlex.quote(partial_path)}",
                 # Rename the completed download to its final name.
-                "mv {partial} {destination}".format(
-                    partial=shlex.quote(partial_path),
-                    destination=shlex.quote(destination_path),
-                ),
+                f"mv {shlex.quote(partial_path)} {shlex.quote(destination_path)}",
                 # Verify the final file as an additional safeguard.
-                "test -s {destination}".format(
-                    destination=shlex.quote(destination_path)
-                ),
+                f"test -s {shlex.quote(destination_path)}",
             ]
         )
 
@@ -286,19 +273,16 @@ def _create_primer_cmd(
     # passing a literal glob pattern to unzip when the directory is empty.
     command_parts.append(
         (
-            "for zip_file in {directory}/*.zip; do "
+            f"for zip_file in {shlex.quote(inclusivity_directory)}/*.zip; do "
             '[ -e "$zip_file" ] || continue; '
             'archive_name=$(basename "$zip_file" .zip); '
             'unzip -tq "$zip_file"; '
-            'unzip -n -q "$zip_file" -d {directory}; '
+            f'unzip -n -q "$zip_file" -d {shlex.quote(inclusivity_directory)}; '
             'unzip -Z1 "$zip_file" '
             '| sed -n "s/\\.fasta$//p" '
             "| sort -u "
-            '> {run_directory}/"${{archive_name}}"_seqids.txt; '
+            f'> {shlex.quote(run_directory)}/"${{archive_name}}"_seqids.txt; '
             "done"
-        ).format(
-            directory=shlex.quote(inclusivity_directory),
-            run_directory=shlex.quote(run_directory),
         )
     )
 
@@ -306,42 +290,30 @@ def _create_primer_cmd(
     # exclusivity directory to be empty.
     command_parts.append(
         (
-            "for zip_file in {directory}/*.zip; do "
+            f"for zip_file in {shlex.quote(exclusivity_directory)}/*.zip; do "
             '[ -e "$zip_file" ] || continue; '
             'archive_name=$(basename "$zip_file" .zip); '
             'unzip -tq "$zip_file"; '
-            'unzip -n -q "$zip_file" -d {directory}; '
+            f'unzip -n -q "$zip_file" -d {shlex.quote(exclusivity_directory)}; '
             'unzip -Z1 "$zip_file" '
             '| sed -n "s/\\.fasta$//p" '
             "| sort -u "
-            '> {run_directory}/"${{archive_name}}"_seqids.txt; '
+            f'> {shlex.quote(run_directory)}/"${{archive_name}}"_seqids.txt; '
             "done"
-        ).format(
-            directory=shlex.quote(exclusivity_directory),
-            run_directory=shlex.quote(run_directory),
         )
     )
 
     # Create the PrimerValidator system call using the supplied arguments.
     primer_command = (
         "primer_validator.py "
-        "-i {inclusivity} "
-        "-e {exclusivity} "
-        "-pf {primer_file_location} "
-        "-r {reports} "
-        "-m {mismatches} "
-        "-min {min_amplicon_size} "
-        "-max {max_amplicon_size} "
-        "-rb {range_buffer}"
-    ).format(
-        inclusivity=shlex.quote(inclusivity_directory),
-        exclusivity=shlex.quote(exclusivity_directory),
-        primer_file_location=shlex.quote(posixpath.join(run_directory, file_name)),
-        reports=shlex.quote(reports_directory),
-        mismatches=shlex.quote(str(mismatches)),
-        min_amplicon_size=shlex.quote(str(min_amplicon_size)),
-        max_amplicon_size=shlex.quote(str(max_amplicon_size)),
-        range_buffer=shlex.quote(str(range_buffer)),
+        f"-i {shlex.quote(inclusivity_directory)} "
+        f"-e {shlex.quote(exclusivity_directory)} "
+        f"-pf {shlex.quote(posixpath.join(run_directory, file_name))} "
+        f"-r {shlex.quote(reports_directory)} "
+        f"-m {shlex.quote(str(mismatches))} "
+        f"-min {shlex.quote(str(min_amplicon_size))} "
+        f"-max {shlex.quote(str(max_amplicon_size))} "
+        f"-rb {shlex.quote(str(range_buffer))}"
     )
 
     # If contig breaks are to be permitted, add the flag to the command.
@@ -357,9 +329,7 @@ def _create_primer_cmd(
 
     command_parts.append(primer_command)
     command_parts.append(
-        'cp -R {reports} "$mount_dir/"'.format(
-            reports=shlex.quote(reports_directory)
-        )
+        f'cp -R {shlex.quote(reports_directory)} "$mount_dir/"'
     )
 
     # Copy sequence-ID files back when at least one such file exists. The
@@ -367,11 +337,11 @@ def _create_primer_cmd(
     # when no panel ZIP archives were selected.
     command_parts.append(
         (
-            "for seqids_file in {run_directory}/*_seqids.txt; do "
+            f"for seqids_file in {shlex.quote(run_directory)}/*_seqids.txt; do "
             '[ -e "$seqids_file" ] || continue; '
             'cp "$seqids_file" "$mount_dir/"; '
             "done"
-        ).format(run_directory=shlex.quote(run_directory))
+        )
     )
 
     # Join every operation so that the task stops at the first failed
@@ -418,9 +388,7 @@ def _generate_input_blob_sas_urls(
         if not blob_client.object_exists(container_name, blob_name):
             raise FileNotFoundError(
                 "Required Batch input blob does not exist: "
-                "{container}/{blob}".format(
-                    container=container_name, blob=blob_name
-                )
+                f"{container_name}/{blob_name}"
             )
 
         sas_url = blob_client.create_transfer_url(
@@ -510,9 +478,7 @@ def _handle_panel_files(
         )
         if not selected_seqids:
             raise ValueError(
-                'No sequences were found for selected genus: {0}'.format(
-                    query_genus
-                )
+                f'No sequences were found for selected genus: {query_genus}'
             )
     if selected_seqids:
         benchmark_blob_names.extend(
@@ -591,9 +557,7 @@ def copy_benchmark_files(
     )
     if selected_archive is None:
         raise FileNotFoundError(
-            "No benchmark archive is available for dataset: {0}".format(
-                genus
-            )
+            f"No benchmark archive is available for dataset: {genus}"
         )
     source_blob_name = selected_archive['blob_name']
     destination_blob_name = posixpath.join(panel, source_blob_name)
@@ -632,13 +596,11 @@ def _copy_sequence_files(*, container_name: str, panel: str, seqids: list) -> li
     copied_names = []
 
     for seqid in sorted(set(seqids)):
-        source_name = '{0}.fasta'.format(seqid)
+        source_name = f'{seqid}.fasta'
         destination_name = posixpath.join(panel, source_name)
         if not blob_client.object_exists(source_container, source_name):
             raise FileNotFoundError(
-                'Selected SeqID is missing from processed-data: {0}'.format(
-                    seqid
-                )
+                f'Selected SeqID is missing from processed-data: {seqid}'
             )
 
         source_size = blob_client.get_object(
@@ -1098,7 +1060,7 @@ def _upload_validator_gene_targets(*, container_name, request):
         unique_id = identifier
         suffix = 2
         while unique_id in seen:
-            unique_id = '{0}__{1}'.format(identifier, suffix)
+            unique_id = f'{identifier}__{suffix}'
             suffix += 1
         seen.add(unique_id)
         records.append((unique_id, sequence))
@@ -1107,20 +1069,18 @@ def _upload_validator_gene_targets(*, container_name, request):
         sample__validator_request=request
     ).select_related('sample')
     for target in targets:
-        prefix = '{0}__{1}'.format(target.sample.name, target.name)
+        prefix = f'{target.sample.name}__{target.name}'
         pasted = (target.gene_sequence or '').strip()
         if pasted:
             if pasted.startswith('>'):
                 parsed = list(SeqIO.parse(StringIO(pasted), 'fasta'))
                 if not parsed:
                     raise ValueError(
-                        'Unable to parse FASTA for target {0}.'.format(
-                            target.name
-                        )
+                        f'Unable to parse FASTA for target {target.name}.'
                     )
                 for record in parsed:
                     add_record(
-                        '{0}__{1}'.format(prefix, record.id), str(record.seq)
+                        f'{prefix}__{record.id}', str(record.seq)
                     )
             else:
                 add_record(prefix, pasted)
@@ -1134,27 +1094,23 @@ def _upload_validator_gene_targets(*, container_name, request):
                     contents = contents.decode('utf-8')
             except (OSError, UnicodeDecodeError) as exc:
                 raise ValueError(
-                    'Unable to read FASTA for target {0}: {1}'.format(
-                        target.name, exc
-                    )
+                    f'Unable to read FASTA for target {target.name}: {exc}'
                 ) from exc
             finally:
                 reference_fasta.close()
             parsed = list(SeqIO.parse(StringIO(contents), 'fasta'))
             if not parsed:
                 raise ValueError(
-                    'Uploaded FASTA for target {0} contains no records.'.format(
-                        target.name
-                    )
+                    f'Uploaded FASTA for target {target.name} contains no records.'
                 )
             for record in parsed:
                 add_record(
-                    '{0}__{1}'.format(prefix, record.id), str(record.seq)
+                    f'{prefix}__{record.id}', str(record.seq)
                 )
 
     if not records:
         return False
-    contents = ''.join('>{0}\n{1}\n'.format(name, seq) for name, seq in records)
+    contents = ''.join(f'>{name}\n{seq}\n' for name, seq in records)
     storage = get_storage_client()
     storage.ensure_container(container_name)
     storage.upload_bytes(
@@ -1164,9 +1120,7 @@ def _upload_validator_gene_targets(*, container_name, request):
 
 
 def _submit_validator_task(*, request, analysis_task, command):
-    job_name = '{0}-{1}'.format(
-        request.container_namer(), analysis_task.task_type
-    )
+    job_name = f'{request.container_namer()}-{analysis_task.task_type}'
     try:
         submission = generic_api_submit(
             command=command,
@@ -1180,7 +1134,7 @@ def _submit_validator_task(*, request, analysis_task, command):
             or submission.get('status') != 'Success'
         ):
             raise RuntimeError(
-                'Validator Batch submission failed: {0}'.format(submission)
+                f'Validator Batch submission failed: {submission}'
             )
     except Exception as exc:
         analysis_task.status = 'error'
@@ -1201,10 +1155,10 @@ def _create_validator_primer_task_command(
     *, request, container_name, file_name, input_blobs
 ):
     return _create_primer_cmd(
-        container_name='{0}-primer'.format(container_name),
+        container_name=f'{container_name}-primer',
         file_name=file_name,
         input_blobs=input_blobs,
-        path='$AZ_BATCH_NODE_MOUNTS_DIR/{0}'.format(container_name),
+        path=f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}',
         request=request,
     )
 
@@ -1212,25 +1166,21 @@ def _create_validator_primer_task_command(
 def _create_validator_gene_task_command(
     *, request, container_name, input_blobs
 ):
-    job_name = '{0}-gene'.format(container_name)
-    run_directory = '/datadrive/{0}'.format(job_name)
-    mount_dir = '$AZ_BATCH_NODE_MOUNTS_DIR/{0}'.format(container_name)
+    job_name = f'{container_name}-gene'
+    run_directory = f'/datadrive/{job_name}'
+    mount_dir = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
     sequences = posixpath.join(run_directory, 'sequences')
     targets = posixpath.join(run_directory, 'targets')
     reports = posixpath.join(run_directory, 'reports')
     parts = [
         'source $CONDA/activate /envs/cowbat',
         'set -euo pipefail',
-        'mkdir -p {0} {1} {2}'.format(
-            shlex.quote(sequences), shlex.quote(targets), shlex.quote(reports)
-        ),
+        f'mkdir -p {shlex.quote(sequences)} {shlex.quote(targets)} {shlex.quote(reports)}',
     ]
     for item in input_blobs:
         destination = posixpath.join(run_directory, item['blob_name'])
         parts.extend((
-            'mkdir -p {0}'.format(
-                shlex.quote(posixpath.dirname(destination))
-            ),
+            f'mkdir -p {shlex.quote(posixpath.dirname(destination))}',
             'curl --fail --location --retry 5 --output {0} {1}'.format(
                 shlex.quote(destination), shlex.quote(item['sas_url'])
             ),
@@ -1240,13 +1190,9 @@ def _create_validator_gene_task_command(
         '[ -e "$archive" ] || continue; unzip -n -q "$archive" -d {1}; done'.format(
             shlex.quote(run_directory), shlex.quote(sequences)
         ),
-        'GeneSeekr blastn -u -s {0} -t {1} -r {2}'.format(
-            shlex.quote(sequences), shlex.quote(targets), shlex.quote(reports)
-        ),
-        'mkdir -p {0}/reports/gene'.format(mount_dir),
-        'cp -R {0}/. {1}/reports/gene/'.format(
-            shlex.quote(reports), mount_dir
-        ),
+        f'GeneSeekr blastn -u -s {shlex.quote(sequences)} -t {shlex.quote(targets)} -r {shlex.quote(reports)}',
+        f'mkdir -p {mount_dir}/reports/gene',
+        f'cp -R {shlex.quote(reports)}/. {mount_dir}/reports/gene/',
     ))
     return ' && '.join(parts)
 
@@ -1386,9 +1332,7 @@ def _process_validator_analysis_task(*, batch_client, task):
     successful = all(code == 0 for code in exit_codes)
     task.status = 'complete' if successful else 'error'
     task.error = '' if successful else (
-        'Batch task returned non-zero or missing exit codes: {0}'.format(
-            exit_codes
-        )
+        f'Batch task returned non-zero or missing exit codes: {exit_codes}'
     )
     task.save(update_fields=['status', 'error'])
 
@@ -1410,7 +1354,7 @@ def _process_validator_analysis_task(*, batch_client, task):
                 )
     except Exception as exc:
         request.status = 'Error'
-        request.errors = 'Validator report finalization failed: {0}'.format(exc)
+        request.errors = f'Validator report finalization failed: {exc}'
         request.save(update_fields=['status', 'errors'])
         logger.exception(
             'Unable to finalize Validator request %s', request.pk

@@ -1,8 +1,16 @@
+"""Django admin registrations for COWBAT models."""
+
 from django.contrib import admin
-from .models import DataFile, SequencingRun, InterOpFile, ResearchRun, SummaryMetadata, AzureTask
 
+from .models import (
+    AzureTask,
+    DataFile,
+    InterOpFile,
+    ResearchRun,
+    SequencingRun,
+    SummaryMetadata,
+)
 
-# Register your models here.
 admin.site.register(DataFile)
 admin.site.register(SequencingRun)
 admin.site.register(InterOpFile)

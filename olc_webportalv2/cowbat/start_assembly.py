@@ -1,24 +1,32 @@
-from argparse import ArgumentParser
-import django
-import os
+"""Command-line entry point for starting a COWBAT sequencing run."""
 
-parentdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import os
+from argparse import ArgumentParser
+
+import django
+
+parentdir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 os.sys.path.insert(0, parentdir)
 print(parentdir)
-os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.prod'
+os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.prod"
 django.setup()
 
-from olc_webportalv2.cowbat.tasks import run_cowbat_batch
+from olc_webportalv2.cowbat.tasks import run_cowbat_batch  # noqa: E402
 
 
 def cli():
+    """Parse a run primary key and submit its COWBAT task."""
     parser = ArgumentParser()
-    parser.add_argument('pk',
-                        type=int,
-                        help='The primary key of the COWBAT run that needs to be started')
+    parser.add_argument(
+        "pk",
+        type=int,
+        help="The primary key of the COWBAT run that needs to be started",
+    )
     arguments = parser.parse_args()
     run_cowbat_batch(arguments.pk)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

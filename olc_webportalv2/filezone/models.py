@@ -42,9 +42,7 @@ class Blobs(models.Model):
     # blob_md5 = models.CharField(max_length=24, blank=False)
 
     def __str__(self):
-        return '{container}/{blob_name}'.format(
-            container=self.container_name,
-            blob_name=self.blob_name)
+        return f'{self.container_name}/{self.blob_name}'
 
 
 class Regexes(models.Model):
@@ -85,6 +83,4 @@ class Regexes(models.Model):
     status = models.CharField(max_length=64, default='Unprocessed')
 
     def __str__(self):
-        return 'regexes-{pk}'.format(
-            pk=self.pk,
-        )
+        return f'regexes-{self.pk}'

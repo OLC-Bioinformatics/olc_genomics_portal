@@ -1,6 +1,4 @@
-"""
-URL configuration for the COWBAT app.
-"""
+"""URL configuration for the COWBAT app."""
 
 # Django imports
 from django.urls import path
@@ -97,7 +95,6 @@ urlpatterns = [
         views.upload_sequence_blob_sas,
         name="upload_sequence_blob_sas",
     ),
-
     # Views for autocompletion.
     path(
         _("run_autocompleter/"),

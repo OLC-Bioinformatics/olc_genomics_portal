@@ -25,19 +25,19 @@ def make_config_file(job_name, sequences, input_data_folder, output_data_folder,
     :return:
     """
     with open(config_file, 'w') as f:
-        f.write('JOB_NAME:={}\n'.format(job_name))
-        f.write('VM_SIZE:={}\n'.format(vm_size))
+        f.write(f'JOB_NAME:={job_name}\n')
+        f.write(f'VM_SIZE:={vm_size}\n')
         # Desired format:
         # CLOUDIN:=container_name/file1 container_name/file_2 sequences
         f.write('CLOUDIN:=')
         for seq in sequences:
-            f.write(os.path.join(job_name, '{seq} '.format(seq=seq)))
-        f.write('{}\n'.format(input_data_folder))
+            f.write(os.path.join(job_name, f'{seq} '))
+        f.write(f'{input_data_folder}\n')
         # Adding / to the end of output folder makes AzureBatch download recursively.
         if not output_data_folder.endswith('/'):
             output_data_folder += '/'
-        f.write('OUTPUT:={}\n'.format(output_data_folder))
-        f.write('COMMAND:={}\n'.format(command))
+        f.write(f'OUTPUT:={output_data_folder}\n')
+        f.write(f'COMMAND:={command}\n')
 
 
 @shared_task
@@ -46,7 +46,7 @@ def run_vir_typer(vir_typer_request_pk):
     vir_typer_samples = list(VirTyperRequest.objects.filter(project_name__pk=vir_typer_request_pk))
     try:
         container_name = VirTyperProject.objects.get(pk=vir_typer_request_pk).container_namer()
-        run_folder = os.path.join('olc_webportalv2/media/{cn}'.format(cn=container_name))
+        run_folder = os.path.join(f'olc_webportalv2/media/{container_name}')
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         sequences = list()
@@ -55,9 +55,9 @@ def run_vir_typer(vir_typer_request_pk):
             for vir_file in vir_files:
                 sequences.append(vir_file.sequence_file)
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
-        command = 'source $CONDA/activate /envs/virustyper && mkdir {cn}'.format(cn=container_name)
+        command = f'source $CONDA/activate /envs/virustyper && mkdir {container_name}'
         #
-        command += ' && virustyper -r {container_name} -s sequences/'.format(container_name=container_name)
+        command += f' && virustyper -r {container_name} -s sequences/'
         make_config_file(job_name=container_name,
                          sequences=sequences,
                          input_data_folder='sequences',
@@ -68,10 +68,8 @@ def run_vir_typer(vir_typer_request_pk):
         # Create the system call
         cmd = (
             'source $CONDA/activate /envs/virustyper && '
-            'virustyper -r $AZ_BATCH_NODE_MOUNTS_DIR/{container_name} '
-            '-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/'.format(
-                container_name=container_name
-            )
+            f'virustyper -r $AZ_BATCH_NODE_MOUNTS_DIR/{container_name} '
+            f'-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/'
         )
 
         # Submit the command to the AzureBatch service

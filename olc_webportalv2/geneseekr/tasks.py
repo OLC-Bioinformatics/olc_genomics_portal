@@ -59,7 +59,7 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
     # many (more than 50 or so), we need to download them, zip them, and then upload the zip folder.
     if other_input_files is None:
         other_input_files = list()
-    output_container_name = '{job_name}-input'.format(job_name=job_name)
+    output_container_name = f'{job_name}-input'
     if len(seqids) > 50:
         blob_file = zip_files(
             seqids=seqids,
@@ -67,8 +67,8 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
             container_name='processed-data'
         )
     with open(config_file, 'w') as f:
-        f.write('JOB_NAME:={}\n'.format(job_name))
-        f.write('VM_SIZE:={}\n'.format(vm_size))
+        f.write(f'JOB_NAME:={job_name}\n')
+        f.write(f'VM_SIZE:={vm_size}\n')
         if len(seqids) > 50:
             f.write('CLOUDIN:={archive}\n'.format(
                 archive=os.path.join(
@@ -87,8 +87,8 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
             if len(seqids) > 0:
                 f.write('CLOUDIN:=')
                 for seqid in seqids:
-                    f.write('processed-data/{}.fasta '.format(seqid))
-                f.write('{}\n'.format(input_data_folder))
+                    f.write(f'processed-data/{seqid}.fasta ')
+                f.write(f'{input_data_folder}\n')
         if benchmark:
             benchmark_lookup = {
                 'Listeria': 'listeria_benchmark.zip',
@@ -112,23 +112,23 @@ def make_config_file(seqids, job_name, input_data_folder, output_data_folder, co
         if len(other_input_files) > 0:
             f.write('CLOUDIN:=')
             for other_file in other_input_files:
-                f.write('{} '.format(other_file))
-            f.write('{}\n'.format(input_data_folder))
+                f.write(f'{other_file} ')
+            f.write(f'{input_data_folder}\n')
         if target:
-            f.write('CLOUDIN:={target_container}/query.fasta targets\n'.format(target_container=output_container_name))
+            f.write(f'CLOUDIN:={output_container_name}/query.fasta targets\n')
         # Adding / to the end of output folder makes AzureBatch download recursively.
         if not output_data_folder.endswith('/'):
             output_data_folder += '/'
-        f.write('OUTPUT:={}\n'.format(output_data_folder))
-        f.write('COMMAND:={}\n'.format(command))
+        f.write(f'OUTPUT:={output_data_folder}\n')
+        f.write(f'COMMAND:={command}\n')
 
 
 @shared_task
 def run_prokka(prokka_request_pk):
     prokka_request = ProkkaRequest.objects.get(pk=prokka_request_pk)
     try:
-        container_name = 'prokka-{}'.format(prokka_request_pk)
-        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        container_name = f'prokka-{prokka_request_pk}'
+        run_folder = os.path.join(f'olc_webportalv2/media/{container_name}')
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         # batch_config_file = os.path.join(run_folder, 'batch_config.txt')
@@ -179,13 +179,10 @@ def run_prokka(prokka_request_pk):
 
         for seqid in prokka_request.seqids:
             cmd += ' && prokka ' \
-                '--outdir $AZ_BATCH_NODE_MOUNTS_DIR/{container}/{seqid} ' \
-                '--prefix {seqid} ' \
-                '--cpus 8 sequences/{seqid}.fasta'\
-                .format(
-                    container=container_name,
-                    seqid=seqid
-                )
+                f'--outdir $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/{seqid} ' \
+                f'--prefix {seqid} ' \
+                f'--cpus 8 sequences/{seqid}.fasta'\
+                
         for other_file in prokka_request.other_input_files:
             cmd += ' && prokka ' \
                 '--outdir $AZ_BATCH_NODE_MOUNTS_DIR/{fasta} ' \
@@ -203,7 +200,7 @@ def run_prokka(prokka_request_pk):
         # Get all the SEQIDs into the input_file_pattern
         for seqid in prokka_request.seqids:
             input_file_pattern.append(
-                'processed-data/{}.fasta '.format(seqid)
+                f'processed-data/{seqid}.fasta '
             )
 
         # Submit the request to the AzureBatch service
@@ -234,15 +231,15 @@ def run_prokka(prokka_request_pk):
 def run_sistr(sistr_request_pk):
     sistr_request = 'asdf'  # TODO: Make a sistr request object in models.
     try:
-        container_name = 'sistr-{}'.format(sistr_request_pk)
-        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        container_name = f'sistr-{sistr_request_pk}'
+        run_folder = os.path.join(f'olc_webportalv2/media/{container_name}')
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         batch_config_file = os.path.join(run_folder, 'batch_config.txt')
         # TODO: This doesn't actually work right now - there's a .logfile attribute that doesn't get instantiated
         # in the command line call, so crash. Need to update OLCTools
-        command = 'source $CONDA/activate /envs/cowbat && python -m spadespipeline.sistr -s sequences {container_name}' \
-                  ' && mv sequences {container_name}'.format(container_name=container_name)
+        command = f'source $CONDA/activate /envs/cowbat && python -m spadespipeline.sistr -s sequences {container_name}' \
+                  f' && mv sequences {container_name}'
         make_config_file(seqids=sistr_request.seqids,
                          job_name=container_name,
                          input_data_folder='sequences',
@@ -255,7 +252,7 @@ def run_sistr(sistr_request_pk):
         #                 '-o olc_webportalv2/media'.format(run_folder=run_folder), shell=True)
         azure_task = AzureBatch()
         azure_task.main(
-            configuration_file='{run_folder}/batch_config.txt'.format(run_folder=run_folder),
+            configuration_file=f'{run_folder}/batch_config.txt',
             job_name=container_name,
             output_dir='olc_webportalv2/media',
             settings=settings,
@@ -280,8 +277,8 @@ def run_sistr(sistr_request_pk):
 def run_amr_summary(amr_summary_pk):
     amr_summary_request = AMRSummary.objects.get(pk=amr_summary_pk)
     try:
-        container_name = 'amrsummary-{}'.format(amr_summary_pk)
-        run_folder = os.path.join('olc_webportalv2/media/{}'.format(container_name))
+        container_name = f'amrsummary-{amr_summary_pk}'
+        run_folder = os.path.join(f'olc_webportalv2/media/{container_name}')
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
         # batch_config_file = os.path.join(run_folder, 'batch_config.txt')
@@ -354,7 +351,7 @@ def run_amr_summary(amr_summary_pk):
         # Get all the SEQIDs into the input_file_pattern
         for seqid in amr_summary_request.seqids:
             input_file_pattern.append(
-                'processed-data/{}.fasta '.format(seqid)
+                f'processed-data/{seqid}.fasta '
             )
 
         # Submit the command to the AzureBatch service
@@ -382,11 +379,11 @@ def run_amr_summary(amr_summary_pk):
 def run_mash(tree_request_pk):
     tree_request = Tree.objects.get(pk=tree_request_pk)
     try:
-        container_name = 'tree-{}'.format(tree_request_pk)
+        container_name = f'tree-{tree_request_pk}'
         run_folder = os.path.join(
             'olc_webportalv2',
             'media',
-            '{container}'.format(container=container_name)
+            f'{container_name}'
         )
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
@@ -433,15 +430,11 @@ def run_mash(tree_request_pk):
 
         # Create the command for the batch request
         cmd = 'source $CONDA/activate /envs/mashtree && ' \
-              'mkdir $AZ_BATCH_NODE_MOUNTS_DIR/{container}/{outdir} && ' \
-              'mashtree --numcpus {cpus} ' \
-              '$AZ_BATCH_NODE_MOUNTS_DIR/{container}/sequences/*.fasta > ' \
-              '$AZ_BATCH_NODE_MOUNTS_DIR/{container}/{outdir}/mash.tree' \
-              .format(
-                  container=container_name,
-                  outdir=container_name,
-                  cpus=cpus
-              )
+              f'mkdir $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/{container_name} && ' \
+              f'mashtree --numcpus {cpus} ' \
+              f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/*.fasta > ' \
+              f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/{container_name}/mash.tree' \
+              
 
         # Initialise a list to store the SEQID patterns
         input_file_pattern = []
@@ -449,7 +442,7 @@ def run_mash(tree_request_pk):
         # Get all the SEQIDs into the input_file_pattern
         for seqid in tree_request.seqids:
             input_file_pattern.append(
-                ['processed-data/{sid}.fasta'.format(sid=seqid), 'sequences']
+                [f'processed-data/{seqid}.fasta', 'sequences']
             )
 
         # Submit the command to the AzureBatch service
@@ -574,10 +567,7 @@ def _create_benchmark_download(*, benchmark_name, expiry_hours=12):
 
     if not blob_client.object_exists(BENCHMARK_CONTAINER_NAME, blob_name):
         raise FileNotFoundError(
-            "Benchmark archive does not exist: {0}/{1}".format(
-                BENCHMARK_CONTAINER_NAME,
-                blob_name,
-            )
+            f"Benchmark archive does not exist: {BENCHMARK_CONTAINER_NAME}/{blob_name}"
         )
 
     content_length = blob_client.get_object(
@@ -624,16 +614,16 @@ def _create_benchmark_geneseekr_command(*, benchmark_download, container_name):
         local_run,
         benchmark_download["blob_name"],
     )
-    partial_archive = "{0}.part".format(local_archive)
+    partial_archive = f"{local_archive}.part"
 
     benchmark_name = benchmark_download["benchmark_name"]
-    seqids_name = "{0}_seqids.txt".format(benchmark_name)
+    seqids_name = f"{benchmark_name}_seqids.txt"
     local_seqids = posixpath.join(local_run, seqids_name)
 
-    mount_dir = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(container_name)
-    target_dir = "{0}/targets".format(mount_dir)
-    mounted_reports = "{0}/reports".format(mount_dir)
-    mounted_seqids = "{0}/{1}".format(mount_dir, seqids_name)
+    mount_dir = f"$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}"
+    target_dir = f"{mount_dir}/targets"
+    mounted_reports = f"{mount_dir}/reports"
+    mounted_seqids = f"{mount_dir}/{seqids_name}"
 
     expected_size = str(benchmark_download["content_length"])
 
@@ -643,11 +633,8 @@ def _create_benchmark_geneseekr_command(*, benchmark_download, container_name):
         "source $CONDA/activate /envs/cowbat",
         "set -euo pipefail",
         # Remove files left by an earlier attempt on the same Batch node.
-        "rm -rf {0}".format(shlex.quote(local_run)),
-        "mkdir -p {0} {1}".format(
-            shlex.quote(local_sequences),
-            shlex.quote(local_reports),
-        ),
+        f"rm -rf {shlex.quote(local_run)}",
+        f"mkdir -p {shlex.quote(local_sequences)} {shlex.quote(local_reports)}",
         # Download to a partial path so an interrupted archive is never used.
         (
             "curl --fail --location --retry 5 --retry-delay 10 "
@@ -657,59 +644,35 @@ def _create_benchmark_geneseekr_command(*, benchmark_download, container_name):
             partial=shlex.quote(partial_archive),
             source=shlex.quote(benchmark_download["sas_url"]),
         ),
-        "test -s {0}".format(shlex.quote(partial_archive)),
+        f"test -s {shlex.quote(partial_archive)}",
         # Validate the exact size without nested shell command substitution.
         (
-            "find {archive} -maxdepth 0 -type f -size {size}c -print -quit | grep -q ."
-        ).format(
-            archive=shlex.quote(partial_archive),
-            size=shlex.quote(expected_size),
+            f"find {shlex.quote(partial_archive)} -maxdepth 0 -type f -size {shlex.quote(expected_size)}c -print -quit | grep -q ."
         ),
-        "mv {0} {1}".format(
-            shlex.quote(partial_archive),
-            shlex.quote(local_archive),
-        ),
-        "unzip -tq {0}".format(shlex.quote(local_archive)),
-        "unzip -q {archive} -d {destination}".format(
-            archive=shlex.quote(local_archive),
-            destination=shlex.quote(local_sequences),
-        ),
-        "rm {0}".format(shlex.quote(local_archive)),
+        f"mv {shlex.quote(partial_archive)} {shlex.quote(local_archive)}",
+        f"unzip -tq {shlex.quote(local_archive)}",
+        f"unzip -q {shlex.quote(local_archive)} -d {shlex.quote(local_sequences)}",
+        f"rm {shlex.quote(local_archive)}",
         # The benchmark contract requires root-level .fasta files.
         (
-            "find {directory} -maxdepth 1 -type f -name '*.fasta' "
+            f"find {shlex.quote(local_sequences)} -maxdepth 1 -type f -name '*.fasta' "
             "-print -quit | grep -q ."
-        ).format(directory=shlex.quote(local_sequences)),
+        ),
         # Convert root-level FASTA basenames to sorted, unique sequence IDs.
         # The output filename includes the canonical benchmark identifier.
         (
-            "find {directory} -maxdepth 1 -type f -name '*.fasta' "
-            "-printf '%f\\n' | sed 's/\\.fasta$//' | sort -u > {output}"
-        ).format(
-            directory=shlex.quote(local_sequences),
-            output=shlex.quote(local_seqids),
+            f"find {shlex.quote(local_sequences)} -maxdepth 1 -type f -name '*.fasta' "
+            f"-printf '%f\\n' | sed 's/\\.fasta$//' | sort -u > {shlex.quote(local_seqids)}"
         ),
-        "test -s {0}".format(shlex.quote(local_seqids)),
-        ("GeneSeekr blastn -u -s {sequences} -t {targets} -r {reports}").format(
-            sequences=shlex.quote(local_sequences),
-            targets=target_dir,
-            reports=shlex.quote(local_reports),
-        ),
+        f"test -s {shlex.quote(local_seqids)}",
+        (f"GeneSeekr blastn -u -s {shlex.quote(local_sequences)} -t {target_dir} -r {shlex.quote(local_reports)}"),
         # Do not report success unless GeneSeekr created at least one result.
-        ("find {directory} -type f -print -quit | grep -q .").format(
-            directory=shlex.quote(local_reports)
-        ),
+        (f"find {shlex.quote(local_reports)} -type f -print -quit | grep -q ."),
         # Replace only persistent outputs belonging to this analysis.
-        "rm -rf {0}".format(mounted_reports),
-        "rm -f {0}".format(mounted_seqids),
-        "cp -R {0} {1}/".format(
-            shlex.quote(local_reports),
-            mount_dir,
-        ),
-        "cp {0} {1}/".format(
-            shlex.quote(local_seqids),
-            mount_dir,
-        ),
+        f"rm -rf {mounted_reports}",
+        f"rm -f {mounted_seqids}",
+        f"cp -R {shlex.quote(local_reports)} {mount_dir}/",
+        f"cp {shlex.quote(local_seqids)} {mount_dir}/",
     ]
 
     return " && ".join(command_parts)
@@ -730,7 +693,7 @@ def run_geneseekr(geneseekr_request_pk):
     geneseekr_request = GeneSeekrRequest.objects.get(pk=geneseekr_request_pk)
 
     try:
-        container_name = "geneseekr-{0}".format(geneseekr_request_pk)
+        container_name = f"geneseekr-{geneseekr_request_pk}"
         run_folder = os.path.join(
             "olc_webportalv2",
             "media",
@@ -774,7 +737,7 @@ def run_geneseekr(geneseekr_request_pk):
                 container_name=container_name,
             )
         else:
-            path = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(container_name)
+            path = f"$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}"
             cmd = (
                 "export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && "
                 "source $CONDA/activate /envs/cowbat && "
@@ -786,22 +749,22 @@ def run_geneseekr(geneseekr_request_pk):
                     target_folder=container_name,
                     container_name="processed-data",
                 )
-                input_file_pattern.append("temporary-storage/{0}".format(blob_file))
+                input_file_pattern.append(f"temporary-storage/{blob_file}")
                 cmd += (
-                    "mkdir -p {path}/sequences && "
-                    "unzip {path}/{blob} -d {path}/sequences && "
-                    "rm {path}/{blob} && "
-                ).format(path=path, blob=blob_file)
+                    f"mkdir -p {path}/sequences && "
+                    f"unzip {path}/{blob_file} -d {path}/sequences && "
+                    f"rm {path}/{blob_file} && "
+                )
             else:
                 for seqid in geneseekr_request.seqids:
                     input_file_pattern.append(
-                        "processed-data/{0}.fasta sequences".format(seqid)
+                        f"processed-data/{seqid}.fasta sequences"
                     )
 
             cmd += (
-                "GeneSeekr blastn -u -s {path}/sequences "
-                "-t {path}/targets -r {path}/reports"
-            ).format(path=path)
+                f"GeneSeekr blastn -u -s {path}/sequences "
+                f"-t {path}/targets -r {path}/reports"
+            )
 
         generic_api_submit(
             command=cmd,
@@ -826,7 +789,7 @@ def run_geneseekr(geneseekr_request_pk):
 def run_nearest_neighbors(nearest_neighbor_pk):
     nearest_neighbor_request = NearestNeighbors.objects.get(pk=nearest_neighbor_pk)
     try:
-        work_dir = 'olc_webportalv2/media/neighbor-{}'.format(nearest_neighbor_pk)
+        work_dir = f'olc_webportalv2/media/neighbor-{nearest_neighbor_pk}'
         if not os.path.isdir(work_dir):
             os.makedirs(work_dir)
         seqids_in_metadata = list()
@@ -846,7 +809,7 @@ def run_nearest_neighbors(nearest_neighbor_pk):
         else:
             fasta_file = os.path.join(work_dir, nearest_neighbor_request.uploaded_file_name)
             blob_client.download_file(
-                'neighbor-{}'.format(nearest_neighbor_request.pk),
+                f'neighbor-{nearest_neighbor_request.pk}',
                 nearest_neighbor_request.uploaded_file_name,
                 fasta_file,
             )
@@ -861,7 +824,7 @@ def run_nearest_neighbors(nearest_neighbor_pk):
         shutil.make_archive(work_dir, 'zip', work_dir)
         sas_url = generate_download_link(
             blob_service_client=blob_client,
-            container_name='neighbor-output-{}'.format(nearest_neighbor_pk),
+            container_name=f'neighbor-output-{nearest_neighbor_pk}',
             output_zipfile=work_dir + '.zip',
             expiry=8,
         )

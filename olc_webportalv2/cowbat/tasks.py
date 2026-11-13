@@ -4,91 +4,104 @@ Collection of tasks for the COWBAT app
 
 # Standard library imports
 import csv
-from datetime import (
-    datetime,
-    timezone,
-)
-from decimal import Decimal
-from glob import glob
-from io import StringIO
 import fnmatch
+import hashlib
 import json
 import logging
 import os
 import re
 import shutil
+from datetime import (
+    datetime,
+    timedelta,
+    timezone,
+)
+from decimal import Decimal
+from glob import glob
+from io import StringIO
+
+import ete3
+import pandas as pd
+
+# Third-party library imports
+from Bio import SeqIO
+from celery import shared_task
 
 # Django-related imports
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-
-# Third-party library imports
-from Bio import SeqIO
-from celery import shared_task
-import ete3
-import pandas as pd
+from django.db.models import Q
+from django.utils import timezone as django_timezone
 from sentry_sdk import capture_exception
 from strainchoosr import strainchoosr
 
 # Local imports
 from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
-from olc_webportalv2.common.methods import (
-    create_batch_client,
-    generic_api_submit,
-    send_email,
-)
 from olc_webportalv2.common.batch_client import (
     BatchServiceClient,
     BatchServiceError,
 )
 from olc_webportalv2.common.batch_recovery import retry_failed_pool_resize
-from olc_webportalv2.cowbat.models import (
-    SequencingRun,
-    AzureTask,
-    SummaryMetadata,
+from olc_webportalv2.common.benchmarks import normalise_benchmark_name
+from olc_webportalv2.common.methods import (
+    create_batch_client,
+    generic_api_submit,
+    send_email,
 )
 from olc_webportalv2.common.research_storage import get_research_storage
+from olc_webportalv2.common.storage_client import (
+    StorageServiceError,
+    get_storage_client,
+)
+from olc_webportalv2.cowbat.models import (
+    AzureTask,
+    NanoporeFile,
+    NanoporeManifest,
+    NanoporeProcessingBatch,
+    SequencingRun,
+    SummaryMetadata,
+)
 from olc_webportalv2.cowsnphr.models import COWSNPhRRequest
 from olc_webportalv2.cowsnphr.tasks import (
     check_cowsnphr_tasks,
 )
 from olc_webportalv2.filezone.models import Regexes
 from olc_webportalv2.geneseekr.models import (
-    TreeAzureRequest,
-    Tree,
-    AMRSummary,
     AMRAzureRequest,
     AMRDetail,
-    ProkkaRequest,
-    ProkkaAzureRequest,
-    GeneSeekrRequest,
-    GeneSeekrDetail,
+    AMRSummary,
     GeneSeekrAzureRequest,
+    GeneSeekrDetail,
+    GeneSeekrRequest,
     NearestNeighbors,
+    ProkkaAzureRequest,
+    ProkkaRequest,
     TopBlastHit,
+    Tree,
+    TreeAzureRequest,
 )
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
     ValidatorRequest,
 )
 from olc_webportalv2.primer_finder.tasks import (
-    check_verifier_tasks,
     check_validator_tasks,
+    check_verifier_tasks,
 )
 from olc_webportalv2.vir_typer.models import (
     VirTyperAzureRequest,
     VirTyperProject,
 )
-from olc_webportalv2.common.storage_client import (
-    StorageServiceError,
-    get_storage_client,
-)
+
+logger = logging.getLogger(__name__)
 
 
 def create_container(container_name, blob_service_client=None):
-    (blob_service_client or get_storage_client()).ensure_container(container_name)
+    (blob_service_client or get_storage_client()).ensure_container(
+        container_name
+    )
 
 
 def upload_blob_from_path(
@@ -135,41 +148,39 @@ def generate_download_link(
         expires_in_seconds=expiry * 24 * 60 * 60,
     )
 
-import hashlib
-from django.db import transaction
-from django.db.models import Q
-from django.utils import timezone as django_timezone
-from olc_webportalv2.cowbat.models import NanoporeFile, NanoporeManifest, NanoporeProcessingBatch
-
 
 @shared_task
 def rename_research_container_task(sequencing_run_pk, old_name, new_name):
     """Move a research run's blobs and update its database record."""
     sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
-    sequencing_run.rename_status = 'running'
+    sequencing_run.rename_status = "running"
     sequencing_run.rename_target = new_name
-    sequencing_run.save(update_fields=['rename_status', 'rename_target'])
+    sequencing_run.save(update_fields=["rename_status", "rename_target"])
 
     try:
         get_research_storage().rename_container(old_name, new_name)
     except Exception as exc:
-        sequencing_run.rename_status = 'failed'
+        sequencing_run.rename_status = "failed"
         sequencing_run.errors = (sequencing_run.errors or []) + [
-            'Rename failed: {0}'.format(str(exc)[:220])
+            f"Rename failed: {str(exc)[:220]}"
         ]
-        sequencing_run.save(update_fields=['rename_status', 'rename_target', 'errors'])
+        sequencing_run.save(
+            update_fields=["rename_status", "rename_target", "errors"]
+        )
         raise
 
     sequencing_run.run_name = new_name
     sequencing_run.container = new_name
-    sequencing_run.rename_status = 'complete'
+    sequencing_run.rename_status = "complete"
     sequencing_run.rename_target = new_name
-    sequencing_run.save(update_fields=[
-        'run_name',
-        'container',
-        'rename_status',
-        'rename_target',
-    ])
+    sequencing_run.save(
+        update_fields=[
+            "run_name",
+            "container",
+            "rename_status",
+            "rename_target",
+        ]
+    )
     return new_name
 
 
@@ -188,24 +199,22 @@ def run_cowbat_batch(
     """
     # Get the sequencing run object
     sequencing_run = SequencingRun.objects.get(pk=sequencing_run_pk)
-    run_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
-        str(sequencing_run)
-    )
+    run_folder = os.path.join("olc_webportalv2", "media", str(sequencing_run))
 
     # Set the name of the container
-    sequencing_run.container = str(sequencing_run).lower().replace('_', '-')
+    sequencing_run.container = str(sequencing_run).lower().replace("_", "-")
     if sequencing_run.task_started_at is None:
         sequencing_run.task_started_at = datetime.now(timezone.utc)
-    sequencing_run.task_queue = 'cowbat'
-    sequencing_run.workflow_state = 'uploading'
-    sequencing_run.save(update_fields=[
-        'container',
-        'task_started_at',
-        'task_queue',
-        'workflow_state',
-    ])
+    sequencing_run.task_queue = "cowbat"
+    sequencing_run.workflow_state = "uploading"
+    sequencing_run.save(
+        update_fields=[
+            "container",
+            "task_started_at",
+            "task_queue",
+            "workflow_state",
+        ]
+    )
 
     try:
         blob_service = get_storage_client()
@@ -214,76 +223,75 @@ def run_cowbat_batch(
         # 'UploadError'
         if not os.path.isdir(run_folder):
             os.makedirs(run_folder)
-        container_name = sequencing_run.run_name.lower().replace('_', '-')
+        container_name = sequencing_run.run_name.lower().replace("_", "-")
         blob_filenames = []
         blobs = blob_service.list_objects(container_name)
         for blob in blobs:
             blob_filenames.append(blob.name)
         all_files_present = True
         for seqid in sequencing_run.seqids:
-            forward_reads = fnmatch.filter(blob_filenames, seqid + '*_R1*')
-            reverse_reads = fnmatch.filter(blob_filenames, seqid + '*_R2*')
+            forward_reads = fnmatch.filter(blob_filenames, seqid + "*_R1*")
+            reverse_reads = fnmatch.filter(blob_filenames, seqid + "*_R2*")
             if len(forward_reads) != 1 or len(reverse_reads) != 1:
                 all_files_present = False
 
         if all_files_present is False:
-            sequencing_run.status = 'UploadError'
-            sequencing_run.workflow_state = 'error'
-            sequencing_run.failure_stage = 'upload'
+            sequencing_run.status = "UploadError"
+            sequencing_run.workflow_state = "error"
+            sequencing_run.failure_stage = "upload"
             sequencing_run.task_finished_at = datetime.now(timezone.utc)
-            sequencing_run.save(update_fields=[
-                'status',
-                'workflow_state',
-                'failure_stage',
-                'task_finished_at',
-            ])
+            sequencing_run.save(
+                update_fields=[
+                    "status",
+                    "workflow_state",
+                    "failure_stage",
+                    "task_finished_at",
+                ]
+            )
             return
 
         # Process NextSeq runs differently
         if sequencing_run.nextseq:
-            print('Processing NextSeq')
+            print("Processing NextSeq")
             nextseq_run(
                 blob_service_client=blob_service,
                 blob_files=blob_filenames,
                 container_name=container_name,
-                sequencing_run=sequencing_run
+                sequencing_run=sequencing_run,
             )
             return
 
         # Submit the batch API request
-        submit_batch(
-            run_folder=run_folder,
-            sequencing_run=sequencing_run
-        )
+        submit_batch(run_folder=run_folder, sequencing_run=sequencing_run)
     except Exception as exc:
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
-        fh = logging.FileHandler(os.path.join(run_folder, 'error'))
+        fh = logging.FileHandler(os.path.join(run_folder, "error"))
         fh.setLevel(logging.INFO)
         logger.addHandler(fh)
         logger.exception(exc)
         capture_exception(exc)
-        sequencing_run.status = 'Error'
-        sequencing_run.workflow_state = 'error'
-        sequencing_run.failure_stage = 'submission'
+        sequencing_run.status = "Error"
+        sequencing_run.workflow_state = "error"
+        sequencing_run.failure_stage = "submission"
         sequencing_run.task_finished_at = datetime.now(timezone.utc)
-        sequencing_run.errors.append(
-            f'Cowbat submission failed: {exc}'
+        sequencing_run.errors.append(f"Cowbat submission failed: {exc}")
+        sequencing_run.save(
+            update_fields=[
+                "status",
+                "workflow_state",
+                "failure_stage",
+                "task_finished_at",
+                "errors",
+            ]
         )
-        sequencing_run.save(update_fields=[
-            'status',
-            'workflow_state',
-            'failure_stage',
-            'task_finished_at',
-            'errors',
-        ])
 
 
 def submit_batch(
-        run_folder: str,
-        sequencing_run: SequencingRun,
-        vm_size: str = 'Standard_D32s_v3'
-        ) -> None:
+    run_folder: str,
+    sequencing_run: SequencingRun,
+    vm_size: str = "Standard_D32s_v3",
+) -> None:
     """
     Submits a batch job to Azure Batch service and creates an AzureTask object
     to track the job.
@@ -306,57 +314,53 @@ def submit_batch(
     """
 
     # Create a variable to store the extremely long path information
-    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{sequencing_run.container}'
+    path = f"$AZ_BATCH_NODE_MOUNTS_DIR/{sequencing_run.container}"
 
     # Define the system call
     command = (
-        'source $CONDA/activate /envs/cowbat && '
-        'mkdir -p /datadrive/{run_name} && '
-        'cp -R {path} /datadrive/ && '
-        'assembly_pipeline.py '
-        '-s /datadrive/{run_name} '
-        '-r /databases/0.5.0.23'.format(
-            path=path,
-            run_name=sequencing_run.container
-        )
+        "source $CONDA/activate /envs/cowbat && "
+        f"mkdir -p /datadrive/{sequencing_run.container} && "
+        f"cp -R {path} /datadrive/ && "
+        "assembly_pipeline.py "
+        f"-s /datadrive/{sequencing_run.container} "
+        "-r /databases/0.5.0.23"
     )
 
     # Add basic assembly and preprocess arguments as required
     if sequencing_run.basic_assembly:
-        command += ' -b'
+        command += " -b"
     if sequencing_run.preprocess:
-        command += ' -p'
+        command += " -p"
 
     # Update the command with the final steps to copy the files back from the
     # datadrive to the container
     command += (
-        f'; pipeline_status=$?; '
-        f'rsync -a /datadrive/{sequencing_run.container}/ '
-        f'$AZ_BATCH_NODE_MOUNTS_DIR/{sequencing_run.container}/; '
-        f'rsync_status=$?; '
-        f'sync; '
-        f'rm -rf /datadrive/{sequencing_run.container}; '
-        f'if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; '
-        f'if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; '
-        f'exit 0'
+        f"; pipeline_status=$?; "
+        f"rsync -a /datadrive/{sequencing_run.container}/ "
+        f"$AZ_BATCH_NODE_MOUNTS_DIR/{sequencing_run.container}/; "
+        f"rsync_status=$?; "
+        f"sync; "
+        f"rm -rf /datadrive/{sequencing_run.container}; "
+        f"if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; "
+        f"if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; "
+        f"exit 0"
     )
-
 
     # Submit the API call
     cowbat_api_submit(
         command=command,
         run_folder=run_folder,
         sequencing_run=sequencing_run,
-        vm_size=vm_size
+        vm_size=vm_size,
     )
 
 
 def cowbat_api_submit(
-        command: str,
-        run_folder: str,
-        sequencing_run: SequencingRun,
-        vm_size: str,
-        ) -> None:
+    command: str,
+    run_folder: str,
+    sequencing_run: SequencingRun,
+    vm_size: str,
+) -> None:
     """
     Submits a job to the Batch API.
 
@@ -383,26 +387,26 @@ def cowbat_api_submit(
         vm_size=vm_size,
         input_file_pattern=None,
         analysis_type="COWBAT",
-        unique_id='FoodPort'
+        unique_id="FoodPort",
     )
 
     # Print the data
-    print('Batch API response', response_data)
+    print("Batch API response", response_data)
 
     # Update the model with the response data
-    sequencing_run.pool_id = response_data.get('pool_id', '')
-    sequencing_run.job_id = response_data.get('job_id', '')
+    sequencing_run.pool_id = response_data.get("pool_id", "")
+    sequencing_run.job_id = response_data.get("job_id", "")
 
     # This is only taking the first entry from the tasks, as there should
     # only be one
-    tasks = response_data.get('tasks', [])
-    sequencing_run.task_id = tasks[0] if tasks else ''
-    sequencing_run.batch_submit_status = response_data.get('status', '')
-    sequencing_run.batch_submit_errors = response_data.get('error', '')
-    sequencing_run.status = 'Processing'
-    sequencing_run.workflow_state = 'submitted'
-    sequencing_run.failure_stage = ''
-    sequencing_run.task_queue = 'cowbat'
+    tasks = response_data.get("tasks", [])
+    sequencing_run.task_id = tasks[0] if tasks else ""
+    sequencing_run.batch_submit_status = response_data.get("status", "")
+    sequencing_run.batch_submit_errors = response_data.get("error", "")
+    sequencing_run.status = "Processing"
+    sequencing_run.workflow_state = "submitted"
+    sequencing_run.failure_stage = ""
+    sequencing_run.task_queue = "cowbat"
     sequencing_run.task_submitted_at = datetime.now(timezone.utc)
 
     # Save the changes
@@ -411,7 +415,7 @@ def cowbat_api_submit(
     # Create a new AzureTask object
     AzureTask.objects.create(
         sequencing_run=sequencing_run,
-        exit_code_file=os.path.join(run_folder, 'exit_codes.txt')
+        exit_code_file=os.path.join(run_folder, "exit_codes.txt"),
     )
 
 
@@ -431,17 +435,17 @@ def nextseq_run(
     container_name = (
         container_name
         or sequencing_run.container
-        or str(sequencing_run).lower().replace('_', '-')
+        or str(sequencing_run).lower().replace("_", "-")
     )
 
     # Check if a sample sheet is present
-    if 'SampleSheet.csv' in blob_files:
-        print('Sample sheet present')
+    if "SampleSheet.csv" in blob_files:
+        print("Sample sheet present")
         sub_runs = sample_sheet(
             blob_service_client=blob_service_client,
             container_name=container_name,
             run_name=sequencing_run.run_name,
-            file_names=blob_files
+            file_names=blob_files,
         )
     else:
         # Create the sub_runs dictionary without a sample sheet
@@ -453,70 +457,65 @@ def nextseq_run(
 
     # Store the base container name for use in creating sub-container names
     base_container_name = container_name
-    
+
     # Submit the each sub-sequencing job to Azure Batch
     for i in sub_runs:
         run_name = sequencing_run.run_name
-        sub_container_name = f'{base_container_name}-{i}'
-        print(f'Processing run {run_name} in container {sub_container_name}')
+        sub_container_name = f"{base_container_name}-{i}"
+        print(f"Processing run {run_name} in container {sub_container_name}")
 
         # Set the path to store the configuration file
-        local_path = os.path.join(os.path.join(
-            'olc_webportalv2',
-            'media',
-            run_name,
-            f'sub_sample_sheets-{i}'
+        local_path = os.path.join(
+            os.path.join(
+                "olc_webportalv2", "media", run_name, f"sub_sample_sheets-{i}"
             )
         )
 
         # Create a SequenceRun object for each sub-sequencing run
-        submitted_at = (
-            sequencing_run.task_submitted_at
-            or datetime.now(timezone.utc)
+        submitted_at = sequencing_run.task_submitted_at or datetime.now(
+            timezone.utc
         )
         sub_sequencing_run, _ = SequencingRun.objects.get_or_create(
             run_name=sub_container_name,
             defaults={
-                'container': sub_container_name,
-                'seqids': sub_runs[i],
-                'basic_assembly': sequencing_run.basic_assembly,
-                'preprocess': sequencing_run.preprocess,
-                'nextseq': True,
-                'progress': 'Processing',
-                'status': 'Processing',
-                'user': sequencing_run.user,
-                'emails_array': sequencing_run.emails_array,
-                'workflow_state': 'submitted',
-                'task_submitted_at': submitted_at,
-                'task_started_at': datetime.now(timezone.utc),
-                'task_queue': 'cowbat',
+                "container": sub_container_name,
+                "seqids": sub_runs[i],
+                "basic_assembly": sequencing_run.basic_assembly,
+                "preprocess": sequencing_run.preprocess,
+                "nextseq": True,
+                "progress": "Processing",
+                "status": "Processing",
+                "user": sequencing_run.user,
+                "emails_array": sequencing_run.emails_array,
+                "workflow_state": "submitted",
+                "task_submitted_at": submitted_at,
+                "task_started_at": datetime.now(timezone.utc),
+                "task_queue": "cowbat",
             },
         )
         os.makedirs(local_path, exist_ok=True)
         try:
             #  Recreate the archive name
-            # archive_name = 'sub_sample_sheets-{i}.zip'.format(i=i)
-
             # Redefine the batch nodes path
-            path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}'
+            path = f"$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}"
 
             # Define the system call
             command = (
-                f'source $CONDA/activate /envs/cowbat && '
-                f'mkdir -p /datadrive/{sub_container_name} && '
-                f'cp -R {path} /datadrive/ && '
-                f'assembly_pipeline.py '
-                f'-s /datadrive/{sub_container_name} '
-                f'-r /databases/0.5.0.23 '
-                f'; pipeline_status=$?; '
-                f'rsync -a /datadrive/{sub_container_name}/ '
-                f'$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}/; '
-                f'rsync_status=$?; '
-                f'sync; '
-                f'rm -rf /datadrive/{sub_container_name}; '
-                f'if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; '
-                f'if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; '
-                f'exit 0'
+                f"source $CONDA/activate /envs/cowbat && "
+                f"mkdir -p /datadrive/{sub_container_name} && "
+                f"cp -R {path} /datadrive/ && "
+                f"assembly_pipeline.py "
+                f"-s /datadrive/{sub_container_name} "
+                f"-r /databases/0.5.0.23 "
+                f"; pipeline_status=$?; "
+                f"rsync -a /datadrive/{sub_container_name}/ "
+                f"$AZ_BATCH_NODE_MOUNTS_DIR/{sub_container_name}/; "
+                f"rsync_status=$?; "
+                f"sync; "
+                f"rm -rf /datadrive/{sub_container_name}; "
+                f"if [ $pipeline_status -ne 0 ]; then exit $pipeline_status; fi; "
+                f"if [ $rsync_status -ne 0 ]; then exit $rsync_status; fi; "
+                f"exit 0"
             )
 
             # Submit the API batch request
@@ -524,22 +523,20 @@ def nextseq_run(
                 command=command,
                 run_folder=local_path,
                 sequencing_run=sub_sequencing_run,
-                vm_size='Standard_D48s_v3'
+                vm_size="Standard_D48s_v3",
             )
         except Exception as exc:
             logger = logging.getLogger()
             logger.setLevel(logging.INFO)
-            fh = logging.FileHandler(os.path.join(local_path, 'error'))
+            fh = logging.FileHandler(os.path.join(local_path, "error"))
             fh.setLevel(logging.INFO)
             logger.addHandler(fh)
             logger.exception(exc)
             capture_exception(exc)
-            SequencingRun.objects.filter(
-                pk=sub_sequencing_run.pk
-            ).update(
-                status='Error',
-                workflow_state='error',
-                failure_stage='submission',
+            SequencingRun.objects.filter(pk=sub_sequencing_run.pk).update(
+                status="Error",
+                workflow_state="error",
+                failure_stage="submission",
                 task_finished_at=datetime.now(timezone.utc),
             )
 
@@ -549,7 +546,7 @@ def sample_sheet(
     container_name: str,
     run_name: str,
     file_names: list,
-    max_samples: int = 40
+    max_samples: int = 40,
 ) -> dict:
     """
     Download the SampleSheet.csv from the blob container and parse it to
@@ -565,35 +562,24 @@ def sample_sheet(
     # Download the SampleSheet.csv from the blob container
     download_blob_to_path(
         container_name=container_name,
-        blob_name='SampleSheet.csv',
+        blob_name="SampleSheet.csv",
         file_path=os.path.join(
-            'olc_webportalv2',
-            'media',
-            run_name,
-            'SampleSheet.csv'
+            "olc_webportalv2", "media", run_name, "SampleSheet.csv"
         ),
         blob_service_client=blob_service_client,
     )
     # Parse the SampleSheet.csv to determine the number of samples and the
     # number of sub-runs required
     sample_sheet_path = os.path.join(
-        'olc_webportalv2',
-        'media',
-        run_name,
-        'SampleSheet.csv'
+        "olc_webportalv2", "media", run_name, "SampleSheet.csv"
     )
 
     # Rename the NextSeq SampleSheet.csv file
-    new_file_name = 'NextSeqSampleSheet.csv'
-    new_path = os.path.join(
-        os.path.dirname(sample_sheet_path),
-        new_file_name
-    )
+    new_file_name = "NextSeqSampleSheet.csv"
+    new_path = os.path.join(os.path.dirname(sample_sheet_path), new_file_name)
 
     # Check to see if the sample sheet is a NextSeq-style
-    nextseq = check_sample_sheet_format(
-        file_path=sample_sheet_path
-    )
+    nextseq = check_sample_sheet_format(file_path=sample_sheet_path)
 
     # Reformat the sample sheet
     if nextseq:
@@ -603,8 +589,7 @@ def sample_sheet(
         # Convert a NextSeq-style sample sheet to one that is more
         # easily parseable
         convert_sample_sheet(
-            nextseq_sample_sheet=new_path,
-            output_file_path=sample_sheet_path
+            nextseq_sample_sheet=new_path, output_file_path=sample_sheet_path
         )
 
     # Initialize an empty list to store the header lines
@@ -613,7 +598,7 @@ def sample_sheet(
     # Initialize an empty list to store the sample names
     sample_names = []
     # Open the sample sheet file in read mode with utf-8 encoding
-    with open(sample_sheet_path, 'r', encoding='utf-8') as samplesheet:
+    with open(sample_sheet_path, "r", encoding="utf-8") as samplesheet:
         # Create a CSV reader object
         reader = csv.reader(samplesheet)
 
@@ -627,14 +612,13 @@ def sample_sheet(
         for line in lines:
             # If we're not in the body of the file
             if not body:
-
                 # Append the line to the header
                 header.append(line)
 
                 # Iterate over each sub-line in the line
                 for sub_line in line:
                     # If the subline contains 'Sample_ID'
-                    if 'Sample_ID' in sub_line:
+                    if "Sample_ID" in sub_line:
                         # Set the flag to indicate that we're in the body of
                         # the file
                         body = True
@@ -681,19 +665,20 @@ def sample_sheet(
         sub_runs=sub_runs_copy,
         container_name=container_name,
         header=header,
-        file_path=os.path.join('olc_webportalv2', 'media', run_name),
-        file_names=file_names
+        file_path=os.path.join("olc_webportalv2", "media", run_name),
+        file_names=file_names,
     )
     return sub_runs
 
 
 def create_sub_sample_sheet(
-        blob_service_client,
-        container_name: str,
-        file_names: list,
-        file_path: str,
-        header: list,
-        sub_runs: dict):
+    blob_service_client,
+    container_name: str,
+    file_names: list,
+    file_path: str,
+    header: list,
+    sub_runs: dict,
+):
     """
     Create a sub-sample sheet for each sub-run
     :param blob_service_client: Provider-neutral Storage client
@@ -704,23 +689,21 @@ def create_sub_sample_sheet(
     :param sub_runs: Dictionary containing the samples for each sub-run
     """
     # Set the path to the sub-sample sheets
-    sample_sheet_path = os.path.join(file_path, 'sub_sample_sheets')
+    sample_sheet_path = os.path.join(file_path, "sub_sample_sheets")
     # Iterate over the sub-runs and create the sub-sample sheets
     for i, sub_run in sub_runs.items():
         # Set the path to the sub-sample sheet
         sub_sample_sheet = header + sub_run
-        sub_sample_sheet_path = sample_sheet_path + f'-{i}'
+        sub_sample_sheet_path = sample_sheet_path + f"-{i}"
 
         # Create the sub-sample sheet path if required
         os.makedirs(sub_sample_sheet_path, exist_ok=True)
         with open(
-                os.path.join(
-                    sub_sample_sheet_path,
-                    'SampleSheet.csv'
-                ),
-                'w',
-                newline='',
-                encoding='utf-8') as subsamplesheet:
+            os.path.join(sub_sample_sheet_path, "SampleSheet.csv"),
+            "w",
+            newline="",
+            encoding="utf-8",
+        ) as subsamplesheet:
             writer = csv.writer(subsamplesheet)
             writer.writerows(sub_sample_sheet)
 
@@ -749,20 +732,13 @@ def create_sub_sample_sheet(
         # Upload the sample sheet to the sub-container
         upload_blob_from_path(
             container_name=sub_container_name,
-            blob_name='SampleSheet.csv',
-            file_path=os.path.join(
-                sub_sample_sheet_path,
-                'SampleSheet.csv'
-            ),
+            blob_name="SampleSheet.csv",
+            file_path=os.path.join(sub_sample_sheet_path, "SampleSheet.csv"),
             blob_service_client=blob_service_client,
         )
 
 
-def create_sub_container(
-    blob_service_client,
-    container_name: str,
-    i: int
-):
+def create_sub_container(blob_service_client, container_name: str, i: int):
     """
     Create a sub-container for the sub-run
     :param blob_service_client: Provider-neutral Storage client
@@ -770,8 +746,10 @@ def create_sub_container(
     :param i: Index of the sub-run
     :return: Name of the sub-container
     """
-    sub_container_name = container_name + f'-{i}'
-    create_container(sub_container_name, blob_service_client=blob_service_client)
+    sub_container_name = container_name + f"-{i}"
+    create_container(
+        sub_container_name, blob_service_client=blob_service_client
+    )
     return sub_container_name
 
 
@@ -805,7 +783,7 @@ def no_sample_sheet(
     blob_service_client,
     blob_files: list,
     container_name: str,
-    max_samples: int = 40
+    max_samples: int = 40,
 ) -> dict:
     """
     Count the number of samples in a blob container and distribute the
@@ -817,15 +795,13 @@ def no_sample_sheet(
     :return: Dictionary containing the samples for each sub-run
     """
     sample_names = {
-        fastq.split('_')[0] for fastq in blob_files if fastq.endswith('.gz')
-        }
+        fastq.split("_")[0] for fastq in blob_files if fastq.endswith(".gz")
+    }
 
     num_samples = len(sample_names)
     if max_samples <= 0:
-        raise ValueError('max_samples must be greater than zero')
-    num_sub_runs = (
-        num_samples + max_samples - 1
-    ) // max_samples
+        raise ValueError("max_samples must be greater than zero")
+    num_sub_runs = (num_samples + max_samples - 1) // max_samples
 
     sub_runs = {i + 1: [] for i in range(num_sub_runs)}
 
@@ -860,54 +836,56 @@ def load_report(report, seq_run):
     :return: None if the report does not exist
     """
     if not os.path.isfile(report):
-        seq_run.status = 'Error'
-        seq_run.workflow_state = 'error'
-        seq_run.failure_stage = 'cleanup'
+        seq_run.status = "Error"
+        seq_run.workflow_state = "error"
+        seq_run.failure_stage = "cleanup"
         seq_run.task_finished_at = datetime.now(timezone.utc)
-        seq_run.errors.append('Summary report not found in blob storage.')
-        seq_run.save(update_fields=[
-            'status',
-            'workflow_state',
-            'failure_stage',
-            'task_finished_at',
-            'errors',
-        ])
+        seq_run.errors.append("Summary report not found in blob storage.")
+        seq_run.save(
+            update_fields=[
+                "status",
+                "workflow_state",
+                "failure_stage",
+                "task_finished_at",
+                "errors",
+            ]
+        )
         return None
     report_columns = [
-        'SeqID',
-        'SampleName',
-        'Genus',
-        'E_coli_Serotype',
-        'SISTR_serovar',
-        'GeneSeekr_Profile',
-        'Vtyper_Profile',
-        'rMLST_Result',
-        'MLST_Result',
-        'N50',
-        'NumContigs',
-        'TotalLength',
-        'AverageCoverageDepth',
-        'ConfindrContamSNVs',
-        'SequencingDate',
-        'Analyst',
-        'Flowcell',
-        'MachineName',
-        'AssemblyDate',
-        'PipelineVersion',
-        'Database',
+        "SeqID",
+        "SampleName",
+        "Genus",
+        "E_coli_Serotype",
+        "SISTR_serovar",
+        "GeneSeekr_Profile",
+        "Vtyper_Profile",
+        "rMLST_Result",
+        "MLST_Result",
+        "N50",
+        "NumContigs",
+        "TotalLength",
+        "AverageCoverageDepth",
+        "ConfindrContamSNVs",
+        "SequencingDate",
+        "Analyst",
+        "Flowcell",
+        "MachineName",
+        "AssemblyDate",
+        "PipelineVersion",
+        "Database",
     ]
     report_data = pd.read_csv(
         report,
         names=report_columns,
         header=None,
-        sep=',',
+        sep=",",
     )
     if report_data.iloc[0].tolist() == report_columns:
         report_data = report_data.iloc[1:]
-    summary_dict = report_data.fillna('ND').transpose().to_dict()
+    summary_dict = report_data.fillna("ND").transpose().to_dict()
     SummaryMetadata.objects.update_or_create(
-        sequencing_run=seq_run,
-        summary_results=summary_dict)
+        sequencing_run=seq_run, summary_results=summary_dict
+    )
 
     return True
 
@@ -915,7 +893,7 @@ def load_report(report, seq_run):
 @shared_task(
     autoretry_for=(Exception,),
     retry_backoff=True,
-    retry_kwargs={'max_retries': 3},
+    retry_kwargs={"max_retries": 3},
 )
 def cowbat_cleanup(sequencing_run_pk: int):
     """
@@ -928,37 +906,32 @@ def cowbat_cleanup(sequencing_run_pk: int):
     # With the sequencing run done, need to put create a zipfile with
     # assemblies and reports for user to download.
     # First create a folder.
-    run_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
-        str(sequencing_run)
-    )
+    run_folder = os.path.join("olc_webportalv2", "media", str(sequencing_run))
     reports_and_assemblies_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
+        "olc_webportalv2",
+        "media",
         str(sequencing_run),
-        'reports_and_assemblies'
+        "reports_and_assemblies",
     )
     if not os.path.isdir(reports_and_assemblies_folder):
         os.makedirs(reports_and_assemblies_folder)
-    container_name = \
-        sequencing_run.run_name.lower().replace('_', '-')
+    container_name = sequencing_run.run_name.lower().replace("_", "-")
     blob_service = get_storage_client()
     # Download all reports and assemblies to reports and assemblies folder.
     assemblies_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
+        "olc_webportalv2",
+        "media",
         str(sequencing_run),
-        'reports_and_assemblies',
-        'BestAssemblies'
+        "reports_and_assemblies",
+        "BestAssemblies",
     )
 
     reports_folder = os.path.join(
-        'olc_webportalv2',
-        'media',
+        "olc_webportalv2",
+        "media",
         str(sequencing_run),
-        'reports_and_assemblies',
-        'reports'
+        "reports_and_assemblies",
+        "reports",
     )
     if not os.path.isdir(assemblies_folder):
         os.makedirs(assemblies_folder)
@@ -971,15 +944,13 @@ def cowbat_cleanup(sequencing_run_pk: int):
     blob_filenames = [b.name for b in blobs]
     for blob in blobs:
         if fnmatch.fnmatch(
-            blob.name,
-            os.path.join("BestAssemblies", "*.fasta")
+            blob.name, os.path.join("BestAssemblies", "*.fasta")
         ):
             download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    assemblies_folder,
-                    os.path.split(blob.name)[1]
+                    assemblies_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
@@ -988,8 +959,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
+                    reports_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
@@ -998,57 +968,36 @@ def cowbat_cleanup(sequencing_run_pk: int):
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
+                    reports_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
-        elif fnmatch.fnmatch(
-            blob.name,
-            os.path.join(
-                'reports',
-                '*.fa'
-            )
-        ):
+        elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.fa")):
             download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
+                    reports_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
-        elif fnmatch.fnmatch(
-            blob.name,
-            os.path.join(
-                'reports',
-                '*.xlsx'
-            )
-        ):
+        elif fnmatch.fnmatch(blob.name, os.path.join("reports", "*.xlsx")):
             download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
+                    reports_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
 
         # Also get the SampleSheet put into the reports folder.
-        elif fnmatch.fnmatch(
-            blob.name,
-            os.path.join(
-                'SampleSheet.csv'
-            )
-        ):
+        elif fnmatch.fnmatch(blob.name, os.path.join("SampleSheet.csv")):
             download_blob_to_path(
                 container_name=container_name,
                 blob_name=blob.name,
                 file_path=os.path.join(
-                    reports_folder,
-                    os.path.split(blob.name)[1]
+                    reports_folder, os.path.split(blob.name)[1]
                 ),
                 blob_service_client=blob_service,
             )
@@ -1064,35 +1013,26 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
     # Load the necessary reports into the SequencingRun model
     report_complete = load_report(
-        report=os.path.join(
-            reports_folder,
-            'summaryMetadata.csv'
-        ),
-        seq_run=SequencingRun.objects.get(pk=sequencing_run_pk)
+        report=os.path.join(reports_folder, "summaryMetadata.csv"),
+        seq_run=SequencingRun.objects.get(pk=sequencing_run_pk),
     )
 
     # With that done, create a zipfile.
-    blob_name = sequencing_run.container + '.zip'
+    blob_name = sequencing_run.container + ".zip"
     shutil.make_archive(
-        os.path.join(
-            run_folder,
-            sequencing_run.container
-        ),
-        'zip',
-        reports_and_assemblies_folder
+        os.path.join(run_folder, sequencing_run.container),
+        "zip",
+        reports_and_assemblies_folder,
     )
 
     # Set the name of the blob container where the zip file will be uploaded
-    report_assembly_container = 'reports-and-assemblies'
+    report_assembly_container = "reports-and-assemblies"
 
     # Upload the zip file to the blob container
     upload_blob_from_path(
         container_name=report_assembly_container,
         blob_name=blob_name,
-        file_path=os.path.join(
-            run_folder,
-            blob_name
-        ),
+        file_path=os.path.join(run_folder, blob_name),
         blob_service_client=blob_service,
     )
 
@@ -1101,24 +1041,17 @@ def cowbat_cleanup(sequencing_run_pk: int):
     sas_url = generate_download_link(
         blob_service_client=blob_service,
         container_name=report_assembly_container,
-        blob_name=os.path.basename(os.path.join(
-            run_folder,
-            blob_name
-        )),
-        expiry=730
+        blob_name=os.path.basename(os.path.join(run_folder, blob_name)),
+        expiry=730,
     )
 
     # Update the SequencingRun object with the download link and remove the
     # local media folder for the run to save space.
-    SequencingRun.objects.filter(
-        pk=sequencing_run_pk
-    ).update(download_link=sas_url)
+    SequencingRun.objects.filter(pk=sequencing_run_pk).update(
+        download_link=sas_url
+    )
     shutil.rmtree(
-        os.path.join(
-            'olc_webportalv2',
-            'media',
-            str(sequencing_run)
-        )
+        os.path.join("olc_webportalv2", "media", str(sequencing_run))
     )
 
     # Break if the report could not be loaded
@@ -1129,19 +1062,21 @@ def cowbat_cleanup(sequencing_run_pk: int):
     # to people that need to know.
     try:
         seq_run = SequencingRun.objects.get(pk=sequencing_run_pk)
-        if seq_run.status != 'Error':
-            seq_run.status = 'Complete'
-            seq_run.workflow_state = 'complete'
-            seq_run.failure_stage = ''
-            seq_run.percent_complete = Decimal('100.00')
+        if seq_run.status != "Error":
+            seq_run.status = "Complete"
+            seq_run.workflow_state = "complete"
+            seq_run.failure_stage = ""
+            seq_run.percent_complete = Decimal("100.00")
             seq_run.task_finished_at = datetime.now(timezone.utc)
-            seq_run.save(update_fields=[
-                'status',
-                'workflow_state',
-                'failure_stage',
-                'percent_complete',
-                'task_finished_at',
-            ])
+            seq_run.save(
+                update_fields=[
+                    "status",
+                    "workflow_state",
+                    "failure_stage",
+                    "percent_complete",
+                    "task_finished_at",
+                ]
+            )
     except ObjectDoesNotExist:
         pass
 
@@ -1149,53 +1084,49 @@ def cowbat_cleanup(sequencing_run_pk: int):
     # them know that things have worked.
     realtime_strains = []
     for seqid in sequencing_run.realtime_strains:
-        if sequencing_run.realtime_strains[seqid] == 'True':
+        if sequencing_run.realtime_strains[seqid] == "True":
             realtime_strains.append(seqid)
 
     # Create a list of recipients based on the environment. In production,
     # send to default recipients
-    if settings.ENVIRONMENT == 'PROD':
+    if settings.ENVIRONMENT == "PROD":
         recipient_list = [
-            'catherine.carrillo@inspection.gc.ca',
-            'monique.arts@inspection.gc.ca',
-            'adam.koziol@inspection.gc.ca',
-            'ashley.cooper@inspection.gc.ca',
-            'bridgette.kelly@inspection.gc.ca'
+            "catherine.carrillo@inspection.gc.ca",
+            "monique.arts@inspection.gc.ca",
+            "adam.koziol@inspection.gc.ca",
+            "ashley.cooper@inspection.gc.ca",
+            "bridgette.kelly@inspection.gc.ca",
         ]
 
         # Send customized emails to each recipient based on their role
         for recipient in recipient_list:
             if recipient in {
-                'ashley.cooper@inspection.gc.ca',
-                'bridgette.kelly@inspection.gc.ca'
+                "ashley.cooper@inspection.gc.ca",
+                "bridgette.kelly@inspection.gc.ca",
             }:
                 body = (
-                    'Please download the blob container to local '
-                    'OLC storage. '
+                    "Please download the blob container to local OLC storage. "
                 )
-            elif recipient == 'monique.arts@inspection.gc.ca':
-                body = (
-                    'Please add this data to the OLC database. '
-                )
+            elif recipient == "monique.arts@inspection.gc.ca":
+                body = "Please add this data to the OLC database. "
             else:
-                body = ''
+                body = ""
 
             body += (
-                'Reports and assemblies are available at the '
-                f'following link: {sas_url}\n'
+                "Reports and assemblies are available at the "
+                f"following link: {sas_url}\n"
             )
             if realtime_strains:
                 body += (
-                    'In this run, the following strains will need '
-                    f'ROGAs created: {realtime_strains}'
-
+                    "In this run, the following strains will need "
+                    f"ROGAs created: {realtime_strains}"
                 )
 
             # Attempt to send the emails
             send_email(
-                subject=f'Run {sequencing_run} has finished assembly.',
+                subject=f"Run {sequencing_run} has finished assembly.",
                 body=body,
-                recipient=recipient
+                recipient=recipient,
             )
 
 
@@ -1217,6 +1148,13 @@ def add_read_filenames_to_metadata(
     empty cells and leave existing data alone.  Any seqid for which the
     forward/reverse lists are empty is recorded in
     ``sequencing_run.errors``.
+
+    Args:
+        sequencing_run: Run whose metadata and errors are updated.
+        blob_service_client: Storage client used to upload the CSV.
+        container_name: Storage container for the run.
+        reports_folder: Local directory containing the metadata CSV.
+        blob_filenames: Object paths available in the run container.
     """
     # Set the path to the combinedMetadata.csv file
     csv_name = "combinedMetadata.csv"
@@ -1231,18 +1169,16 @@ def add_read_filenames_to_metadata(
     try:
         df = pd.read_csv(csv_path)
     except Exception as exc:  # pragma: no cover
-        sequencing_run.errors.append(
-            f"could not read {csv_name}: {exc}"
-        )
+        sequencing_run.errors.append(f"could not read {csv_name}: {exc}")
         sequencing_run.save()
         return
 
     # Convert any existing columns to string/object and replace NaN with ''
-    for col in ('R1_file', 'R2_file'):
+    for col in ("R1_file", "R2_file"):
         if col not in df.columns:
-            df[col] = ''
+            df[col] = ""
         else:
-            df[col] = df[col].fillna('').astype(str)
+            df[col] = df[col].fillna("").astype(str)
 
     # Populate
     for idx, row in df.iterrows():
@@ -1253,9 +1189,9 @@ def add_read_filenames_to_metadata(
         # Remove trimmed, repaired, corrected, or otherwise modified reads
         # from consideration
         forwards = [
-            f for f in forwards if not any(
-                x in f for x in ["trimmed", "repaired", "corrected"]
-            )
+            f
+            for f in forwards
+            if not any(x in f for x in ["trimmed", "repaired", "corrected"])
         ]
 
         # Find matching reverse reads
@@ -1263,23 +1199,23 @@ def add_read_filenames_to_metadata(
         # Remove trimmed, repaired, corrected, or otherwise modified reads
         # from consideration
         reverses = [
-            f for f in reverses if not any(
-                x in f for x in ["trimmed", "repaired", "corrected"]
-            )
+            f
+            for f in reverses
+            if not any(x in f for x in ["trimmed", "repaired", "corrected"])
         ]
 
         # Only write into blank cells (after the fillna() above a blank cell is
         # exactly the empty string)
-        if df.at[idx, 'R1_file'] == '':
+        if df.at[idx, "R1_file"] == "":
             if len(forwards) == 1:
-                df.at[idx, 'R1_file'] = forwards[0]
+                df.at[idx, "R1_file"] = forwards[0]
             elif len(forwards) > 1:
-                df.at[idx, 'R1_file'] = ';'.join(forwards)
-        if df.at[idx, 'R2_file'] == '':
+                df.at[idx, "R1_file"] = ";".join(forwards)
+        if df.at[idx, "R2_file"] == "":
             if len(reverses) == 1:
-                df.at[idx, 'R2_file'] = reverses[0]
+                df.at[idx, "R2_file"] = reverses[0]
             elif len(reverses) > 1:
-                df.at[idx, 'R2_file'] = ';'.join(reverses)
+                df.at[idx, "R2_file"] = ";".join(reverses)
 
         if len(forwards) != 1 or len(reverses) != 1:
             sequencing_run.errors.append(
@@ -1305,54 +1241,59 @@ def add_read_filenames_to_metadata(
 
 
 def escape_ansi(line):
-    """
-    Remove ANSI escape characters from a string
-    :param line: String potentially containing ANSI escape characters
-    :return: String with ANSI escape characters removed
+    """Remove ANSI escape characters from a string.
+
+    Args:
+        line: Text that may contain ANSI escape sequences.
+
+    Returns:
+        The input text with ANSI escape sequences removed.
     """
     # Use a regular expression to compile ANSI escape characters
-    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
 
     # Substitute the escape characters with an empty string
-    return ansi_escape.sub('', line)
+    return ansi_escape.sub("", line)
 
 
 def _update_run_percentage(sequencing_run, progress_message):
-    """Persist the configured percentage for a recognized pipeline message."""
+    """Persist the configured percentage for a recognized pipeline message.
+
+    Args:
+        sequencing_run: Run whose completion percentage is updated.
+        progress_message: Latest COWBAT progress message.
+    """
     progress_map = os.path.join(
         os.path.dirname(__file__),
-        'cowbat_percent_complete.json',
+        "cowbat_percent_complete.json",
     )
-    with open(progress_map, 'r', encoding='utf-8') as progress_file:
+    with open(progress_map, "r", encoding="utf-8") as progress_file:
         progress_entries = json.load(progress_file)
 
     for entry in progress_entries:
-        if entry['message'] == progress_message:
+        if entry["message"] == progress_message:
             sequencing_run.percent_complete = Decimal(
-                str(entry['percent_complete'])
+                str(entry["percent_complete"])
             )
             return
 
 
 def check_cowbat_progress(
-    batch_client,
-    batch_job_name,
-    batch_task_name,
-    sequencing_run
+    batch_client, batch_job_name, batch_task_name, sequencing_run
 ):
-    """
-    Check the progress of a cowbat job
-    :param batch_client: Azure batch client
-    :param batch_job_name: Name of the batch job
-    :param sequencing_run: SequencingRun object
+    """Read task files and update run progress and downloaded output files.
+
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        batch_job_name: Identifier of the Batch job.
+        batch_task_name: Identifier of the Batch task.
+        sequencing_run: Run whose progress, errors, and files are updated.
     """
     # Ensure that the model status is set to "Processing"
-    sequencing_run.status = 'Processing'
+    sequencing_run.status = "Processing"
     sequencing_run.save()
     node_files = batch_client.file.list_from_task(
-        job_id=batch_job_name,
-        task_id=batch_task_name,
-        recursive=True
+        job_id=batch_job_name, task_id=batch_task_name, recursive=True
     )
 
     # Initialize dictionaries to hold the contents of the files and the
@@ -1362,66 +1303,69 @@ def check_cowbat_progress(
 
     # Create an output directory for the files
     out_dir = os.path.join(
-        'olc_webportalv2',
-        'media',
-        'cowbat',
-        batch_job_name
+        "olc_webportalv2", "media", "cowbat", batch_job_name
     )
     os.makedirs(out_dir, exist_ok=True)
     try:
         for node_file in node_files:
             # Stderr.txt file
-            if 'stderr' in node_file.name:
+            if "stderr" in node_file.name:
                 try:
-                    contents[node_file.name] = \
+                    contents[node_file.name] = batch_client.file.get_from_task(
+                        job_id=batch_job_name,
+                        task_id=batch_task_name,
+                        file_path=node_file.name,
+                    )
+                    text_files[node_file.name] = (
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
                             task_id=batch_task_name,
-                            file_path=node_file.name
+                            file_path=node_file.name,
                         )
-                    text_files[node_file.name] = \
-                        batch_client.file.get_from_task(
-                            job_id=batch_job_name,
-                            task_id=batch_task_name,
-                            file_path=node_file.name
-                        )
+                    )
                 except Exception as exc:
-                    sequencing_run.errors.append('stderr issue:')
+                    sequencing_run.errors.append("stderr issue:")
                     sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
-            elif 'log' in node_file.name or 'err' in node_file.name or \
-                    'metadata.json' in node_file.name:
+            elif (
+                "log" in node_file.name
+                or "err" in node_file.name
+                or "metadata.json" in node_file.name
+            ):
                 try:
-                    text_files[node_file.name] = \
+                    text_files[node_file.name] = (
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
                             task_id=batch_task_name,
-                            file_path=node_file.name
+                            file_path=node_file.name,
                         )
+                    )
                 except Exception as exc:
                     sequencing_run.errors.append(
-                        'log/err/metadata.json issue:'
+                        "log/err/metadata.json issue:"
                     )
                     sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
-            elif 'reports' in node_file.name and not \
-                    node_file.name.endswith('reports'):
+            elif "reports" in node_file.name and not node_file.name.endswith(
+                "reports"
+            ):
                 try:
-                    text_files[node_file.name] = \
+                    text_files[node_file.name] = (
                         batch_client.file.get_from_task(
                             job_id=batch_job_name,
                             task_id=batch_task_name,
-                            file_path=node_file.name
+                            file_path=node_file.name,
                         )
+                    )
                 except Exception as exc:
-                    sequencing_run.errors.append('Reports issue:')
+                    sequencing_run.errors.append("Reports issue:")
                     sequencing_run.errors.append(node_file.name)
                     sequencing_run.errors.append(text_files)
                     sequencing_run.errors.append(type(exc))
                     sequencing_run.errors.append(str(exc))
                     sequencing_run.save()
     except BatchServiceError as exc:
-        sequencing_run.errors.append('Azure error:')
+        sequencing_run.errors.append("Azure error:")
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
@@ -1430,8 +1374,8 @@ def check_cowbat_progress(
         for content_chunk in content_object:
             try:
                 clean_line = escape_ansi(line=content_chunk.decode())
-                final_line = clean_line.split('\n')[-2]
-                status = ' '.join(final_line.split(' ')[2:])
+                final_line = clean_line.split("\n")[-2]
+                status = " ".join(final_line.split(" ")[2:])
                 sequencing_run.progress = status
                 _update_run_percentage(
                     sequencing_run=sequencing_run,
@@ -1439,7 +1383,7 @@ def check_cowbat_progress(
                 )
                 sequencing_run.save()
             except Exception as exc:
-                sequencing_run.errors.append('Update model error:')
+                sequencing_run.errors.append("Update model error:")
                 sequencing_run.errors.append(str(exc))
                 sequencing_run.save()
     # Save the files
@@ -1450,18 +1394,14 @@ def check_cowbat_progress(
             parent_dir = os.path.split(file_name)[-2]
             os.makedirs(os.path.join(out_dir, parent_dir), exist_ok=True)
             with open(
-                os.path.join(
-                    out_dir,
-                    parent_dir,
-                    os.path.basename(file_name)
-                ),
-                'w',
-                encoding='utf-8'
+                os.path.join(out_dir, parent_dir, os.path.basename(file_name)),
+                "w",
+                encoding="utf-8",
             ) as text_output:
                 for content_chunk in content_object:
                     text_output.write(content_chunk.decode())
     except Exception as exc:
-        sequencing_run.errors.append('Saving file error:')
+        sequencing_run.errors.append("Saving file error:")
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
@@ -1486,18 +1426,18 @@ def check_cowbat_tasks():
         )
         batch_job_name = sequencing_run.job_id
 
-        if sequencing_run.workflow_state == 'ready':
+        if sequencing_run.workflow_state == "ready":
             handle_task_completion(
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
                 batch_job_name=batch_job_name,
-                azure_task_id=azure_task.id
+                azure_task_id=azure_task.id,
             )
             continue
 
         if (
-            sequencing_run.workflow_state == 'processing'
-            and sequencing_run.failure_stage == 'cleanup'
+            sequencing_run.workflow_state == "processing"
+            and sequencing_run.failure_stage == "cleanup"
         ):
             AzureTask.objects.filter(id=azure_task.id).delete()
             continue
@@ -1505,22 +1445,25 @@ def check_cowbat_tasks():
         try:
             cloud_tasks = list(batch_client.task.list(batch_job_name))
         except BatchServiceError as exc:
-            if exc.status_code == 404 and sequencing_run.status == 'Resize Error':
+            if (
+                exc.status_code == 404
+                and sequencing_run.status == "Resize Error"
+            ):
                 _mark_resize_failure(
                     batch_client=batch_client,
                     sequencing_run=sequencing_run,
                     batch_job_name=batch_job_name,
                     azure_task_id=azure_task.id,
-                    message='Batch job disappeared after a pool resize error.',
+                    message="Batch job disappeared after a pool resize error.",
                 )
                 continue
-            sequencing_run.errors.append('Running task error:')
+            sequencing_run.errors.append("Running task error:")
             sequencing_run.errors.append(str(exc))
             sequencing_run.save()
             continue
 
         if not cloud_tasks:
-            sequencing_run.errors.append('Batch job has no tasks to monitor.')
+            sequencing_run.errors.append("Batch job has no tasks to monitor.")
             sequencing_run.save()
             continue
 
@@ -1529,25 +1472,32 @@ def check_cowbat_tasks():
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
                 batch_job_name=batch_job_name,
-                azure_task_id=azure_task.id
+                azure_task_id=azure_task.id,
             )
         else:
             handle_incomplete_tasks(
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
                 batch_job_name=batch_job_name,
-                azure_task_id=azure_task.id
+                azure_task_id=azure_task.id,
             )
 
 
 def _record_batch_error(sequencing_run, prefix, exc):
-    prefix = f'{prefix}:'
+    """Append a unique error prefix and message to a sequencing run.
+
+    Args:
+        sequencing_run: Run whose error list is updated.
+        prefix: Short category label for the error.
+        exc: Exception or error value to record.
+    """
+    prefix = f"{prefix}:"
     message = str(exc)
     if prefix not in sequencing_run.errors:
         sequencing_run.errors.append(prefix)
     if message not in sequencing_run.errors:
         sequencing_run.errors.append(message)
-    sequencing_run.save(update_fields=['errors'])
+    sequencing_run.save(update_fields=["errors"])
 
 
 def _delete_batch_resources(
@@ -1555,14 +1505,23 @@ def _delete_batch_resources(
     sequencing_run,
     batch_job_name,
 ):
-    """Delete the Cowbat job and pool, treating already-missing resources as done."""
+    """Delete the COWBAT job and pool, treating missing resources as deleted.
+
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        sequencing_run: Run containing the associated pool identifier.
+        batch_job_name: Identifier of the job and default pool.
+
+    Returns:
+        Whether both Batch resources are confirmed deleted.
+    """
     deletions = (
         (
-            'Terminating job error',
+            "Terminating job error",
             lambda: batch_client.job.delete(job_id=batch_job_name),
         ),
         (
-            'Terminating pool error',
+            "Terminating pool error",
             lambda: batch_client.pool.delete(
                 pool_id=sequencing_run.pool_id or batch_job_name
             ),
@@ -1587,11 +1546,20 @@ def _mark_resize_failure(
     azure_task_id,
     message,
 ):
+    """Record a terminal pool-resize failure and complete cleanup.
+
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        sequencing_run: Run whose resize failure is recorded.
+        batch_job_name: Identifier of the Batch job.
+        azure_task_id: Local AzureTask record identifier.
+        message: Failure message to append to the run.
+    """
     if message not in sequencing_run.errors:
         sequencing_run.errors.append(message)
-    sequencing_run.status = 'Error'
-    sequencing_run.workflow_state = 'ready'
-    sequencing_run.failure_stage = 'submission'
+    sequencing_run.status = "Error"
+    sequencing_run.workflow_state = "ready"
+    sequencing_run.failure_stage = "submission"
     sequencing_run.task_finished_at = datetime.now(timezone.utc)
     sequencing_run.save()
     handle_task_completion(
@@ -1603,32 +1571,28 @@ def _mark_resize_failure(
 
 
 def handle_task_completion(
-    batch_client,
-    sequencing_run,
-    batch_job_name,
-    azure_task_id
+    batch_client, sequencing_run, batch_job_name, azure_task_id
 ):
-    """
-    Handle the case when tasks are complete.
+    """Reconcile completed task results and finalize the sequencing run.
 
-    Parameters:
-    batch_client (BatchServiceClient): The Azure Batch client.
-    sequencing_run (SequencingRun): The sequencing run object.
-    batch_job_name (str): The name of the batch job.
-    azure_task_id (int): The ID of the Azure task.
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        sequencing_run: Run associated with the completed Batch job.
+        batch_job_name: Identifier of the Batch job.
+        azure_task_id: Local AzureTask record identifier.
     """
-    if sequencing_run.workflow_state != 'ready':
+    if sequencing_run.workflow_state != "ready":
         try:
             cloud_tasks = list(batch_client.task.list(batch_job_name))
         except BatchServiceError as exc:
-            _record_batch_error(sequencing_run, 'Terminating task error', exc)
+            _record_batch_error(sequencing_run, "Terminating task error", exc)
             return
 
         if not cloud_tasks:
             _record_batch_error(
                 sequencing_run,
-                'Batch task listing error',
-                'No Batch tasks were returned for a completed job.',
+                "Batch task listing error",
+                "No Batch tasks were returned for a completed job.",
             )
             return
 
@@ -1636,13 +1600,15 @@ def handle_task_completion(
         for cloudtask in cloud_tasks:
             execution_info = cloudtask.execution_info
             exit_code = (
-                execution_info.exit_code if execution_info is not None else None
+                execution_info.exit_code
+                if execution_info is not None
+                else None
             )
             if exit_code is None:
                 _record_batch_error(
                     sequencing_run,
-                    'Batch task exit-code error',
-                    f'Task {cloudtask.id} has no recorded exit code.',
+                    "Batch task exit-code error",
+                    f"Task {cloudtask.id} has no recorded exit code.",
                 )
                 return
             exit_codes.append(exit_code)
@@ -1651,20 +1617,20 @@ def handle_task_completion(
             (code for code in exit_codes if code != 0),
             0,
         )
-        sequencing_run.workflow_state = 'ready'
+        sequencing_run.workflow_state = "ready"
         sequencing_run.task_finished_at = datetime.now(timezone.utc)
         if sequencing_run.exit_code == 0:
-            sequencing_run.failure_stage = ''
+            sequencing_run.failure_stage = ""
         else:
-            sequencing_run.status = 'Error'
-            sequencing_run.failure_stage = 'analysis'
-            if 'Exit code bad' not in sequencing_run.errors:
-                sequencing_run.errors.append('Exit code bad')
+            sequencing_run.status = "Error"
+            sequencing_run.failure_stage = "analysis"
+            if "Exit code bad" not in sequencing_run.errors:
+                sequencing_run.errors.append("Exit code bad")
         sequencing_run.save()
 
     exit_codes_good = (
         sequencing_run.exit_code == 0
-        and sequencing_run.failure_stage != 'submission'
+        and sequencing_run.failure_stage != "submission"
     )
     if not _delete_batch_resources(
         batch_client=batch_client,
@@ -1676,46 +1642,42 @@ def handle_task_completion(
     if exit_codes_good:
         try:
             with transaction.atomic():
-                SequencingRun.objects.filter(
-                    pk=sequencing_run.pk
-                ).update(
-                    workflow_state='processing',
-                    failure_stage='cleanup',
+                SequencingRun.objects.filter(pk=sequencing_run.pk).update(
+                    workflow_state="processing",
+                    failure_stage="cleanup",
                 )
                 cowbat_cleanup.apply_async(
-                    queue='cowbat',
-                    args=(sequencing_run.pk, )
+                    queue="cowbat", args=(sequencing_run.pk,)
                 )
         except Exception as exc:
-            sequencing_run.workflow_state = 'ready'
-            sequencing_run.failure_stage = ''
-            _record_batch_error(sequencing_run, 'Clean-up error', exc)
+            sequencing_run.workflow_state = "ready"
+            sequencing_run.failure_stage = ""
+            _record_batch_error(sequencing_run, "Clean-up error", exc)
             return
     else:
-        sequencing_run.status = 'Error'
-        sequencing_run.workflow_state = 'error'
+        sequencing_run.status = "Error"
+        sequencing_run.workflow_state = "error"
         if not sequencing_run.failure_stage:
-            sequencing_run.failure_stage = 'analysis'
-        sequencing_run.save(update_fields=[
-            'status',
-            'workflow_state',
-            'failure_stage',
-        ])
+            sequencing_run.failure_stage = "analysis"
+        sequencing_run.save(
+            update_fields=[
+                "status",
+                "workflow_state",
+                "failure_stage",
+            ]
+        )
 
     try:
         # Delete task, so we don't have to keep checking up on it.
         AzureTask.objects.filter(id=azure_task_id).delete()
     except Exception as exc:
-        sequencing_run.errors.append('AzureTask deletion error:')
+        sequencing_run.errors.append("AzureTask deletion error:")
         sequencing_run.errors.append(str(exc))
         sequencing_run.save()
 
 
 def handle_incomplete_tasks(
-    batch_client,
-    sequencing_run,
-    batch_job_name,
-    azure_task_id
+    batch_client, sequencing_run, batch_job_name, azure_task_id
 ):
     """
     Handle the case when tasks are not complete.
@@ -1730,7 +1692,7 @@ def handle_incomplete_tasks(
     try:
         pools = list(batch_client.pool.list())
     except BatchServiceError as exc:
-        _record_batch_error(sequencing_run, 'Pool listing error', exc)
+        _record_batch_error(sequencing_run, "Pool listing error", exc)
         return
 
     pool = next(
@@ -1738,19 +1700,19 @@ def handle_incomplete_tasks(
         None,
     )
     if pool is None:
-        if sequencing_run.status == 'Resize Error':
+        if sequencing_run.status == "Resize Error":
             _mark_resize_failure(
                 batch_client=batch_client,
                 sequencing_run=sequencing_run,
                 batch_job_name=batch_job_name,
                 azure_task_id=azure_task_id,
-                message='Batch pool is missing after a resize error.',
+                message="Batch pool is missing after a resize error.",
             )
         else:
             _record_batch_error(
                 sequencing_run,
-                'Batch pool lookup error',
-                f'Pool {batch_job_name} is not present.',
+                "Batch pool lookup error",
+                f"Pool {batch_job_name} is not present.",
             )
         return
 
@@ -1759,39 +1721,41 @@ def handle_incomplete_tasks(
             batch_client=batch_client,
             pool_id=sequencing_run.pool_id or batch_job_name,
         )
-        action = resize_result['action']
+        action = resize_result["action"]
         if action in (
-            'resize_retried',
-            'retry_throttled',
-            'resize_in_progress',
+            "resize_retried",
+            "retry_throttled",
+            "resize_in_progress",
         ):
-            if action == 'resize_retried':
+            if action == "resize_retried":
                 sequencing_run.task_retry_count += 1
-            sequencing_run.status = 'Processing'
-            sequencing_run.workflow_state = 'processing'
-            sequencing_run.save(update_fields=[
-                'status',
-                'workflow_state',
-                'task_retry_count',
-            ])
+            sequencing_run.status = "Processing"
+            sequencing_run.workflow_state = "processing"
+            sequencing_run.save(
+                update_fields=[
+                    "status",
+                    "workflow_state",
+                    "task_retry_count",
+                ]
+            )
             return
-        if action == 'nodes_available':
+        if action == "nodes_available":
             check_cowbat_progress(
                 batch_client,
                 batch_job_name,
                 sequencing_run.task_id,
-                sequencing_run
+                sequencing_run,
             )
             return
         if action in (
-            'inspection_failed',
-            'resize_request_failed',
-            'unsupported_allocation_state',
+            "inspection_failed",
+            "resize_request_failed",
+            "unsupported_allocation_state",
         ):
             _record_batch_error(
                 sequencing_run,
-                'Pool resize recovery error',
-                resize_result.get('message', action),
+                "Pool resize recovery error",
+                resize_result.get("message", action),
             )
             return
         _mark_resize_failure(
@@ -1807,10 +1771,7 @@ def handle_incomplete_tasks(
         return
 
     check_cowbat_progress(
-        batch_client,
-        batch_job_name,
-        sequencing_run.task_id,
-        sequencing_run
+        batch_client, batch_job_name, sequencing_run.task_id, sequencing_run
     )
 
 
@@ -1827,12 +1788,10 @@ def check_tree_tasks() -> None:
     # Iterate over each tree task
     for tree_task in tree_tasks:
         # Fetch the corresponding tree object
-        tree_object = Tree.objects.get(
-            pk=tree_task.tree_request.pk
-        )
+        tree_object = Tree.objects.get(pk=tree_task.tree_request.pk)
 
         # Construct the batch job name
-        batch_job_name = f'tree-{tree_task.tree_request.pk}'
+        batch_job_name = f"tree-{tree_task.tree_request.pk}"
 
         try:
             # Check if all tasks related to this job have completed
@@ -1840,15 +1799,13 @@ def check_tree_tasks() -> None:
                 task.state == "completed"
                 for task in batch_client.task.list(batch_job_name)
             )
-        except BatchServiceError as exc:
+        except BatchServiceError:
             # If job doesn't exist, update status to 'Error' and delete
             # the task
-            Tree.objects.filter(
-                pk=tree_task.tree_request.pk
-            ).update(status='Error')
-            TreeAzureRequest.objects.filter(
-                id=tree_task.id
-            ).delete()
+            Tree.objects.filter(pk=tree_task.tree_request.pk).update(
+                status="Error"
+            )
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
             continue
 
         # If tasks have completed, check if they were successful
@@ -1868,18 +1825,17 @@ def check_tree_tasks() -> None:
                 download_container(
                     blob_service_client=blob_client,
                     container_name=batch_job_name,
-                    output_dir=os.path.join(
-                        'olc_webportalv2',
-                        'media'
-                    )
+                    output_dir=os.path.join("olc_webportalv2", "media"),
                 )
 
                 # Open the tree file and read the first line
                 tree_file = os.path.join(
-                    'olc_webportalv2', 'media',
-                    f'tree-{tree_object.pk}', 'mash.tree'
+                    "olc_webportalv2",
+                    "media",
+                    f"tree-{tree_object.pk}",
+                    "mash.tree",
                 )
-                with open(tree_file, 'r', encoding='utf-8') as f:
+                with open(tree_file, "r", encoding="utf-8") as f:
                     tree_string = f.readline()
 
                 # If there are diversitree strains, get their names
@@ -1887,20 +1843,21 @@ def check_tree_tasks() -> None:
                     diverse_strains = strainchoosr.pd_greedy(
                         tree=ete3.Tree(tree_file),
                         number_tips=tree_object.number_diversitree_strains,
-                        starting_strains=[]
+                        starting_strains=[],
                     )
-                    tree_object.seqids_diversitree = \
+                    tree_object.seqids_diversitree = (
                         strainchoosr.get_leaf_names_from_nodes(diverse_strains)
+                    )
 
                 # Update the tree object and save it
                 tree_object.newick_tree = tree_string.rstrip().replace("'", "")
                 tree_object.save()
 
                 # Delete the containers related to this tree task
-                for suffix in ['-input', '-output']:
+                for suffix in ["-input", "-output"]:
                     try:
                         blob_client.delete_container(
-                            f'tree-{tree_object.pk}{suffix}'
+                            f"tree-{tree_object.pk}{suffix}"
                         )
                     except StorageServiceError as exc:
                         if exc.status_code != 404:
@@ -1909,62 +1866,54 @@ def check_tree_tasks() -> None:
 
                 # Prepare the output folder and remove the batch config file
                 tree_output_folder = os.path.join(
-                    'olc_webportalv2', 'media',
-                    f'tree-{tree_object.pk}'
+                    "olc_webportalv2", "media", f"tree-{tree_object.pk}"
                 )
-                os.remove(
-                    os.path.join(tree_output_folder, 'batch_config.txt')
-                )
+                os.remove(os.path.join(tree_output_folder, "batch_config.txt"))
 
                 # Create a variable to store the zip path
-                zip_path = f'{tree_output_folder}.zip'
+                zip_path = f"{tree_output_folder}.zip"
 
                 # Zip the output folder and upload it to the cloud
                 shutil.make_archive(
-                    tree_output_folder,
-                    'zip',
-                    tree_output_folder
+                    tree_output_folder, "zip", tree_output_folder
                 )
-                tree_result_container = f'tree-{tree_object.pk}'
+                tree_result_container = f"tree-{tree_object.pk}"
 
                 # Upload the zip file to the cloud and generate a SAS URL for download
                 upload_blob_from_path(
                     blob_service_client=blob_client,
                     container_name=tree_result_container,
                     blob_name=os.path.basename(zip_path),
-                    file_path=zip_path
+                    file_path=zip_path,
                 )
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=tree_result_container,
                     blob_name=os.path.basename(zip_path),
-                    expiry=8
+                    expiry=8,
                 )
 
                 # Remove the output folder and the zip file
                 shutil.rmtree(tree_output_folder)
                 zip_folder = os.path.join(
-                    'olc_webportalv2', 'media',
-                    f'{batch_job_name}.zip'
+                    "olc_webportalv2", "media", f"{batch_job_name}.zip"
                 )
                 if os.path.isfile(zip_folder):
                     os.remove(zip_folder)
 
                 # Update the tree object and save it
                 tree_object.download_link = sas_url
-                tree_object.status = 'Complete'
+                tree_object.status = "Complete"
                 tree_object.save()
             else:
                 # If the tasks were not successful, update the status to
                 # 'Error'
-                Tree.objects.filter(
-                    pk=tree_task.tree_request.pk
-                ).update(status='Error')
+                Tree.objects.filter(pk=tree_task.tree_request.pk).update(
+                    status="Error"
+                )
 
             # Delete the task to avoid iterating over it again
-            TreeAzureRequest.objects.filter(
-                id=tree_task.id
-            ).delete()
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
 
 
 def check_amr_summary_tasks():
@@ -1981,12 +1930,10 @@ def check_amr_summary_tasks():
     # Iterate over each AMR summary task
     for amr_task in amr_summary_tasks:
         # Fetch the corresponding AMR summary object
-        amr_object = AMRSummary.objects.get(
-            pk=amr_task.amr_request.pk
-        )
+        amr_object = AMRSummary.objects.get(pk=amr_task.amr_request.pk)
 
         # Construct the batch job name
-        batch_job_name = f'amrsummary-{amr_task.amr_request.pk}'
+        batch_job_name = f"amrsummary-{amr_task.amr_request.pk}"
 
         # Assume all tasks related to this job have completed
         tasks_completed = True
@@ -1998,12 +1945,10 @@ def check_amr_summary_tasks():
                     tasks_completed = False
         # If job doesn't exist, update status to 'Error' and delete the task
         except BatchServiceError:
-            AMRSummary.objects.filter(
-                pk=amr_task.amr_request.pk
-            ).update(status='Error')
-            AMRAzureRequest.objects.filter(
-                id=amr_task.id
-            ).delete()
+            AMRSummary.objects.filter(pk=amr_task.amr_request.pk).update(
+                status="Error"
+            )
+            AMRAzureRequest.objects.filter(id=amr_task.id).delete()
             continue
 
         # If tasks have completed, check if they were successful
@@ -2023,39 +1968,32 @@ def check_amr_summary_tasks():
                 download_container(
                     blob_service_client=blob_client,
                     container_name=batch_job_name,
-                    output_dir='olc_webportalv2/media'
+                    output_dir="olc_webportalv2/media",
                 )
 
-                output_dir = f'olc_webportalv2/media/{batch_job_name}'
+                output_dir = f"olc_webportalv2/media/{batch_job_name}"
                 if os.path.isfile(
-                    os.path.join(
-                        output_dir,
-                        'batch_config.txt'
-                    )
+                    os.path.join(output_dir, "batch_config.txt")
                 ):
-                    os.remove(os.path.join(output_dir, 'batch_config.txt'))
-                shutil.make_archive(
-                    output_dir,
-                    'zip',
-                    output_dir
-                )
+                    os.remove(os.path.join(output_dir, "batch_config.txt"))
+                shutil.make_archive(output_dir, "zip", output_dir)
 
-                amr_result_container = f'amrsummary-{amr_object.pk}'
+                amr_result_container = f"amrsummary-{amr_object.pk}"
 
                 # Generate a SAS URL for the zip file and update the
                 # AMRSummary object with the download link
                 upload_blob_from_path(
                     blob_service_client=blob_client,
                     container_name=amr_result_container,
-                    blob_name=os.path.basename(f'{output_dir}.zip'),
-                    file_path=f'{output_dir}.zip'
+                    blob_name=os.path.basename(f"{output_dir}.zip"),
+                    file_path=f"{output_dir}.zip",
                 )
 
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=amr_result_container,
-                    blob_name=os.path.basename(f'{output_dir}.zip'),
-                    expiry=8
+                    blob_name=os.path.basename(f"{output_dir}.zip"),
+                    expiry=8,
                 )
 
                 # Populate the AMRDetail model with results
@@ -2064,12 +2002,8 @@ def check_amr_summary_tasks():
                     seq_amr_dict[seqid] = {}
                 # Open the AMR summary CSV file
                 with open(
-                    os.path.join(
-                        output_dir,
-                        'reports',
-                        'amr_summary.csv'
-                    ),
-                    encoding='utf-8'
+                    os.path.join(output_dir, "reports", "amr_summary.csv"),
+                    encoding="utf-8",
                 ) as csvfile:
                     # Create a CSV dictionary reader
                     reader = csv.DictReader(csvfile)
@@ -2078,9 +2012,9 @@ def check_amr_summary_tasks():
                     for row in reader:
                         # Extract the sequence ID, gene, and location from
                         # the row
-                        seqid = row['Strain']
-                        gene = row['Gene']
-                        location = row['Location']
+                        seqid = row["Strain"]
+                        gene = row["Gene"]
+                        location = row["Location"]
 
                         # If the sequence ID is not already in the dictionary,
                         # add it
@@ -2098,18 +2032,18 @@ def check_amr_summary_tasks():
                     AMRDetail.objects.create(
                         amr_request=amr_object,
                         seqid=seqid,
-                        amr_results=amr_results
+                        amr_results=amr_results,
                     )
 
                 # Cleanup
                 shutil.rmtree(output_dir)
-                os.remove(output_dir + '.zip')
+                os.remove(output_dir + ".zip")
                 amr_object.download_link = sas_url
-                amr_object.status = 'Complete'
+                amr_object.status = "Complete"
                 amr_object.save()
 
             else:
-                amr_object.status = 'Error'
+                amr_object.status = "Error"
                 amr_object.save()
 
             # Delete the task
@@ -2130,9 +2064,11 @@ def check_vir_typer_tasks():
     # Iterate over each VirTyper task
     for sub_task in vir_typer_tasks:
         vir_typer_task = VirTyperProject.objects.get(
-            pk=sub_task.project_name.pk)
+            pk=sub_task.project_name.pk
+        )
         batch_job_name = VirTyperProject.objects.get(
-            pk=vir_typer_task.pk).container_namer()
+            pk=vir_typer_task.pk
+        ).container_namer()
 
         # Check if tasks related with this VirusTyper project have finished
         tasks_completed = True
@@ -2142,13 +2078,15 @@ def check_vir_typer_tasks():
                     tasks_completed = False
         # Catch specific Azure Batch exceptions
         except BatchServiceError:
-            VirTyperProject.objects.filter(
-                pk=vir_typer_task.pk).update(status='Error')
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(
+                status="Error"
+            )
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
             continue
         except Exception:  # Catch all other exceptions
-            VirTyperProject.objects.filter(
-                pk=vir_typer_task.pk).update(status='Error')
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(
+                status="Error"
+            )
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
             continue
 
@@ -2171,31 +2109,28 @@ def check_vir_typer_tasks():
                 download_container(
                     blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
-                    output_dir='olc_webportalv2/media')
+                    output_dir="olc_webportalv2/media",
+                )
 
                 output_dir = os.path.join(
-                    'olc_webportalv2',
-                    'media',
-                    batch_job_name
+                    "olc_webportalv2", "media", batch_job_name
                 )
 
                 # Remove batch_config.txt if it exists
                 batch_config_path = os.path.join(
-                    output_dir,
-                    'batch_config.txt'
+                    output_dir, "batch_config.txt"
                 )
                 if os.path.isfile(batch_config_path):
                     os.remove(batch_config_path)
 
                 # Create a zip archive of the output directory
-                shutil.make_archive(output_dir, 'zip', output_dir)
+                shutil.make_archive(output_dir, "zip", output_dir)
 
                 # Read in the json output
                 json_output = os.path.join(
-                    output_dir,
-                    'virus_typer_outputs.json'
+                    output_dir, "virus_typer_outputs.json"
                 )
-                with open(json_output, 'r', encoding='utf-8') as json_report:
+                with open(json_output, "r", encoding="utf-8") as json_report:
                     vir_typer_task.report = json.load(json_report)
 
                 # Upload the zip file to the cloud and generate a SAS URL for
@@ -2203,24 +2138,25 @@ def check_vir_typer_tasks():
                 upload_blob_from_path(
                     blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
-                    blob_name=os.path.basename(output_dir + '.zip'),
-                    file_path=output_dir + '.zip'
+                    blob_name=os.path.basename(output_dir + ".zip"),
+                    file_path=output_dir + ".zip",
                 )
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=vir_typer_result_container,
-                    blob_name=os.path.basename(output_dir + '.zip'),
-                    expiry=8)
+                    blob_name=os.path.basename(output_dir + ".zip"),
+                    expiry=8,
+                )
 
                 vir_typer_task.download_link = sas_url
-                vir_typer_task.status = 'Complete'
+                vir_typer_task.status = "Complete"
                 vir_typer_task.save()
 
                 # Clean up the output directory and zip file
                 shutil.rmtree(output_dir)
-                os.remove(output_dir + '.zip')
+                os.remove(output_dir + ".zip")
             else:
-                vir_typer_task.status = 'Error'
+                vir_typer_task.status = "Error"
                 vir_typer_task.save()
 
             # Delete the Azure task
@@ -2245,7 +2181,7 @@ def check_prokka_tasks() -> None:
         )
 
         # Create a job name for the batch
-        batch_job_name = f'prokka-{prokka_task.prokka_request.pk}'
+        batch_job_name = f"prokka-{prokka_task.prokka_request.pk}"
 
         # Assume all tasks are completed
         tasks_completed = True
@@ -2260,17 +2196,14 @@ def check_prokka_tasks() -> None:
             # Handle exceptions
             ProkkaRequest.objects.filter(
                 pk=prokka_task.prokka_request.pk
-            ).update(status='Error')
+            ).update(status="Error")
             ProkkaAzureRequest.objects.filter(id=prokka_task.id).delete()
             continue
 
         # If all tasks are completed, handle them
         if tasks_completed:
             handle_completed_tasks(
-                batch_client,
-                batch_job_name,
-                prokka_object,
-                prokka_task
+                batch_client, batch_job_name, prokka_object, prokka_task
             )
 
 
@@ -2278,10 +2211,15 @@ def handle_completed_tasks(
     batch_client: BatchServiceClient,
     batch_job_name: str,
     prokka_object: ProkkaRequest,
-    prokka_task: ProkkaAzureRequest
+    prokka_task: ProkkaAzureRequest,
 ) -> None:
-    """
-    Handle completed tasks.
+    """Evaluate completed Prokka tasks and clean up Batch resources.
+
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        batch_job_name: Identifier of the Prokka Batch job.
+        prokka_object: Prokka request associated with the job.
+        prokka_task: Local record tracking the Batch task.
     """
     # Assume all exit codes are good
     exit_codes_good = True
@@ -2298,13 +2236,10 @@ def handle_completed_tasks(
 
     # If all exit codes are good, handle successful tasks
     if exit_codes_good:
-        handle_successful_tasks(
-            batch_job_name,
-            prokka_object
-        )
+        handle_successful_tasks(batch_job_name, prokka_object)
     else:
         # Otherwise, set the status of the Prokka object to 'Error'
-        prokka_object.status = 'Error'
+        prokka_object.status = "Error"
         prokka_object.save()
 
     # Delete the Prokka task
@@ -2312,74 +2247,73 @@ def handle_completed_tasks(
 
 
 def handle_successful_tasks(
-    batch_job_name: str,
-    prokka_object: ProkkaRequest
+    batch_job_name: str, prokka_object: ProkkaRequest
 ) -> None:
-    """
-    Handle successful tasks.
+    """Package successful Prokka outputs and save a download link.
+
+    Args:
+        batch_job_name: Identifier of the Prokka Batch job.
+        prokka_object: Prokka request to update with the result URL.
     """
     blob_client = get_storage_client()
 
     download_container(
         blob_service_client=blob_client,
         container_name=batch_job_name,
-        output_dir=os.path.join('olc_webportalv2', 'media')
+        output_dir=os.path.join("olc_webportalv2", "media"),
     )
 
     # Define the output directory
-    output_dir = os.path.join('olc_webportalv2', 'media', batch_job_name)
+    output_dir = os.path.join("olc_webportalv2", "media", batch_job_name)
 
     # If a batch_config.txt file exists, remove it
-    if os.path.isfile(os.path.join(output_dir, 'batch_config.txt')):
-        os.remove(os.path.join(output_dir, 'batch_config.txt'))
+    if os.path.isfile(os.path.join(output_dir, "batch_config.txt")):
+        os.remove(os.path.join(output_dir, "batch_config.txt"))
 
     # Create a zip archive of the output directory
-    shutil.make_archive(output_dir, 'zip', output_dir)
+    shutil.make_archive(output_dir, "zip", output_dir)
 
     # Define the result container name
-    prokka_result_container = f'prokka-result-{prokka_object.pk}'
+    prokka_result_container = f"prokka-result-{prokka_object.pk}"
 
     # Upload the zip file to the cloud
     upload_blob_from_path(
         blob_service_client=blob_client,
         container_name=prokka_result_container,
-        blob_name=os.path.basename(output_dir + '.zip'),
-        file_path=output_dir + '.zip'
+        blob_name=os.path.basename(output_dir + ".zip"),
+        file_path=output_dir + ".zip",
     )
 
     # Generate a SAS URL for the zip file
     sas_url = generate_download_link(
         blob_service_client=blob_client,
         container_name=prokka_result_container,
-        blob_name=os.path.basename(output_dir + '.zip'),
-        expiry=8
+        blob_name=os.path.basename(output_dir + ".zip"),
+        expiry=8,
     )
 
     # Update the Prokka object with the download link and status
     prokka_object.download_link = sas_url
-    prokka_object.status = 'Complete'
+    prokka_object.status = "Complete"
     prokka_object.save()
 
     # Remove the output directory and the zip file
     shutil.rmtree(output_dir)
-    os.remove(output_dir + '.zip')
+    os.remove(output_dir + ".zip")
 
 
-def get_batch_blast_results(
-    blast_result_file,
-    geneseekr_task
-):
-    """
-    Parse BLAST results and update the GeneSeekr task.
+def get_batch_blast_results(blast_result_file, geneseekr_task):
+    """Parse BLAST results and update the GeneSeekr request.
 
-    :param blast_result_file: File with BLAST results.
-    :param geneseekr_task: GeneSeekr task to be updated.
-    :return: None
+    Args:
+        blast_result_file: File containing BLAST results.
+        geneseekr_task: GeneSeekr request to update.
     """
     # Parse query sequence to get query IDs
     query_names = [
-        query.id for query in SeqIO.parse(
-            StringIO(geneseekr_task.query_sequence), 'fasta'
+        query.id
+        for query in SeqIO.parse(
+            StringIO(geneseekr_task.query_sequence), "fasta"
         )
     ]
 
@@ -2395,17 +2329,18 @@ def get_batch_blast_results(
 
     # Parse BLAST results file
     try:
-        blast_results_dict = pd.read_csv(
-            blast_result_file, sep=','
-        ).fillna('ND').transpose()
+        blast_results_dict = (
+            pd.read_csv(blast_result_file, sep=",").fillna("ND").transpose()
+        )
     except pd.errors.ParserError:
         return
 
     # Update gene_hits with BLAST results
     for _, blast_dict in blast_results_dict.items():
         for query_name in query_names:
-            gene_hits[query_name][blast_dict['Strain']] = \
-                blast_dict[query_name]
+            gene_hits[query_name][blast_dict["Strain"]] = blast_dict[
+                query_name
+            ]
 
     # Update GeneSeekrDetail objects with BLAST results
     for seqid in geneseekr_task.seqids:
@@ -2432,39 +2367,49 @@ def get_batch_blast_results(
 
 
 def get_batch_blast_hits(run_folder, geneseekr_task):
-    """
-    Parse BLAST hits and update the GeneSeekr task.
+    """Parse BLAST hit files and replace matching GeneSeekr records.
 
-    :param run_folder: Folder containing BLAST results.
-    :param geneseekr_task: GeneSeekr task to be updated.
-    :return: None
+    Args:
+        run_folder: Local folder containing BLAST result files.
+        geneseekr_task: GeneSeekr request to update.
     """
     for seqid in geneseekr_task.seqids:
-        results = glob(
-            os.path.join(
-                run_folder,
-                f'{seqid}*.tsv')
-        )[0]
+        results = glob(os.path.join(run_folder, f"{seqid}*.tsv"))[0]
 
         # Read results into a dictionary
-        results_dict = pd.read_csv(
-            results,
-            names=[
-                'query_id', 'subject_id', 'positives', 'mismatches',
-                'gaps', 'evalue', 'bit_score', 'subject_length',
-                'alignment_length', 'query_start', 'query_end',
-                'subject_start', 'subject_end', 'percent_match',
-                'query_sequence', 'subject_sequence'
-            ],
-            sep='\t'
-        ).fillna('ND').transpose()
+        results_dict = (
+            pd.read_csv(
+                results,
+                names=[
+                    "query_id",
+                    "subject_id",
+                    "positives",
+                    "mismatches",
+                    "gaps",
+                    "evalue",
+                    "bit_score",
+                    "subject_length",
+                    "alignment_length",
+                    "query_start",
+                    "query_end",
+                    "subject_start",
+                    "subject_end",
+                    "percent_match",
+                    "query_sequence",
+                    "subject_sequence",
+                ],
+                sep="\t",
+            )
+            .fillna("ND")
+            .transpose()
+        )
 
         for _, blast_result in results_dict.items():
-            if blast_result.query_id == 'query_id':
+            if blast_result.query_id == "query_id":
                 continue
 
             # Format contig name
-            modified_contig_name = f'{seqid}_{blast_result.query_id}'
+            modified_contig_name = f"{seqid}_{blast_result.query_id}"
 
             # Remove any previously populated versions
             TopBlastHit.objects.filter(
@@ -2481,14 +2426,12 @@ def get_batch_blast_hits(run_folder, geneseekr_task):
                 end_position=blast_result.query_end,
                 e_value=blast_result.evalue,
                 geneseekr_request=geneseekr_task,
-                gene_name=blast_result.subject_id.replace(
-                    'gb|', ''
-                ).replace(
-                    '|', ''
+                gene_name=blast_result.subject_id.replace("gb|", "").replace(
+                    "|", ""
                 ),
                 query_start_position=blast_result.subject_start,
                 query_end_position=blast_result.subject_end,
-                query_sequence_length=blast_result.subject_length
+                query_sequence_length=blast_result.subject_length,
             )
 
             # Save the hit
@@ -2522,14 +2465,11 @@ def _populate_benchmark_seqids(
     benchmark_name = normalise_benchmark_name(
         benchmark_name=geneseekr_request.benchmark
     )
-    seqids_name = "{0}_seqids.txt".format(benchmark_name)
+    seqids_name = f"{benchmark_name}_seqids.txt"
 
     if not blob_client.object_exists(output_container, seqids_name):
         raise FileNotFoundError(
-            "Generated benchmark SEQID file is missing: {0}/{1}".format(
-                output_container,
-                seqids_name,
-            )
+            f"Generated benchmark SEQID file is missing: {output_container}/{seqids_name}"
         )
 
     os.makedirs(run_folder, exist_ok=True)
@@ -2537,14 +2477,13 @@ def _populate_benchmark_seqids(
     blob_client.download_file(output_container, seqids_name, local_seqids)
 
     with open(local_seqids, "r", encoding="utf-8") as seqids_object:
-        sequence_ids = sorted({line.strip() for line in seqids_object if line.strip()})
+        sequence_ids = sorted(
+            {line.strip() for line in seqids_object if line.strip()}
+        )
 
     if not sequence_ids:
         raise ValueError(
-            "Generated benchmark SEQID file is empty: {0}/{1}".format(
-                output_container,
-                seqids_name,
-            )
+            f"Generated benchmark SEQID file is empty: {output_container}/{seqids_name}"
         )
 
     geneseekr_request.seqids = sequence_ids
@@ -2567,14 +2506,13 @@ def check_geneseekr_tasks():
 
     # Iterate over each GeneSeekr task
     for geneseekr_task in geneseekr_tasks:
-
         # Get the corresponding GeneSeekr request
         geneseekr_request = GeneSeekrRequest.objects.get(
             pk=geneseekr_task.geneseekr_request.pk
         )
 
         # Create a name for the batch job
-        batch_job_name = f'geneseekr-{geneseekr_task.geneseekr_request.pk}'
+        batch_job_name = f"geneseekr-{geneseekr_task.geneseekr_request.pk}"
 
         # Initialize a flag to check if all tasks have completed
         tasks_completed = True
@@ -2582,7 +2520,6 @@ def check_geneseekr_tasks():
         # Try to list all tasks for the batch job
         try:
             for cloudtask in batch_client.task.list(batch_job_name):
-
                 # If any task is not completed, set the flag to False
                 if cloudtask.state != "completed":
                     tasks_completed = False
@@ -2591,7 +2528,7 @@ def check_geneseekr_tasks():
         except BatchServiceError:
             GeneSeekrRequest.objects.filter(
                 pk=geneseekr_task.geneseekr_request.pk
-            ).update(status='Error')
+            ).update(status="Error")
             GeneSeekrAzureRequest.objects.filter(id=geneseekr_task.id).delete()
             continue
 
@@ -2599,22 +2536,20 @@ def check_geneseekr_tasks():
         except Exception:
             GeneSeekrRequest.objects.filter(
                 pk=geneseekr_task.geneseekr_request.pk
-            ).update(status='Error')
+            ).update(status="Error")
             GeneSeekrAzureRequest.objects.filter(id=geneseekr_task.id).delete()
             continue
 
         # If all tasks have completed, check if they were successful
         if tasks_completed:
-
             # Initialize a flag to check if all exit codes are 0 (successful)
             exit_codes_good = True
 
             # Iterate over each task again
             for cloudtask in batch_client.task.list(batch_job_name):
-
                 # If any task's exit code is not 0, set the flag to False
                 if cloudtask.execution_info.exit_code != 0:
-                    print('Error!', cloudtask.execution_info.exit_code)
+                    print("Error!", cloudtask.execution_info.exit_code)
                     exit_codes_good = False
 
             # Delete the batch job and pool to save resources
@@ -2623,13 +2558,10 @@ def check_geneseekr_tasks():
 
             # If all exit codes are good, proceed with the next steps
             if exit_codes_good:
-
                 # Define the output container and run folder
                 output_container = batch_job_name
                 run_folder = os.path.join(
-                    'olc_webportalv2',
-                    'media',
-                    batch_job_name
+                    "olc_webportalv2", "media", batch_job_name
                 )
 
                 blob_client = get_storage_client()
@@ -2638,37 +2570,27 @@ def check_geneseekr_tasks():
 
                 # Iterate over each blob
                 for blob in blobs:
-
                     # If the blob is a CSV report, download it
                     if fnmatch.fnmatch(
                         blob.name,
-                        os.path.join(
-                            'reports',
-                            'geneseekr_blastn.csv'
-                        )
+                        os.path.join("reports", "geneseekr_blastn.csv"),
                     ):
                         download_blob_to_path(
                             container_name=output_container,
                             blob_name=blob.name,
                             file_path=os.path.join(
-                                run_folder,
-                                os.path.split(blob.name)[1]
+                                run_folder, os.path.split(blob.name)[1]
                             ),
                             blob_service_client=blob_client,
                         )
                     elif fnmatch.fnmatch(
-                        blob.name,
-                        os.path.join(
-                            'reports',
-                            '*.tsv'
-                        )
+                        blob.name, os.path.join("reports", "*.tsv")
                     ):
                         download_blob_to_path(
                             container_name=output_container,
                             blob_name=blob.name,
                             file_path=os.path.join(
-                                run_folder,
-                                os.path.split(blob.name)[1]
+                                run_folder, os.path.split(blob.name)[1]
                             ),
                             blob_service_client=blob_client,
                         )
@@ -2685,14 +2607,12 @@ def check_geneseekr_tasks():
                 # Get BLAST results and hits
                 get_batch_blast_results(
                     blast_result_file=os.path.join(
-                        run_folder,
-                        'geneseekr_blastn.csv'
+                        run_folder, "geneseekr_blastn.csv"
                     ),
-                    geneseekr_task=geneseekr_request
+                    geneseekr_task=geneseekr_request,
                 )
                 get_batch_blast_hits(
-                    run_folder=run_folder,
-                    geneseekr_task=geneseekr_request
+                    run_folder=run_folder, geneseekr_task=geneseekr_request
                 )
 
                 # Generate an SAS url with read access that users will be able
@@ -2700,39 +2620,39 @@ def check_geneseekr_tasks():
                 sas_url = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=output_container,
-                    blob_name='reports/geneseekr_blastn.xlsx',
+                    blob_name="reports/geneseekr_blastn.xlsx",
                     expiry=8,
                 )
                 sas_url_sequence = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=output_container,
-                    blob_name='reports/geneseekr_blastn.csv',
+                    blob_name="reports/geneseekr_blastn.csv",
                     expiry=8,
                 )
 
                 # Update request status and download links
                 geneseekr_request.download_link = sas_url
                 geneseekr_request.download_link_sequence = sas_url_sequence
-                geneseekr_request.status = 'Complete'
+                geneseekr_request.status = "Complete"
                 geneseekr_request.save()
 
                 # Send email to users
                 email_list = geneseekr_request.emails_array
                 for email in email_list:
                     send_email(
-                        subject=f'Geneseekr Query {geneseekr_request} has '
-                        'finished.',
-                        body=f'This email is to inform you that the Geneseekr'
-                        f' Query {geneseekr_request} has completed and is '
-                        f'available at the following link {sas_url}',
-                        recipient=email
+                        subject=f"Geneseekr Query {geneseekr_request} has "
+                        "finished.",
+                        body=f"This email is to inform you that the Geneseekr"
+                        f" Query {geneseekr_request} has completed and is "
+                        f"available at the following link {sas_url}",
+                        recipient=email,
                     )
 
                 # Finally, do some cleanup
                 shutil.rmtree(run_folder)
             else:
-                print('Error in exit codes')
-                geneseekr_request.status = 'Error'
+                print("Error in exit codes")
+                geneseekr_request.status = "Error"
                 geneseekr_request.save()
 
             GeneSeekrAzureRequest.objects.filter(id=geneseekr_task.id).delete()
@@ -2754,7 +2674,7 @@ def monitor_tasks():
     try:
         check_nanopore_tasks()
     except Exception as exc:
-        logger.exception("Nanopore task monitoring failed: {}".format(exc))
+        logger.exception(f"Nanopore task monitoring failed: {exc}")
         capture_exception(exc)
 
     # Also check for Mash tree creation tasks
@@ -2806,10 +2726,9 @@ def monitor_tasks():
 
 
 def check_sample_sheet_format(
-    file_path: str,
-    target_string: str = '[BCLConvert_Data]'
+    file_path: str, target_string: str = "[BCLConvert_Data]"
 ) -> bool:
-    '''
+    """
     Check if a specific string exists in a sample sheet.
 
     Parameters:
@@ -2818,9 +2737,9 @@ def check_sample_sheet_format(
 
     Returns:
     bool: True if the string is found, False otherwise.
-    '''
+    """
     # Open the file with utf-8 encoding
-    with open(file_path, 'r', encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         # Read the file line by line
         for line in file:
             # Check if the target string is in the current line
@@ -2832,8 +2751,7 @@ def check_sample_sheet_format(
 
 
 def convert_sample_sheet(
-    nextseq_sample_sheet: str,
-    output_file_path: str
+    nextseq_sample_sheet: str, output_file_path: str
 ) -> None:
     """
     Convert a NextSeq-style sample sheet to a MiSeq-style sample sheet.
@@ -2846,59 +2764,57 @@ def convert_sample_sheet(
     None
     """
     # Define constants
-    header_section = '[Header]'
-    reads_section = '[Reads]'
-    settings_section = '[Settings]'
-    data_section = '[Data]'
+    header_section = "[Header]"
+    reads_section = "[Reads]"
+    settings_section = "[Settings]"
+    data_section = "[Data]"
     data_columns = [
-        'Sample_ID',
-        'Sample_Name',
-        'Description',
-        'I7_Index_ID',
-        'index',
-        'I5_Index_ID',
-        'index2',
-        'Sample_Project',
-        'Sample_Plate',
-        'Sample_Well'
+        "Sample_ID",
+        "Sample_Name",
+        "Description",
+        "I7_Index_ID",
+        "index",
+        "I5_Index_ID",
+        "index2",
+        "Sample_Project",
+        "Sample_Plate",
+        "Sample_Well",
     ]
 
     # Load the data frames using the read_sections function
-    dataframes = read_sections(
-        file_path=nextseq_sample_sheet
-    )
+    dataframes = read_sections(file_path=nextseq_sample_sheet)
 
     # Extract the necessary information
-    experiment_name = dataframes['Header'].get('RunName', '')
-    forward_read_length = dataframes['Reads'].get('Read1Cycles', '')
-    reverse_read_length = dataframes['Reads'].get('Read2Cycles', '')
+    experiment_name = dataframes["Header"].get("RunName", "")
+    forward_read_length = dataframes["Reads"].get("Read1Cycles", "")
+    reverse_read_length = dataframes["Reads"].get("Read2Cycles", "")
     adapter = (
         f"{dataframes['BCLConvert_Settings'].get('AdapterRead1', '')}_"
         f"{dataframes['BCLConvert_Settings'].get('AdapterRead2', '')}"
     )
 
     # Create the MiSeq sample sheet
-    with open(output_file_path, 'w', encoding='utf-8') as file:
-        file.write(f'{header_section}\n')
-        file.write(f'Experiment Name,{experiment_name}\n')
-        file.write(f'\n{reads_section}\n')
-        file.write(f'{forward_read_length}\n')
-        file.write(f'{reverse_read_length}\n')
-        file.write(f'\n{settings_section}\n')
-        file.write(f'adapter,{adapter}\n')
-        file.write(f'\n{data_section}\n')
-        file.write(','.join(data_columns) + '\n')
-        for seq_id, seq_dict in sorted(dataframes['Cloud_Data'].items()):
-            description = ''
-            i7_index = dataframes['BCLConvert_Data'][seq_id].get('Index')
-            i5_index = dataframes['BCLConvert_Data'][seq_id].get('Index2')
-            sample_project = ''
-            sample_plate = seq_dict.get('ProjectName', '')
-            sample_well = ''
+    with open(output_file_path, "w", encoding="utf-8") as file:
+        file.write(f"{header_section}\n")
+        file.write(f"Experiment Name,{experiment_name}\n")
+        file.write(f"\n{reads_section}\n")
+        file.write(f"{forward_read_length}\n")
+        file.write(f"{reverse_read_length}\n")
+        file.write(f"\n{settings_section}\n")
+        file.write(f"adapter,{adapter}\n")
+        file.write(f"\n{data_section}\n")
+        file.write(",".join(data_columns) + "\n")
+        for seq_id, seq_dict in sorted(dataframes["Cloud_Data"].items()):
+            description = ""
+            i7_index = dataframes["BCLConvert_Data"][seq_id].get("Index")
+            i5_index = dataframes["BCLConvert_Data"][seq_id].get("Index2")
+            sample_project = ""
+            sample_plate = seq_dict.get("ProjectName", "")
+            sample_well = ""
             file.write(
-                f'{seq_id},{seq_id},{description},{i7_index},{i7_index},'
-                f'{i5_index},{i5_index},{sample_project},{sample_plate},'
-                f'{sample_well}\n'
+                f"{seq_id},{seq_id},{description},{i7_index},{i7_index},"
+                f"{i5_index},{i5_index},{sample_project},{sample_plate},"
+                f"{sample_well}\n"
             )
 
 
@@ -2918,17 +2834,15 @@ def read_sections(file_path: str) -> dict:
     # Check if the file exists
     if not os.path.exists(file_path):
         # If the file does not exist, raise an error
-        raise FileNotFoundError(
-            f'The file {file_path} does not exist.'
-        )
+        raise FileNotFoundError(f"The file {file_path} does not exist.")
 
     # Open the file in read mode with utf-8 encoding
-    with open(file_path, 'r', encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         # Read the entire content of the file
         content = file.read()
 
     # Split the content into sections
-    sections = content.split('[')
+    sections = content.split("[")
     sections = sections[1:]  # Exclude the first empty section
 
     # Initialize an empty dictionary to store the dataframes
@@ -2937,17 +2851,17 @@ def read_sections(file_path: str) -> dict:
     # Loop through each section
     for section in sections:
         # Split the section into lines
-        lines = section.split('\n')
+        lines = section.split("\n")
         # Extract the section name from the first line
-        section_name = lines[0].replace(']', '').replace(',', '')
+        section_name = lines[0].replace("]", "").replace(",", "")
         # Join the remaining lines back into a string
-        section_data = '\n'.join(lines[1:])
+        section_data = "\n".join(lines[1:])
         # Read the section data into a dataframe
         # df = pd.read_csv(StringIO(section_data), sep=',', header=None)
-        df = pd.read_csv(StringIO(section_data), sep=',', header=None)
+        df = pd.read_csv(StringIO(section_data), sep=",", header=None)
 
         # Check the section name
-        if section_name in ['BCLConvert_Data', 'Cloud_Data']:
+        if section_name in ["BCLConvert_Data", "Cloud_Data"]:
             # Process 'BCLConvert_Data' or 'Cloud_Data'
 
             # Transpose the DataFrame so that the values in row 1 become
@@ -2981,16 +2895,10 @@ def read_sections(file_path: str) -> dict:
                     if seq_id not in dataframes[section_name]:
                         dataframes[section_name][seq_id] = {}
                     # Update the dictionary with the header and cell data
-                    dataframes[section_name][seq_id].update(
-                        {
-                            header: data
-                        }
-                    )
+                    dataframes[section_name][seq_id].update({header: data})
         else:
             # Process other sections
-            dataframes[section_name] = df.set_index(
-                df.columns[0]
-            )[1].to_dict()
+            dataframes[section_name] = df.set_index(df.columns[0])[1].to_dict()
 
     # Return the dictionary of dataframes
     return dataframes
@@ -2998,27 +2906,26 @@ def read_sections(file_path: str) -> dict:
 
 @shared_task
 def clean_old_containers():
-    """
-    Remove containers matching regexes if they are over one week old
-    """
+    """Delete matching storage containers older than seven days."""
     blob_client = get_storage_client()
     # Patterns we have to worry about - data-request-digits, geneseekr-digits
     # TODO: Add more of these as more analysis types get created.
     patterns_to_search = [
-        re.compile('^ampliseq.+'),
-        re.compile(r'^amrsummary-\d+-\w+$'),
-        re.compile('^cowsnphr.+'),
-        re.compile(r'^data-request-\d+$'),
-        re.compile(r'^geneseekr-\d+-\w+$'),
-        re.compile(r'^mash-\d+-\w+$'),
-        re.compile(r'^neighbor-\d+$'),
-        re.compile(r'^neighbor-\w+-\d+$'),
-        re.compile(r'^parsnp-\d+-\w+$'),
-        re.compile(r'^primer-\w+-\d+$'),
-        re.compile(r'^primer-\w+-\d+-\w+$'),
-        re.compile(r'^prokka-\d+-\w+$'),
-        re.compile(r'^tree-\d+-\w+$'),
-        re.compile(r'^vir-typer-\d+-\w+$')]
+        re.compile("^ampliseq.+"),
+        re.compile(r"^amrsummary-\d+-\w+$"),
+        re.compile("^cowsnphr.+"),
+        re.compile(r"^data-request-\d+$"),
+        re.compile(r"^geneseekr-\d+-\w+$"),
+        re.compile(r"^mash-\d+-\w+$"),
+        re.compile(r"^neighbor-\d+$"),
+        re.compile(r"^neighbor-\w+-\d+$"),
+        re.compile(r"^parsnp-\d+-\w+$"),
+        re.compile(r"^primer-\w+-\d+$"),
+        re.compile(r"^primer-\w+-\d+-\w+$"),
+        re.compile(r"^prokka-\d+-\w+$"),
+        re.compile(r"^tree-\d+-\w+$"),
+        re.compile(r"^vir-typer-\d+-\w+$"),
+    ]
     generator = blob_client.list_containers()
     for container in generator:
         for pattern in patterns_to_search:
@@ -3026,7 +2933,7 @@ def clean_old_containers():
                 if not container.created_at:
                     continue
                 created_at = datetime.fromisoformat(
-                    container.created_at.replace('Z', '+00:00')
+                    container.created_at.replace("Z", "+00:00")
                 )
                 if created_at.tzinfo is None:
                     created_at = created_at.replace(tzinfo=timezone.utc)
@@ -3038,9 +2945,7 @@ def clean_old_containers():
 
 @shared_task
 def clean_old_models():
-    """
-    Delete models after seven days
-    """
+    """Delete analysis request records older than seven days."""
     models = [
         AmpliSeqRequest.objects.all(),  # AmpliSeq
         COWSNPhRRequest.objects.all(),  # COWSNPhR
@@ -3086,6 +2991,15 @@ NANOPORE_SUBMISSION_MAX_RETRY_DELAY = getattr(
 
 
 def _batch_submission_is_retryable(response, response_data):
+    """Determine whether a Batch submission failure is transient.
+
+    Args:
+        response: HTTP response returned by the Batch service.
+        response_data: Parsed response body.
+
+    Returns:
+        Whether the response indicates a retryable capacity failure.
+    """
     if response_data.get("retryable") is True:
         return True
     if response.status_code == 503 and response_data.get("error_code") == (
@@ -3100,7 +3014,11 @@ def _batch_submission_is_retryable(response, response_data):
 
 
 def _nanopore_batch_is_active(run):
-    """Return whether one persistent Azure task owns this run."""
+    """Return whether one persistent Azure task owns this run.
+
+    Args:
+        run: Sequencing run whose processing batches are checked.
+    """
     return run.nanopore_processing_batches.filter(
         status__in=("submitting", "submitted", "running"),
         azure_job_id__gt="",
@@ -3108,7 +3026,11 @@ def _nanopore_batch_is_active(run):
 
 
 def _nanopore_collection_blocker(run):
-    """Return the oldest generation whose result is not published yet."""
+    """Return the oldest generation whose result is not published yet.
+
+    Args:
+        run: Sequencing run whose processing batches are checked.
+    """
     return (
         run.nanopore_processing_batches.filter(
             status__in=(
@@ -3126,7 +3048,11 @@ def _nanopore_collection_blocker(run):
 
 
 def _unclaimed_nanopore_files(run):
-    """Return uploaded POD5 files that are not assigned to a generation."""
+    """Return uploaded POD5 files that are not assigned to a generation.
+
+    Args:
+        run: Sequencing run whose files are queried.
+    """
     return NanoporeFile.objects.filter(
         sequencing_run=run,
         status="uploaded",
@@ -3135,8 +3061,16 @@ def _unclaimed_nanopore_files(run):
 
 
 def _schedule_nanopore_collection(run_id, force=False, countdown=0):
-    """Schedule collection after the surrounding transaction commits."""
+    """Schedule collection after the surrounding transaction commits.
+
+    Args:
+        run_id: Primary key of the run to collect.
+        force: Whether to skip the quiet-window delay.
+        countdown: Celery delay before task execution, in seconds.
+    """
+
     def schedule():
+        """Queue the collection task after the transaction commits."""
         collect_nanopore_iteration.apply_async(
             queue="cowbat",
             args=(run_id,),
@@ -3148,7 +3082,12 @@ def _schedule_nanopore_collection(run_id, force=False, countdown=0):
 
 
 def _nanopore_result_payload(blob_service, processing_batch):
-    """Return one published generation result, or None when unavailable."""
+    """Return one published generation result, or ``None`` if unavailable.
+
+    Args:
+        blob_service: Storage client used to retrieve the manifest.
+        processing_batch: Generation whose result manifest is checked.
+    """
     if not processing_batch.report_url:
         return None
     container_name = getattr(
@@ -3156,10 +3095,14 @@ def _nanopore_result_payload(blob_service, processing_batch):
         "NANOPORE_RESULTS_CONTAINER",
         "nanopore-results",
     )
-    if not blob_service.object_exists(container_name, processing_batch.report_url):
+    if not blob_service.object_exists(
+        container_name, processing_batch.report_url
+    ):
         return None
     payload = json.loads(
-        blob_service.download_bytes(container_name, processing_batch.report_url)
+        blob_service.download_bytes(
+            container_name, processing_batch.report_url
+        )
     )
     if not isinstance(payload, dict):
         raise ValueError("Nanopore result must be a JSON object.")
@@ -3167,22 +3110,43 @@ def _nanopore_result_payload(blob_service, processing_batch):
 
 
 def _nanopore_result_identity_error(run, batch_record, payload):
-    """Reject stale results before changing database state."""
+    """Reject stale results before changing database state.
+
+    Args:
+        run: Sequencing run expected to own the result.
+        batch_record: Processing generation expected to own the result.
+        payload: Decoded result manifest.
+
+    Returns:
+        An error message for an identity mismatch, or ``None`` if valid.
+    """
     try:
         run_id = int(payload.get("run_id"))
         generation = int(payload.get("generation", payload.get("iteration")))
     except (TypeError, ValueError):
         return "Nanopore result has invalid run ID or generation."
-    if (run_id != run.pk or payload.get("run_name") != run.run_name
-            or generation != batch_record.generation):
-        return ("Nanopore result identity mismatch: expected run {0}, "
-                "generation {1}; found run {2}, generation {3}.").format(
-                    run.pk, batch_record.generation, run_id, generation)
+    if (
+        run_id != run.pk
+        or payload.get("run_name") != run.run_name
+        or generation != batch_record.generation
+    ):
+        return (
+            f"Nanopore result identity mismatch: expected run {run.pk}, "
+            f"generation {batch_record.generation}; found run {run_id}, generation {generation}."
+        )
     return None
 
 
 def _reconcile_nanopore_generation_results(run, blob_service):
-    """Persist newly published immutable generation result manifests."""
+    """Persist newly published immutable generation result manifests.
+
+    Args:
+        run: Sequencing run whose generations are reconciled.
+        blob_service: Storage client used to read result manifests.
+
+    Returns:
+        Lists of completed and failed processing batch records.
+    """
     completed = []
     failed = []
     batches = run.nanopore_processing_batches.filter(
@@ -3193,7 +3157,9 @@ def _reconcile_nanopore_generation_results(run, blob_service):
         payload = _nanopore_result_payload(blob_service, batch_record)
         if payload is None:
             continue
-        identity_error = _nanopore_result_identity_error(run, batch_record, payload)
+        identity_error = _nanopore_result_identity_error(
+            run, batch_record, payload
+        )
         if identity_error:
             batch_record.status = "failed"
             batch_record.error = identity_error
@@ -3215,12 +3181,16 @@ def _reconcile_nanopore_generation_results(run, blob_service):
         batch_record.report = payload
         batch_record.exit_code = exit_code
         batch_record.last_completed_at = completed_at
-        if result_status in (
-            "complete",
-            "completed",
-            "success",
-            "succeeded",
-        ) and exit_code == 0:
+        if (
+            result_status
+            in (
+                "complete",
+                "completed",
+                "success",
+                "succeeded",
+            )
+            and exit_code == 0
+        ):
             batch_record.processed_pod5_count = batch_record.pod5_count
             if batch_record.status == "published":
                 batch_record.status = "complete"
@@ -3229,23 +3199,32 @@ def _reconcile_nanopore_generation_results(run, blob_service):
             if not batch_record.azure_job_id:
                 batch_record.status = "failed"
             batch_record.error = (
-                "Nanopore generation {0} reported status {1!r} with "
-                "scheduler exit code {2!r}."
-            ).format(batch_record.generation, result_status, exit_code)
+                f"Nanopore generation {batch_record.generation} reported status {result_status!r} with "
+                f"scheduler exit code {exit_code!r}."
+            )
             failed.append(batch_record)
-        batch_record.save(update_fields=[
-            "status",
-            "report",
-            "exit_code",
-            "last_completed_at",
-            "processed_pod5_count",
-            "error",
-        ])
+        batch_record.save(
+            update_fields=[
+                "status",
+                "report",
+                "exit_code",
+                "last_completed_at",
+                "processed_pod5_count",
+                "error",
+            ]
+        )
     return completed, failed
 
 
 def _claim_nanopore_batch(run):
-    """Claim all uploaded files in one immutable quiet-window generation."""
+    """Claim all uploaded files in one immutable quiet-window generation.
+
+    Args:
+        run: Sequencing run whose unclaimed files are assigned.
+
+    Returns:
+        The created processing batch, or ``None`` when no files are waiting.
+    """
     files = list(
         NanoporeFile.objects.select_for_update()
         .filter(
@@ -3293,9 +3272,9 @@ def _claim_nanopore_batch(run):
         status="pending",
         pod5_count=len(files),
         report_url=(
-            "runs/{0}/iterations/iteration-{1:06d}/manifests/"
-            "iteration-{1:06d}.json"
-        ).format(run.run_name, generation),
+            f"runs/{run.run_name}/iterations/iteration-{generation:06d}/manifests/"
+            f"iteration-{generation:06d}.json"
+        ),
     )
     NanoporeFile.objects.filter(
         pk__in=[nanopore_file.pk for nanopore_file in files]
@@ -3304,13 +3283,18 @@ def _claim_nanopore_batch(run):
 
 
 def _write_nanopore_control(run, state):
-    """Publish the mutable control state consumed by the Batch wrapper."""
+    """Publish the mutable control state consumed by the Batch wrapper.
+
+    Args:
+        run: Sequencing run whose control file is written.
+        state: Control state to publish.
+    """
     blob_service = get_storage_client()
     container_name = settings.NANOPORE_RAW_CONTAINER
     blob_service.ensure_container(container_name)
     blob_service.upload_bytes(
         container_name,
-        "{0}/input/control/state.json".format(run.run_name),
+        f"{run.run_name}/input/control/state.json",
         json.dumps(
             {
                 "schema_version": 1,
@@ -3326,7 +3310,6 @@ def _write_nanopore_control(run, state):
 
 
 @shared_task
-
 def collect_nanopore_iteration(sequencing_run_pk, force=False):
     """Claim waiting uploads after the preceding generation is published.
 
@@ -3334,6 +3317,13 @@ def collect_nanopore_iteration(sequencing_run_pk, force=False):
     immutable result manifest. Once that result is published, all accumulated
     files are claimed into one generation. ``force=True`` skips only the quiet
     window; it never bypasses the preceding-generation gate.
+
+    Args:
+        sequencing_run_pk: Primary key of the sequencing run to collect.
+        force: Whether to skip the quiet-window delay.
+
+    Returns:
+        A status dictionary describing the collection decision.
     """
     with transaction.atomic():
         try:
@@ -3421,6 +3411,7 @@ def collect_nanopore_iteration(sequencing_run_pk, force=False):
         run_id = sequencing_run.pk
 
         def publish_or_submit():
+            """Queue processing for the generation after commit."""
             submit_nanopore_batch.apply_async(
                 queue="cowbat",
                 args=(run_id,),
@@ -3447,6 +3438,15 @@ def collect_nanopore_iteration(sequencing_run_pk, force=False):
 
 
 def _scheduler_csvs(sequencing_run, nanopore_run):
+    """Build and persist the scheduler input and sample metadata CSV strings.
+
+    Args:
+        sequencing_run: Sequencing run associated with the Nanopore workflow.
+        nanopore_run: Nanopore-specific configuration and sample metadata.
+
+    Returns:
+        The scheduler input CSV and barcode metadata CSV.
+    """
     barcode_values = nanopore_run.barcode_values or [
         int(value.strip())
         for value in settings.NANOPORE_BARCODE_VALUES.split(",")
@@ -3455,8 +3455,8 @@ def _scheduler_csvs(sequencing_run, nanopore_run):
     samples = (nanopore_run.sample_metadata or {}).get("samples") or [
         {
             "barcode": value,
-            "seqid": "barcode{0:02d}".format(value),
-            "olnid": "BARCODE-{0:02d}".format(value),
+            "seqid": f"barcode{value:02d}",
+            "olnid": f"BARCODE-{value:02d}",
         }
         for value in barcode_values
     ]
@@ -3467,18 +3467,15 @@ def _scheduler_csvs(sequencing_run, nanopore_run):
     nanopore_run.sample_metadata = {"samples": samples}
     input_csv = (
         "reference,pod5_dir,output_dir,barcode,barcode_values,run_id\n"
-        "{0},$AZ_BATCH_TASK_WORKING_DIR/source,"
-        "$AZ_BATCH_TASK_WORKING_DIR/output,{1},{2},{3}\n"
-    ).format(
-        settings.NANOPORE_REFERENCE,
-        nanopore_run.barcode_kit,
-        ",".join(str(value) for value in barcode_values),
-        sequencing_run.run_name,
+        f"{settings.NANOPORE_REFERENCE},"
+        "$AZ_BATCH_TASK_WORKING_DIR/source,"
+        "$AZ_BATCH_TASK_WORKING_DIR/output,"
+        f"{nanopore_run.barcode_kit},"
+        f"{','.join(str(value) for value in barcode_values)},"
+        f"{sequencing_run.run_name}\n"
     )
     metadata_csv = "Barcode,SEQID,OLNID\n" + "".join(
-        "{0},{1},{2}\n".format(
-            sample["barcode"], sample["seqid"], sample.get("olnid", "")
-        )
+        f"{sample['barcode']},{sample['seqid']},{sample.get('olnid', '')}\n"
         for sample in sorted(samples, key=lambda item: item["barcode"])
     )
     return input_csv, metadata_csv
@@ -3486,6 +3483,12 @@ def _scheduler_csvs(sequencing_run, nanopore_run):
 
 @shared_task(bind=True, max_retries=NANOPORE_SUBMISSION_MAX_RETRIES)
 def submit_nanopore_batch(self, sequencing_run_pk):
+    """Publish a Nanopore generation or submit its persistent Batch task.
+
+    Args:
+        self: Bound Celery task instance used for retry handling.
+        sequencing_run_pk: Primary key of the sequencing run to submit.
+    """
     with transaction.atomic():
         sequencing_run = SequencingRun.objects.select_for_update().get(
             pk=sequencing_run_pk
@@ -3499,15 +3502,23 @@ def submit_nanopore_batch(self, sequencing_run_pk):
         if processing_batch is None:
             return
         if not publish_only:
-            if processing_batch.status == "submitted" or processing_batch.azure_job_id:
+            if (
+                processing_batch.status == "submitted"
+                or processing_batch.azure_job_id
+            ):
                 return
-            if processing_batch.status == "submitting" and self.request.retries == 0:
+            if (
+                processing_batch.status == "submitting"
+                and self.request.retries == 0
+            ):
                 return
         if sequencing_run.workflow_state in ("complete", "error"):
             return
         if not settings.NANOPORE_BATCH_COMMAND:
             processing_batch.status = "failed"
-            processing_batch.error = "NANOPORE_BATCH_COMMAND is not configured."
+            processing_batch.error = (
+                "NANOPORE_BATCH_COMMAND is not configured."
+            )
             processing_batch.save(update_fields=["status", "error"])
             sequencing_run.workflow_state = "error"
             sequencing_run.save(update_fields=["workflow_state"])
@@ -3521,11 +3532,11 @@ def submit_nanopore_batch(self, sequencing_run_pk):
     storage_prefix = sequencing_run.run_name
     blob_service = get_storage_client()
     blob_service.ensure_container(settings.NANOPORE_RAW_CONTAINER)
-    manifest_prefix = "{0}/input/manifests/input-manifest-v".format(storage_prefix)
-    manifest_blob_name = "{0}{1:06d}.json".format(
-        manifest_prefix, processing_batch.generation
+    manifest_prefix = f"{storage_prefix}/input/manifests/input-manifest-v"
+    manifest_blob_name = (
+        f"{manifest_prefix}{processing_batch.generation:06d}.json"
     )
-    control_blob_name = "{0}/input/control/state.json".format(storage_prefix)
+    control_blob_name = f"{storage_prefix}/input/control/state.json"
     nanopore_run = sequencing_run.nanopore_run
     if not nanopore_run.scheduler_input_csv:
         input_csv, metadata_csv = _scheduler_csvs(sequencing_run, nanopore_run)
@@ -3553,13 +3564,14 @@ def submit_nanopore_batch(self, sequencing_run_pk):
         "finalized": manifest.finalized,
         "finalized_at": manifest.created_at.isoformat(),
         "dorado": {
-            "model": nanopore_run.dorado_model or settings.NANOPORE_DORADO_MODEL,
+            "model": nanopore_run.dorado_model
+            or settings.NANOPORE_DORADO_MODEL,
             "barcode_kit": nanopore_run.barcode_kit,
         },
         "reference": {"path": settings.NANOPORE_REFERENCE},
         "scheduler": {
-            "input_blob": "{0}/input/input.csv".format(storage_prefix),
-            "metadata_blob": "{0}/input/metadata.csv".format(storage_prefix),
+            "input_blob": f"{storage_prefix}/input/input.csv",
+            "metadata_blob": f"{storage_prefix}/input/metadata.csv",
             "input_sha256": nanopore_run.scheduler_input_sha256,
             "metadata_sha256": nanopore_run.scheduler_metadata_sha256,
         },
@@ -3601,13 +3613,13 @@ def submit_nanopore_batch(self, sequencing_run_pk):
         )
         blob_service.upload_bytes(
             settings.NANOPORE_RAW_CONTAINER,
-            "{0}/input/input.csv".format(storage_prefix),
+            f"{storage_prefix}/input/input.csv",
             nanopore_run.scheduler_input_csv.encode("utf-8"),
             content_type="text/csv",
         )
         blob_service.upload_bytes(
             settings.NANOPORE_RAW_CONTAINER,
-            "{0}/input/metadata.csv".format(storage_prefix),
+            f"{storage_prefix}/input/metadata.csv",
             nanopore_run.scheduler_metadata_csv.encode("utf-8"),
             content_type="text/csv",
         )
@@ -3628,8 +3640,8 @@ def submit_nanopore_batch(self, sequencing_run_pk):
                 manifest_blob_name,
             )
             return
-        mount_root = "$AZ_BATCH_NODE_MOUNTS_DIR/{0}".format(
-            settings.NANOPORE_RAW_CONTAINER
+        mount_root = (
+            f"$AZ_BATCH_NODE_MOUNTS_DIR/{settings.NANOPORE_RAW_CONTAINER}"
         )
         command = build_nanopore_command(
             settings.NANOPORE_BATCH_COMMAND,
@@ -3648,24 +3660,18 @@ def submit_nanopore_batch(self, sequencing_run_pk):
             "command_file": command,
             "vm_size": settings.NANOPORE_BATCH_VM_SIZE,
             "input_file_pattern": [
-                "{0}/{1}".format(settings.NANOPORE_RAW_CONTAINER, manifest_blob_name),
-                "{0}/{1}/input/pod5/*".format(
-                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
-                ),
-                "{0}/{1}/input/input.csv".format(
-                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
-                ),
-                "{0}/{1}/input/metadata.csv".format(
-                    settings.NANOPORE_RAW_CONTAINER, storage_prefix
-                ),
+                f"{settings.NANOPORE_RAW_CONTAINER}/{manifest_blob_name}",
+                f"{settings.NANOPORE_RAW_CONTAINER}/{storage_prefix}/input/pod5/*",
+                f"{settings.NANOPORE_RAW_CONTAINER}/{storage_prefix}/input/input.csv",
+                f"{settings.NANOPORE_RAW_CONTAINER}/{storage_prefix}/input/metadata.csv",
             ],
             "download_file_pattern": [],
             "output_file_pattern": ["output/"],
             "output_container": settings.NANOPORE_RESULTS_CONTAINER,
-            "output_prefix": "runs/{0}".format(sequencing_run.run_name),
+            "output_prefix": f"runs/{sequencing_run.run_name}",
             "analysis_type": "Nanopore",
-            "unique_id": "foodport-nanopore-{0}".format(sequencing_run.pk),
-            "log_prefix": "runs/{0}/logs".format(sequencing_run.run_name),
+            "unique_id": f"foodport-nanopore-{sequencing_run.pk}",
+            "log_prefix": f"runs/{sequencing_run.run_name}/logs",
         }
         transfer_url_ttl = getattr(
             settings,
@@ -3699,14 +3705,13 @@ def submit_nanopore_batch(self, sequencing_run_pk):
             log_prefix=request_data["log_prefix"],
             environment_variables=environment_variables,
         )
-        submission_status = str(
-            response_data.get("status", "")
-        ).strip().lower()
+        submission_status = (
+            str(response_data.get("status", "")).strip().lower()
+        )
         if submission_status not in ("success", "submitted"):
             raise RuntimeError(
-                "Batch service submission failed: {0}".format(
-                    response_data.get("error", "Unknown Batch service error")
-                )
+                "Batch service submission failed: "
+                f"{response_data.get('error', 'Unknown Batch service error')}"
             )
         job_id = response_data["job_id"]
         task_ids = response_data.get("tasks", [])
@@ -3734,8 +3739,8 @@ def submit_nanopore_batch(self, sequencing_run_pk):
             processing_batch.status = "submitting"
             processing_batch.error = (
                 "Azure GPU capacity is temporarily unavailable. "
-                "Retrying submission (attempt {0} of {1})."
-            ).format(retry_number, self.max_retries)
+                f"Retrying submission (attempt {retry_number} of {self.max_retries})."
+            )
             processing_batch.save(update_fields=["status", "error"])
             sequencing_run.task_retry_count = retry_number
             sequencing_run.save(update_fields=["task_retry_count"])
@@ -3751,14 +3756,13 @@ def submit_nanopore_batch(self, sequencing_run_pk):
                 exc=exc,
                 countdown=min(
                     NANOPORE_SUBMISSION_MAX_RETRY_DELAY,
-                    NANOPORE_SUBMISSION_RETRY_DELAY * (2**self.request.retries),
+                    NANOPORE_SUBMISSION_RETRY_DELAY
+                    * (2**self.request.retries),
                 ),
             )
         processing_batch.status = "failed"
         if retryable:
-            processing_batch.error = (
-                "Azure GPU capacity remained unavailable after {0} retries."
-            ).format(self.max_retries)
+            processing_batch.error = f"Azure GPU capacity remained unavailable after {self.max_retries} retries."
         else:
             processing_batch.error = str(exc)[:1000]
         processing_batch.save(update_fields=["status", "error"])
@@ -3783,28 +3787,49 @@ def submit_nanopore_batch(self, sequencing_run_pk):
         ]
     )
     sequencing_run.workflow_state = (
-        "stopping" if sequencing_run.workflow_state == "stopping" else "processing"
+        "stopping"
+        if sequencing_run.workflow_state == "stopping"
+        else "processing"
     )
     sequencing_run.job_id = str(job_id)
     sequencing_run.task_id = str(task_ids[0])
     sequencing_run.batch_submit_status = response_data.get("status", "")
     sequencing_run.save(
-        update_fields=["workflow_state", "job_id", "task_id", "batch_submit_status"]
+        update_fields=[
+            "workflow_state",
+            "job_id",
+            "task_id",
+            "batch_submit_status",
+        ]
     )
 
 
 def build_nanopore_command(template, **paths):
-    """Format the image-installed wrapper command with mounted task paths."""
+    """Format the image-installed wrapper command with mounted task paths.
+
+    Args:
+        template: Wrapper command template.
+        **paths: Values used to populate named template placeholders.
+
+    Returns:
+        The formatted wrapper command.
+    """
     command = template.format(**paths)
-    if paths.get("manifest_prefix") and "--manifest-prefix" not in command:
-        command += ' --manifest-prefix "{0}"'.format(paths["manifest_prefix"])
-    if paths.get("control_blob") and "--control-blob" not in command:
-        command += ' --control-blob "{0}"'.format(paths["control_blob"])
+    manifest_prefix = paths.get("manifest_prefix")
+    if manifest_prefix and "--manifest-prefix" not in command:
+        command += f' --manifest-prefix "{manifest_prefix}"'
+    control_blob = paths.get("control_blob")
+    if control_blob and "--control-blob" not in command:
+        command += f' --control-blob "{control_blob}"'
     return command
 
 
 def _batch_resource_missing(exception):
-    """Return whether the Batch service reports a missing resource."""
+    """Return whether the Batch service reports a missing resource.
+
+    Args:
+        exception: Error raised while accessing a Batch resource.
+    """
     error = getattr(exception, "error", None)
     code = getattr(error, "code", None)
     if hasattr(code, "value"):
@@ -3838,7 +3863,11 @@ def _batch_resource_missing(exception):
 
 
 def _batch_state_value(resource):
-    """Return a normalized Azure Batch resource state string."""
+    """Return a normalized Azure Batch resource state string.
+
+    Args:
+        resource: Resource or state value returned by the Batch service.
+    """
     state = getattr(resource, "state", None)
     if hasattr(state, "value"):
         state = state.value
@@ -3849,7 +3878,12 @@ def _batch_state_value(resource):
 
 
 def _append_unique_run_errors(run, errors):
-    """Append cleanup errors without duplicating messages every poll cycle."""
+    """Append cleanup errors without duplicating messages on each poll.
+
+    Args:
+        run: Sequencing run whose error list is updated.
+        errors: Error messages to add to the run.
+    """
     current_errors = list(run.errors or [])
     changed = False
     for error in errors:
@@ -3868,6 +3902,11 @@ def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
     A later monitor cycle verifies that the job is absent before requesting
     pool deletion. Azure identifiers are cleared only after resource absence
     is confirmed, allowing cleanup to resume after worker restarts.
+
+    Args:
+        batch_client: Provider-neutral Batch service client.
+        processing_batch: Generation whose job and pool are being removed.
+        run: Sequencing run whose resource identifiers are updated.
     """
     resource_errors = []
     updated_fields = []
@@ -3901,7 +3940,7 @@ def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
                 )
                 batch_client.job.delete(job_id)
         except Exception as exc:
-            message = "Nanopore job cleanup error: {0}".format(exc)
+            message = f"Nanopore job cleanup error: {exc}"
             resource_errors.append(message)
             logger.exception(
                 "Could not clean up Nanopore Batch job run=%s job=%s",
@@ -3958,7 +3997,7 @@ def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
                         pool_id,
                     )
         except Exception as exc:
-            message = "Nanopore pool cleanup error: {0}".format(exc)
+            message = f"Nanopore pool cleanup error: {exc}"
             resource_errors.append(message)
             logger.exception(
                 "Could not clean up Nanopore Batch pool run=%s pool=%s",
@@ -3973,8 +4012,7 @@ def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
         run.save(update_fields=["errors"])
 
     complete = not (
-        processing_batch.azure_job_id
-        or processing_batch.azure_pool_id
+        processing_batch.azure_job_id or processing_batch.azure_pool_id
     )
     return {
         "complete": complete,
@@ -3984,7 +4022,7 @@ def _cleanup_nanopore_batch_resources(*, batch_client, processing_batch, run):
 
 
 def check_nanopore_tasks():
-    """Reconcile generation publication, task state, and resource cleanup."""
+    """Reconcile Nanopore results, task state, and resource cleanup."""
     owner_batches = (
         NanoporeProcessingBatch.objects.filter(
             Q(azure_job_id__gt="") | Q(azure_pool_id__gt="")
@@ -4013,16 +4051,25 @@ def check_nanopore_tasks():
                 run.exit_code = failed_batch.exit_code
                 _append_unique_run_errors(run, [failed_batch.error])
                 run.nanopore_run.save(update_fields=["status"])
-                run.save(update_fields=[
-                    "workflow_state", "status", "failure_stage", "exit_code",
-                    "errors",
-                ])
+                run.save(
+                    update_fields=[
+                        "workflow_state",
+                        "status",
+                        "failure_stage",
+                        "exit_code",
+                        "errors",
+                    ]
+                )
                 _write_nanopore_control(run, "error")
 
             waiting_count = _unclaimed_nanopore_files(run).count()
             blocker = _nanopore_collection_blocker(run)
-            if (run.workflow_state != "error" and not failed_generations
-                    and waiting_count > 0 and blocker is None):
+            if (
+                run.workflow_state != "error"
+                and not failed_generations
+                and waiting_count > 0
+                and blocker is None
+            ):
                 collect_nanopore_iteration.apply_async(
                     queue="cowbat",
                     args=(run.pk,),
@@ -4040,9 +4087,9 @@ def check_nanopore_tasks():
             # monitor cycles then bypass task polling and resume cleanup.
             if owner_batch.finished_at is None:
                 try:
-                    cloud_tasks = list(batch_client.task.list(
-                        owner_batch.azure_job_id
-                    ))
+                    cloud_tasks = list(
+                        batch_client.task.list(owner_batch.azure_job_id)
+                    )
                 except BatchServiceError as exc:
                     if not _batch_resource_missing(exc):
                         raise
@@ -4052,24 +4099,34 @@ def check_nanopore_tasks():
                         "Azure Batch job disappeared before FoodPort observed "
                         "a terminal Nanopore task state."
                     )
-                    owner_batch.save(update_fields=[
-                        "exit_code", "finished_at", "error",
-                    ])
+                    owner_batch.save(
+                        update_fields=[
+                            "exit_code",
+                            "finished_at",
+                            "error",
+                        ]
+                    )
                     run.workflow_state = "error"
                     run.status = "Error"
                     run.failure_stage = "cleanup"
                     run.nanopore_run.status = "error"
                     _append_unique_run_errors(run, [owner_batch.error])
                     run.nanopore_run.save(update_fields=["status"])
-                    run.save(update_fields=[
-                        "workflow_state", "status", "failure_stage", "errors",
-                    ])
+                    run.save(
+                        update_fields=[
+                            "workflow_state",
+                            "status",
+                            "failure_stage",
+                            "errors",
+                        ]
+                    )
                     cloud_tasks = []
 
                 if owner_batch.finished_at is None:
                     cloud_task = next(
                         (
-                            task for task in cloud_tasks
+                            task
+                            for task in cloud_tasks
                             if str(getattr(task, "id", ""))
                             == owner_batch.azure_task_id
                         ),
@@ -4089,10 +4146,15 @@ def check_nanopore_tasks():
                         run.task_started_at = (
                             run.task_started_at or django_timezone.now()
                         )
-                        owner_batch.save(update_fields=["status", "started_at"])
-                        run.save(update_fields=[
-                            "workflow_state", "task_started_at",
-                        ])
+                        owner_batch.save(
+                            update_fields=["status", "started_at"]
+                        )
+                        run.save(
+                            update_fields=[
+                                "workflow_state",
+                                "task_started_at",
+                            ]
+                        )
                         continue
 
                     # Read the persistent wrapper task exit code directly
@@ -4101,13 +4163,16 @@ def check_nanopore_tasks():
                     # which must never be used as proof that the wrapper ended.
                     wrapper_exit_code = getattr(
                         getattr(cloud_task, "execution_info", None),
-                        "exit_code", None,
+                        "exit_code",
+                        None,
                     )
                     owner_batch.exit_code = wrapper_exit_code
                     owner_batch.finished_at = django_timezone.now()
                     run.exit_code = wrapper_exit_code
                     run.task_finished_at = owner_batch.finished_at
-                    owner_batch.save(update_fields=["exit_code", "finished_at"])
+                    owner_batch.save(
+                        update_fields=["exit_code", "finished_at"]
+                    )
                     run.save(update_fields=["exit_code", "task_finished_at"])
 
             wrapper_exit_code = owner_batch.exit_code
@@ -4129,18 +4194,20 @@ def check_nanopore_tasks():
                 and waiting_count == 0
                 and blocker is None
                 and not unresolved.exists()
-                and not run.nanopore_processing_batches.filter(status="failed").exists()
+                and not run.nanopore_processing_batches.filter(
+                    status="failed"
+                ).exists()
             )
 
             if not successful_drain:
                 owner_batch.status = "failed"
                 if not owner_batch.error:
                     owner_batch.error = (
-                        "Azure Batch wrapper task exited with code {0} "
+                        f"Azure Batch wrapper task exited with code {wrapper_exit_code} "
                         "before all Nanopore generations were drained. "
                         "The latest reconciled scheduler generation exited "
-                        "with code {1}."
-                    ).format(wrapper_exit_code, scheduler_exit_code)
+                        f"with code {scheduler_exit_code}."
+                    )
                     if wrapper_exit_code == 0 and unresolved.exists():
                         owner_batch.error = (
                             "Azure Batch wrapper exited without all generation "
@@ -4151,14 +4218,23 @@ def check_nanopore_tasks():
                 run.failure_stage = "processing"
                 run.nanopore_run.status = "error"
                 _append_unique_run_errors(run, [owner_batch.error])
-                owner_batch.save(update_fields=[
-                    "status", "last_completed_at",
-                    "processed_pod5_count", "error",
-                ])
+                owner_batch.save(
+                    update_fields=[
+                        "status",
+                        "last_completed_at",
+                        "processed_pod5_count",
+                        "error",
+                    ]
+                )
                 run.nanopore_run.save(update_fields=["status"])
-                run.save(update_fields=[
-                    "workflow_state", "status", "failure_stage", "errors",
-                ])
+                run.save(
+                    update_fields=[
+                        "workflow_state",
+                        "status",
+                        "failure_stage",
+                        "errors",
+                    ]
+                )
 
             cleanup = _cleanup_nanopore_batch_resources(
                 batch_client=batch_client,
@@ -4170,9 +4246,13 @@ def check_nanopore_tasks():
                     owner_batch.status = "running"
                     run.workflow_state = "stopping"
                     run.nanopore_run.status = "stopping"
-                    owner_batch.save(update_fields=[
-                        "status", "last_completed_at", "processed_pod5_count",
-                    ])
+                    owner_batch.save(
+                        update_fields=[
+                            "status",
+                            "last_completed_at",
+                            "processed_pod5_count",
+                        ]
+                    )
                     run.nanopore_run.save(update_fields=["status"])
                     run.save(update_fields=["workflow_state"])
                 continue
@@ -4184,22 +4264,38 @@ def check_nanopore_tasks():
                 run.failure_stage = ""
                 run.nanopore_run.status = "complete"
                 run.nanopore_run.terminated_at = django_timezone.now()
-                owner_batch.save(update_fields=[
-                    "status", "last_completed_at", "processed_pod5_count",
-                    "azure_pool_id", "azure_job_id", "azure_task_id",
-                ])
-                run.nanopore_run.save(update_fields=["status", "terminated_at"])
-                run.save(update_fields=[
-                    "workflow_state", "status", "failure_stage",
-                ])
+                owner_batch.save(
+                    update_fields=[
+                        "status",
+                        "last_completed_at",
+                        "processed_pod5_count",
+                        "azure_pool_id",
+                        "azure_job_id",
+                        "azure_task_id",
+                    ]
+                )
+                run.nanopore_run.save(
+                    update_fields=["status", "terminated_at"]
+                )
+                run.save(
+                    update_fields=[
+                        "workflow_state",
+                        "status",
+                        "failure_stage",
+                    ]
+                )
             else:
-                owner_batch.save(update_fields=[
-                    "azure_pool_id", "azure_job_id", "azure_task_id",
-                ])
+                owner_batch.save(
+                    update_fields=[
+                        "azure_pool_id",
+                        "azure_job_id",
+                        "azure_task_id",
+                    ]
+                )
 
         except (BatchServiceError, StorageServiceError) as exc:
             owner_batch.error = str(exc)[:1000]
             owner_batch.save(update_fields=["error"])
-            message = "Nanopore Batch polling error: {0}".format(exc)
+            message = f"Nanopore Batch polling error: {exc}"
             if _append_unique_run_errors(run, [message]):
                 run.save(update_fields=["errors"])

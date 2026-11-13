@@ -286,14 +286,10 @@ def _gene_internal_stop_coordinates(record, protein):
         sequence_index = offset + (amino_acid_index * 3)
         if reverse:
             codon_end = max(query_start, query_end) - sequence_index
-            coordinates.append('{0}-{1}'.format(
-                coordinate_text(codon_end - 2), coordinate_text(codon_end)
-            ))
+            coordinates.append(f'{coordinate_text(codon_end - 2)}-{coordinate_text(codon_end)}')
         else:
             codon_start = min(query_start, query_end) + sequence_index
-            coordinates.append('{0}-{1}'.format(
-                coordinate_text(codon_start), coordinate_text(codon_start + 2)
-            ))
+            coordinates.append(f'{coordinate_text(codon_start)}-{coordinate_text(codon_start + 2)}')
     return coordinates
 
 
@@ -346,31 +342,20 @@ def _gene_internal_stop_evidence(record, protein):
         ] if subject_sequence else ''
         if reverse:
             query_codon_end = max(query_start, query_end) - sequence_index
-            query_location = '{0}-{1}'.format(
-                coordinate_text(query_codon_end - 2),
-                coordinate_text(query_codon_end),
-            )
+            query_location = f'{coordinate_text(query_codon_end - 2)}-{coordinate_text(query_codon_end)}'
         else:
             query_codon_start = min(query_start, query_end) + sequence_index
-            query_location = '{0}-{1}'.format(
-                coordinate_text(query_codon_start),
-                coordinate_text(query_codon_start + 2),
-            )
+            query_location = f'{coordinate_text(query_codon_start)}-{coordinate_text(query_codon_start + 2)}'
         subject_codon_start = (
             min(subject_start, subject_end) + sequence_index
         )
-        subject_location = '{0}-{1}'.format(
-            coordinate_text(subject_codon_start),
-            coordinate_text(subject_codon_start + 2),
-        )
+        subject_location = f'{coordinate_text(subject_codon_start)}-{coordinate_text(subject_codon_start + 2)}'
         item = {
             'query_location': query_location,
             'subject_location': subject_location,
         }
         if query_codon and subject_codon:
-            item['codon_change'] = '{0} -> {1}'.format(
-                subject_codon, query_codon
-            )
+            item['codon_change'] = f'{subject_codon} -> {query_codon}'
         evidence.append(item)
     return evidence
 
@@ -603,11 +588,8 @@ def categorize_gene_hit_details(records, identity_cutoff=90,
                 evidence.append({
                     'category': 'EXTENDED',
                     'reason': (
-                        'The complete reference ends in stop codon {0}, but '
-                        'the corresponding query codon is {1}.'.format(
-                            reference_terminal_codon,
-                            query_terminal_codon
-                        )
+                        f'The complete reference ends in stop codon {reference_terminal_codon}, but '
+                        f'the corresponding query codon is {query_terminal_codon}.'
                     ),
                     'hit': _gene_detail_hit(best_hit),
                     'terminal_reference': True,

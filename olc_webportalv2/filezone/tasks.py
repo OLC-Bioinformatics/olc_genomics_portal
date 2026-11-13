@@ -306,10 +306,7 @@ def archive(blob_client, blob_list, container_name, container_pk):
                     )
         archive_file = os.path.join(
             archive_folder,
-            '{container_name}_{container_pk}.zip'.format(
-                container_name=container_name,
-                container_pk=container_pk
-            )
+            f'{container_name}_{container_pk}.zip'
         )
         with zipfile.ZipFile(archive_file, 'w') as zip_stream:
             for local_file in local_files:
@@ -359,9 +356,7 @@ def archive_multiple_containers(
                             container_name, blob.name, local_file
                         )
         archive_file = os.path.join(
-            archive_folder, 'filezone_request_{filezone_pk}.zip'.format(
-                filezone_pk=filezone_pk
-            )
+            archive_folder, f'filezone_request_{filezone_pk}.zip'
         )
         with zipfile.ZipFile(archive_file, 'w') as zip_stream:
             for local_file in local_files:
