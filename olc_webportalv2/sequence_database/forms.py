@@ -18,6 +18,9 @@ from olc_webportalv2.sequence_database.models import (
     UniqueSpecies,
 )
 
+SEQID_PATTERN = re.compile(r'\d{4}-[A-Z0-9]{3,5}-\d{4}')
+CFIAID_PATTERN = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,47}')
+
 
 class DatabaseRequestForm(forms.Form):
     """Collect metadata filters for sequence database searches."""
@@ -303,12 +306,43 @@ class DatabaseIDsForm(forms.Form):
     )
 
     def clean(self):
-        """Combine and tokenize the submitted identifiers."""
-        super().clean()
-        input_ids = self.cleaned_data.get('seqids') or ''
-        # Concatenate the CFIA IDs to the end of the SEQID string
-        input_ids += ',' + (self.cleaned_data.get('cfiaids') or '')
-        # Keep word characters and dashes used in both identifier formats.
-        id_list = re.findall(r'[\w-]+', input_ids)
-        # TODO: Some validation!
-        return id_list
+        """Validate and combine the submitted sequence and CFIA IDs."""
+        cleaned_data = super().clean()
+        seqids = re.findall(
+            r'[^,\s;]+', cleaned_data.get('seqids') or ''
+        )
+        cfiaids = re.findall(
+            r'[^,\s;]+', cleaned_data.get('cfiaids') or ''
+        )
+        invalid_seqids = [
+            seqid
+            for seqid in seqids
+            if not SEQID_PATTERN.fullmatch(seqid)
+        ]
+        invalid_cfiaids = [
+            cfiaid
+            for cfiaid in cfiaids
+            if not CFIAID_PATTERN.fullmatch(cfiaid)
+        ]
+
+        errors = []
+        if invalid_seqids:
+            errors.append(
+                _(
+                    'Invalid SEQIDs. Expected the format '
+                    'YYYY-LAB-####. Invalid values: %(ids)s'
+                )
+                % {'ids': ', '.join(invalid_seqids)}
+            )
+        if invalid_cfiaids:
+            errors.append(
+                _(
+                    'Invalid CFIA IDs. Use letters, numbers, hyphens, or '
+                    'underscores. Invalid values: %(ids)s'
+                )
+                % {'ids': ', '.join(invalid_cfiaids)}
+            )
+        if errors:
+            raise forms.ValidationError(errors)
+
+        return seqids + cfiaids

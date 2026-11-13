@@ -52,6 +52,40 @@ class SequenceDatabaseSearchTests(TestCase):
         self.assertEqual(response.context['seqids'], [])
         self.assertEqual(list(response.context['query_table']), [])
 
+    def test_id_search_rejects_identifiers_with_invalid_characters(self):
+        """Do not turn malformed identifiers into valid partial matches."""
+        for field, identifier in (
+            ('seqids', '1234-SEQ-0001!'),
+            ('cfiaids', 'CFIA001!'),
+        ):
+            with self.subTest(field=field):
+                response = self.client.post(
+                    reverse('sequence_database:id_search'),
+                    {'seqids': '', 'cfiaids': '', field: identifier},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.context['form'].is_valid())
+                self.assertTrue(
+                    response.context['form'].non_field_errors()
+                )
+
+    def test_id_search_accepts_comma_and_newline_separated_ids(self):
+        """Search valid sequence and CFIA IDs across common delimiters."""
+        response = self.client.post(
+            reverse('sequence_database:id_search'),
+            {
+                'seqids': '1234-SEQ-0001,\n1234-SEQ-0002',
+                'cfiaids': 'CFIA001',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(
+            response.context['seqids'],
+            ['1234-SEQ-0001', '1234-SEQ-0002'],
+        )
+
     def test_database_filter_applies_start_date_without_end_date(self):
         """A start-only date filter excludes earlier sequence records."""
         response = self.client.post(
