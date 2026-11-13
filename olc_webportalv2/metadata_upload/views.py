@@ -1,53 +1,82 @@
-import os
+"""Views for the Metadata Upload workflow."""
 
-from django.shortcuts import render, redirect
+import logging
+
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from .forms import UploadFileForm
+from django.shortcuts import redirect, render
+
+from olc_webportalv2.metadata_upload.forms import UploadFileForm
+
 from .management.commands.upload_metadata import upload_metadata
+
+logger = logging.getLogger(__name__)
 
 
 def upload_files(request):
-    if request.method == 'POST':
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            seqtracking_file = request.FILES['seqtracking_file']
-            seqmetadata_file = request.FILES['seqmetadata_file']
-            clear_all = form.cleaned_data['clear_all']
+    """Validate uploaded CSVs and run the metadata importer.
 
-            # Save the uploaded files to a temporary location
-            fs = FileSystemStorage(location=settings.MEDIA_ROOT)
-            seqtracking_filename = fs.save(
-                seqtracking_file.name, seqtracking_file)
-            seqmetadata_filename = fs.save(
-                seqmetadata_file.name, seqmetadata_file)
+    Args:
+        request: The current HTTP request.
 
-            seqtracking_path = os.path.join(
-                settings.MEDIA_ROOT, seqtracking_filename)
-            seqmetadata_path = os.path.join(
-                settings.MEDIA_ROOT, seqmetadata_filename)
+    """
+    if request.method != 'POST':
+        return render(
+            request,
+            'metadata_upload/upload_files.html',
+            {'form': UploadFileForm()},
+        )
 
-            try:
-                # Call the upload_metadata function
-                upload_metadata(
-                    seqtracking_csv=seqtracking_path,
-                    seqmetadata_csv=seqmetadata_path,
-                    clear_all=clear_all)
-                return redirect('metadata_upload:upload_success')
-            except Exception as exc:
-                return render(
-                    request, 'metadata_upload/upload_files.html',
-                    {'form': form, 'error': str(exc)})
-        else:
-            # If the form is not valid, render the form with errors
-            return render(request,
-                          'metadata_upload/upload_files.html',
-                          {'form': form})
+    form = UploadFileForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return render(
+            request,
+            'metadata_upload/upload_files.html',
+            {'form': form},
+        )
 
-    else:
-        form = UploadFileForm()
-    return render(request, 'metadata_upload/upload_files.html', {'form': form})
+    storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+    seqtracking_filename = None
+    seqmetadata_filename = None
+    try:
+        seqtracking_file = form.cleaned_data['seqtracking_file']
+        seqmetadata_file = form.cleaned_data['seqmetadata_file']
+        seqtracking_filename = storage.save(
+            seqtracking_file.name, seqtracking_file
+        )
+        seqmetadata_filename = storage.save(
+            seqmetadata_file.name, seqmetadata_file
+        )
+        upload_metadata(
+            seqtracking_csv=storage.path(seqtracking_filename),
+            seqmetadata_csv=storage.path(seqmetadata_filename),
+            clear_all=form.cleaned_data['clear_all'],
+        )
+    except Exception:
+        logger.exception('Metadata upload failed.')
+        return render(
+            request,
+            'metadata_upload/upload_files.html',
+            {
+                'form': form,
+                'error': 'Metadata upload failed. Please contact an '
+                'administrator.',
+            },
+        )
+    finally:
+        if seqtracking_filename:
+            storage.delete(seqtracking_filename)
+        if seqmetadata_filename:
+            storage.delete(seqmetadata_filename)
+
+    return redirect('metadata_upload:upload_success')
 
 
 def upload_success(request):
+    """Render the successful metadata upload page.
+
+    Args:
+        request: The current HTTP request.
+
+    """
     return render(request, 'metadata_upload/upload_success.html')

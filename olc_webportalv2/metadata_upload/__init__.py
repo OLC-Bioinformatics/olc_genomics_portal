@@ -1,0 +1,1 @@
+"""Metadata Upload Django application."""
