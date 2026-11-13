@@ -36,7 +36,7 @@ class BatchTask:
 
     id: str
     state: str
-    execution_info: object
+    execution_info: SimpleNamespace
 
 
 @dataclass(frozen=True)
