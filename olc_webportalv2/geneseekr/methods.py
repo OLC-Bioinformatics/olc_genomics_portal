@@ -1,6 +1,4 @@
-"""
-General methods for the GeneSeekr app
-"""
+"""General methods for the GeneSeekr app."""
 
 # Standard imports
 import os
@@ -10,15 +8,21 @@ from olc_webportalv2.common.storage_client import get_storage_client
 
 
 def zip_files(
-        seqids: list,
-        target_folder: str,
-        container_name: str):
-    """
-    Create a local archive from a list of SEQIDs. Upload the archive to a
-    target container
+    seqids: list[str], target_folder: str, container_name: str
+) -> str:
+    """Download matching sequence files, archive them, and upload the archive.
+
+    Args:
+        seqids: Sequence identifiers whose FASTA files should be included.
+        target_folder: Local folder name and uploaded archive name prefix.
+        container_name: Source blob container containing the sequence files.
+
+    Returns:
+        Name of the uploaded archive blob.
+
     """
     # Set the destination folder for the downloaded files
-    job_dir = os.path.join('olc_webportalv2', 'media',  target_folder, 'tmp')
+    job_dir = os.path.join('olc_webportalv2', 'media', target_folder, 'tmp')
     # Create the folder if required
     os.makedirs(job_dir, exist_ok=True)
     blob_client = get_storage_client()

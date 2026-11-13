@@ -74,6 +74,24 @@ class GeneSeekrWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(request.emails_array, ['alerts@example.com'])
 
+    def test_processing_page_saves_email_when_email_array_is_null(self):
+        request = GeneSeekrRequest.objects.create(
+            user=self.user,
+            emails_array=None,
+        )
+
+        response = self.client.post(
+            reverse(
+                'geneseekr:geneseekr_processing',
+                kwargs={'geneseekr_request_pk': request.pk},
+            ),
+            {'email': 'alerts@example.com'},
+        )
+
+        request.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(request.emails_array, ['alerts@example.com'])
+
     @mock.patch('olc_webportalv2.geneseekr.views.id_sync', return_value={})
     def test_results_page_displays_gene_hits(self, id_sync):
         request = GeneSeekrRequest.objects.create(
@@ -100,11 +118,15 @@ class GeneSeekrWorkflowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context['gene_top_hits']['geneA']), [hit])
+        self.assertEqual(
+            list(response.context['gene_top_hits']['geneA']), [hit]
+        )
         self.assertEqual(id_sync.call_count, 1)
 
     def test_submission_views_create_processing_requests(self):
-        with mock.patch('olc_webportalv2.geneseekr.views.run_mash') as run_mash:
+        with mock.patch(
+            'olc_webportalv2.geneseekr.views.run_mash'
+        ) as run_mash:
             response = self.client.post(
                 reverse('geneseekr:tree_request'),
                 {'seqids': '2015-SEQ-0711 2015-SEQ-0712'},
@@ -128,7 +150,9 @@ class GeneSeekrWorkflowTests(TestCase):
 
         with (
             mock.patch('olc_webportalv2.geneseekr.views.get_storage_client'),
-            mock.patch('olc_webportalv2.geneseekr.views.run_prokka') as run_prokka,
+            mock.patch(
+                'olc_webportalv2.geneseekr.views.run_prokka'
+            ) as run_prokka,
         ):
             response = self.client.post(
                 reverse('geneseekr:prokka_request'),
@@ -154,11 +178,33 @@ class GeneSeekrWorkflowTests(TestCase):
     def test_other_users_cannot_view_results(self):
         other_user = User.objects.create_user(username='another-user')
         owned_requests = [
-            (GeneSeekrRequest.objects.create(user=other_user), 'geneseekr:geneseekr_results', 'geneseekr_request_pk'),
-            (Tree.objects.create(user=other_user), 'geneseekr:tree_result', 'tree_request_pk'),
-            (AMRSummary.objects.create(user=other_user), 'geneseekr:amr_result', 'amr_request_pk'),
-            (ProkkaRequest.objects.create(user=other_user), 'geneseekr:prokka_result', 'prokka_request_pk'),
-            (NearestNeighbors.objects.create(user=other_user, number_neighbors=2), 'geneseekr:neighbor_result', 'neighbor_request_pk'),
+            (
+                GeneSeekrRequest.objects.create(user=other_user),
+                'geneseekr:geneseekr_results',
+                'geneseekr_request_pk',
+            ),
+            (
+                Tree.objects.create(user=other_user),
+                'geneseekr:tree_result',
+                'tree_request_pk',
+            ),
+            (
+                AMRSummary.objects.create(user=other_user),
+                'geneseekr:amr_result',
+                'amr_request_pk',
+            ),
+            (
+                ProkkaRequest.objects.create(user=other_user),
+                'geneseekr:prokka_result',
+                'prokka_request_pk',
+            ),
+            (
+                NearestNeighbors.objects.create(
+                    user=other_user, number_neighbors=2
+                ),
+                'geneseekr:neighbor_result',
+                'neighbor_request_pk',
+            ),
         ]
 
         for request, url_name, parameter in owned_requests:
@@ -170,7 +216,10 @@ class GeneSeekrWorkflowTests(TestCase):
     def test_amr_and_prokka_email_submissions_are_saved(self):
         amr_request = AMRSummary.objects.create(user=self.user)
         response = self.client.post(
-            reverse('geneseekr:amr_result', kwargs={'amr_request_pk': amr_request.pk}),
+            reverse(
+                'geneseekr:amr_result',
+                kwargs={'amr_request_pk': amr_request.pk},
+            ),
             {'email': 'amr@example.com'},
         )
         self.assertEqual(response.status_code, 200)
@@ -179,7 +228,10 @@ class GeneSeekrWorkflowTests(TestCase):
 
         prokka_request = ProkkaRequest.objects.create(user=self.user)
         response = self.client.post(
-            reverse('geneseekr:prokka_result', kwargs={'prokka_request_pk': prokka_request.pk}),
+            reverse(
+                'geneseekr:prokka_result',
+                kwargs={'prokka_request_pk': prokka_request.pk},
+            ),
             {'email': 'prokka@example.com'},
         )
         self.assertEqual(response.status_code, 200)
@@ -229,4 +281,6 @@ class GeneSeekrWorkflowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(GeneSeekrRequest.objects.filter(pk=request.pk).exists())
+        self.assertTrue(
+            GeneSeekrRequest.objects.filter(pk=request.pk).exists()
+        )

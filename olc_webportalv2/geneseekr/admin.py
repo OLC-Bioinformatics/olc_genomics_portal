@@ -1,6 +1,22 @@
+"""Django admin registrations for GeneSeekr analysis models."""
+
 from django.contrib import admin
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, GeneSeekrDetail, GeneSeekrAzureRequest, TopBlastHit, TreeAzureRequest, Tree, \
-    AMRSummary, AMRAzureRequest, AMRDetail, ProkkaRequest, ProkkaAzureRequest, NearestNeighbors, NearNeighborDetail
+
+from olc_webportalv2.geneseekr.models import (
+    AMRAzureRequest,
+    AMRDetail,
+    AMRSummary,
+    GeneSeekrAzureRequest,
+    GeneSeekrDetail,
+    GeneSeekrRequest,
+    NearestNeighbors,
+    NearNeighborDetail,
+    ProkkaAzureRequest,
+    ProkkaRequest,
+    TopBlastHit,
+    Tree,
+    TreeAzureRequest,
+)
 
 # Register your models here.
 admin.site.register(GeneSeekrRequest)

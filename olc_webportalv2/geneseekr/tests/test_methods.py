@@ -33,10 +33,9 @@ class GeneSeekrMethodTests(TestCase):
         self.assertEqual(remove.call_count, 1)
         self.assertEqual(
             remove.call_args[0][0],
-            'olc_webportalv2/media/gene-seekr-1/tmp.zip'
+            'olc_webportalv2/media/gene-seekr-1/tmp.zip',
         )
         self.assertEqual(rmtree.call_count, 1)
         self.assertEqual(
-            rmtree.call_args[0][0],
-            'olc_webportalv2/media/gene-seekr-1/tmp'
+            rmtree.call_args[0][0], 'olc_webportalv2/media/gene-seekr-1/tmp'
         )
