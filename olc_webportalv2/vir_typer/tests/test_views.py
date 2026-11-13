@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
 import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.test import TestCase
 from django.urls import reverse
@@ -151,6 +153,41 @@ class SampleTestCase(TestCase):
             [result.trimmed_quality_stdev for result in results],
             ["5.59", "6.10", "6.23", "5.59"],
         )
+
+    def test_vir_typer_result_post_downloads_and_stores_pdf(self):
+        """Return a valid PDF and persist it under the configured media root."""
+        project = VirTyperProject.objects.get(project_name="test_views")
+        testpath = os.path.abspath(os.path.dirname(__file__))
+        json_output = os.path.join(testpath, "virus_typer_outputs.json")
+        with open(json_output, "r") as json_report:
+            project.report = json.load(json_report)
+        project.save()
+        self.client.login(username="TestViews", password="password")
+        url = reverse(
+            "vir_typer:vir_typer_results",
+            kwargs={"vir_typer_pk": project.pk},
+        )
+
+        with (
+            TemporaryDirectory() as media_root,
+            self.settings(MEDIA_ROOT=media_root),
+        ):
+            response = self.client.post(url)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "application/pdf")
+            self.assertTrue(response.content.startswith(b"%PDF-"))
+            self.assertEqual(
+                response["Content-Disposition"],
+                'attachment; filename="VirusTyperReport_test_views.pdf"',
+            )
+            pdf_path = (
+                Path(media_root)
+                / "vir_typer"
+                / str(project.pk)
+                / "VirusTyperReport_test_views.pdf"
+            )
+            self.assertEqual(pdf_path.read_bytes(), response.content)
 
     def test_report_parse(self):
         testpath = os.path.abspath(os.path.dirname(__file__))

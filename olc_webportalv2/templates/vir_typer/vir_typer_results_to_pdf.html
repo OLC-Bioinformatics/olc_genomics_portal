@@ -1,10 +1,8 @@
 {#Head container#}
-{% load static %}
 {% load i18n widget_tweaks %}
 {% block content %}
-{% load static %}
 <header>
-        <img src="https://raw.githubusercontent.com/OLC-Bioinformatics/olc_genomics_portal/master/olc_webportalv2/static/images/logo.png" alt="CFIA Logo" style="width: 30%;" >
+        <img src="{{ logo_uri }}" alt="CFIA Logo" style="width: 30%;" >
 </header>
 <body>
 
@@ -65,7 +63,6 @@
                         <th>{% trans "Quality Stdev" %}</th>
                     </tr>
             </thead>
-            {% autoescape off %}
             <tbody>
             {% for sample_dict in results %}
                  <tr style="vertical-align: top;">
@@ -81,7 +78,7 @@
                     </td>
                     <td>
                         {% for sequence in sample_dict.sequence %}
-                            {{ sequence }} <br>
+                            {{ sequence|safe }} <br>
                         {% endfor %}
                     </td>
                     <td>
@@ -112,7 +109,6 @@
                 </tr>
             {% endfor %}
             </tbody>
-            {% endautoescape %}
         </table>
     </div>
     <br>

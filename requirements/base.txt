@@ -20,6 +20,9 @@ django-model-utils==5.0.0
 # Images
 Pillow==13.0.0
 
+# HTML-to-PDF reports
+WeasyPrint==70.0
+
 # Password storage
 argon2-cffi==25.1.0
 

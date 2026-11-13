@@ -4,9 +4,12 @@ import datetime
 import json
 import os
 from html import escape
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles import finders
 from django.db import IntegrityError
 from django.forms.formsets import formset_factory
 from django.shortcuts import get_object_or_404, redirect, render
@@ -370,6 +373,8 @@ def vir_typer_results(request, vir_typer_pk):
     from django.core.files.storage import FileSystemStorage
     from django.http import HttpResponse
     from django.template.loader import render_to_string
+    from django.utils.http import content_disposition_header
+    from django.utils.text import get_valid_filename
 
     manager_codes = {
         "NOVI": {
@@ -572,14 +577,16 @@ def vir_typer_results(request, vir_typer_pk):
     os.makedirs(
         f"olc_webportalv2/static/ajax/vir_typer/{vir_typer_pk}", exist_ok=True
     )
-    os.makedirs(
-        f"olc_webportalv2/media/vir_typer/{vir_typer_pk}", exist_ok=True
-    )
     # Create the JSON-formatted output file
     with open(json_path, "w") as json_out:
         json.dump(full_results, json_out)
     if request.method == "POST":
-        # Render the HTML report before converting it to a PDF.
+        from weasyprint import HTML
+
+        logo_path = finders.find("images/logo.png")
+        if not logo_path:
+            raise FileNotFoundError("Required static logo not found.")
+
         html_string = render_to_string(
             "vir_typer/vir_typer_results_to_pdf.html",
             {
@@ -588,20 +595,25 @@ def vir_typer_results(request, vir_typer_pk):
                 "codes": sorted(list(codes)),
                 "results": outputs,
                 "vir_typer_samples": vir_typer_samples,
+                "logo_uri": Path(logo_path).as_uri(),
             },
         )
-        fs = FileSystemStorage(
-            f"olc_webportalv2/media/vir_typer/{vir_typer_pk}/"
+        pdf_bytes = HTML(string=html_string).write_pdf()
+        project_name = get_valid_filename(vir_typer_project.project_name)
+        filename = f"VirusTyperReport_{project_name}.pdf"
+        report_directory = os.path.join(
+            settings.MEDIA_ROOT, "vir_typer", str(vir_typer_pk)
         )
-        with fs.open(
-            f"VirusTyperReport_{vir_typer_project.project_name}.pdf"
-        ) as pdf:
-            response = HttpResponse(pdf, content_type="application/pdf")
-            filename = f"VirusTyperReport_{vir_typer_project.project_name}.pdf"
-            response["Content-Disposition"] = (
-                f'attachment; filename="{filename}"'
-            )
-            return response
+        os.makedirs(report_directory, exist_ok=True)
+        fs = FileSystemStorage(location=report_directory)
+        with fs.open(filename, "wb") as pdf_file:
+            pdf_file.write(pdf_bytes)
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = content_disposition_header(
+            True, filename
+        )
+        return response
     return render(
         request,
         "vir_typer/vir_typer_results.html",
