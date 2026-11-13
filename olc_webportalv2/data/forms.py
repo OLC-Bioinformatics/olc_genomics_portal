@@ -1,48 +1,61 @@
-from django import forms
-from olc_webportalv2.metadata.models import SequenceData
+"""Forms for sequence data requests."""
+
 import re
+
+from django import forms
 from django.utils.translation import gettext_lazy as _
+
+from olc_webportalv2.metadata.models import SequenceData
+
+SEQID_PATTERN = re.compile(r'\d{4}-[A-Z0-9]{3,5}-\d{4}')
 
 
 class DataRequestForm(forms.Form):
+    """Validate a list of sequence identifiers for a data request."""
+
     seqids = forms.CharField(
         required=False,
         max_length=2048,
-        widget=forms.Textarea(
-            attrs={
-                'placeholder': _('YYYY-LAB-####')
-            }
-        ),
-        label=''
+        widget=forms.Textarea(attrs={'placeholder': _('YYYY-LAB-####')}),
+        label='',
     )
 
     def clean_seqids(self):
+        """Validate SEQID formatting and confirm IDs exist in the catalog."""
         seqid_input = self.cleaned_data['seqids']
-        if seqid_input == "":
+        if not seqid_input:
             raise forms.ValidationError(_('Cannot be blank'))
+
         seqid_list = seqid_input.split()
-        bad_seqids = list()
-        for seqid in seqid_list:
-            if not re.match('\d{4}-[A-Z0-9]{3,5}-\d{4}', seqid):
-                bad_seqids.append(seqid)
-        if len(bad_seqids) > 0:
+        invalid_seqids = [
+            seqid for seqid in seqid_list if not SEQID_PATTERN.fullmatch(seqid)
+        ]
+        if invalid_seqids:
             raise forms.ValidationError(
                 _(
-                    'One or more of the SEQIDs you entered was not formatted correctly. Correct format is '
-                    'YYYY-LAB-####. Also, ensure that you have entered one SEQID per line. Invalid SEQIDS: %s'
+                    'One or more of the SEQIDs you entered was not formatted '
+                    'correctly. Correct format is YYYY-LAB-####. Also, ensure '
+                    'that you have entered one SEQID per line. Invalid '
+                    'SEQIDs: %(seqids)s'
                 )
-                % bad_seqids
+                % {'seqids': ', '.join(invalid_seqids)}
             )
-        # Also check that SEQIDs are present in our database of SEQIDs
-        sequence_data_objects = SequenceData.objects.filter()
-        seqids_in_database = list()
-        bad_seqids = list()
-        for sequence_data in sequence_data_objects:
-            seqids_in_database.append(sequence_data.seqid)
-        for seqid in seqid_list:
-            if seqid not in seqids_in_database:
-                bad_seqids.append(seqid)
-        if len(bad_seqids) > 0:
-            raise forms.ValidationError(_('One or more of the SEQIDs you entered was not found in our database.'
-                                        ' SEQIDs not found: %s')% bad_seqids)
+
+        existing_seqids = set(
+            SequenceData.objects.filter(seqid__in=seqid_list).values_list(
+                'seqid', flat=True
+            )
+        )
+        missing_seqids = [
+            seqid for seqid in seqid_list if seqid not in existing_seqids
+        ]
+        if missing_seqids:
+            raise forms.ValidationError(
+                _(
+                    'One or more of the SEQIDs you entered was not found in '
+                    'our database. SEQIDs not found: %(seqids)s'
+                )
+                % {'seqids': ', '.join(missing_seqids)}
+            )
+
         return seqid_input
