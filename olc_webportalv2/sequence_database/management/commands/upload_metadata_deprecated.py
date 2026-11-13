@@ -1,28 +1,49 @@
-from django.core.management.base import BaseCommand
-from olc_webportalv2.metadata.models import SequenceData, LabID, Genus, Species, Serotype, MLST, RMLST, OLNID
+"""Legacy management command for importing metadata CSV files."""
+
 import csv
 import re
+
+from django.core.management.base import BaseCommand
+
 from olc_webportalv2.common.storage_client import get_storage_client
+from olc_webportalv2.metadata.models import (
+    MLST,
+    OLNID,
+    RMLST,
+    Genus,
+    LabID,
+    SequenceData,
+    Serotype,
+    Species,
+)
 
 
 def upload_metadata(seqtracking_csv, seqmetadata_csv):
+    """Upload metadata from SeqTracking and SeqMetadata CSV exports.
+
+    Args:
+        seqtracking_csv: Path to the SeqTracking CSV file.
+        seqmetadata_csv: Path to the SeqMetadata CSV file.
+    """
     blob_client = get_storage_client()
     seqids_in_cloud = []
     generator = blob_client.list_objects('processed-data')
     for blob in generator:
         seqids_in_cloud.append(blob.name.replace('.fasta', ''))
 
-    seqdata_dict = {}  # This stores all of our DataToUpload objects, accessed with SeqID keys.
+    # Store upload records by sequence identifier.
+    seqdata_dict = {}
 
     # Make lists of attributes we have.
     genera_present = [str(genus) for genus in Genus.objects.filter()]
     species_present = [str(species) for species in Species.objects.filter()]
-    serotypes_present = [str(serotype) for serotype in Serotype.objects.filter()]
+    serotypes_present = [
+        str(serotype) for serotype in Serotype.objects.filter()
+    ]
     mlst_present = [str(mlst) for mlst in MLST.objects.filter()]
     rmlst_present = [str(rmlst) for rmlst in RMLST.objects.filter()]
 
-    # First up: Make a pass through seqtracking to pull out SeqIDs, LabIDs (if the SeqID has one), genus, species,
-    # quality, and serotype.
+    # Read sequence identifiers, taxonomy, quality, and sample identifiers.
     with open(seqtracking_csv) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -35,7 +56,7 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             serotype = row['Serotype']
             olnid = row['OLNID'].upper()
             seqdata = DataToUpload(seqid)
-            
+
             # Set quality attribute.
             if 'REFERENCE' in quality:
                 seqdata.quality = 'Reference'
@@ -43,20 +64,21 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
                 seqdata.quality = 'Pass'
             else:
                 seqdata.quality = 'Fail'
-            
-            # Check if our LabID looks acceptable. If yes, set the labid attr of seqdata_dict
-            if re.fullmatch('[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid):
+
+            # Keep only LabIDs matching the expected format.
+            if re.fullmatch(
+                '[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid
+            ):
                 seqdata.labid = labid
 
             if 'OLF' in olnid or 'OLC' in olnid:
                 seqdata.olnid = olnid
-                 
-            # Pull out genus, species, and serotype. Genus/serotype should have first char uppercase, species should
-            # be entirely lowercase. # TODO: Not sure what happens with a blank value. 
+
+            # Normalize genus, species, and serotype casing.
             seqdata.genus = genus.lower().capitalize()
             seqdata.serotype = serotype.lower().capitalize()
             seqdata.species = species.lower() if species else 'ND'
-            
+
             seqdata_dict[seqid] = seqdata
 
     # Now go through seqmetadata to get mlst and rmlst updated
@@ -72,12 +94,14 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
 
     # Now add the metadata to our database!
     for seqid in seqdata_dict:
-        # If we don't have actual sequence data associated, don't upload metadata.
+        # Do not upload metadata without a stored sequence.
         if seqid not in seqids_in_cloud:
-            print(f'WARNING: SeqID {seqid} was listed on metadata sheet, but is not stored in cloud.')
+            print(
+                f'WARNING: SeqID {seqid} has metadata but no stored sequence.'
+            )
             continue
 
-        # Check if we need to add to our lists of Genera, Species, Serotype, MLST, RMLST for autocompletion
+        # Add new values to the autocomplete tables.
         if seqdata_dict[seqid].genus not in genera_present:
             Genus.objects.create(genus=seqdata_dict[seqid].genus)
             genera_present.append(seqdata_dict[seqid].genus)
@@ -100,13 +124,15 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
 
         # Create a SequenceData object, if needed. Otherwise, update!
         if not SequenceData.objects.filter(seqid=seqid).exists():
-            SequenceData.objects.create(seqid=seqid,
-                                        quality=seqdata_dict[seqid].quality,
-                                        genus=seqdata_dict[seqid].genus,
-                                        species=seqdata_dict[seqid].species,
-                                        serotype=seqdata_dict[seqid].serotype,
-                                        mlst=seqdata_dict[seqid].mlst,
-                                        rmlst=seqdata_dict[seqid].rmlst)
+            SequenceData.objects.create(
+                seqid=seqid,
+                quality=seqdata_dict[seqid].quality,
+                genus=seqdata_dict[seqid].genus,
+                species=seqdata_dict[seqid].species,
+                serotype=seqdata_dict[seqid].serotype,
+                mlst=seqdata_dict[seqid].mlst,
+                rmlst=seqdata_dict[seqid].rmlst,
+            )
         else:
             sequence_data = SequenceData.objects.get(seqid=seqid)
             sequence_data.quality = seqdata_dict[seqid].quality
@@ -116,11 +142,12 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             sequence_data.mlst = seqdata_dict[seqid].mlst
             sequence_data.rmlst = seqdata_dict[seqid].rmlst
             sequence_data.save()
-            
-        # Check if our seqdata has a labID. If it does, create labid object if necessary, and then link the SequenceData
-        # back to the labID
+
+        # Link the sequence to its LabID when one is available.
         if seqdata_dict[seqid].labid is not None:
-            if not LabID.objects.filter(labid=seqdata_dict[seqid].labid).exists():
+            if not LabID.objects.filter(
+                labid=seqdata_dict[seqid].labid
+            ).exists():
                 LabID.objects.create(labid=seqdata_dict[seqid].labid)
             sequence_data = SequenceData.objects.get(seqid=seqid)
             lab_data = LabID.objects.get(labid=seqdata_dict[seqid].labid)
@@ -128,20 +155,26 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
             sequence_data.save()
         # Also check for some sort of OLN ID.
         if seqdata_dict[seqid].olnid is not None:
-            try:
-                if not OLNID.objects.filter(olnid=seqdata_dict[seqid].olnid).exists():
-                    OLNID.objects.create(olnid=seqdata_dict[seqid].olnid)
-                sequence_data = SequenceData.objects.get(seqid=seqid)
-                lab_data = OLNID.objects.get(olnid=seqdata_dict[seqid].olnid)
-                sequence_data.olnid = lab_data
-                sequence_data.save()
-            except:  # Some OLN IDs are too long for the DB field I've set up to handle. Skip over those.
-                pass
+            olnid = seqdata_dict[seqid].olnid
+            max_length = OLNID._meta.get_field('olnid').max_length
+            if len(olnid) > max_length:
+                print(f'WARNING: Skipping overlong OLN ID {olnid!r}.')
+                continue
+            OLNID.objects.get_or_create(olnid=olnid)
+            sequence_data = SequenceData.objects.get(seqid=seqid)
+            sequence_data.olnid = OLNID.objects.get(olnid=olnid)
+            sequence_data.save()
 
 
 class DataToUpload:
-    # Class (but actually kinda a struct) that holds data we need to upload.
+    """Hold metadata values parsed from the CSV files."""
+
     def __init__(self, seqid):
+        """Initialize an empty upload record.
+
+        Args:
+            seqid: The sequence identifier for this record.
+        """
         self.seqid = seqid
         self.labid = None
         self.mlst = None
@@ -154,16 +187,35 @@ class DataToUpload:
 
 
 class Command(BaseCommand):
-    help = 'Updates metadata when given a SeqTracking.csv and SeqMetadata.csv from OLC Access database.' 
+    """Expose the legacy CSV metadata importer as a Django command."""
+
+    help = 'Update metadata from SeqTracking.csv and SeqMetadata.csv exports.'
 
     def add_arguments(self, parser):
-        parser.add_argument('seqtracking_csv',
-                            type=str,
-                            help='Full path to SeqTracking.csv exported from OLC Access Database.')
-        parser.add_argument('seqmetadata_csv',
-                            type=str,
-                            help='Full path to SeqMetadata.csv exported from OLC Access Database.')
+        """Register required CSV path arguments.
+
+        Args:
+            parser: The command-line argument parser.
+        """
+        parser.add_argument(
+            'seqtracking_csv',
+            type=str,
+            help='Path to SeqTracking.csv exported from OLC Access.',
+        )
+        parser.add_argument(
+            'seqmetadata_csv',
+            type=str,
+            help='Path to SeqMetadata.csv exported from OLC Access.',
+        )
 
     def handle(self, *args, **options):
-        upload_metadata(seqtracking_csv=options['seqtracking_csv'],
-                        seqmetadata_csv=options['seqmetadata_csv'])
+        """Run the metadata importer with parsed command options.
+
+        Args:
+            args: Additional positional command arguments.
+            options: Parsed command-line options.
+        """
+        upload_metadata(
+            seqtracking_csv=options['seqtracking_csv'],
+            seqmetadata_csv=options['seqmetadata_csv'],
+        )

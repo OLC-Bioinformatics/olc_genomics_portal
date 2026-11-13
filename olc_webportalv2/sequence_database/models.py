@@ -1,18 +1,26 @@
-from django.db import models
+"""Database models for genomic sequence metadata and query filters."""
+
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 # verbose names are needed for translation!
 
 
 class LabID(models.Model):
-    labid = models.CharField(max_length=24,)
+    """Store a laboratory identifier."""
+
+    labid = models.CharField(
+        max_length=24,
+    )
 
     def __str__(self):
         return self.labid
 
 
 class OLNID(models.Model):
+    """Store an OLC network identifier."""
+
     olnid = models.CharField(max_length=24)
 
     def __str__(self):
@@ -20,82 +28,154 @@ class OLNID(models.Model):
 
 
 class Genus(models.Model):
+    """Store the genus associated with a sequence."""
+
     seqid = models.CharField(max_length=24)
-    genus = models.CharField(max_length=48, blank=True, verbose_name=_("genus"),)
+    genus = models.CharField(
+        max_length=48,
+        blank=True,
+        verbose_name=_('genus'),
+    )
 
     def __str__(self):
         return self.genus
 
 
 class Species(models.Model):
+    """Store the species associated with a sequence."""
+
     seqid = models.CharField(max_length=24)
-    species = models.CharField(max_length=48, blank=True, verbose_name=_("species"),)
+    species = models.CharField(
+        max_length=48,
+        blank=True,
+        verbose_name=_('species'),
+    )
 
     def __str__(self):
         return self.species
 
 
 class MLST(models.Model):
+    """Store an MLST profile and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
     mlst = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.mlst
 
 
 class MLSTCC(models.Model):
+    """Store an MLST clonal complex and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
     mlst_cc = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.mlst_cc
 
 
 class RMLST(models.Model):
+    """Store an rMLST profile and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
     rmlst = models.CharField(max_length=12, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.rmlst
 
 
 class GeneSeekr(models.Model):
+    """Store a GeneSeekr profile and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
     geneseekr = models.CharField(max_length=48, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.geneseekr
 
 
 class Vtyper(models.Model):
+    """Store a Vtyper profile and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
     vtyper = models.CharField(max_length=48, blank=True)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.vtyper
 
 
 class Serovar(models.Model):
+    """Store a serovar and its pipeline metadata."""
+
     seqid = models.CharField(max_length=24)
-    serovar = models.CharField(max_length=512, blank=True, verbose_name=_("serovar"),)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    serovar = models.CharField(
+        max_length=512,
+        blank=True,
+        verbose_name=_('serovar'),
+    )
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
     def __str__(self):
         return self.serovar
 
 
 class NameTable(models.Model):
+    """Map a sequence identifier to a CFIA identifier."""
+
     seqid = models.CharField(max_length=24)
     cfiaid = models.CharField(max_length=48)
     curatorflag = models.CharField(max_length=48)
@@ -105,18 +185,24 @@ class NameTable(models.Model):
 
 
 class LookupTable(models.Model):
+    """Store secondary identifiers and aliases for a CFIA record."""
+
     cfiaid = models.ForeignKey(NameTable, on_delete=models.CASCADE)
     seqid = models.CharField(max_length=24)
     olnid = models.CharField(max_length=48)
     labid = models.CharField(max_length=48)
     biosample = models.CharField(max_length=48)
-    other_names = ArrayField(models.CharField(max_length=512), null=True, blank=True, default=list)
+    other_names = ArrayField(
+        models.CharField(max_length=512), null=True, blank=True, default=list
+    )
 
     def __str__(self):
         return self.cfiaid.cfiaid
 
 
 class UniqueGenus(models.Model):
+    """Store a distinct genus for autocomplete."""
+
     genus = models.CharField(max_length=24)
 
     def __str__(self):
@@ -124,6 +210,8 @@ class UniqueGenus(models.Model):
 
 
 class UniqueSpecies(models.Model):
+    """Store a distinct species for autocomplete."""
+
     species = models.CharField(max_length=24)
 
     def __str__(self):
@@ -131,6 +219,8 @@ class UniqueSpecies(models.Model):
 
 
 class UniqueMLST(models.Model):
+    """Store a distinct MLST profile for autocomplete."""
+
     mlst = models.CharField(max_length=24)
 
     def __str__(self):
@@ -138,6 +228,8 @@ class UniqueMLST(models.Model):
 
 
 class UniqueMLSTCC(models.Model):
+    """Store a distinct MLST clonal complex for autocomplete."""
+
     mlst_cc = models.CharField(max_length=24)
 
     def __str__(self):
@@ -145,6 +237,8 @@ class UniqueMLSTCC(models.Model):
 
 
 class UniqueRMLST(models.Model):
+    """Store a distinct rMLST profile for autocomplete."""
+
     rmlst = models.CharField(max_length=24)
 
     def __str__(self):
@@ -152,6 +246,8 @@ class UniqueRMLST(models.Model):
 
 
 class UniqueGeneSeekr(models.Model):
+    """Store a distinct GeneSeekr profile for autocomplete."""
+
     geneseekr = models.CharField(max_length=48)
 
     def __str__(self):
@@ -159,6 +255,8 @@ class UniqueGeneSeekr(models.Model):
 
 
 class UniqueSerovar(models.Model):
+    """Store a distinct serovar for autocomplete."""
+
     serovar = models.CharField(max_length=512)
 
     def __str__(self):
@@ -166,6 +264,8 @@ class UniqueSerovar(models.Model):
 
 
 class UniqueVtyper(models.Model):
+    """Store a distinct Vtyper profile for autocomplete."""
+
     vtyper = models.CharField(max_length=24)
 
     def __str__(self):
@@ -173,30 +273,81 @@ class UniqueVtyper(models.Model):
 
 
 class SequenceData(models.Model):
+    """Link a sequence identifier to its genomic metadata."""
+
     seqid = models.CharField(max_length=24, verbose_name=_('SEQID'))
-    cfiaid = models.ForeignKey(NameTable, on_delete=models.CASCADE, verbose_name=_('CFIA ID'))
+    cfiaid = models.ForeignKey(
+        NameTable, on_delete=models.CASCADE, verbose_name=_('CFIA ID')
+    )
     # rMLST is numeric, but categorical, so keep as CharField
-    rmlst = models.ForeignKey(RMLST, on_delete=models.CASCADE, null=True, verbose_name=_('rMLST Profile'))
+    rmlst = models.ForeignKey(
+        RMLST,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('rMLST Profile'),
+    )
     # Same as rMLST. Numeric, but categorical.
-    mlst = models.ForeignKey(MLST, on_delete=models.CASCADE, null=True, verbose_name=_('MLST Profile'))
-    mlst_cc = models.ForeignKey(MLSTCC, on_delete=models.CASCADE, null=True, verbose_name=_('MLST Clonal Complex'))
-    genus = models.ForeignKey(Genus, on_delete=models.CASCADE, null=True, verbose_name=_('Genus'))
-    species = models.ForeignKey(Species, on_delete=models.CASCADE, null=True, verbose_name=_('Species'))
-    serovar = models.ForeignKey(Serovar, on_delete=models.CASCADE, null=True, verbose_name=_('Serovar'))
-    geneseekr = models.ForeignKey(GeneSeekr, on_delete=models.CASCADE, null=True, verbose_name=_('GeneSeekr Profile'))
-    vtyper = models.ForeignKey(Vtyper, on_delete=models.CASCADE, null=True, verbose_name=_('Vtyper Profile'))
-    version = models.CharField(max_length=48, verbose_name=_('Database Version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('Typing Date'))
+    mlst = models.ForeignKey(
+        MLST,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('MLST Profile'),
+    )
+    mlst_cc = models.ForeignKey(
+        MLSTCC,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('MLST Clonal Complex'),
+    )
+    genus = models.ForeignKey(
+        Genus, on_delete=models.CASCADE, null=True, verbose_name=_('Genus')
+    )
+    species = models.ForeignKey(
+        Species, on_delete=models.CASCADE, null=True, verbose_name=_('Species')
+    )
+    serovar = models.ForeignKey(
+        Serovar, on_delete=models.CASCADE, null=True, verbose_name=_('Serovar')
+    )
+    geneseekr = models.ForeignKey(
+        GeneSeekr,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('GeneSeekr Profile'),
+    )
+    vtyper = models.ForeignKey(
+        Vtyper,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('Vtyper Profile'),
+    )
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('Database Version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('Typing Date')
+    )
 
     def __str__(self):
         return self.seqid
 
+
 class DatabaseRequestIDs(models.Model):
-    seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list)
-    cfiaids = ArrayField(models.CharField(max_length=48), blank=True, default=list)
+    """Store sequence and CFIA IDs submitted in a database request."""
+
+    seqids = ArrayField(
+        models.CharField(max_length=24), blank=True, default=list
+    )
+    cfiaids = ArrayField(
+        models.CharField(max_length=48), blank=True, default=list
+    )
 
 
 class DatabaseRequest(models.Model):
+    """Store a flattened result row for legacy database requests."""
+
     seqid = models.CharField(max_length=24)
     cfiaid = models.CharField(max_length=48)
     rmlst = models.CharField(max_length=48)
@@ -207,11 +358,19 @@ class DatabaseRequest(models.Model):
     serovar = models.CharField(max_length=512)
     geneseekr = models.CharField(max_length=48)
     vtyper = models.CharField(max_length=48)
-    version = models.CharField(max_length=48, verbose_name=_('pipeline_version'), blank=True, null=True)
-    typing_date = models.DateField(blank=True, null=True, verbose_name=_('typing_date'))
+    version = models.CharField(
+        max_length=48,
+        verbose_name=_('pipeline_version'),
+        blank=True,
+        null=True,
+    )
+    typing_date = models.DateField(
+        blank=True, null=True, verbose_name=_('typing_date')
+    )
 
 
 class DatabaseQuery(models.Model):
+    """Represent one user-supplied database query clause."""
 
     SEQID = 'SEQID'
     CFIAID = 'CFIAID'
@@ -234,18 +393,14 @@ class DatabaseQuery(models.Model):
         (GENESEEKR, _('GeneSeekr Profile')),
         (SEROVAR, _('Serovar')),
         (VTYPER, _('Vtyper Profile')),
-        (VERSION, _('Pipeline Version'))
+        (VERSION, _('Pipeline Version')),
     ]
 
     AND = 'AND'
     OR = 'OR'
     NOT = 'NOT'
 
-    OPERATORS = [
-        (AND, _('and')),
-        (OR, _('or')),
-        (NOT, _('not'))
-    ]
+    OPERATORS = [(AND, _('and')), (OR, _('or')), (NOT, _('not'))]
 
     CONTAINS = 'CONTAINS'
     EXACT = 'EXACT'
@@ -254,7 +409,13 @@ class DatabaseQuery(models.Model):
         (CONTAINS, _('contains')),
         (EXACT, _('exact')),
     ]
-    database_fields = models.CharField(max_length=24, choices=FIELDS, default=GENUS, blank=False)
-    query_operators = models.CharField(max_length=12, choices=OPERATORS, default=AND, blank=False)
-    qualifiers = models.CharField(max_length=12, choices=QUALIFIERS, default=CONTAINS, blank=False)
+    database_fields = models.CharField(
+        max_length=24, choices=FIELDS, default=GENUS, blank=False
+    )
+    query_operators = models.CharField(
+        max_length=12, choices=OPERATORS, default=AND, blank=False
+    )
+    qualifiers = models.CharField(
+        max_length=12, choices=QUALIFIERS, default=CONTAINS, blank=False
+    )
     query = models.CharField(max_length=48)

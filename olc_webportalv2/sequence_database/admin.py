@@ -1,8 +1,20 @@
-from django.contrib import admin
-from olc_webportalv2.sequence_database.models import DatabaseRequest, LookupTable, NameTable, MLST, MLSTCC, RMLST, OLNID, \
-    Serovar, SequenceData, Vtyper
+"""Admin registrations for Sequence Database models."""
 
-# Register your models here.
+from django.contrib import admin
+
+from olc_webportalv2.sequence_database.models import (
+    MLST,
+    MLSTCC,
+    OLNID,
+    RMLST,
+    DatabaseRequest,
+    LookupTable,
+    NameTable,
+    SequenceData,
+    Serovar,
+    Vtyper,
+)
+
 admin.site.register(SequenceData)
 admin.site.register(DatabaseRequest)
 # admin.site.register(LabID)

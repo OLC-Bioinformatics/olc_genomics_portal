@@ -1,47 +1,81 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.conf import settings
-from olc_webportalv2.sequence_database.forms import DatabaseRequestForm, DatabaseIDsForm, DatabaseFieldForm, \
-    SequenceDatabaseBaseFormSet, DatabaseDateForm
-from olc_webportalv2.sequence_database.models import DatabaseRequest, SequenceData, OLNID, LookupTable, UniqueGenus, \
-    UniqueSpecies, UniqueMLST, UniqueMLSTCC, UniqueRMLST, UniqueSerovar
-from olc_webportalv2.sequence_database.serializers import SequenceDataSerializer, OLNSerializer
+"""Views and autocomplete endpoints for Sequence Database."""
+
 import datetime
-from django.contrib.auth.decorators import login_required
+
 from dal import autocomplete
-from rest_framework import generics, permissions, pagination
-from olc_webportalv2.common.storage_client import get_storage_client
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.forms.formsets import formset_factory
-from olc_webportalv2.sequence_database.tables import SequenceDataTable
-from django.core.paginator import Paginator
-from django_tables2.paginators import LazyPaginator
+from django.http import JsonResponse
+from django.shortcuts import render
 from django_tables2.config import RequestConfig
+from django_tables2.paginators import LazyPaginator
+from rest_framework import generics, pagination, permissions
+
+from olc_webportalv2.common.storage_client import get_storage_client
+from olc_webportalv2.sequence_database.forms import (
+    DatabaseDateForm,
+    DatabaseFieldForm,
+    DatabaseIDsForm,
+    DatabaseRequestForm,
+    SequenceDatabaseBaseFormSet,
+)
+from olc_webportalv2.sequence_database.models import (
+    OLNID,
+    DatabaseRequest,
+    LookupTable,
+    SequenceData,
+    UniqueGenus,
+    UniqueMLST,
+    UniqueMLSTCC,
+    UniqueRMLST,
+    UniqueSerovar,
+    UniqueSpecies,
+)
+from olc_webportalv2.sequence_database.serializers import (
+    OLNSerializer,
+    SequenceDataSerializer,
+)
+from olc_webportalv2.sequence_database.tables import SequenceDataTable
 
 
-# Not sure where to put this - create pagination.py?
 class LargeResultsPagination(pagination.PageNumberPagination):
+    """Provide configurable pagination for large database API results."""
+
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 20000
 
 
 class OLNList(generics.ListCreateAPIView):
+    """List and create OLC network identifiers."""
+
     queryset = OLNID.objects.all()
     serializer_class = OLNSerializer
     pagination_class = LargeResultsPagination
 
 
 class OLNDetail(generics.RetrieveAPIView):
+    """Retrieve sequences associated with one OLC network identifier."""
+
     serializer_class = OLNSerializer
     permission_classes = (permissions.AllowAny,)
 
     def get_queryset(self):
+        """Return the requested OLC network identifier."""
         oln_id = self.kwargs['oln_id']
         oln = OLNID.objects.get(olnid=oln_id)
         return oln
 
     def retrieve(self, request, *args, **kwargs):
+        """Return sequence quality values for the requested identifier.
+
+        Args:
+            request: The current API request.
+            args: Additional positional view arguments.
+            kwargs: View arguments containing the OLC network identifier.
+        """
         oln = self.get_queryset()
         seqids = SequenceData.objects.filter(olnid=oln)
         seqdata_dict = dict()
@@ -50,10 +84,17 @@ class OLNDetail(generics.RetrieveAPIView):
         return JsonResponse(seqdata_dict)
 
     def handle_exception(self, exc):
+        """Return API exceptions as JSON error responses.
+
+        Args:
+            exc: The exception raised while handling the request.
+        """
         return JsonResponse({'ERROR': str(exc)})
 
 
 class SequenceDataList(generics.ListCreateAPIView):
+    """List and create sequence metadata records."""
+
     queryset = SequenceData.objects.all()
     serializer_class = SequenceDataSerializer
     permission_classes = (permissions.IsAdminUser,)
@@ -61,11 +102,20 @@ class SequenceDataList(generics.ListCreateAPIView):
 
 
 class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete an individual sequence record."""
+
     queryset = SequenceData.objects.all()
     serializer_class = SequenceDataSerializer
     permission_classes = (permissions.IsAdminUser,)
 
     def retrieve(self, request, *args, **kwargs):
+        """Return a temporary sequence download link.
+
+        Args:
+            request: The current API request.
+            args: Additional positional view arguments.
+            kwargs: View arguments containing the sequence primary key.
+        """
         primary_key = kwargs['pk']
         seqid = SequenceData.objects.get(pk=primary_key).seqid
         sas_url = get_storage_client().create_transfer_url(
@@ -74,233 +124,306 @@ class SequenceDataDetail(generics.RetrieveUpdateDestroyAPIView):
             name=seqid + '.fasta',
             expires_in_seconds=3600,
         )
-        return JsonResponse({'id': primary_key,
-                             'seqid': seqid,
-                             'download_link': sas_url})
+        return JsonResponse(
+            {'id': primary_key, 'seqid': seqid, 'download_link': sas_url}
+        )
 
 
 @login_required
 def database_home(request):
+    """Render the Sequence Database home page.
+
+    Args:
+        request: The current HTTP request.
+    """
     return render(request, 'sequence_database/database_home.html')
 
 
 def generic_autocompleter(non_target_dict):
+    """Filter sequences by the forwarded autocomplete fields.
+
+    Args:
+        non_target_dict: Field names mapped to their selected values.
+
+    Returns:
+        A queryset matching all non-empty forwarded values.
     """
-    Use Q objects to create an autocomplete filter based on the input dictionary
-    :param: non_target_dict: Dictionary of field name: query e.g. rmlst: 2124
-    :return Filtered query set
-    """
-    #  Initialise a Q object for building the queries
     q = Q()
-    #  The query set will begin as all entries in the SequenceData model
     qs = SequenceData.objects.all()
-    # Dictionary linking the field name to the appropriate table in the SequenceData model
     lookup_dict = {
         'genus': 'genus__genus',
         'species': 'species__species',
         'mlst': 'mlst__mlst',
         'rmlst': 'rmlst__rmlst',
         'mlstcc': 'mlst_cc__mlst_cc',
-        'serovar': 'serovar__serovar'
+        'serovar': 'serovar__serovar',
+        'geneseekr': 'geneseekr__geneseekr',
+        'vtyper': 'vtyper__vtyper',
     }
-    # Iterate through all the fields in the dictionary
     for field, query in non_target_dict.items():
-        # Only update the Q object if the query string exists
         if query:
-            # Set the kwargs as the table lookup: query e.g. rmlst__rmlst: 2124
-            kwargs = {
-                str(f'{lookup_dict[field]}'): str(query)
-            }
-            # Update the Q object with the kwargs
+            kwargs = {str(f'{lookup_dict[field]}'): str(query)}
             q = q & Q(**kwargs)
-    # Filter the query set with the Q object
     qs = qs.filter(q)
     return qs
 
 
 def category_chooser(target):
+    """Return all autocomplete fields except the selected target.
+
+    Args:
+        target: The field currently being completed.
+
+    Returns:
+        The forwarded fields that should constrain this autocomplete.
     """
-    Create a list of non-targets from a list of all possible non-targets by eliminating the single provided target
-    :param target: Current category being investigated e.g. genus
-    :return: List of non-targets
-    """
-    # Initialise the list
-    non_targets = list()
-    # Iterate through all possible target categories
-    for category in ['genus', 'species', 'mlst', 'rmlst', 'mlstcc', 'serovar']:
-        # Add the current category to the list if it does not match the name of the target
-        if category != target:
-            non_targets.append(category)
-    return non_targets
+    categories = [
+        'genus',
+        'species',
+        'mlst',
+        'rmlst',
+        'mlstcc',
+        'serovar',
+        'geneseekr',
+        'vtyper',
+    ]
+    return [category for category in categories if category != target]
 
 
 class GenusAutoCompleter(autocomplete.Select2ListView):
+    """Complete genus values using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with genus as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'genus'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching genus values."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(genus__genus__contains=self.q)
+                qs = qs.filter(genus__genus__contains=self.q)
         else:
             qs = UniqueGenus.objects.all()
             if self.q:
-                qs.filter(genus__icontains=self.q)
+                qs = qs.filter(genus__icontains=self.q)
         return sorted(list(set(str(result.genus) for result in qs)))
 
 
 class SpeciesAutoCompleter(autocomplete.Select2ListView):
+    """Complete species values using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with species as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'species'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching species values."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(species__species__icontains=self.q)
+                qs = qs.filter(species__species__icontains=self.q)
         else:
             qs = UniqueSpecies.objects.all()
             if self.q:
-                qs.filter(species__icontains=self.q)
-        return sorted(list(set(str(result.species) for result in qs if str(result.species) != 'ND')))
+                qs = qs.filter(species__icontains=self.q)
+        return sorted(
+            list(
+                set(
+                    str(result.species)
+                    for result in qs
+                    if str(result.species) != 'ND'
+                )
+            )
+        )
 
 
 class MLSTAutoCompleter(autocomplete.Select2ListView):
+    """Complete MLST profiles using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with MLST as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'mlst'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching MLST profiles."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(mlst__mlst__icontains=self.q)
+                qs = qs.filter(mlst__mlst__icontains=self.q)
         else:
             qs = UniqueMLST.objects.all()
             if self.q:
-                qs.filter(mlst__icontains=self.q)
-        int_output = sorted(list(set(int(str(result.mlst)) for result in qs if str(result.mlst) != 'ND')))
+                qs = qs.filter(mlst__icontains=self.q)
+        int_output = sorted(
+            list(
+                set(
+                    int(str(result.mlst))
+                    for result in qs
+                    if str(result.mlst) != 'ND'
+                )
+            )
+        )
         return [str(integer) for integer in int_output]
 
 
 class RMLSTAutoCompleter(autocomplete.Select2ListView):
+    """Complete rMLST profiles using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with rMLST as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'rmlst'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching rMLST profiles."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(rmlst__rmlst__icontains=self.q)
+                qs = qs.filter(rmlst__rmlst__icontains=self.q)
         else:
             qs = UniqueRMLST.objects.all()
             if self.q:
-                qs.filter(rmlst__icontains=self.q)
-        int_output = sorted(list(set(int(str(result.rmlst)) for result in qs if str(result.rmlst) != 'ND')))
+                qs = qs.filter(rmlst__icontains=self.q)
+        int_output = sorted(
+            list(
+                set(
+                    int(str(result.rmlst))
+                    for result in qs
+                    if str(result.rmlst) != 'ND'
+                )
+            )
+        )
         return [str(integer) for integer in int_output]
 
 
 class MLSTCCAutoCompleter(autocomplete.Select2ListView):
+    """Complete MLST clonal complexes using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with MLST-CC as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'mlstcc'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching MLST clonal complexes."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(mlst_cc__mlst_cc__icontains=self.q)
+                qs = qs.filter(mlst_cc__mlst_cc__icontains=self.q)
         else:
             qs = UniqueMLSTCC.objects.all()
             if self.q:
-                qs.filter(mlst_cc__icontains=self.q)
+                qs = qs.filter(mlst_cc__icontains=self.q)
         return sorted(list(set(str(result.mlst_cc) for result in qs)))
 
 
 class SerovarAutoCompleter(autocomplete.Select2ListView):
+    """Complete serovars using selected metadata filters."""
 
     def __init__(self, **kwargs):
+        """Initialize the autocomplete with serovar as its target field.
+
+        Args:
+            kwargs: Options passed to the parent list view.
+        """
         self.category = 'serovar'
         super().__init__(**kwargs)
 
     def get_list(self):
+        """Return matching serovars."""
         non_targets = category_chooser(target=self.category)
         non_target_dict = dict()
         query = False
         for non_target in non_targets:
             non_target_dict[non_target] = self.forwarded.get(non_target, None)
-            if non_target_dict[non_target] != '':
+            if non_target_dict[non_target]:
                 query = True
         if query:
             qs = generic_autocompleter(non_target_dict=non_target_dict)
             if self.q:
-                qs.filter(serovar__serovar__icontains=self.q)
+                qs = qs.filter(serovar__serovar__icontains=self.q)
         else:
             qs = UniqueSerovar.objects.all()
             if self.q:
-                qs.filter(serovar__icontains=self.q)
+                qs = qs.filter(serovar__icontains=self.q)
         return sorted(list(set(str(result.serovar) for result in qs)))
 
 
 # Create your views here.
 @login_required
 def database_filter(request):
+    """Filter sequence metadata by predefined fields and date bounds.
+
+    Args:
+        request: The current HTTP request.
+    """
     form = DatabaseRequestForm()
     if request.method == 'POST':
         form = DatabaseRequestForm(request.POST)
         if form.is_valid():
-            # As the date filtering field is more complex, extract only these values from the cleaned_data
             start_date = form.cleaned_data.get('start_date')
             end_date = form.cleaned_data.get('end_date')
-            # Initialise a Q object to build queries
             q = Q()
-            # Initialise a query set from the SequenceData model
             qs = SequenceData.objects.all()
-            # Dictionary linking the field name to the appropriate table in the SequenceData model
             lookup_dict = {
                 'genus': 'genus__genus__iexact',
                 'species': 'species__species__iexact',
@@ -309,58 +432,62 @@ def database_filter(request):
                 'mlstcc': 'mlst_cc__mlst_cc__iexact',
                 'geneseekr': 'geneseekr__geneseekr__icontains',
                 'serovar': 'serovar__serovar__iexact',
-                'vtyper': 'vtyper__vtyper__icontains'
+                'vtyper': 'vtyper__vtyper__icontains',
             }
-            # Iterate through all the cleaned data
             for field, query in form.cleaned_data.items():
-                # Ensure that the query exists, and is not None, and that 'date' is not in the field, as these are
-                # being processed separately
                 if str(query) != 'None' and str(query) and 'date' not in field:
-                    # Create the kwargs based on the category, the appropriate table and the query,
-                    # e.g. genus, Escherichia will create a dictionary entry of genus__genus__iexact: Escherichia
-                    kwargs = {
-                        str(f'{lookup_dict[field]}'): str(query)
-                    }
-                    # Update the Q object with the kwargs
+                    kwargs = {str(f'{lookup_dict[field]}'): str(query)}
                     q = q & Q(**kwargs)
-            # Filter the query set with the Q object
             qs = qs.filter(q)
-            # Filter based on date range separately from the other categories
-            if start_date and end_date:
-                qs = qs.filter(typing_date__range=[start_date, end_date])
-            # Initialise list to store the appropriate IDs
+            if start_date:
+                qs = qs.filter(typing_date__gte=start_date)
+            if end_date:
+                qs = qs.filter(typing_date__lte=end_date)
             seqid_list = list()
             cfiaid_list = list()
-            # Populate the lists with the necessary IDs
             for sequence_data in qs:
                 seqid_list.append(sequence_data.seqid)
                 cfiaid_list.append(sequence_data.cfiaid.cfiaid)
-            headers = ['SeqID', 'CFIA ID', 'rMLST Profile', 'MLST Profile', 'MLST Clonal Complex', 'Genus', 'Species',
-                       'Serovar', 'GeneSeekr Profile', 'Vtyper Profile', 'Database Version', 'Typing Date']
+            headers = [
+                'SeqID',
+                'CFIA ID',
+                'rMLST Profile',
+                'MLST Profile',
+                'MLST Clonal Complex',
+                'Genus',
+                'Species',
+                'Serovar',
+                'GeneSeekr Profile',
+                'Vtyper Profile',
+                'Database Version',
+                'Typing Date',
+            ]
             paginator = Paginator(qs.order_by('seqid'), 100)
             result = paginator.page(1)
-            return render(request,
-                          'sequence_database/database_filter_results.html',
-                          {
-                              'query_set': result,
-                              'headers': headers,
-                              'seqids': seqid_list,
-                              'cfiaids': cfiaid_list
-                          })
-    return render(request,
-                  'sequence_database/database_filter.html',
-                  {
-                      'form': form
-                  })
+            return render(
+                request,
+                'sequence_database/database_filter_results.html',
+                {
+                    'query_set': result,
+                    'headers': headers,
+                    'seqids': seqid_list,
+                    'cfiaids': cfiaid_list,
+                },
+            )
+    return render(
+        request, 'sequence_database/database_filter.html', {'form': form}
+    )
 
 
 def form_lookup(form):
+    """Map a validated query form to its model field and lookup.
+
+    Args:
+        form: A validated ``DatabaseFieldForm``.
+
+    Returns:
+        The model field path and lookup qualifier.
     """
-    Extracts necessary values from a populated form, and looks up the necessary database table with the extracted values
-    :param form: Populated DatabaseFieldForm
-    :return: Extracted field table e.g. genus__genus, and qualifier e.g. icontains
-    """
-    # Dictionary linking categories to tables
     lookup_dict = {
         'GENUS': 'genus__genus',
         'SPECIES': 'species__species',
@@ -372,72 +499,65 @@ def form_lookup(form):
         'VTYPER': 'vtyper__vtyper',
         'VERSION': 'version',
         'CONTAINS': 'icontains',
-        'EXACT': 'iexact'
+        'EXACT': 'iexact',
     }
-    # Extract the table name from the lookup dictionary using the value for database_field from the form
     field = lookup_dict[form.cleaned_data.get('database_fields')]
-    # Extract the qualifier from the lookup dictionary using the value for qualifiers from the form
     qualifier = lookup_dict[form.cleaned_data.get('qualifiers')]
     return field, qualifier
 
 
 @login_required()
 def database_query(request):
+    """Render advanced metadata queries built from a formset.
+
+    Args:
+        request: The current HTTP request.
+    """
     database_date = DatabaseDateForm()
-    database_formset_factory = formset_factory(form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet)
-    # Initialise the query set as all objects from the SequenceData model
+    database_formset_factory = formset_factory(
+        form=DatabaseFieldForm, formset=SequenceDatabaseBaseFormSet
+    )
     query_set = SequenceData.objects.all()
-    table = SequenceDataTable(query_set, order_by="seqid")
+    table = SequenceDataTable(query_set, order_by='seqid')
 
-    # query_set.order_by('seqid')
-    # paginator = Paginator(query_set.order_by('seqid'), request.GET.get('page_length', 25))
-    # page = request.GET.get('page')
-    # result = paginator.get_page(page)
-
-    import operator
-    # Initialise list to store the appropriate IDs
     seqid_list = list()
     cfiaid_list = list()
-    headers = ['SeqID', 'CFIA ID', 'rMLST Profile', 'MLST Profile', 'MLST Clonal Complex', 'Genus', 'Species',
-               'Serovar', 'GeneSeekr Profile', 'Vtyper Profile', 'Database Version', 'Typing Date']
+    headers = [
+        'SeqID',
+        'CFIA ID',
+        'rMLST Profile',
+        'MLST Profile',
+        'MLST Clonal Complex',
+        'Genus',
+        'Species',
+        'Serovar',
+        'GeneSeekr Profile',
+        'Vtyper Profile',
+        'Database Version',
+        'Typing Date',
+    ]
     if request.method == 'POST':
-        # query_set = SequenceData.objects.all()
-        # Populate the necessary forms with the POST data
         database_date = DatabaseDateForm(request.POST)
         database_form_set = database_formset_factory(request.POST)
         if database_date.is_valid() and database_form_set.is_valid():
-            # Process the dates first - extract the necessary values from the form's cleaned data
             start = database_date.cleaned_data.get('start_date')
             end = database_date.cleaned_data.get('end_date')
-            # Update the values as required
             if start is None:
-                # If there is no start date provided, set the date to be 1900-01-01
-                start = datetime.datetime.strptime("-".join(['1900', '1', '1']), '%Y-%m-%d')
+                start = datetime.datetime.strptime(
+                    '-'.join(['1900', '1', '1']), '%Y-%m-%d'
+                )
             if end is None:
-                # If there is no end date provided, set the date to be today's date
                 end = datetime.date.today()
                 end = end.strftime('%Y-%m-%d')
-            # Filter the query set on the date range
             query_set = query_set.filter(typing_date__range=[start, end])
-            # Initialise a Q object for build the queries
             q = Q()
-            # Iterate through all the DatabaseFieldForms in the form set
             for form in database_form_set:
-                # Ensure that the form contains entries
                 if form.cleaned_data:
-                    # Extract the table name e.g. genus__genus and the qualifier e.g. icontains from the form data
                     field, qualifier = form_lookup(form=form)
-                    # Extract the operator e.g. AND, and the query e.g. Escherichia
                     operator = form.cleaned_data.get('query_operators')
                     query = form.cleaned_data.get('query')
-                    # Ensure that a query exists before updating the Q object
                     if query != '' and query is not None:
-                        # Create a kwargs dictionary entry of the table name__qualifier: query
-                        # e.g. genus__genus__icontains: Escherichia
-                        kwargs = {
-                            str(f'{field}__{qualifier}'): str(query)
-                        }
-                        # Update the Q object appropriately depending on the operator
+                        kwargs = {str(f'{field}__{qualifier}'): str(query)}
                         if operator == 'AND':
                             q = q & Q(**kwargs)
                         elif operator == 'OR':
@@ -446,63 +566,57 @@ def database_query(request):
                             q = q & ~Q(**kwargs)
                         else:
                             q = q
-            # Filter the query set with the query stored in the Q object
             query_set = query_set.filter(q)
 
-        # Populate the lists with the necessary IDs
         for sequence_data in query_set:
             seqid_list.append(sequence_data.seqid)
             cfiaid_list.append(sequence_data.cfiaid.cfiaid)
-        # paginator = Paginator(query_set.order_by('seqid'), request.GET.get('page_length', 25))
-        # page = request.GET.get('page')
-        # result = paginator.get_page(page)
-        # query_set.order_by('seqid')
-        table = SequenceDataTable(query_set, order_by="seqid")
+        table = SequenceDataTable(query_set, order_by='seqid')
         table.orderable = False
-        RequestConfig(request, paginate={"paginator_class": LazyPaginator}).configure(table)
-        return render(request,
-                      'sequence_database/database_query.html',
-                      {
-                          'form_set': database_form_set,
-                          'date': database_date,
-                          'database_result': table,
-                          'headers': headers,
-                          'count': query_set.count(),
-                          'seqids': seqid_list,
-                          'cfiaids': cfiaid_list,
-                      })
+        RequestConfig(
+            request, paginate={'paginator_class': LazyPaginator}
+        ).configure(table)
+        return render(
+            request,
+            'sequence_database/database_query.html',
+            {
+                'form_set': database_form_set,
+                'date': database_date,
+                'database_result': table,
+                'headers': headers,
+                'count': query_set.count(),
+                'seqids': seqid_list,
+                'cfiaids': cfiaid_list,
+            },
+        )
 
-    # elif request.method == 'GET':
     else:
-        RequestConfig(request, paginate={"paginator_class": LazyPaginator}).configure(table)
+        RequestConfig(
+            request, paginate={'paginator_class': LazyPaginator}
+        ).configure(table)
         database_form_set = database_formset_factory()
-        return render(request,
-                      'sequence_database/database_query.html',
-                      {
-                          'form_set': database_form_set,
-                          'date': database_date,
-                          'database_result': table,
-                          'headers': headers,
-                          'count': query_set.count(),
-                          'seqids': seqid_list,
-                          'cfiaids': cfiaid_list,
-                      })
-    # else:
-    #     database_form_set = database_formset_factory()
-    #     return render(request,
-    #                   'sequence_database/database_query.html',
-    #                   {
-    #                       'form_set': database_form_set,
-    #                       'date': database_date,
-    #                       'database_result': [],
-    #                       'headers': headers,
-    #                       'seqids': seqid_list,
-    #                       'cfiaids': cfiaid_list,
-    #                   })
+        return render(
+            request,
+            'sequence_database/database_query.html',
+            {
+                'form_set': database_form_set,
+                'date': database_date,
+                'database_result': table,
+                'headers': headers,
+                'count': query_set.count(),
+                'seqids': seqid_list,
+                'cfiaids': cfiaid_list,
+            },
+        )
 
 
 @login_required
 def id_search(request):
+    """Find records by sequence identifier, CFIA ID, or renamed ID.
+
+    Args:
+        request: The current HTTP request.
+    """
     id_form = DatabaseIDsForm()
     if request.method == 'POST':
         # Populate the form with the POST data
@@ -525,23 +639,18 @@ def id_search(request):
                     if query_id[0].isdigit():
                         # Filter the query set with the SEQID
                         results = query_set.filter(seqid__exact=query_id)
-                        # If the SEQID is not present in the SequenceData table, look for it in the LookupTable
+                        # Search aliases when no sequence record exists.
                         if not results:
                             # Initialise a query set of LookupTable objects
                             lookup_table = LookupTable.objects.all()
-                            # Initialise a boolean of whether the SEQID is found in the LookupTable
                             match = False
-                            # Iterate through the entries in the LookupTable
                             for entry in lookup_table:
-                                # Determine if the SEQID is in the other_names field of the current entry
                                 if query_id in entry.other_names:
-                                    # Update the renamed_ids list with a tuple of SEQID, CFIA ID of entry
-                                    renamed_ids.append((query_id, str(entry.cfiaid)))
-                                    # Update the current query ID to be the CFIA ID of the entry
+                                    renamed_ids.append(
+                                        (query_id, str(entry.cfiaid))
+                                    )
                                     query_id = entry.cfiaid
-                                    # Store the fact that a match was found
                                     match = True
-                            # If the SEQID was not in the LookupTable, add it to the list of missing SEQIDs
                             if not match:
                                 missing_ids.append(query_id)
                             else:
@@ -550,32 +659,32 @@ def id_search(request):
                         q = q | Q(seqid__exact=query_id)
                     # Same general idea for CFIA IDs
                     else:
-                        # Check to see if there are any CFIA IDs matching the supplied query ID
-                        results = query_set.filter(cfiaid__cfiaid__exact=query_id)
-                        # If there are no matches, update the list of missing IDs with the query ID
+                        results = query_set.filter(
+                            cfiaid__cfiaid__exact=query_id
+                        )
                         if not results:
                             missing_ids.append(query_id)
-                        # Update the query
                         q = q | Q(cfiaid__cfiaid__exact=query_id)
-            # Filter the query set with the query build above
-            query_set = query_set.filter(q)
+                # Filter using the supplied IDs. An empty Q matches every row.
+                query_set = query_set.filter(q)
+            else:
+                query_set = query_set.none()
             # Add the SEQIDs to the list
             for entry in query_set:
                 seqids.append(entry.seqid)
-            return render(request,
-                          'sequence_database/database_id_search.html',
-                          {
-                              'form': id_form,
-                              'query_table': query_set,
-                              'seqids': seqids,
-                              'missing_ids': missing_ids,
-                              'renamed': renamed_ids
-                          }
-                          )
-    return render(request,
-                  'sequence_database/database_id_search.html',
-                  {
-                      'form': id_form,
-                      'query_table': DatabaseRequest.objects.all()
-                  }
-                  )
+            return render(
+                request,
+                'sequence_database/database_id_search.html',
+                {
+                    'form': id_form,
+                    'query_table': query_set,
+                    'seqids': seqids,
+                    'missing_ids': missing_ids,
+                    'renamed': renamed_ids,
+                },
+            )
+    return render(
+        request,
+        'sequence_database/database_id_search.html',
+        {'form': id_form, 'query_table': DatabaseRequest.objects.all()},
+    )

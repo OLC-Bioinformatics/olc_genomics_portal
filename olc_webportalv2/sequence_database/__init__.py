@@ -1,0 +1,1 @@
+"""Sequence Database Django application."""
