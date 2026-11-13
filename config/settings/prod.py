@@ -152,24 +152,31 @@ FIXTURE_DIRS = (str(APPS_DIR.path("fixtures")),)
 
 # EMAIL CONFIGURATION
 # -----------------------------------------------------------------------------
-EMAIL_BACKEND = env(
+email_backend = env(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.smtp.EmailBackend",
 )
-EMAIL_USE_TLS = True
-
-# EMAIL_HOST = 'smtp.gmail.com'
 DEFAULT_FROM_EMAIL = (
     "cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca"
 )
-EMAIL_HOST = "email-smtp.ca-central-1.amazonaws.com"
-EMAIL_PORT = 587
 EMAIL_RELAY_SECRET = env("EMAIL_RELAY_SECRET")
 
-# Uncomment these when you want to have emails sent - can't be done when on
-# your local machine due to firewall? (I think)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+email_options = {}
+if email_backend == "django.core.mail.backends.smtp.EmailBackend":
+    email_options = {
+        "host": "email-smtp.ca-central-1.amazonaws.com",
+        "port": 587,
+        "username": env("EMAIL_HOST_USER"),
+        "password": env("EMAIL_HOST_PASSWORD"),
+        "use_tls": True,
+    }
+
+MAILERS = {
+    "default": {
+        "BACKEND": email_backend,
+        "OPTIONS": email_options,
+    },
+}
 
 # MANAGER CONFIGURATION
 # -----------------------------------------------------------------------------
@@ -224,9 +231,6 @@ SITE_ID = 1
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
 USE_I18N = True
-
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#use-l10n
-USE_L10N = True
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True

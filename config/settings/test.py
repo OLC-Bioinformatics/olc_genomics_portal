@@ -67,7 +67,11 @@ DATABASES = {
 }
 
 ENVIRONMENT = "TEST"
-EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.locmem.EmailBackend",
+    },
+}
 MEDIA_ROOT = os.environ.get(
     "FOODPORT_TEST_MEDIA_ROOT",
     "/tmp/foodport-test-media",
