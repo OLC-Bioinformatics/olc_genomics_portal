@@ -80,8 +80,10 @@ __pycache__/
 # # pyenv
 # .python-version
 #
-# # celery beat schedule file
-# celerybeat-schedule
+# # Celery Beat schedule files
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
 #
 # # SageMath parsed files
 # *.sage.py
@@ -111,6 +113,8 @@ env
 
 # Others
 celerybeat-schedule.db
+celerybeat-schedule.db-shm
+celerybeat-schedule.db-wal
 *.fasta
 olc_webportalv2/media/
 celerybeat.pid
