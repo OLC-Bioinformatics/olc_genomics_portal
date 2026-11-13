@@ -1,12 +1,12 @@
+"""Admin registrations for COWSNPhR models."""
+
 from django.contrib import admin
 
-
 from olc_webportalv2.cowsnphr.models import (
+    ContainerName,
     COWSNPhRAzureTask,
     COWSNPhRRequest,
-    ContainerName
 )
-
 
 # Register your models here.
 admin.site.register(COWSNPhRRequest)

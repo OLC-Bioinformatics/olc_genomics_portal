@@ -1,0 +1,1 @@
+"""COWSNPhR genomics analysis application."""

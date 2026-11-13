@@ -1,6 +1,4 @@
-"""
-Create URLs for the COWSNPhR app.
-"""
+"""Create URLs for the COWSNPhR app."""
 
 # Django imports
 from django.urls import path
@@ -66,14 +64,12 @@ urlpatterns = [
         views.cowsnphr_amino_acid_summary,
         name="cowsnphr_amino_acid_summary",
     ),
-
     # Allow user to refresh containers for autocomplete.
     path(
         _("container_refresh/"),
         views.container_refresh,
         name="refresh",
     ),
-
     # Views for autocompletion.
     path(
         _("cowsnphr_autocompleter/"),
