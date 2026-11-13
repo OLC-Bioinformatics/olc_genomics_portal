@@ -39,6 +39,12 @@ parameters:
 variables:
 - name: DEPLOY_ENVIRONMENT
   value: ${{ parameters.deployEnvironment }}
+- ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+  - name: DJANGO_DEBUG
+    value: 'True'
+- ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+  - name: DJANGO_DEBUG
+    value: 'False'
 - ${{ if eq(parameters.deployEnvironment, 'prod') }}:
   - name: DJANGO_SERVER_NAME
     value: 'foodport-dev.cloud-nuage.inspection.gc.ca'
@@ -577,9 +583,10 @@ stages:
 
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
+        safe_DJANGO_DEBUG=$(printf '%q' "${DJANGO_DEBUG:-}")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST DJANGO_DEBUG=$safe_DJANGO_DEBUG bash -s" <<'EOF'
           set -euo pipefail
           umask 077
 
@@ -594,6 +601,15 @@ stages:
           dotenv_file="$REMOTE_DIR/.env"
           : > "$env_file"
           : > "$dotenv_file"
+          case "$DJANGO_DEBUG" in
+            True|False) ;;
+            *)
+              echo "DJANGO_DEBUG must be True or False" >&2
+              exit 1
+              ;;
+          esac
+          printf '%s=%s\n' DJANGO_DEBUG "$DJANGO_DEBUG" >> "$env_file"
+          printf '%s=%s\n' DJANGO_DEBUG "$DJANGO_DEBUG" >> "$dotenv_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
           django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
@@ -748,3 +764,5 @@ stages:
           exit 1
         EOF
       displayName: 'Deploy portal on target VM'
+      env:
+        DJANGO_DEBUG: $(DJANGO_DEBUG)
