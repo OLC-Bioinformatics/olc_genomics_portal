@@ -96,6 +96,12 @@ Container renames run asynchronously, and the page reports their status.
 Tasks run on the portal are executed via celery. You can use the nice interface provided
 by [flower](https://flower.readthedocs.io/en/latest/index.html) to monitor tasks.
 
+The Compose Redis service uses AOF persistence in the named `redis-data` volume
+so queued tasks and results survive future container recreation. Existing data
+in an older Redis container is not automatically migrated to this volume, so
+plan the initial upgrade around pending work. Preserve the volume during routine
+redeploys; `docker compose down -v` removes it.
+
 Flower is set up to use some basic authentication - you can either a username/password in your `docker-compose.yml` by 
 changing `$FLOWER_USER` and `$FLOWER_PASSWORD`, or you can just set the environmental variables 
 before booting the portal.

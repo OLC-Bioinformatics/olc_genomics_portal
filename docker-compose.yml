@@ -172,14 +172,23 @@ services:
 
   redis:
     restart: always
-    image: redis:3.0
+    image: redis:8.10.3
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   celeryworker:
     restart: always
     <<: *web
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       batch:
         condition: service_healthy
       storage:
@@ -191,7 +200,7 @@ services:
     <<: *web
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       batch:
         condition: service_healthy
       storage:
@@ -296,3 +305,4 @@ volumes:
   redmine-db:
   rag-db:
   rag-model-cache:
+  redis-data:
