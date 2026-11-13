@@ -48,6 +48,17 @@ class PortalRoutingTests(TestCase):
         self.assertIn('aria-labelledby="metadataDropdownButton"', html)
         self.assertIn('aria-labelledby="dropdownMenuButton"', html)
 
+    def test_home_and_about_render_the_shared_portal_shell(self):
+        """Render the common navigation and scripts on both landing pages."""
+        for path in ("/", "/about/"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'id="log-in-link"')
+                self.assertContains(response, "jquery-3.7.1.min.js")
+                self.assertContains(response, "project.js")
+
     def test_navigation_menu_items_link_to_their_sections(self):
         """Link each navigation item to a resolvable route."""
         response = self.client.get("/")
@@ -131,6 +142,29 @@ class PortalRoutingTests(TestCase):
             response.cookies[settings.LANGUAGE_COOKIE_NAME].value,
             "fr",
         )
+
+    def test_language_selector_enforces_csrf_protection(self):
+        """Require a CSRF token when changing the selected language."""
+        client = Client(enforce_csrf_checks=True)
+        page = client.get("/", HTTP_HOST="localhost")
+        csrf_token = page.cookies["csrftoken"].value
+        set_language_url = reverse("set_language")
+        post_data = {"language": "fr", "next": "/"}
+
+        self.assertContains(page, 'name="csrfmiddlewaretoken"')
+        denied_response = client.post(
+            set_language_url,
+            post_data,
+            HTTP_HOST="localhost",
+        )
+        accepted_response = client.post(
+            set_language_url,
+            {**post_data, "csrfmiddlewaretoken": csrf_token},
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(denied_response.status_code, 403)
+        self.assertEqual(accepted_response.status_code, 302)
 
     def test_base_assets_exist_and_jquery_precedes_project_javascript(self):
         """Find base assets and ensure jQuery loads before project scripts."""
