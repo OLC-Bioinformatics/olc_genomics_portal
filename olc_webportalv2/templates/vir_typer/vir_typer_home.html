@@ -41,6 +41,7 @@
                 <td>{{ vir_typer_project.created_at }}</td>
                 {% if vir_typer_project.status != 'Processing' and 'Unprocessed' %}
                     <form id="form{{vir_typer_project.pk}}" method="post">
+                        {% csrf_token %}
                         <td align="center"><button class="btn btn-danger w-100" type="submit" id="btn{{vir_typer_project.pk}}" name="delBtn" value={{vir_typer_project.pk}}>{%  trans "Delete " %} <i class="fas fa-trash-alt"></i></button></td>
                         <input type='hidden' id="delete{{vir_typer_project.pk}}" name="delete" value={{vir_typer_project.pk}}>
                     </form>
@@ -101,7 +102,7 @@
                             if (bowser.name === "Internet Explorer") { //allows for page submission IE
                                 $.ajax({
                                     type:"POST",
-                                    data: {"delete":btn}}).done(function(data) {
+                                    data: $(form).serialize()}).done(function(data) {
                                         location.reload();
                                     });
                             }else {

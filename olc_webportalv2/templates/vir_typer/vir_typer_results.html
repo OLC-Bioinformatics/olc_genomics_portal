@@ -32,6 +32,7 @@
 
 <div>
     <form action='' enctype="multipart/form-data" method="post" novalidate>
+        {% csrf_token %}
         <button type="submit" class="btn btn-primary btn-lg">{% trans "Create PDF Report" %}</button>
     </form>
 </div>

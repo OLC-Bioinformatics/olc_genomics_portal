@@ -1,5 +1,14 @@
+"""Admin registrations for VirusTyper models."""
+
 from django.contrib import admin
-from .models import VirTyperAzureRequest, VirTyperFiles, VirTyperProject, VirTyperRequest, VirTyperResults
+
+from olc_webportalv2.vir_typer.models import (
+    VirTyperAzureRequest,
+    VirTyperFiles,
+    VirTyperProject,
+    VirTyperRequest,
+    VirTyperResults,
+)
 
 admin.site.register(VirTyperProject)
 admin.site.register(VirTyperRequest)

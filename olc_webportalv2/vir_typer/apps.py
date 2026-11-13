@@ -1,5 +1,9 @@
+"""Django application configuration for VirusTyper."""
+
 from django.apps import AppConfig
 
 
 class VirTyperConfig(AppConfig):
-    name = 'olc_webportalv2.vir_typer'
+    """Configure the VirusTyper Django application."""
+
+    name = "olc_webportalv2.vir_typer"
