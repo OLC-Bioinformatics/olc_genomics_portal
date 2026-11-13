@@ -4,13 +4,25 @@ import base64
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
-import requests
 
+import requests
 from django.conf import settings
 
 
 @dataclass(frozen=True)
 class StorageObject:
+    """Describe object metadata returned by the Storage service.
+
+    Attributes:
+        name: Object path within its container.
+        size: Object size in bytes, if provided.
+        last_modified: Last-modified timestamp, if provided.
+        etag: Entity tag, if provided.
+        content_md5: Content checksum, if provided.
+        content_type: MIME type, if provided.
+
+    """
+
     name: str
     size: int | None
     last_modified: str | None
@@ -21,6 +33,15 @@ class StorageObject:
 
 @dataclass(frozen=True)
 class StorageContainer:
+    """Describe a container returned by the Storage service.
+
+    Attributes:
+        name: Container name.
+        created_at: Creation timestamp, if provided.
+        metadata: Container metadata.
+
+    """
+
     name: str
     created_at: str | None
     metadata: dict
@@ -30,6 +51,13 @@ class StorageServiceError(RuntimeError):
     """Raised when the Storage service returns an unsuccessful response."""
 
     def __init__(self, status_code, message):
+        """Create an error with the upstream status and message.
+
+        Args:
+            status_code: HTTP status code, or ``None`` for transport errors.
+            message: Error message returned by the service or transport.
+
+        """
         super().__init__(message)
         self.status_code = status_code
 
@@ -38,12 +66,27 @@ class StorageClient:
     """HTTP client implementing the provider-neutral Storage contract."""
 
     def __init__(self, base_url=None, token=None, session=None, timeout=None):
+        """Configure the HTTP client from arguments or Django settings.
+
+        Args:
+            base_url: Optional Storage service URL.
+            token: Optional service bearer token.
+            session: Optional requests-compatible session for HTTP calls.
+            timeout: Optional request timeout in seconds.
+
+        """
         self.base_url = (base_url or settings.STORAGE_SERVICE_URL).rstrip("/")
         self.token = token or settings.STORAGE_SERVICE_TOKEN
         self.session = session or requests.Session()
         self.timeout = timeout or settings.STORAGE_REQUEST_TIMEOUT
 
     def list_containers(self):
+        """List containers and map service responses to storage records.
+
+        Returns:
+            Container metadata records.
+
+        """
         data = self._request("GET", "/v1/containers").json()
         return [
             StorageContainer(
@@ -55,12 +98,31 @@ class StorageClient:
         ]
 
     def ensure_container(self, container):
+        """Create a container if it does not already exist.
+
+        Args:
+            container: Container name to ensure.
+
+        """
         self._request("PUT", f"/v1/containers/{quote(container, safe='')}")
 
     def delete_container(self, container):
+        """Delete a container.
+
+        Args:
+            container: Container name to delete.
+
+        """
         self._request("DELETE", f"/v1/containers/{quote(container, safe='')}")
 
     def rename_container(self, old_name, new_name):
+        """Rename a container.
+
+        Args:
+            old_name: Current container name.
+            new_name: Replacement container name.
+
+        """
         self._request(
             "POST",
             "/v1/containers/rename",
@@ -68,6 +130,16 @@ class StorageClient:
         )
 
     def list_objects(self, container, prefix=None):
+        """List objects in a container, optionally filtered by path prefix.
+
+        Args:
+            container: Container to enumerate.
+            prefix: Optional object-name prefix.
+
+        Returns:
+            Object metadata records matching the query.
+
+        """
         response = self._request(
             "GET",
             f"/v1/containers/{quote(container, safe='')}/objects",
@@ -76,6 +148,16 @@ class StorageClient:
         return [self._object(item) for item in response.json()["items"]]
 
     def get_object(self, container, name):
+        """Fetch metadata for an object.
+
+        Args:
+            container: Container holding the object.
+            name: Object path.
+
+        Returns:
+            Metadata for the requested object.
+
+        """
         response = self._request(
             "HEAD",
             self._object_path(container, name),
@@ -90,6 +172,16 @@ class StorageClient:
         )
 
     def object_exists(self, container, name):
+        """Check whether an object exists, propagating other service errors.
+
+        Args:
+            container: Container holding the object.
+            name: Object path.
+
+        Returns:
+            Whether the object exists.
+
+        """
         try:
             self.get_object(container, name)
         except StorageServiceError as exc:
@@ -101,6 +193,16 @@ class StorageClient:
     def upload_bytes(
         self, container, name, data, content_type=None, content_md5=None
     ):
+        """Upload bytes and return the resulting object metadata.
+
+        Args:
+            container: Destination container.
+            name: Destination object path.
+            data: Byte content to upload.
+            content_type: Optional MIME type.
+            content_md5: Optional raw or base64-encoded content checksum.
+
+        """
         headers = {}
         if content_type:
             headers["Content-Type"] = content_type
@@ -121,6 +223,16 @@ class StorageClient:
     def upload_file(
         self, container, name, file_path, content_type=None, content_md5=None
     ):
+        """Upload a local file and return its object metadata.
+
+        Args:
+            container: Destination container.
+            name: Destination object path.
+            file_path: Path to the local source file.
+            content_type: Optional MIME type.
+            content_md5: Optional base64-encoded content checksum.
+
+        """
         headers = {}
         if content_type:
             headers["Content-Type"] = content_type
@@ -136,6 +248,16 @@ class StorageClient:
         return self._object(response.json())
 
     def download_bytes(self, container, name):
+        """Download an object into memory.
+
+        Args:
+            container: Source container.
+            name: Source object path.
+
+        Returns:
+            The object content as bytes.
+
+        """
         response = self._request(
             "GET",
             self._object_path(container, name),
@@ -143,6 +265,14 @@ class StorageClient:
         return response.content
 
     def download_file(self, container, name, file_path):
+        """Stream an object to a local file, creating parent directories.
+
+        Args:
+            container: Source container.
+            name: Source object path.
+            file_path: Local destination path.
+
+        """
         destination = Path(file_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         response = self._request(
@@ -159,9 +289,31 @@ class StorageClient:
             response.close()
 
     def delete_object(self, container, name):
+        """Delete an object from a container.
+
+        Args:
+            container: Container holding the object.
+            name: Object path to delete.
+
+        """
         self._request("DELETE", self._object_path(container, name))
 
-    def copy_object(self, source_container, source_name, destination_container, destination_name):
+    def copy_object(
+        self,
+        source_container,
+        source_name,
+        destination_container,
+        destination_name,
+    ):
+        """Copy an object and return the destination metadata.
+
+        Args:
+            source_container: Container holding the source object.
+            source_name: Source object path.
+            destination_container: Container for the copied object.
+            destination_name: Destination object path.
+
+        """
         response = self._request(
             "POST",
             "/v1/objects/copy",
@@ -183,6 +335,19 @@ class StorageClient:
         expires_in_seconds=3600,
         content_disposition=None,
     ):
+        """Create a temporary URL for an object transfer.
+
+        Args:
+            container: Container associated with the transfer.
+            action: Transfer operation, such as ``read`` or ``write``.
+            name: Optional object path for object-specific URLs.
+            expires_in_seconds: Requested URL lifetime.
+            content_disposition: Optional disposition applied to downloads.
+
+        Returns:
+            The generated transfer URL.
+
+        """
         response = self._request(
             "POST",
             "/v1/transfer-urls",
@@ -208,7 +373,9 @@ class StorageClient:
                 **kwargs,
             )
         except requests.RequestException as exc:
-            raise StorageServiceError(None, f"Storage service request failed: {exc}") from exc
+            raise StorageServiceError(
+                None, f"Storage service request failed: {exc}"
+            ) from exc
         if not response.ok:
             try:
                 message = response.json().get("error", response.text)
@@ -237,4 +404,5 @@ class StorageClient:
 
 
 def get_storage_client():
+    """Create a Storage client using the configured Django settings."""
     return StorageClient()

@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 
-"""
-Common methods shared between multiple apps
-"""
+"""Common methods shared between FoodPort applications."""
 
 # Standard imports
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from time import sleep
-from copy import deepcopy
-from typing import Optional
 import json
 import logging
 import os
 import re
 import smtplib
+from copy import deepcopy
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from time import sleep
+from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
 
 # Third-party imports
@@ -22,6 +20,7 @@ import requests
 
 # Django-related imports
 from django.conf import settings
+
 from olc_webportalv2.common.batch_client import BatchServiceClient
 from olc_webportalv2.common.storage_client import StorageClient
 
@@ -29,17 +28,20 @@ from olc_webportalv2.common.storage_client import StorageClient
 def _redact_sas_urls(value):
     """Redact URL query strings while preserving nested data structures."""
     if isinstance(value, str):
+
         def redact(match):
             parts = urlsplit(match.group(0))
             if not parts.query:
                 return match.group(0)
-            return urlunsplit((
-                parts.scheme,
-                parts.netloc,
-                parts.path,
-                "[REDACTED]",
-                parts.fragment,
-            ))
+            return urlunsplit(
+                (
+                    parts.scheme,
+                    parts.netloc,
+                    parts.path,
+                    "[REDACTED]",
+                    parts.fragment,
+                )
+            )
 
         return re.sub(r"https?://[^\s\"'<>]+", redact, value)
     if isinstance(value, dict):
@@ -65,26 +67,28 @@ def generic_api_submit(
     log_prefix: Optional[str] = None,
     environment_variables: Optional[dict] = None,
 ) -> dict:
-    """
-    Submits a job to the Batch API.
+    """Submit a job to the internal Batch API.
 
-    This function sends a POST request to the Batch API with the specified
-    command, container name, and VM size. 
+    Send a POST request with the command, container name, VM size, and
+    optional file and environment configuration.
 
     Args:
-        analysis_type (str): The type of analysis to be run. This is used to
-            select the appropriate VM image. Default is COWBAT
-        command (str): The command to be run.
-        container_name (str): The name of the container in which the files to
-            be used in the analyses are located
-        input_file_pattern (list): List of files not already in the container
-            to be copied to the VM. Default is None
-        vm_size (str): The size of the VM where the command will be run.
-        unique_id (str): The unique ID to add to the container name rather than
-            using a random hash. Default is None
+        command: Command or script to execute.
+        container_name: Storage container containing analysis inputs.
+        vm_size: Requested virtual machine size.
+        analysis_type: Analysis type used to choose the VM image.
+        input_file_pattern: Optional input patterns to copy to the VM.
+        unique_id: Optional stable identifier for the submitted job.
+        download_file_pattern: Optional patterns downloaded before execution.
+        output_file_pattern: Optional patterns uploaded after execution.
+        output_container: Optional destination container for output files.
+        output_prefix: Optional path prefix for output files.
+        log_prefix: Optional path prefix for task logs.
+        environment_variables: Optional environment variables for the job.
 
     Returns:
-        dict: The response from the Batch API as a dictionary.
+        The Batch service response as a dictionary.
+
     """
     # Ensure that empty lists are converted to None
     input_file_pattern = input_file_pattern if input_file_pattern else None
@@ -115,36 +119,39 @@ def generic_api_submit(
         settings.BATCH_SERVICE_URL,
         headers=settings.BATCH_URL_HEADERS,
         data=json.dumps(data),
-        timeout=600
+        timeout=600,
     )
 
     # Log and print useful response attributes
-    logging.info('Response status code: %s', response.status_code)
-    logging.info('Response content: %s', response.content)
-    logging.info('Response text: %s', response.text)
-    
+    logging.info("Response status code: %s", response.status_code)
+    logging.info("Response content: %s", response.content)
+    logging.info("Response text: %s", response.text)
+
     # Check if the response is JSON and log accordingly
-    content_type = response.headers.get('content-type', '')
+    content_type = response.headers.get("content-type", "")
     try:
-        response_json = response.json() if 'application/json' in \
-            content_type else 'No JSON response'
+        response_json = (
+            response.json()
+            if "application/json" in content_type
+            else "No JSON response"
+        )
     except ValueError:
-        response_json = 'Invalid JSON response'
+        response_json = "Invalid JSON response"
 
-    logging.info('Response JSON: %s', response_json)
-    logging.info('Response headers: %s', response.headers)
-    logging.info('Response URL: %s', response.url)
-    logging.info('Response elapsed time: %s', response.elapsed)
-    logging.info('Response reason: %s', response.reason)
+    logging.info("Response JSON: %s", response_json)
+    logging.info("Response headers: %s", response.headers)
+    logging.info("Response URL: %s", response.url)
+    logging.info("Response elapsed time: %s", response.elapsed)
+    logging.info("Response reason: %s", response.reason)
 
-    print('Response status code:', response.status_code)
-    print('Response content:', response.content)
-    print('Response text:', response.text)
-    print('Response JSON:', response_json)
-    print('Response headers:', response.headers)
-    print('Response URL:', response.url)
-    print('Response elapsed time:', response.elapsed)
-    print('Response reason:', response.reason)
+    print("Response status code:", response.status_code)
+    print("Response content:", response.content)
+    print("Response text:", response.text)
+    print("Response JSON:", response_json)
+    print("Response headers:", response.headers)
+    print("Response URL:", response.url)
+    print("Response elapsed time:", response.elapsed)
+    print("Response reason:", response.reason)
 
     response.raise_for_status()  # Raise an error for bad responses
 
@@ -159,59 +166,55 @@ def generic_api_submit(
     )
 
 
-
 def send_email(
     *,  # Enforce keyword arguments
     subject: str,
     body: str,
-    recipient: str
+    recipient: str,
 ) -> None:
-    """
-    Sends an email with the given subject, body, and recipient.
+    """Send an email with the specified subject, body, and recipient.
 
-    If an "Access denied" SMTP data error or a "wrong version number" SMTP
-    server disconnected error occurs, the function will wait for 5 seconds and
-    then retry the operation. This retry process will happen up to 50 times.
-    If any other error occurs, it will be raised immediately.
+    Retry recognized access-denied or TLS-version errors up to 50 times,
+    waiting five seconds between attempts. Other errors are raised immediately.
 
     Args:
-        subject (str): The subject of the email.
-        body (str): The body of the email.
-        recipient (str): The recipient's email address.
+        subject: Email subject.
+        body: Plain-text email body.
+        recipient: Destination email address.
 
     Raises:
-        smtplib.SMTPDataError: If an SMTP data error occurs that is not an
-        "Access denied" error.
-        smtplib.SMTPServerDisconnected: If an SMTP server disconnected error
-        occurs that is not a "wrong version number" error.
+        smtplib.SMTPDataError: If an SMTP data error is not an access denial.
+        smtplib.SMTPServerDisconnected: If the disconnect is not a TLS error.
+
     """
     # Define the sender's email address
-    from_addr = \
-        'cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca'
+    from_addr = (
+        "cfia.foodport.donotreply-nepasrepondre.aliport.acia@inspection.gc.ca"
+    )
     # Define the recipient's email address
     to_addr = recipient
 
     # Create a MIME multipart message
     msg = MIMEMultipart()
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
 
     # Attempt to send the email up to 50 times
     for _ in range(50):
         server = None  # Initialize server variable
         try:
             # Connect to the SMTP server
-            server = smtplib.SMTP('email-smtp.ca-central-1.amazonaws.com', 587)
+            server = smtplib.SMTP("email-smtp.ca-central-1.amazonaws.com", 587)
 
             # Start TLS encryption
             server.starttls()
 
             # Login to the SMTP server
             server.login(
-                user=os.environ.get('EMAIL_HOST_USER'),
-                password=os.environ.get('EMAIL_HOST_PASSWORD')
+                user=os.environ.get("EMAIL_HOST_USER"),
+                password=os.environ.get("EMAIL_HOST_PASSWORD"),
             )
 
             # Convert the message to a string
@@ -249,9 +252,7 @@ def send_email(
 
 
 def create_batch_client() -> BatchServiceClient:
-    """
-    Creates an HTTP client for the internal Batch service.
-    """
+    """Create an HTTP client for the internal Batch service."""
     return BatchServiceClient()
 
 
@@ -259,18 +260,17 @@ def upload_blob_from_path(
     container_name: str,
     blob_name: str,
     file_path: str,
-    blob_service_client: StorageClient
+    blob_service_client: StorageClient,
 ) -> None:
-    """
-    Uploads a blob from a local file path.
+    """Upload a local file to object storage.
 
-    :param container_name: Name of the container
-    :param blob_name: Name of the blob
-    :param file_path: Path to the local file
-    :param blob_service_client: Storage service client
-    :return: None
-    """
+    Args:
+        container_name: Destination container.
+        blob_name: Destination object path.
+        file_path: Path to the local source file.
+        blob_service_client: Configured storage client.
 
+    """
     blob_service_client.ensure_container(container_name)
     blob_service_client.upload_file(container_name, blob_name, file_path)
 
@@ -279,19 +279,18 @@ def download_blob_to_path(
     container_name: str,
     blob_name: str,
     file_path: str,
-    blob_service_client: StorageClient
+    blob_service_client: StorageClient,
 ) -> None:
-    """
-    Downloads a blob to a local file path.
+    """Download an object to a local file path.
 
-    :param container_name: Name of the container
-    :param blob_name: Name of the blob
-    :param file_path: Local file path to write
-    :param blob_service_client: Storage service client
-    :return: None
+    Args:
+        container_name: Source container.
+        blob_name: Source object path.
+        file_path: Local destination path.
+        blob_service_client: Configured storage client.
+
     """
     blob_service_client.download_file(container_name, blob_name, file_path)
-
 
 
 def generate_download_link(
@@ -299,8 +298,21 @@ def generate_download_link(
     container_name: str,
     blob_name: str,
     expiry: int = 8,
-    content_disposition: Optional[str] = None
+    content_disposition: Optional[str] = None,
 ) -> str:
+    """Create a temporary download URL for a storage object.
+
+    Args:
+        blob_service_client: Configured storage client.
+        container_name: Container holding the object.
+        blob_name: Object path to expose.
+        expiry: URL lifetime in days.
+        content_disposition: Optional download disposition header value.
+
+    Returns:
+        A temporary URL that permits downloading the object.
+
+    """
     return blob_service_client.create_transfer_url(
         container_name,
         "read",
@@ -311,27 +323,28 @@ def generate_download_link(
 
 
 def create_container(
-    container_name: str,
-    blob_service_client: StorageClient
+    container_name: str, blob_service_client: StorageClient
 ) -> None:
-    """
-    Create a container if it does not already exist.
+    """Create a container if it does not already exist.
+
+    Args:
+        container_name: Name of the container to create.
+        blob_service_client: Configured storage client.
+
     """
     blob_service_client.ensure_container(container_name)
 
 
 def download_container(
-    blob_service_client: StorageClient,
-    container_name: str,
-    output_dir: str
+    blob_service_client: StorageClient, container_name: str, output_dir: str
 ) -> None:
-    """
-    Download all blobs in a container to a local directory, preserving folder structure.
+    """Download a container's objects while preserving their folder paths.
 
-    :param blob_service_client: Storage service client
-    :param container_name: Name of the container
-    :param output_dir: Local directory to write blobs to
-    :return: None
+    Args:
+        blob_service_client: Configured storage client.
+        container_name: Container whose objects will be downloaded.
+        output_dir: Local root directory for downloaded objects.
+
     """
     os.makedirs(output_dir, exist_ok=True)
     for blob in blob_service_client.list_objects(container_name):

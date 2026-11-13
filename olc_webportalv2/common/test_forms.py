@@ -1,3 +1,5 @@
+"""Tests for common upload form fields."""
+
 import unittest
 
 from django import forms

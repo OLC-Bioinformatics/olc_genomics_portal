@@ -22,11 +22,19 @@ DEFAULT_RETRYABLE_RESIZE_CODES = (
 
 
 def batch_pool_id_from_job_id(job_id):
-    """Return the conventional pool ID for a FoodPort Batch job."""
-    if job_id.endswith("-job"):
-        return "{0}-pool".format(job_id[:-4])
+    """Return the pool ID conventionally paired with a Batch job.
 
-    return "{0}-pool".format(job_id)
+    Args:
+        job_id: Identifier of the Batch job.
+
+    Returns:
+        The corresponding pool identifier.
+
+    """
+    if job_id.endswith("-job"):
+        return f"{job_id[:-4]}-pool"
+
+    return f"{job_id}-pool"
 
 
 def _batch_resize_error_details(pool):
@@ -77,7 +85,7 @@ def retry_failed_pool_resize(
     target_dedicated_nodes=1,
     target_low_priority_nodes=0,
     retry_interval_seconds=None,
-    retryable_codes=None
+    retryable_codes=None,
 ):
     """Retry a failed zero-node Azure Batch pool resize.
 
@@ -87,6 +95,7 @@ def retry_failed_pool_resize(
 
     Returns:
         dict: A structured result describing the action taken.
+
     """
     if retry_interval_seconds is None:
         retry_interval_seconds = getattr(
@@ -176,7 +185,7 @@ def retry_failed_pool_resize(
 
         return result
 
-    cache_key = "batch-resize-retry:{0}".format(pool_id)
+    cache_key = f"batch-resize-retry:{pool_id}"
 
     retry_permitted = cache.add(
         cache_key,
@@ -222,4 +231,3 @@ def retry_failed_pool_resize(
     )
 
     return result
-

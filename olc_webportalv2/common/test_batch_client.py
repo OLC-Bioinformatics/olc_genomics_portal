@@ -24,9 +24,7 @@ class BatchClientTests(unittest.TestCase):
 
     def test_task_listing_maps_generic_response_and_auth(self):
         self.response.json.return_value = {
-            "items": [
-                {"id": "job-1", "state": "completed", "exit_code": 0}
-            ]
+            "items": [{"id": "job-1", "state": "completed", "exit_code": 0}]
         }
 
         tasks = self.client.task.list("job-1")
@@ -35,8 +33,12 @@ class BatchClientTests(unittest.TestCase):
         self.assertEqual(tasks[0].state, "completed")
         self.assertEqual(tasks[0].execution_info.exit_code, 0)
         call = self.session.request.call_args
-        self.assertEqual(call.args[:2], ("GET", "http://batch:5000/v1/jobs/job-1/tasks"))
-        self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer internal-token")
+        self.assertEqual(
+            call.args[:2], ("GET", "http://batch:5000/v1/jobs/job-1/tasks")
+        )
+        self.assertEqual(
+            call.kwargs["headers"]["Authorization"], "Bearer internal-token"
+        )
 
     def test_resize_uses_provider_neutral_fields(self):
         self.client.pool.resize(
