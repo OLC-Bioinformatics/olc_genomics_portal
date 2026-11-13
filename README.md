@@ -105,19 +105,13 @@ export FLOWER_USER=a_flower_username
 export FLOWER_PASSWORD=a_flower_password
 ```
 
-#### Booting up the portal
+#### Deployment
 
-Add your IP address to ALLOWED_HOSTS in `prod.py`, and make a directory called
-`postgres-data` in the root of your cloned dir. You should now be able to boot up the portal. You'll need the following commands (in this order, run in the root
-of the directory you cloned):
-
-- `docker-compose -f docker-compose-prod.yml build`
-- `docker-compose -f docker-compose-prod.yml up`
-
-You'll then need to get database structure set up - attach into the running web container (command will be something like
- `docker exec -it olc_genomics_portal_web_1 /bin/bash`) and run `python3 manage.py migrate` (you shouldn't need to make migrations,
- these get pushed to the repository.) At this point, the portal will be up and running, but there won't be any metadata in there,
- and so it's still pretty useless. Read on to see how to get metadata into the portal.
+Portal VM deployments are managed by the Azure DevOps pipelines. The
+`azure-pipelines-update.yml` pipeline updates the main portal VM, and
+`azure-pipelines-dev.yml` manages the development deployment. Both use the
+repository's default `docker-compose.yml`; the retired
+`docker-compose-prod.yml` instructions are no longer applicable.
  
  
 #### Adding in metadata/sequence data so the portal isn't useless
