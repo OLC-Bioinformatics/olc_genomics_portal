@@ -2,94 +2,105 @@
 
 """Estimate COWBAT pipeline completion from timestamps in its log file."""
 
-# Standard imports
 import json
 import re
 import sys
 from datetime import datetime
+from pathlib import Path
 
-# Get the log file path from the command line arguments
-log_file_path = sys.argv[1]
+LOG_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.*)")
+ANSI_PATTERN = re.compile(r"\x1b\[.*?m")
 
-# Read the log entries from the file
-with open(log_file_path, "r", encoding="utf-8") as file:
-    log_entries = file.read()
 
-# Remove ANSI escape codes
-log_entries = re.sub(r"\x1b\[.*?m", "", log_entries)
+def estimate_percent_complete(
+    log_entries: str,
+) -> list[dict[str, str | float]]:
+    """Estimate completion percentages for unique timestamped log messages.
 
-# Split the log entries into lines
-lines = log_entries.split("\n")
+    Args:
+        log_entries: COWBAT log contents to parse.
 
-# Define a pattern for the date, time, and message
-pattern = r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.*)"
+    Returns:
+        Ordered messages with their estimated completion percentages.
 
-# Initialize a dictionary to track message occurrences
-message_occurrences = {}
+    Raises:
+        ValueError: If fewer than two unique messages span positive time.
+    """
+    message_occurrences = {}
+    parsed_entries = []
+    cleaned_log = ANSI_PATTERN.sub("", log_entries)
 
-# Initialize an empty list to hold the parsed log entries
-parsed_log_entries = []
+    for line in cleaned_log.splitlines():
+        match = LOG_PATTERN.search(line)
+        if not match:
+            continue
 
-# Loop over each line
-for line in lines:
-    # If the line is not empty
-    if line:
-        # Search for the pattern in the line
-        match = re.search(pattern, line)
+        date, time, message = match.groups()
+        timestamp = datetime.strptime(
+            f"{date} {time}",
+            "%Y-%m-%d %H:%M:%S",
+        )
+        message_occurrences[message] = (
+            message_occurrences.get(message, 0) + 1
+        )
+        parsed_entries.append((timestamp, message))
 
-        # If a match is found
-        if match:
-            # Extract the date, time, and message
-            date, time, message = match.groups()
+    unique_entries = [
+        entry
+        for entry in parsed_entries
+        if message_occurrences[entry[1]] == 1
+    ]
+    if len(unique_entries) < 2:
+        raise ValueError(
+            "At least two unique timestamped messages are required."
+        )
 
-            # Increment the message occurrence count
-            if message in message_occurrences:
-                message_occurrences[message] += 1
-            else:
-                message_occurrences[message] = 1
+    start_time = unique_entries[0][0]
+    total_seconds = (unique_entries[-1][0] - start_time).total_seconds()
+    if total_seconds <= 0:
+        raise ValueError(
+            "The unique log messages must span a positive duration."
+        )
 
-            # Temporarily add the parsed log entry to the list
-            parsed_log_entries.append(
-                {
-                    "datetime": datetime.strptime(
-                        f"{date} {time}", "%Y-%m-%d %H:%M:%S"
-                    ),
-                    "message": message,
-                }
-            )
+    return [
+        {
+            "message": message,
+            "percent_complete": round(
+                (timestamp - start_time).total_seconds()
+                / total_seconds
+                * 100,
+                2,
+            ),
+        }
+        for timestamp, message in unique_entries
+    ]
 
-# Filter out entries with messages that occur more than once
-filtered_log_entries = [
-    entry
-    for entry in parsed_log_entries
-    if message_occurrences[entry["message"]] == 1
-]
 
-# Assuming the total expected time is the time of the last log entry
-total_time = filtered_log_entries[-1]["datetime"]
+def main(log_file_path: str, output_path: str | None = None) -> Path:
+    """Write a progress estimate JSON file for the supplied COWBAT log.
 
-# Calculate the percent complete for each log entry
-for entry in filtered_log_entries:
-    elapsed_time = entry["datetime"]
-    percent_complete = (
-        ((elapsed_time - filtered_log_entries[0]["datetime"]).total_seconds())
-        / ((total_time - filtered_log_entries[0]["datetime"]).total_seconds())
-        * 100
+    Args:
+        log_file_path: Path to the timestamped COWBAT log.
+        output_path: Optional destination for the generated JSON file.
+
+    Returns:
+        The path to the generated progress map.
+    """
+    with open(log_file_path, "r", encoding="utf-8") as log_file:
+        output_data = estimate_percent_complete(log_file.read())
+
+    destination = (
+        Path(output_path)
+        if output_path
+        else Path(__file__).with_name("cowbat_percent_complete.json")
     )
-    entry["percent_complete"] = round(percent_complete, 2)
+    with destination.open("w", encoding="utf-8") as output_file:
+        json.dump(output_data, output_file)
+    return destination
 
-# Create a new list with only the message and percent_complete fields
-output_data = [
-    {
-        "message": entry["message"],
-        "percent_complete": entry["percent_complete"],
-    }
-    for entry in filtered_log_entries
-]
 
-# Convert the output data to JSON
-json_data = json.dumps(output_data)
-
-# Write the JSON data to a file
-with open("cowbat_percent_complete.json", "w", encoding="utf-8") as file:
-    file.write(json_data)
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.stderr.write("Usage: percent_estimate.py <cowbat-log-file>\n")
+        sys.exit(2)
+    main(sys.argv[1])
