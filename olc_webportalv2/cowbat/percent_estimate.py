@@ -1,95 +1,84 @@
 #!/usr/bin/env python
 
 """
-Parse a COWBAT logfile and create estimates for the percentage complete of the
-COWBAT pipeline based on the timestamps of the log entries.
+Parse a COWBAT logfile and estimate pipeline progress for each unique message.
 """
 
-# Standard imports
-from datetime import datetime
 import json
+import os
 import re
 import sys
+from datetime import datetime
 
-# Get the log file path from the command line arguments
-log_file_path = sys.argv[1]
 
-# Read the log entries from the file
-with open(log_file_path, 'r', encoding='utf-8') as file:
-    log_entries = file.read()
+LOG_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.*)")
+ANSI_PATTERN = re.compile(r"\x1b\[.*?m")
 
-# Remove ANSI escape codes
-log_entries = re.sub(r'\x1b\[.*?m', '', log_entries)
 
-# Split the log entries into lines
-lines = log_entries.split("\n")
+def estimate_percent_complete(log_entries):
+    """Return unique timestamped log messages with estimated percentages."""
+    log_entries = ANSI_PATTERN.sub("", log_entries)
+    message_occurrences = {}
+    parsed_entries = []
 
-# Define a pattern for the date, time, and message
-pattern = r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (.*)"
+    for line in log_entries.splitlines():
+        match = LOG_PATTERN.search(line)
+        if not match:
+            continue
 
-# Initialize a dictionary to track message occurrences
-message_occurrences = {}
+        date, time, message = match.groups()
+        timestamp = datetime.strptime(
+            "{} {}".format(date, time), "%Y-%m-%d %H:%M:%S"
+        )
+        message_occurrences[message] = message_occurrences.get(message, 0) + 1
+        parsed_entries.append({
+            "datetime": timestamp,
+            "message": message,
+        })
 
-# Initialize an empty list to hold the parsed log entries
-parsed_log_entries = []
+    unique_entries = [
+        entry for entry in parsed_entries
+        if message_occurrences[entry["message"]] == 1
+    ]
+    if len(unique_entries) < 2:
+        raise ValueError("At least two unique timestamped messages are required.")
 
-# Loop over each line
-for line in lines:
-    # If the line is not empty
-    if line:
-        # Search for the pattern in the line
-        match = re.search(pattern, line)
+    start_time = unique_entries[0]["datetime"]
+    total_seconds = (
+        unique_entries[-1]["datetime"] - start_time
+    ).total_seconds()
+    if total_seconds <= 0:
+        raise ValueError("The unique log messages must span a positive duration.")
 
-        # If a match is found
-        if match:
-            # Extract the date, time, and message
-            date, time, message = match.groups()
+    output_data = []
+    for entry in unique_entries:
+        elapsed_seconds = (entry["datetime"] - start_time).total_seconds()
+        output_data.append({
+            "message": entry["message"],
+            "percent_complete": round(
+                elapsed_seconds / total_seconds * 100, 2
+            ),
+        })
+    return output_data
 
-            # Increment the message occurrence count
-            if message in message_occurrences:
-                message_occurrences[message] += 1
-            else:
-                message_occurrences[message] = 1
 
-            # Temporarily add the parsed log entry to the list
-            parsed_log_entries.append({
-                "datetime": datetime.strptime(
-                    f"{date} {time}", '%Y-%m-%d %H:%M:%S'
-                ),
-                "message": message
-            })
+def main(log_file_path, output_path=None):
+    """Generate the progress lookup JSON consumed by the COWBAT view."""
+    with open(log_file_path, "r", encoding="utf-8") as log_file:
+        output_data = estimate_percent_complete(log_file.read())
 
-# Filter out entries with messages that occur more than once
-filtered_log_entries = [
-    entry for entry in parsed_log_entries if message_occurrences[
-        entry["message"]
-    ] == 1
-]
+    if output_path is None:
+        output_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "cowbat_percent_complete.json",
+        )
+    with open(output_path, "w", encoding="utf-8") as output_file:
+        json.dump(output_data, output_file)
+    return output_path
 
-# Assuming the total expected time is the time of the last log entry
-total_time = filtered_log_entries[-1]['datetime']
 
-# Calculate the percent complete for each log entry
-for entry in filtered_log_entries:
-    elapsed_time = entry['datetime']
-    percent_complete = (
-        (elapsed_time - filtered_log_entries[0]['datetime']).total_seconds()
-    ) / (
-        (total_time - filtered_log_entries[0]['datetime']).total_seconds()
-    ) * 100
-    entry['percent_complete'] = round(percent_complete, 2)
-
-# Create a new list with only the message and percent_complete fields
-output_data = [
-    {
-        "message": entry["message"],
-        "percent_complete": entry["percent_complete"]
-    } for entry in filtered_log_entries
-]
-
-# Convert the output data to JSON
-json_data = json.dumps(output_data)
-
-# Write the JSON data to a file
-with open('cowbat_percent_complete.json', 'w', encoding='utf-8') as file:
-    file.write(json_data)
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.stderr.write("Usage: percent_estimate.py <cowbat-log-file>\n")
+        sys.exit(2)
+    main(sys.argv[1])
