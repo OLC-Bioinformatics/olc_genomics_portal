@@ -2387,6 +2387,24 @@ def get_batch_blast_hits(run_folder, geneseekr_task):
         run_folder: Local folder containing BLAST result files.
         geneseekr_task: GeneSeekr request to update.
     """
+    columns = [
+        "query_id",
+        "subject_id",
+        "positives",
+        "mismatches",
+        "gaps",
+        "evalue",
+        "bit_score",
+        "subject_length",
+        "alignment_length",
+        "query_start",
+        "query_end",
+        "subject_start",
+        "subject_end",
+        "percent_match",
+        "query_sequence",
+        "subject_sequence",
+    ]
     for seqid in geneseekr_task.seqids:
         results = glob(os.path.join(run_folder, f"{seqid}*.tsv"))[0]
 
@@ -2394,25 +2412,9 @@ def get_batch_blast_hits(run_folder, geneseekr_task):
         results_dict = (
             pd.read_csv(
                 results,
-                names=[
-                    "query_id",
-                    "subject_id",
-                    "positives",
-                    "mismatches",
-                    "gaps",
-                    "evalue",
-                    "bit_score",
-                    "subject_length",
-                    "alignment_length",
-                    "query_start",
-                    "query_end",
-                    "subject_start",
-                    "subject_end",
-                    "percent_match",
-                    "query_sequence",
-                    "subject_sequence",
-                ],
+                names=columns,
                 sep="\t",
+                usecols=range(len(columns)),
             )
             .fillna("ND")
             .transpose()
@@ -2635,13 +2637,13 @@ def check_geneseekr_tasks():
                     blob_service_client=blob_client,
                     container_name=output_container,
                     blob_name="reports/geneseekr_blastn.xlsx",
-                    expiry=8,
+                    expiry=7,
                 )
                 sas_url_sequence = generate_download_link(
                     blob_service_client=blob_client,
                     container_name=output_container,
                     blob_name="reports/geneseekr_blastn.csv",
-                    expiry=8,
+                    expiry=7,
                 )
 
                 # Update request status and download links

@@ -1,8 +1,10 @@
 from unittest import mock
+from types import SimpleNamespace
 
 from django.test import TestCase
 from django.urls import reverse
 
+from olc_webportalv2.geneseekr.tasks import _create_benchmark_download
 from olc_webportalv2.geneseekr.models import (
     AMRSummary,
     GeneSeekrRequest,
@@ -36,6 +38,35 @@ class GeneSeekrWorkflowTests(TestCase):
         self.client.login(
             username='geneseekr-workflow-test',
             password='password',
+        )
+
+    @mock.patch('olc_webportalv2.geneseekr.tasks.get_storage_client')
+    def test_benchmark_download_uses_latest_version_and_read_sas(
+        self, get_storage_client
+    ):
+        blob_client = get_storage_client.return_value
+        blob_client.list_objects.return_value = [
+            SimpleNamespace(name='bds-salmonella-1.0.0.zip', size=100),
+            SimpleNamespace(name='bds-salmonella-1.10.0.zip', size=217),
+        ]
+        blob_client.create_transfer_url.return_value = 'benchmark-url'
+
+        download = _create_benchmark_download(
+            benchmark_name='bds-salmonella'
+        )
+
+        self.assertEqual(download['blob_name'], 'bds-salmonella-1.10.0.zip')
+        self.assertEqual(download['benchmark_version'], '1.10.0')
+        self.assertEqual(download['content_length'], 217)
+        blob_client.list_objects.assert_called_once_with(
+            'benchmark-datasets',
+            prefix='bds-salmonella',
+        )
+        blob_client.create_transfer_url.assert_called_once_with(
+            'benchmark-datasets',
+            'read',
+            name='bds-salmonella-1.10.0.zip',
+            expires_in_seconds=12 * 60 * 60,
         )
 
     @mock.patch('olc_webportalv2.geneseekr.views.run_geneseekr')

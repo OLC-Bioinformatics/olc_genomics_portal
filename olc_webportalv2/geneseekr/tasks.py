@@ -20,8 +20,8 @@ from sentry_sdk import capture_exception
 # Local imports
 from olc_webportalv2.common.benchmarks import (
     BENCHMARK_CONTAINER_NAME,
-    benchmark_blob_name,
     normalise_benchmark_name,
+    select_benchmark_blob,
 )
 from olc_webportalv2.common.methods import generic_api_submit
 from olc_webportalv2.common.storage_client import get_storage_client
@@ -309,28 +309,42 @@ def _create_benchmark_download(*, benchmark_name, expiry_hours=12):
 
     """
     canonical_name = normalise_benchmark_name(benchmark_name=benchmark_name)
-    blob_name = benchmark_blob_name(benchmark_name=canonical_name)
-
     blob_client = get_storage_client()
-
-    if not blob_client.object_exists(BENCHMARK_CONTAINER_NAME, blob_name):
+    available_archives = blob_client.list_objects(
+        BENCHMARK_CONTAINER_NAME,
+        prefix=canonical_name,
+    )
+    selected_archive = select_benchmark_blob(
+        blob_names=[blob.name for blob in available_archives],
+        benchmark_name=canonical_name,
+    )
+    if selected_archive is None:
         raise FileNotFoundError(
-            'Benchmark archive does not exist: '
-            f'{BENCHMARK_CONTAINER_NAME}/{blob_name}'
+            'No benchmark archive exists for '
+            f'{BENCHMARK_CONTAINER_NAME}/{canonical_name}'
         )
 
-    content_length = blob_client.get_object(
-        BENCHMARK_CONTAINER_NAME, blob_name
-    ).size
+    blob_name = selected_archive['blob_name']
+    selected_blob = next(
+        (blob for blob in available_archives if blob.name == blob_name),
+        None,
+    )
+    if selected_blob is None or not selected_blob.size:
+        raise ValueError(
+            f'Benchmark archive size is unavailable: '
+            f'{BENCHMARK_CONTAINER_NAME}/{blob_name}'
+        )
+    content_length = selected_blob.size
     sas_url = blob_client.create_transfer_url(
         BENCHMARK_CONTAINER_NAME,
-        'download',
+        'read',
         name=blob_name,
         expires_in_seconds=expiry_hours * 60 * 60,
     )
 
     return {
         'benchmark_name': canonical_name,
+        'benchmark_version': selected_archive['version'],
         'container_name': BENCHMARK_CONTAINER_NAME,
         'blob_name': blob_name,
         'sas_url': sas_url,
@@ -495,6 +509,17 @@ def run_geneseekr(geneseekr_request_pk):
             benchmark_download = _create_benchmark_download(
                 benchmark_name=geneseekr_request.benchmark
             )
+            if benchmark_download['benchmark_version']:
+                versions = dict(
+                    geneseekr_request.benchmark_versions or {}
+                )
+                versions[benchmark_download['benchmark_name']] = (
+                    benchmark_download['benchmark_version']
+                )
+                geneseekr_request.benchmark_versions = versions
+                geneseekr_request.save(
+                    update_fields=['benchmark_versions']
+                )
             cmd = _create_benchmark_geneseekr_command(
                 benchmark_download=benchmark_download,
                 container_name=container_name,

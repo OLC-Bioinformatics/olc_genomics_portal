@@ -21,6 +21,7 @@ from olc_webportalv2.cowbat.tasks import (
     cowbat_api_submit,
     cowbat_cleanup,
     generate_download_link,
+    get_batch_blast_hits,
     handle_incomplete_tasks,
     handle_task_completion,
     load_report,
@@ -31,6 +32,7 @@ from olc_webportalv2.cowbat.tasks import (
     send_email,
     submit_batch,
 )
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest, TopBlastHit
 from olc_webportalv2.users.models import User
 
 
@@ -379,6 +381,64 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(summary_row["SeqID"], "SEQ-1")
         self.assertEqual(summary_row["SampleName"], "Sample 1")
         self.assertEqual(summary_row["Genus"], "Escherichia")
+
+    def test_geneseekr_blast_hit_import_ignores_trailing_empty_tsv_field(self):
+        request = GeneSeekrRequest.objects.create(
+            user=self.user,
+            seqids=["SEQ-1"],
+        )
+        columns = [
+            "query_id",
+            "subject_id",
+            "positives",
+            "mismatches",
+            "gaps",
+            "evalue",
+            "bit_score",
+            "subject_length",
+            "alignment_length",
+            "query_start",
+            "query_end",
+            "subject_start",
+            "subject_end",
+            "percent_match",
+            "query_sequence",
+            "subject_sequence",
+        ]
+        values = [
+            "Contig_1_100.200",
+            "gb|ACC123|",
+            "10",
+            "0",
+            "0",
+            "1e-20",
+            "50",
+            "200",
+            "100",
+            "1",
+            "100",
+            "5",
+            "104",
+            "99.0",
+            "ACGT",
+            "ACGT",
+        ]
+
+        with tempfile.TemporaryDirectory() as run_folder:
+            report_path = os.path.join(
+                run_folder, "SEQ-1_blastn_geneseekr.tsv"
+            )
+            with open(report_path, "w", encoding="utf-8") as report:
+                report.write("\t".join(columns) + "\n")
+                report.write("\t".join(values) + "\t\n")
+
+            get_batch_blast_hits(run_folder, request)
+
+        hit = TopBlastHit.objects.get(geneseekr_request=request)
+        self.assertEqual(hit.contig_name, "SEQ-1_Contig_1_100.200")
+        self.assertEqual(hit.gene_name, "ACC123")
+        self.assertEqual(hit.query_coverage, 100)
+        self.assertEqual(hit.percent_identity, 99.0)
 
     def test_generate_download_link_requests_read_access(self):
         blob_service = mock.Mock()
