@@ -399,6 +399,9 @@ Keep every value marked secret using the lock icon. If you cannot read a Key
 Vault value, ask an authorized secret owner to enter it; do not put secret
 values in source control, pipeline logs, or chat.
 
+`AZURE_ACCOUNT_KEY` is passed to the Batch service for Azure Blob mounts. Treat
+it as a storage-account secret; it is not passed to the web container or logged.
+
 | Variable name | Existing Key Vault secret |
 |---|---|
 | `SECRET_KEY` | `secret-key` |
@@ -412,6 +415,9 @@ values in source control, pipeline logs, or chat.
 | `BATCH_ACCOUNT_SUBNET` | `batch-account-subnet` |
 | `VM_IMAGE` | `vm-image` |
 | `COWBAT_NODE_AGENT_SKU` | `cowbat-node-agent-sku` |
+| `BATCH_SECURITY_TYPE` | Optional; defaults to `trustedLaunch` for Batch pools. Set to `none` only for images that do not use Trusted Launch. |
+| `BATCH_SECURE_BOOT_ENABLED` | Optional Trusted Launch UEFI setting (`true`/`false`); unset leaves the Azure default. |
+| `BATCH_VTPM_ENABLED` | Optional Trusted Launch UEFI setting (`true`/`false`); unset leaves the Azure default. |
 | `AMPLISEQ_IMAGE` | `ampliseq-image` |
 | `AMPLISEQ_NODE_AGENT_SKU` | `ampliseq-node-agent-sku` |
 | `COWSNPHR_IMAGE` | `cowsnphr-image` |

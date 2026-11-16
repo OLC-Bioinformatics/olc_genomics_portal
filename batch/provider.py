@@ -3,13 +3,15 @@
 import fnmatch
 import hashlib
 import hmac
+import logging
 import os
 import posixpath
-import re
 import uuid
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class SubmissionError(ValueError):
@@ -209,6 +211,48 @@ def _resize_error(error):
     }
 
 
+def _boolean_setting(name):
+    """Read an optional boolean environment setting."""
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return None
+    normalized = value.strip().lower()
+    if normalized in {"true", "1", "yes", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "off"}:
+        return False
+    raise RuntimeError(f"{name} must be a boolean value")
+
+
+def _batch_request_id(error):
+    """Return the Azure request ID when the SDK exposes response headers."""
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", {}) or {}
+    return (
+        headers.get("request-id")
+        or headers.get("x-ms-request-id")
+        or headers.get("Request-Id")
+    )
+
+
+def _log_batch_failure(operation, error, **context):
+    """Log Azure Batch failure context without swallowing the exception."""
+    azure_error = getattr(error, "error", None)
+    error_code = (
+        _value(_get(azure_error, "code"))
+        or _value(_get(error, "code"))
+        or ""
+    )
+    logger.exception(
+        "Azure Batch operation failed operation=%s request_id=%s "
+        "error_code=%s context=%s",
+        operation,
+        _batch_request_id(error),
+        error_code,
+        context,
+    )
+
+
 class AzureBatchProvider:
     """Translate Azure Batch SDK operations to provider-neutral data."""
 
@@ -256,7 +300,7 @@ class AzureBatchProvider:
             analysis_type: FoodPort analysis name.
 
         Returns:
-            The VM image, node agent SKU, subnet, and storage account.
+            The VM image, node agent SKU, subnet, storage account, and key.
 
         Raises:
             SubmissionError: If the analysis type is unsupported.
@@ -279,6 +323,7 @@ class AzureBatchProvider:
         storage_account = os.environ.get(
             "AZURE_ACCOUNT_NAME"
         ) or os.environ.get("STORAGE_ACCOUNT_NAME")
+        storage_account_key = os.environ.get("AZURE_ACCOUNT_KEY")
         missing = [
             name
             for name, value in (
@@ -286,6 +331,7 @@ class AzureBatchProvider:
                 (setting_names[1], node_agent),
                 ("BATCH_ACCOUNT_SUBNET", subnet),
                 ("AZURE_ACCOUNT_NAME", storage_account),
+                ("AZURE_ACCOUNT_KEY", storage_account_key),
             )
             if not value
         ]
@@ -294,7 +340,7 @@ class AzureBatchProvider:
                 "Batch submission configuration is missing: "
                 + ", ".join(missing)
             )
-        return image, node_agent, subnet, storage_account
+        return image, node_agent, subnet, storage_account, storage_account_key
 
     @staticmethod
     def _pattern_tokens(value):
@@ -451,9 +497,20 @@ class AzureBatchProvider:
         container = data["container"]
         vm_size = data["vm_size"]
         analysis_type = data["analysis_type"]
-        image, node_agent, subnet, storage_account = self._submission_settings(
-            analysis_type
-        )
+        (
+            image,
+            node_agent,
+            subnet,
+            storage_account,
+            storage_account_key,
+        ) = self._submission_settings(analysis_type)
+        security_type = (os.environ.get("BATCH_SECURITY_TYPE") or "").strip()
+        if not security_type:
+            security_type = "trustedLaunch"
+        elif security_type.lower() == "none":
+            security_type = ""
+        secure_boot_enabled = _boolean_setting("BATCH_SECURE_BOOT_ENABLED")
+        v_tpm_enabled = _boolean_setting("BATCH_VTPM_ENABLED")
         self._stage_inputs(container, data.get("input_file_pattern"))
 
         unique_id = data.get("unique_id") or uuid.uuid4().hex[:8]
@@ -464,33 +521,27 @@ class AzureBatchProvider:
             job_id = f"{container}-{unique_id}-job"
             task_id = f"{container}-{unique_id}-task"
 
-        # Blob mounts need both read and write access for task inputs/outputs.
-        mount_url = self._storage().create_transfer_url(
-            container,
-            "readwrite",
-            604800,
+        uefi_settings = None
+        if secure_boot_enabled is not None or v_tpm_enabled is not None:
+            uefi_settings = models.UefiSettings(
+                secure_boot_enabled=secure_boot_enabled,
+                v_tpm_enabled=v_tpm_enabled,
+            )
+        security_profile = (
+            models.SecurityProfile(
+                security_type=security_type,
+                uefi_settings=uefi_settings,
+            )
+            if security_type
+            else None
         )
-        sas_key = urlsplit(mount_url).query
         vm_configuration = {
             "image_reference": models.ImageReference(
                 virtual_machine_image_id=image,
             ),
             "node_agent_sku_id": node_agent,
+            "security_profile": security_profile,
         }
-        is_gallery_version = re.match(
-            r"^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/"
-            r"Microsoft\.Compute/galleries/[^/]+/images/[^/]+/versions/[^/]+$",
-            image,
-            re.IGNORECASE,
-        )
-        lower_image = image.lower()
-        if not is_gallery_version or (
-            "ubuntu" in lower_image
-            and any(version in lower_image for version in ("22.04", "24.04"))
-        ):
-            vm_configuration["security_profile"] = models.SecurityProfile(
-                security_type="trustedLaunch",
-            )
         pool = models.PoolAddParameter(
             id=pool_id,
             virtual_machine_configuration=models.VirtualMachineConfiguration(
@@ -511,9 +562,9 @@ class AzureBatchProvider:
                     azure_blob_file_system_configuration=(
                         models.AzureBlobFileSystemConfiguration(
                             account_name=storage_account,
+                            account_key=storage_account_key,
                             container_name=container,
                             relative_mount_path=container,
-                            sas_key=sas_key,
                             blobfuse_options=(
                                 "--file-cache-timeout-in-seconds=240 "
                                 "--attr-cache-timeout=240 "
@@ -530,13 +581,42 @@ class AzureBatchProvider:
                 )
             ],
         )
-        self.client.pool.add(pool)
-        self.client.job.add(
-            models.JobAddParameter(
-                id=job_id,
-                pool_info=models.PoolInformation(pool_id=pool_id),
-            )
+        pool_context = {
+            "pool_id": pool_id,
+            "vm_size": vm_size,
+            "image": image,
+            "node_agent_sku_id": node_agent,
+            "subnet": subnet,
+            "mount_auth": "account_key",
+            "security_type": security_type or None,
+            "secure_boot_enabled": secure_boot_enabled,
+            "v_tpm_enabled": v_tpm_enabled,
+        }
+        logger.info("Creating Azure Batch pool context=%s", pool_context)
+        try:
+            self.client.pool.add(pool)
+        except Exception as exc:
+            _log_batch_failure("pool.add", exc, **pool_context)
+            raise
+        logger.info(
+            "Azure Batch pool creation accepted pool_id=%s",
+            pool_id,
         )
+        try:
+            self.client.job.add(
+                models.JobAddParameter(
+                    id=job_id,
+                    pool_info=models.PoolInformation(pool_id=pool_id),
+                )
+            )
+        except Exception as exc:
+            _log_batch_failure(
+                "job.add",
+                exc,
+                pool_id=pool_id,
+                job_id=job_id,
+            )
+            raise
 
         write_url = self._storage().create_transfer_url(
             container,
@@ -597,7 +677,24 @@ class AzureBatchProvider:
                     ],
                 )
             )
-        self.client.task.add_collection(job_id=job_id, value=tasks)
+        try:
+            self.client.task.add_collection(job_id=job_id, value=tasks)
+        except Exception as exc:
+            _log_batch_failure(
+                "task.add_collection",
+                exc,
+                pool_id=pool_id,
+                job_id=job_id,
+                task_count=len(tasks),
+            )
+            raise
+        logger.info(
+            "Azure Batch submission accepted pool_id=%s job_id=%s "
+            "task_count=%s",
+            pool_id,
+            job_id,
+            len(tasks),
+        )
         return {
             "pool_id": pool_id,
             "job_id": job_id,
@@ -714,7 +811,10 @@ class AzureBatchProvider:
 
     def list_pools(self):
         """List Batch pools as provider-neutral records."""
-        return [self._pool(pool) for pool in self.client.pool.list()]
+        pools = [self._pool(pool) for pool in self.client.pool.list()]
+        for pool in pools:
+            self._log_pool_status(pool)
+        return pools
 
     def get_pool(self, pool_id):
         """Get a Batch pool as a provider-neutral record.
@@ -723,7 +823,30 @@ class AzureBatchProvider:
             pool_id: Azure Batch pool ID.
 
         """
-        return self._pool(self.client.pool.get(pool_id))
+        pool = self._pool(self.client.pool.get(pool_id))
+        self._log_pool_status(pool)
+        return pool
+
+    @staticmethod
+    def _log_pool_status(pool):
+        """Log pool allocation state and any Azure resize errors."""
+        logger.info(
+            "Azure Batch pool status pool_id=%s allocation_state=%s "
+            "dedicated_nodes=%s/%s low_priority_nodes=%s/%s",
+            pool["id"],
+            pool["allocation_state"],
+            pool["current_dedicated_nodes"],
+            pool["target_dedicated_nodes"],
+            pool["current_low_priority_nodes"],
+            pool["target_low_priority_nodes"],
+        )
+        if pool["resize_errors"]:
+            logger.warning(
+                "Azure Batch pool resize/allocation errors "
+                "pool_id=%s errors=%s",
+                pool["id"],
+                pool["resize_errors"],
+            )
 
     @staticmethod
     def _pool(pool):

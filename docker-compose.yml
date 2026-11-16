@@ -47,8 +47,6 @@ services:
     ports:
       - "5000:5000"
     env_file: env
-    environment:
-      AZURE_ACCOUNT_KEY: ""
     depends_on:
       storage:
         condition: service_healthy

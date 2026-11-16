@@ -133,7 +133,7 @@ def generate_download_link(
     container_name,
     blob_name=None,
     output_zipfile=None,
-    expiry=8,
+    expiry=7,
 ):
     if output_zipfile:
         blob_name = os.path.basename(output_zipfile)
@@ -143,7 +143,7 @@ def generate_download_link(
         )
     return blob_service_client.create_transfer_url(
         container_name,
-        "download",
+        "read",
         name=blob_name,
         expires_in_seconds=expiry * 24 * 60 * 60,
     )
@@ -874,8 +874,22 @@ def load_report(report, seq_run):
         "PipelineVersion",
         "Database",
     ]
+    normalized_report = StringIO()
+    with open(report, newline="", encoding="utf-8-sig") as report_file:
+        writer = csv.writer(normalized_report)
+        for row in csv.reader(report_file):
+            if len(row) > len(report_columns):
+                extra_fields = row[len(report_columns) :]
+                if any(field.strip() for field in extra_fields):
+                    raise ValueError(
+                        "Summary report row has more fields than expected."
+                    )
+                row = row[: len(report_columns)]
+            writer.writerow(row)
+
+    normalized_report.seek(0)
     report_data = pd.read_csv(
-        report,
+        normalized_report,
         names=report_columns,
         header=None,
         sep=",",
@@ -1042,7 +1056,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
         blob_service_client=blob_service,
         container_name=report_assembly_container,
         blob_name=os.path.basename(os.path.join(run_folder, blob_name)),
-        expiry=730,
+        expiry=7,
     )
 
     # Update the SequencingRun object with the download link and remove the

@@ -1,9 +1,11 @@
+from decimal import Decimal
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.cowbat.forms import CustomRunForm, RealTimeForm
 from olc_webportalv2.cowbat.models import ResearchRun, SequencingRun
 from olc_webportalv2.cowbat.tasks import rename_research_container_task
@@ -15,6 +17,7 @@ from olc_webportalv2.cowbat.views import (
     RunAutoCompleter,
     check_uploaded_seqids,
     find_percent_complete,
+    find_percentage_complete,
     validate_research_files,
 )
 from olc_webportalv2.users.models import User
@@ -770,6 +773,67 @@ class CowbatWorkflowTests(TestCase):
         ].name = "other.txt"
 
         self.assertEqual(find_percent_complete(run), 7)
+
+    @mock.patch("olc_webportalv2.cowbat.views.create_batch_client")
+    def test_find_percentage_complete_updates_from_stderr(
+        self, batch_client_class
+    ):
+        run = SequencingRun.objects.create(
+            user=self.user,
+            run_name="000000-aaa",
+            job_id="job-1",
+            task_id="task-1",
+            status="Processing",
+        )
+        stderr_file = mock.Mock()
+        stderr_file.name = "stderr.txt"
+        batch_client = batch_client_class.return_value
+        batch_client.file.list_from_task.return_value = [stderr_file]
+        batch_client.file.get_from_task.return_value = [
+            (
+                b"2026-11-16 16:00:00 Starting pipeline\n"
+                b"2026-11-16 16:00:10 Performing mash analyses\n"
+            )
+        ]
+
+        find_percentage_complete(run)
+
+        run.refresh_from_db()
+        self.assertEqual(run.percent_complete, Decimal("66.90"))
+        batch_client.file.list_from_task.assert_called_once_with(
+            job_id="job-1",
+            task_id="task-1",
+            recursive=True,
+        )
+        batch_client.file.get_from_task.assert_called_once_with(
+            job_id="job-1",
+            task_id="task-1",
+            file_path="stderr.txt",
+        )
+
+    @mock.patch("olc_webportalv2.cowbat.views.create_batch_client")
+    def test_find_percentage_complete_ignores_active_task_conflict(
+        self, batch_client_class
+    ):
+        run = SequencingRun.objects.create(
+            user=self.user,
+            run_name="000000-aaa",
+            job_id="job-1",
+            task_id="task-1",
+            status="Processing",
+        )
+        batch_client = batch_client_class.return_value
+        batch_client.file.list_from_task.side_effect = BatchServiceError(
+            409,
+            "The specified operation is not valid for the current state "
+            "of the resource.",
+        )
+
+        find_percentage_complete(run)
+
+        run.refresh_from_db()
+        self.assertEqual(run.percent_complete, Decimal("0.01"))
+        batch_client.file.get_from_task.assert_not_called()
 
     @mock.patch("olc_webportalv2.cowbat.views.get_storage_client")
     def test_upload_interop_posts_files_to_interop_path(

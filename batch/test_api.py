@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import importlib.util
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -283,6 +284,35 @@ def test_pool_and_node_contracts(service):
     assert response.json == {"items": [{"id": "node-1", "state": "idle"}]}
 
 
+def test_get_pool_logs_allocation_errors(caplog):
+    pool = SimpleNamespace(
+        id="pool-1",
+        allocation_state="resizing",
+        current_dedicated_nodes=0,
+        target_dedicated_nodes=1,
+        current_low_priority_nodes=0,
+        target_low_priority_nodes=0,
+        resize_errors=[
+            {
+                "code": "AllocationFailed",
+                "message": "A node could not be allocated",
+                "details": {},
+            }
+        ],
+    )
+    client = SimpleNamespace(
+        pool=SimpleNamespace(get=Mock(return_value=pool)),
+    )
+    provider = AzureBatchProvider(client=client)
+
+    with caplog.at_level(logging.WARNING, logger="provider"):
+        result = provider.get_pool("pool-1")
+
+    assert result["resize_errors"][0]["code"] == "AllocationFailed"
+    assert "pool_id=pool-1" in caplog.text
+    assert "AllocationFailed" in caplog.text
+
+
 def test_pool_resize_reboot_and_delete_contracts(service):
     client, provider = service
     headers = auth_headers()
@@ -480,8 +510,17 @@ def configure_submission(monkeypatch):
         "COWBAT_NODE_AGENT_SKU": "batch.node.ubuntu 22.04",
         "BATCH_ACCOUNT_SUBNET": "/subscriptions/test/subnets/batch",
         "AZURE_ACCOUNT_NAME": "storageaccount",
+        "AZURE_ACCOUNT_KEY": "test-storage-account-key",
     }.items():
         monkeypatch.setenv(key, value)
+
+
+def test_submission_settings_require_storage_account_key(monkeypatch):
+    configure_submission(monkeypatch)
+    monkeypatch.delenv("AZURE_ACCOUNT_KEY")
+
+    with pytest.raises(RuntimeError, match="AZURE_ACCOUNT_KEY"):
+        AzureBatchProvider._submission_settings("COWBAT")
 
 
 def test_create_client_uses_managed_identity(monkeypatch):
@@ -581,15 +620,17 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
             "imports/two.fasta",
         ),
         ("list_objects", "target-runs", "preexisting.fasta"),
-        ("create_transfer_url", "target-runs", "readwrite", 604800),
         ("create_transfer_url", "target-runs", "write", 604800),
     ]
     pool = batch_client.pool.calls[0][1]
+    security_profile = pool.virtual_machine_configuration.security_profile
+    assert security_profile.security_type == "trustedLaunch"
+    assert security_profile.uefi_settings is None
     blob_mount = pool.mount_configuration[
         0
     ].azure_blob_file_system_configuration
-    assert blob_mount.account_key is None
-    assert blob_mount.sas_key == "sv=test&sig=readwrite"
+    assert blob_mount.account_key == "test-storage-account-key"
+    assert blob_mount.sas_key is None
     assert batch_client.job.calls[0][1].id == "target-runs"
     tasks = batch_client.task.calls[0][1]["value"]
     assert [task.command_line for task in tasks] == [
@@ -607,6 +648,35 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
         "$AZ_BATCH_TASK_DIR/stderr.txt",
         "$AZ_BATCH_TASK_DIR/stdout.txt",
     ]
+
+
+def test_submission_applies_explicit_trusted_launch_uefi_settings(monkeypatch):
+    configure_submission(monkeypatch)
+    monkeypatch.setenv("BATCH_SECURE_BOOT_ENABLED", "false")
+    monkeypatch.setenv("BATCH_VTPM_ENABLED", "false")
+    batch_client = FakeBatchClient()
+    provider = AzureBatchProvider(
+        client=batch_client,
+        storage_client=FakeStorageService(),
+    )
+
+    provider.submit_batch_request(
+        {
+            "analysis_type": "COWBAT",
+            "command_file": "echo run",
+            "container": "target-runs",
+            "input_file_pattern": [],
+            "vm_size": "Standard_D4s_v3",
+        }
+    )
+
+    security_profile = (
+        batch_client.pool.calls[0][1]
+        .virtual_machine_configuration.security_profile
+    )
+    assert security_profile.security_type == "trustedLaunch"
+    assert security_profile.uefi_settings.secure_boot_enabled is False
+    assert security_profile.uefi_settings.v_tpm_enabled is False
 
 
 def test_submission_rejects_unsupported_analysis_type_without_blob_calls():

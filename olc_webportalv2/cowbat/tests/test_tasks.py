@@ -20,6 +20,7 @@ from olc_webportalv2.cowbat.tasks import (
     check_sample_sheet_format,
     cowbat_api_submit,
     cowbat_cleanup,
+    generate_download_link,
     handle_incomplete_tasks,
     handle_task_completion,
     load_report,
@@ -328,7 +329,7 @@ class RunCowbatBatchTests(TestCase):
             run.errors, ["Summary report not found in blob storage."]
         )
 
-    def test_load_report_creates_summary_metadata(self):
+    def test_load_report_accepts_trailing_empty_report_field(self):
         headers = [
             "SeqID",
             "SampleName",
@@ -356,6 +357,9 @@ class RunCowbatBatchTests(TestCase):
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as report:
             report.write(",".join(headers) + "\n")
             report.write(",".join(values) + "\n")
+            trailing_empty_values = values.copy()
+            trailing_empty_values[1] = "Sample 2"
+            report.write(",".join(trailing_empty_values) + ",\n")
             report_path = report.name
 
         run = self.create_run()
@@ -365,10 +369,35 @@ class RunCowbatBatchTests(TestCase):
             os.unlink(report_path)
 
         summary = SummaryMetadata.objects.get(sequencing_run=run)
-        summary_row = list(summary.summary_results.values())[0]
+        summary_rows = list(summary.summary_results.values())
+        self.assertEqual(len(summary_rows), 2)
+        self.assertEqual(
+            {row["SampleName"] for row in summary_rows},
+            {"Sample 1", "Sample 2"},
+        )
+        summary_row = summary_rows[0]
         self.assertEqual(summary_row["SeqID"], "SEQ-1")
         self.assertEqual(summary_row["SampleName"], "Sample 1")
         self.assertEqual(summary_row["Genus"], "Escherichia")
+
+    def test_generate_download_link_requests_read_access(self):
+        blob_service = mock.Mock()
+        blob_service.create_transfer_url.return_value = "https://example.test/"
+
+        link = generate_download_link(
+            blob_service,
+            "reports-and-assemblies",
+            blob_name="000000-aaa.zip",
+            expiry=7,
+        )
+
+        self.assertEqual(link, "https://example.test/")
+        blob_service.create_transfer_url.assert_called_once_with(
+            "reports-and-assemblies",
+            "read",
+            name="000000-aaa.zip",
+            expires_in_seconds=7 * 24 * 60 * 60,
+        )
 
     def test_add_read_filenames_updates_report_and_uploads_it(self):
         run = self.create_run()

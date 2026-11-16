@@ -118,8 +118,14 @@ def find_percentage_complete(sequencing_run):
                 except Exception:
                     pass
     except BatchServiceError as exc:
-        # The run hasn't started assembling yet
-        if exc.status_code == 404:
+        # Task files may be unavailable before the task starts or while it runs.
+        if exc.status_code in (404, 409):
+            log.debug(
+                "Batch task files are not yet available for progress "
+                "polling (run_pk=%s, status_code=%s)",
+                sequencing_run.pk,
+                exc.status_code,
+            )
             return
         raise
 
