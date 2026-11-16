@@ -302,10 +302,28 @@ def retrieve_panel_seqids(
     # Construct the path to the seqids.txt file
     seqids_file = os.path.join(run_folder, f'{genus}_seqids.txt')
 
-    # Check if the file exists
-    if not os.path.exists(seqids_file):
-        logger.warning('Sequence ID file %s was not found', seqids_file)
-        return seq_dictionary
+    if not os.path.isfile(seqids_file):
+        filenames = os.listdir(run_folder) if os.path.isdir(run_folder) else []
+        versioned_files = sorted(
+            os.path.join(run_folder, filename)
+            for filename in filenames
+            if filename.startswith(f'{genus}-')
+            and filename.endswith('_seqids.txt')
+        )
+        if len(versioned_files) == 1:
+            seqids_file = versioned_files[0]
+        elif versioned_files:
+            raise ValueError(
+                f'Multiple versioned sequence ID files found for {genus}: '
+                f'{versioned_files}'
+            )
+        else:
+            logger.warning(
+                'Sequence ID file for %s was not found in %s',
+                genus,
+                run_folder,
+            )
+            return seq_dictionary
 
     # Read the SEQIDs from the file
     with open(seqids_file, 'r', encoding='utf-8') as f:
@@ -385,7 +403,46 @@ def _download_reports(
     # Create a blob service client to manipulate blobs
     blob_service = get_storage_client()
 
-    for blob in blob_service.list_objects(container_name):
+    _download_storage_objects(
+        blob_service=blob_service,
+        container_name=container_name,
+        blobs=blob_service.list_objects(container_name),
+        run_folder=run_folder,
+    )
+
+
+def _download_storage_objects(
+    *,
+    blob_service,
+    container_name: str,
+    blobs,
+    run_folder: str,
+):
+    """Download storage objects while recreating virtual directories."""
+    blobs = list(blobs)
+    directory_names = set()
+    for blob in blobs:
+        parent, separator, _ = blob.name.rstrip('/').rpartition('/')
+        while separator:
+            directory_names.add(parent)
+            parent, separator, _ = parent.rpartition('/')
+
+    for blob in blobs:
+        blob_name = blob.name.rstrip('/')
+        is_directory = blob.name.endswith('/') or (
+            getattr(blob, 'size', None) == 0
+            and blob_name in directory_names
+        )
+        if is_directory:
+            directory_path = os.path.join(run_folder, blob_name)
+            if (
+                os.path.isfile(directory_path)
+                and os.path.getsize(directory_path) == 0
+            ):
+                os.remove(directory_path)
+            os.makedirs(directory_path, exist_ok=True)
+            continue
+
         blob_service.download_file(
             container_name,
             blob.name,
@@ -1773,14 +1830,12 @@ def _archive_reports_and_upload(
         os.makedirs(local_reports_dir)
 
         # Download each blob to the temp dir
-        for b in report_blobs:
-            local_path = os.path.join(
-                tmpdir, b.name
-            )  # includes 'reports/...' in path
-            local_dir = os.path.dirname(local_path)
-            if not os.path.isdir(local_dir):
-                os.makedirs(local_dir)
-            blob_client.download_file(container_name, b.name, local_path)
+        _download_storage_objects(
+            blob_service=blob_client,
+            container_name=container_name,
+            blobs=report_blobs,
+            run_folder=tmpdir,
+        )
 
         # Create zip archive that includes the "reports" folder at top-level
         base_name = os.path.join(tmpdir, f'{container_name}_reports')

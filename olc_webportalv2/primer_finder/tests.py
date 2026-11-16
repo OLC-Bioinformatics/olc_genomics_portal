@@ -1,5 +1,9 @@
 import json
+import os
+import tempfile
 import unittest
+import zipfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
@@ -7,14 +11,20 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 
 from olc_webportalv2.primer_finder.forms import ValidatorTargetFormSetFactory
-from olc_webportalv2.primer_finder.methods import create_blob_from_summary
+from olc_webportalv2.primer_finder.methods import (
+    _download_reports,
+    create_blob_from_summary,
+    retrieve_panel_seqids,
+)
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
     ValidatorRequest,
 )
 from olc_webportalv2.primer_finder.tasks import (
+    _archive_reports_and_upload,
     _create_primer_cmd,
     _generate_input_blob_sas_urls,
+    _generate_sas_urls,
 )
 from olc_webportalv2.primer_finder.validator_gene_reports import (
     filter_report_by_gene_categories,
@@ -216,6 +226,94 @@ class VerifierHistoryViewTests(unittest.TestCase):
 
 
 class PrimerFinderStorageTests(unittest.TestCase):
+    def test_versioned_panel_sequence_ids_match_their_genus(self):
+        with tempfile.TemporaryDirectory() as run_folder:
+            Path(run_folder, 'bds-stec-1.0.0_seqids.txt').write_text(
+                'BDS-VTEC001\nBDS-VTEC002\n',
+                encoding='utf-8',
+            )
+
+            result = retrieve_panel_seqids(
+                genus='bds-stec',
+                run_folder=run_folder,
+                seq_dictionary={},
+            )
+
+        self.assertEqual(
+            result,
+            {'bds-stec': ['BDS-VTEC001', 'BDS-VTEC002']},
+        )
+
+    @patch('olc_webportalv2.primer_finder.methods.get_storage_client')
+    def test_download_reports_handles_empty_directory_markers(self, get_client):
+        client = get_client.return_value
+        client.list_objects.return_value = [
+            SimpleNamespace(name='reports', size=0),
+            SimpleNamespace(name='reports/primer.xlsx', size=128),
+            SimpleNamespace(name='reports/gene', size=0),
+            SimpleNamespace(name='reports/gene/hits.tsv', size=128),
+            SimpleNamespace(name='exclusivity/empty.txt', size=0),
+        ]
+
+        def download_file(container_name, blob_name, file_path):
+            destination = Path(file_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(b'data')
+
+        client.download_file.side_effect = download_file
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_folder = os.path.join(temp_dir, 'primer-run')
+            os.makedirs(run_folder)
+            Path(run_folder, 'reports').touch()
+
+            _download_reports(
+                container_name='primer-run',
+                run_folder=run_folder,
+            )
+
+            self.assertTrue(Path(run_folder, 'reports').is_dir())
+            self.assertTrue(Path(run_folder, 'reports', 'gene').is_dir())
+            self.assertEqual(
+                [
+                    call_args.args[1]
+                    for call_args in client.download_file.call_args_list
+                ],
+                [
+                    'reports/primer.xlsx',
+                    'reports/gene/hits.tsv',
+                    'exclusivity/empty.txt',
+                ],
+            )
+
+    def test_report_archive_handles_empty_directory_markers(self):
+        blob_client = Mock()
+        blob_client.list_objects.return_value = [
+            SimpleNamespace(name='reports/gene', size=0),
+            SimpleNamespace(name='reports/gene/hits.tsv', size=4),
+        ]
+        archived_names = []
+
+        def download_file(container_name, blob_name, file_path):
+            destination = Path(file_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(b'data')
+
+        def upload_file(container_name, blob_name, file_path, content_type):
+            with zipfile.ZipFile(file_path) as archive:
+                archived_names.extend(archive.namelist())
+
+        blob_client.download_file.side_effect = download_file
+        blob_client.upload_file.side_effect = upload_file
+
+        _archive_reports_and_upload(
+            blob_client=blob_client,
+            container_name='primer-run',
+        )
+
+        self.assertIn('reports/gene/hits.tsv', archived_names)
+        blob_client.upload_file.assert_called_once()
+
     def test_primer_command_includes_probe_and_copies_reports(self):
         request = SimpleNamespace(
             probe_sequence='ACGT',
@@ -270,15 +368,46 @@ class PrimerFinderStorageTests(unittest.TestCase):
             [
                 call(
                     'primer-run',
-                    'download',
+                    'read',
                     name='panel.json',
                     expires_in_seconds=12 * 60 * 60,
                 ),
                 call(
                     'primer-run',
-                    'download',
+                    'read',
                     name='primers.csv',
                     expires_in_seconds=12 * 60 * 60,
+                ),
+            ],
+        )
+
+    def test_report_sas_urls_use_read_action_and_supported_expiry(self):
+        blob_client = Mock()
+        blob_client.create_transfer_url.side_effect = [
+            'summary-url',
+            'archive-url',
+        ]
+
+        result = _generate_sas_urls(
+            blob_client=blob_client,
+            container_name='primer-run',
+        )
+
+        self.assertEqual(result, ('summary-url', 'archive-url'))
+        self.assertEqual(
+            blob_client.create_transfer_url.call_args_list,
+            [
+                call(
+                    'primer-run',
+                    'read',
+                    name='reports/primer-run_summary_report.xlsx',
+                    expires_in_seconds=7 * 24 * 60 * 60,
+                ),
+                call(
+                    'primer-run',
+                    'read',
+                    name='primer-run_reports.zip',
+                    expires_in_seconds=7 * 24 * 60 * 60,
                 ),
             ],
         )

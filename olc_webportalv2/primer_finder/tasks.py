@@ -405,7 +405,7 @@ def _generate_input_blob_sas_urls(
 
         sas_url = blob_client.create_transfer_url(
             container_name,
-            'download',
+            'read',
             name=blob_name,
             expires_in_seconds=expiry_hours * 60 * 60,
         )
@@ -945,15 +945,15 @@ def _generate_sas_urls(
 
     excel_sas_url = blob_client.create_transfer_url(
         container_name,
-        'download',
+        'read',
         name=excel_blob_name,
-        expires_in_seconds=8 * 24 * 60 * 60,
+        expires_in_seconds=7 * 24 * 60 * 60,
     )
     archive_sas_url = blob_client.create_transfer_url(
         container_name,
-        'download',
+        'read',
         name=archive_blob_name,
-        expires_in_seconds=8 * 24 * 60 * 60,
+        expires_in_seconds=7 * 24 * 60 * 60,
     )
     return excel_sas_url, archive_sas_url
 
