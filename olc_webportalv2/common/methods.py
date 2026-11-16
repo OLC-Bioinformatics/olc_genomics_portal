@@ -69,8 +69,10 @@ def generic_api_submit(
     vm_size: str,
     analysis_type: str = "COWBAT",
     input_file_pattern: Optional[list] = None,
-    unique_id: Optional[str] = None
-) -> None:
+    unique_id: Optional[str] = None,
+    download_file_pattern: Optional[list] = None,
+    log_prefix: Optional[str] = None
+) -> dict:
     """
     Submits a job to the Batch API.
 
@@ -89,8 +91,11 @@ def generic_api_submit(
         unique_id (str): The unique ID to add to the container name rather than
             using a random hash. Default is None
 
+        download_file_pattern (list): File patterns to download from the VM.
+        log_prefix (str): Prefix used to organize Batch task logs.
+
     Returns:
-        None
+        dict: Batch submission response.
     """
     # Ensure that empty lists are converted to None
     input_file_pattern = input_file_pattern if input_file_pattern else None
@@ -101,9 +106,10 @@ def generic_api_submit(
         "command_file": command,
         "vm_size": vm_size,
         "input_file_pattern": input_file_pattern,
-        "download_file_pattern": None,
+        "download_file_pattern": download_file_pattern,
         "analysis_type": analysis_type,
-        'unique_id': unique_id
+        'unique_id': unique_id,
+        'log_prefix': log_prefix
     }
 
     # Log the dictionary
@@ -118,13 +124,29 @@ def generic_api_submit(
         data=json.dumps(data),
         timeout=600
     )
+    response.raise_for_status()
+    content_type = response.headers.get('content-type', '')
+    if not content_type.lower().startswith('application/json'):
+        raise RuntimeError(
+            'Batch API returned a non-JSON response (HTTP {0}): {1}'.format(
+                response.status_code,
+                response.text[:1000],
+            )
+        )
+    try:
+        response_data = response.json()
+    except ValueError as exc:
+        raise RuntimeError(
+            'Batch API returned invalid JSON (HTTP {0})'.format(
+                response.status_code
+            )
+        ) from exc
 
     # Log and print useful response attributes
     logging.info('Response status code: %s', response.status_code)
     logging.info('Response content: %s', response.content)
     logging.info('Response text: %s', response.text)
-    logging.info('Response JSON: %s', response.json() if response.headers.get(
-        'content-type') == 'application/json' else 'No JSON response')
+    logging.info('Response JSON: %s', response_data)
     logging.info('Response headers: %s', response.headers)
     logging.info('Response URL: %s', response.url)
     logging.info('Response elapsed time: %s', response.elapsed)
@@ -133,9 +155,9 @@ def generic_api_submit(
     print('Response status code:', response.status_code)
     print('Response content:', response.content)
     print('Response text:', response.text)
-    print('Response JSON:', response.json() if response.headers.get(
-        'content-type') == 'application/json' else 'No JSON response')
+    print('Response JSON:', response_data)
     print('Response headers:', response.headers)
     print('Response URL:', response.url)
     print('Response elapsed time:', response.elapsed)
     print('Response reason:', response.reason)
+    return response_data

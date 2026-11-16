@@ -204,7 +204,8 @@ def submit_batch_request():
             download_file_pattern=data['download_file_pattern'],
             worker=True,
             unique_id=unique_id,
-            no_tidy=no_tidy
+            no_tidy=no_tidy,
+            log_prefix=data.get('log_prefix')
         )
         # Call the main method
         response = azure_batch.main()

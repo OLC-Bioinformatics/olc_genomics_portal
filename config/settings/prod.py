@@ -401,6 +401,7 @@ TIMEZONE = 'Canada/Eastern'
 # Main Queues
 task_queues = (
    Queue('default', Exchange='default', routing_key='default'),
+   Queue('primer_finder', Exchange='', routing_key='primer_finder'),
    Queue('geneseekr', Exchange='geneseekr', routing_key='geneseekr'),
    Queue('cowbat', Exchange='cowbat', routing_key='cowbat'),
    Queue('refresh', Exchange='refresh', routing_key='refresh')
