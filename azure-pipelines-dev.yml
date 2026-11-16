@@ -37,6 +37,12 @@ parameters:
 variables:
 - name: DEPLOY_ENVIRONMENT
   value: ${{ parameters.deployEnvironment }}
+- ${{ if eq(parameters.deployEnvironment, 'dev') }}:
+  - name: DJANGO_DEBUG
+    value: 'True'
+- ${{ if eq(parameters.deployEnvironment, 'prod') }}:
+  - name: DJANGO_DEBUG
+    value: 'False'
 - ${{ if eq(parameters.deployEnvironment, 'prod') }}:
   - name: DJANGO_SERVER_NAME
     value: 'foodport-dev.cloud-nuage.inspection.gc.ca'
@@ -804,8 +810,12 @@ stages:
 
         output_dir = Path(sys.argv[1])
         target_host = sys.argv[2]
+        django_debug = os.environ["DJANGO_DEBUG"]
+        if django_debug not in {"True", "False"}:
+            raise SystemExit("DJANGO_DEBUG must be True or False.")
         env_lines = [
             "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_DEBUG={django_debug}",
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
         env_lines.extend(
@@ -816,6 +826,7 @@ stages:
 
         dotenv_lines = [
             "MICROSOFT_AUTH_ENABLED=False",
+            f"DJANGO_DEBUG={django_debug}",
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
         dotenv_lines.extend(f"{name}={os.environ[name]}" for name in dotenv_names)
@@ -965,6 +976,7 @@ stages:
       displayName: 'Deploy portal on dev VM'
       env:
         FOODPORT_SECRET_VARIABLES_READY: $(FOODPORT_SECRET_VARIABLES_READY)
+        DJANGO_DEBUG: $(DJANGO_DEBUG)
         FOODPORT_DJANGO_SECRET_KEY: $(foodport_django_secret_key)
         FOODPORT_DJANGO_SECRET_KEY_BASE: $(foodport_django_secret_key_base)
         REDMINE_DB_PASSWORD: $(REDMINE_DB_PASSWORD)
