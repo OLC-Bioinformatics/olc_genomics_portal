@@ -317,13 +317,15 @@ def tree_request(request):
             container_name = f'tree-{tree_request.pk}'
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
-                file_name = os.path.join(container_name, other_file.name)
+                file_name = os.path.join(
+                    container_name, 'sequences', other_file.name
+                )
                 file_names.append(file_name)
                 storage = get_storage_client()
                 storage.ensure_container(container_name)
                 storage.upload_bytes(
                     container_name,
-                    other_file.name,
+                    os.path.join('sequences', other_file.name),
                     other_file.read(),
                     content_type=getattr(other_file, 'content_type', None),
                 )
@@ -453,13 +455,15 @@ def amr_request(request):
             container_name = f'amrsummary-{amr_request_object.pk}'
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
-                file_name = os.path.join(container_name, other_file.name)
+                file_name = os.path.join(
+                    container_name, 'sequences', other_file.name
+                )
                 file_names.append(file_name)
                 storage = get_storage_client()
                 storage.ensure_container(container_name)
                 storage.upload_bytes(
                     container_name,
-                    other_file.name,
+                    os.path.join('sequences', other_file.name),
                     other_file.read(),
                     content_type=getattr(other_file, 'content_type', None),
                 )

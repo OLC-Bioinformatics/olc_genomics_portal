@@ -120,7 +120,19 @@ def download_blob_to_path(
 
 
 def download_container(blob_service_client, container_name, output_dir):
-    for item in blob_service_client.list_objects(container_name):
+    items = blob_service_client.list_objects(container_name)
+    directory_prefixes = set()
+    for item in items:
+        parts = item.name.rstrip('/').split('/')
+        directory_prefixes.update(
+            '/'.join(parts[:index]) for index in range(1, len(parts))
+        )
+    for item in items:
+        if (
+            item.name.endswith('/')
+            or item.name.rstrip('/') in directory_prefixes
+        ):
+            continue
         blob_service_client.download_file(
             container_name,
             item.name,
@@ -1803,35 +1815,54 @@ def check_tree_tasks() -> None:
     for tree_task in tree_tasks:
         # Fetch the corresponding tree object
         tree_object = Tree.objects.get(pk=tree_task.tree_request.pk)
+        if tree_object.status == "Complete":
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
+            continue
 
         # Construct the batch job name
         batch_job_name = f"tree-{tree_task.tree_request.pk}"
 
         try:
             # Check if all tasks related to this job have completed
-            tasks_completed = all(
-                task.state == "completed"
-                for task in batch_client.task.list(batch_job_name)
-            )
+            cloud_tasks = list(batch_client.task.list(batch_job_name))
         except BatchServiceError:
             # If job doesn't exist, update status to 'Error' and delete
             # the task
+            Tree.objects.filter(pk=tree_task.tree_request.pk).exclude(
+                status="Complete"
+            ).update(status="Error")
+            TreeAzureRequest.objects.filter(id=tree_task.id).delete()
+            continue
+
+        if not cloud_tasks:
+            logger.error("Tree Batch job %s contains no tasks", batch_job_name)
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
             Tree.objects.filter(pk=tree_task.tree_request.pk).update(
                 status="Error"
             )
             TreeAzureRequest.objects.filter(id=tree_task.id).delete()
             continue
 
+        tasks_completed = all(
+            task.state == "completed" for task in cloud_tasks
+        )
+
         # If tasks have completed, check if they were successful
         if tasks_completed:
             exit_codes_good = all(
                 task.execution_info.exit_code == 0
-                for task in batch_client.task.list(batch_job_name)
+                for task in cloud_tasks
             )
-
-            # Delete the job and pool to save resources
-            batch_client.job.delete(job_id=batch_job_name)
-            batch_client.pool.delete(pool_id=batch_job_name)
+            if not exit_codes_good:
+                logger.error(
+                    "Tree Batch job %s failed: %s",
+                    batch_job_name,
+                    [
+                        (task.id, task.execution_info.exit_code)
+                        for task in cloud_tasks
+                    ],
+                )
 
             if exit_codes_good:
                 blob_client = get_storage_client()
@@ -1849,11 +1880,24 @@ def check_tree_tasks() -> None:
                     f"tree-{tree_object.pk}",
                     "mash.tree",
                 )
+                if not os.path.isfile(tree_file):
+                    logger.error(
+                        "Tree Batch job %s succeeded without producing %s",
+                        batch_job_name,
+                        tree_file,
+                    )
+                    tree_object.status = "Error"
+                    tree_object.save()
+                    TreeAzureRequest.objects.filter(id=tree_task.id).delete()
+                    continue
                 with open(tree_file, "r", encoding="utf-8") as f:
                     tree_string = f.readline()
 
                 # If there are diversitree strains, get their names
-                if tree_object.number_diversitree_strains > 0:
+                if (
+                    tree_object.number_diversitree_strains
+                    and tree_object.number_diversitree_strains > 0
+                ):
                     diverse_strains = strainchoosr.pd_greedy(
                         tree=ete3.Tree(tree_file),
                         number_tips=tree_object.number_diversitree_strains,
@@ -1882,7 +1926,11 @@ def check_tree_tasks() -> None:
                 tree_output_folder = os.path.join(
                     "olc_webportalv2", "media", f"tree-{tree_object.pk}"
                 )
-                os.remove(os.path.join(tree_output_folder, "batch_config.txt"))
+                batch_config = os.path.join(
+                    tree_output_folder, "batch_config.txt"
+                )
+                if os.path.isfile(batch_config):
+                    os.remove(batch_config)
 
                 # Create a variable to store the zip path
                 zip_path = f"{tree_output_folder}.zip"
@@ -1904,7 +1952,7 @@ def check_tree_tasks() -> None:
                     blob_service_client=blob_client,
                     container_name=tree_result_container,
                     blob_name=os.path.basename(zip_path),
-                    expiry=8,
+                    expiry=7,
                 )
 
                 # Remove the output folder and the zip file
@@ -1945,36 +1993,56 @@ def check_amr_summary_tasks():
     for amr_task in amr_summary_tasks:
         # Fetch the corresponding AMR summary object
         amr_object = AMRSummary.objects.get(pk=amr_task.amr_request.pk)
+        if amr_object.status == "Complete":
+            AMRAzureRequest.objects.filter(id=amr_task.id).delete()
+            continue
 
         # Construct the batch job name
         batch_job_name = f"amrsummary-{amr_task.amr_request.pk}"
 
         # Assume all tasks related to this job have completed
-        tasks_completed = True
-
         try:
             # Check if all tasks related to this job have completed
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != "completed":
-                    tasks_completed = False
+            cloud_tasks = list(batch_client.task.list(batch_job_name))
         # If job doesn't exist, update status to 'Error' and delete the task
         except BatchServiceError:
+            AMRSummary.objects.filter(
+                pk=amr_task.amr_request.pk
+            ).exclude(status="Complete").update(status="Error")
+            AMRAzureRequest.objects.filter(id=amr_task.id).delete()
+            continue
+
+        if not cloud_tasks:
+            logger.error(
+                "AMR Batch job %s contains no tasks", batch_job_name
+            )
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
             AMRSummary.objects.filter(pk=amr_task.amr_request.pk).update(
                 status="Error"
             )
             AMRAzureRequest.objects.filter(id=amr_task.id).delete()
             continue
 
+        tasks_completed = all(
+            cloudtask.state == "completed" for cloudtask in cloud_tasks
+        )
+
         # If tasks have completed, check if they were successful
         if tasks_completed:
-            exit_codes_good = True
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.execution_info.exit_code != 0:
-                    exit_codes_good = False
-
-            # Delete the job and pool to save resources
-            batch_client.job.delete(job_id=batch_job_name)
-            batch_client.pool.delete(pool_id=batch_job_name)
+            exit_codes_good = all(
+                cloudtask.execution_info.exit_code == 0
+                for cloudtask in cloud_tasks
+            )
+            if not exit_codes_good:
+                logger.error(
+                    "AMR Batch job %s failed: %s",
+                    batch_job_name,
+                    [
+                        (cloudtask.id, cloudtask.execution_info.exit_code)
+                        for cloudtask in cloud_tasks
+                    ],
+                )
 
             if exit_codes_good:
                 blob_client = get_storage_client()
@@ -1990,6 +2058,21 @@ def check_amr_summary_tasks():
                     os.path.join(output_dir, "batch_config.txt")
                 ):
                     os.remove(os.path.join(output_dir, "batch_config.txt"))
+                report_path = os.path.join(
+                    output_dir, "sequences", "reports", "amr_summary.csv"
+                )
+                if not os.path.isfile(report_path):
+                    logger.error(
+                        "AMR Batch job %s succeeded without producing %s",
+                        batch_job_name,
+                        report_path,
+                    )
+                    amr_object.status = "Error"
+                    amr_object.save()
+                    AMRAzureRequest.objects.filter(id=amr_task.id).delete()
+                    batch_client.job.delete(job_id=batch_job_name)
+                    batch_client.pool.delete(pool_id=batch_job_name)
+                    continue
                 shutil.make_archive(output_dir, "zip", output_dir)
 
                 amr_result_container = f"amrsummary-{amr_object.pk}"
@@ -2007,7 +2090,7 @@ def check_amr_summary_tasks():
                     blob_service_client=blob_client,
                     container_name=amr_result_container,
                     blob_name=os.path.basename(f"{output_dir}.zip"),
-                    expiry=8,
+                    expiry=7,
                 )
 
                 # Populate the AMRDetail model with results
@@ -2015,10 +2098,7 @@ def check_amr_summary_tasks():
                 for seqid in amr_object.seqids:
                     seq_amr_dict[seqid] = {}
                 # Open the AMR summary CSV file
-                with open(
-                    os.path.join(output_dir, "reports", "amr_summary.csv"),
-                    encoding="utf-8",
-                ) as csvfile:
+                with open(report_path, encoding="utf-8") as csvfile:
                     # Create a CSV dictionary reader
                     reader = csv.DictReader(csvfile)
 
@@ -2059,6 +2139,10 @@ def check_amr_summary_tasks():
             else:
                 amr_object.status = "Error"
                 amr_object.save()
+
+            # Keep Batch outputs available until finalization succeeds.
+            batch_client.job.delete(job_id=batch_job_name)
+            batch_client.pool.delete(pool_id=batch_job_name)
 
             # Delete the task
             AMRAzureRequest.objects.filter(id=amr_task.id).delete()

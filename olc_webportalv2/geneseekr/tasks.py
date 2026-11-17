@@ -111,17 +111,16 @@ def run_amr_summary(amr_summary_pk):
             'source $CONDA/activate /envs/cowbat && '
             'GeneSeekr blastn -u '
             f'-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences '
-            '-t /datadrive/0.5.0.23/resfinder '
+            '-t /databases/0.5.0.23/resfinder '
             f'-r $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/reports '
             '-A && '
             'python -m genemethods.assemblypipeline.mobrecon '
             f'-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences '
-            '-r /datadrive/0.5.0.23 && '
-            f'mv $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences '
-            f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/'
+            '-r /databases/0.5.0.23'
         )
         input_file_pattern = [
-            f'processed-data/{seqid}.fasta ' for seqid in seqids
+            [f'processed-data/{seqid}.fasta', 'sequences']
+            for seqid in seqids
         ]
 
         # Submit the command to the AzureBatch service
@@ -143,7 +142,7 @@ def run_amr_summary(amr_summary_pk):
 
 @shared_task
 def run_mash(tree_request_pk):
-    """Submit a Mashtree analysis to Azure Batch.
+    """Submit a Mash-distance neighbor-joining tree to Azure Batch.
 
     Args:
         tree_request_pk: Primary key of the tree request.
@@ -171,14 +170,38 @@ def run_mash(tree_request_pk):
         else:
             vm_size = 'Standard_D32s_v3'
             cpus = 32
+        sequence_dir = (
+            f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences'
+        )
+        distance_matrix = (
+            f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/mash.dist'
+        )
+        tree_file = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/mash.tree'
+        # Mash labels assemblies by their FASTA headers, which may repeat.
+        tree_builder = (
+            'import os,sys; '
+            'from Bio import Phylo; '
+            'from Bio.Phylo.TreeConstruction import '
+            'DistanceMatrix,DistanceTreeConstructor; '
+            'rows=[line.split() for line in open(sys.argv[1])]; '
+            'names=[os.path.basename(path)[:-6] '
+            'for path in sys.argv[2:-2]]; '
+            'matrix=[[0.0]+[float(value) for value in row[1:]] '
+            'for row in rows[1:]]; '
+            'assert len(names)==int(rows[0][0])==len(matrix); '
+            'assert all(len(row)==index+1 '
+            'for index,row in enumerate(matrix)); '
+            'tree=DistanceTreeConstructor().nj('
+            'DistanceMatrix(names,matrix)); '
+            'Phylo.write(tree,sys.argv[-2],sys.argv[-1])'
+        )
         cmd = (
-            'source $CONDA/activate /envs/mashtree && '
-            f'mkdir $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/'
-            f'{container_name} && '
-            f'mashtree --numcpus {cpus} '
-            f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/*.fasta > '
-            f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/'
-            f'{container_name}/mash.tree'
+            'source $CONDA/activate /envs/cowbat && '
+            f'mash triangle -p {cpus} -s 10000 -k 21 '
+            f'{sequence_dir}/*.fasta > {distance_matrix} && '
+            f'python -c {shlex.quote(tree_builder)} '
+            f'{distance_matrix} {sequence_dir}/*.fasta '
+            f'{tree_file} newick'
         )
         input_file_pattern = []
         for seqid in seqids:
