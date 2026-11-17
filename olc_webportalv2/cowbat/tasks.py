@@ -2164,101 +2164,141 @@ def check_vir_typer_tasks():
         vir_typer_task = VirTyperProject.objects.get(
             pk=sub_task.project_name.pk
         )
+        if vir_typer_task.status in {"Complete", "Error"}:
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+            continue
         batch_job_name = VirTyperProject.objects.get(
             pk=vir_typer_task.pk
         ).container_namer()
 
-        # Check if tasks related with this VirusTyper project have finished
-        tasks_completed = True
         try:
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.state != "completed":
-                    tasks_completed = False
-        # Catch specific Azure Batch exceptions
+            cloud_tasks = list(batch_client.task.list(batch_job_name))
         except BatchServiceError:
-            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(
-                status="Error"
+            logger.exception(
+                "Could not retrieve VirTyper Batch tasks for project %s",
+                vir_typer_task.pk,
             )
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).exclude(
+                status="Complete"
+            ).update(status="Error")
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
             continue
-        except Exception:  # Catch all other exceptions
-            VirTyperProject.objects.filter(pk=vir_typer_task.pk).update(
-                status="Error"
+        except Exception:
+            logger.exception(
+                "Unexpected error retrieving VirTyper Batch tasks for "
+                "project %s",
+                vir_typer_task.pk,
             )
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).exclude(
+                status="Complete"
+            ).update(status="Error")
             VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
             continue
 
-        # If tasks have completed, check if they were successful
-        if tasks_completed:
-            exit_codes_good = True
-            for cloudtask in batch_client.task.list(batch_job_name):
-                if cloudtask.execution_info.exit_code != 0:
-                    exit_codes_good = False
+        if not cloud_tasks:
+            logger.error(
+                "VirTyper Batch job %s contains no tasks", batch_job_name
+            )
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).exclude(
+                status="Complete"
+            ).update(status="Error")
+            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+            continue
 
-            # Delete job and pool to save resources
+        if any(cloudtask.state != "completed" for cloudtask in cloud_tasks):
+            continue
+
+        exit_codes_good = all(
+            cloudtask.execution_info.exit_code == 0
+            for cloudtask in cloud_tasks
+        )
+
+        if exit_codes_good:
+            blob_client = get_storage_client()
+
+            vir_typer_result_container = batch_job_name
+
+            download_container(
+                blob_service_client=blob_client,
+                container_name=vir_typer_result_container,
+                output_dir="olc_webportalv2/media",
+            )
+
+            output_dir = os.path.join(
+                "olc_webportalv2", "media", batch_job_name
+            )
+
+            # Remove batch_config.txt if it exists
+            batch_config_path = os.path.join(output_dir, "batch_config.txt")
+            if os.path.isfile(batch_config_path):
+                os.remove(batch_config_path)
+
+            # Avoid including a previous archive when retrying finalization.
+            previous_archive = os.path.join(
+                output_dir, os.path.basename(output_dir + ".zip")
+            )
+            if os.path.isfile(previous_archive):
+                os.remove(previous_archive)
+
+            # Create a zip archive of the output directory
+            shutil.make_archive(output_dir, "zip", output_dir)
+
+            # Read in the JSON output
+            json_output = os.path.join(output_dir, "virus_typer_outputs.json")
+            with open(json_output, "r", encoding="utf-8") as json_report:
+                vir_typer_task.report = json.dumps(json.load(json_report))
+
+            # Upload the zip file to the cloud and generate a SAS URL for
+            # download
+            upload_blob_from_path(
+                blob_service_client=blob_client,
+                container_name=vir_typer_result_container,
+                blob_name=os.path.basename(output_dir + ".zip"),
+                file_path=output_dir + ".zip",
+            )
+            sas_url = generate_download_link(
+                blob_service_client=blob_client,
+                container_name=vir_typer_result_container,
+                blob_name=os.path.basename(output_dir + ".zip"),
+                expiry=7,
+            )
+
+            vir_typer_task.download_link = sas_url
+            vir_typer_task.status = "Complete"
+            vir_typer_task.save()
+
+        else:
+            VirTyperProject.objects.filter(pk=vir_typer_task.pk).exclude(
+                status="Complete"
+            ).update(status="Error")
+
+        # Remove the tracker before slow cleanup so another monitor pass
+        # cannot downgrade a completed project if the Batch job disappears.
+        VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
+
+        if exit_codes_good:
+            # Clean up local output files after the report is persisted.
+            shutil.rmtree(output_dir)
+            os.remove(output_dir + ".zip")
+
+        # Delete Batch resources only after result processing has finished.
+        try:
             batch_client.job.delete(job_id=batch_job_name)
+        except BatchServiceError as exc:
+            logger.warning(
+                "VirTyper Batch job cleanup failed job=%s: %s",
+                batch_job_name,
+                exc,
+            )
+        try:
             batch_client.pool.delete(pool_id=batch_job_name)
+        except BatchServiceError as exc:
+            logger.warning(
+                "VirTyper Batch pool cleanup failed pool=%s: %s",
+                batch_job_name,
+                exc,
+            )
 
-            if exit_codes_good:
-                blob_client = get_storage_client()
-
-                vir_typer_result_container = batch_job_name
-
-                download_container(
-                    blob_service_client=blob_client,
-                    container_name=vir_typer_result_container,
-                    output_dir="olc_webportalv2/media",
-                )
-
-                output_dir = os.path.join(
-                    "olc_webportalv2", "media", batch_job_name
-                )
-
-                # Remove batch_config.txt if it exists
-                batch_config_path = os.path.join(
-                    output_dir, "batch_config.txt"
-                )
-                if os.path.isfile(batch_config_path):
-                    os.remove(batch_config_path)
-
-                # Create a zip archive of the output directory
-                shutil.make_archive(output_dir, "zip", output_dir)
-
-                # Read in the json output
-                json_output = os.path.join(
-                    output_dir, "virus_typer_outputs.json"
-                )
-                with open(json_output, "r", encoding="utf-8") as json_report:
-                    vir_typer_task.report = json.load(json_report)
-
-                # Upload the zip file to the cloud and generate a SAS URL for
-                # download
-                upload_blob_from_path(
-                    blob_service_client=blob_client,
-                    container_name=vir_typer_result_container,
-                    blob_name=os.path.basename(output_dir + ".zip"),
-                    file_path=output_dir + ".zip",
-                )
-                sas_url = generate_download_link(
-                    blob_service_client=blob_client,
-                    container_name=vir_typer_result_container,
-                    blob_name=os.path.basename(output_dir + ".zip"),
-                    expiry=8,
-                )
-
-                vir_typer_task.download_link = sas_url
-                vir_typer_task.status = "Complete"
-                vir_typer_task.save()
-
-                # Clean up the output directory and zip file
-                shutil.rmtree(output_dir)
-                os.remove(output_dir + ".zip")
-            else:
-                vir_typer_task.status = "Error"
-                vir_typer_task.save()
-
-            # Delete the Azure task
-            VirTyperAzureRequest.objects.filter(id=sub_task.id).delete()
 
 
 def check_prokka_tasks() -> None:
@@ -2792,6 +2832,7 @@ def monitor_tasks():
     try:
         check_vir_typer_tasks()
     except Exception as e:
+        logger.exception("VirTyper task monitoring failed: %s", e)
         capture_exception(e)
     # Prokka!
     try:

@@ -3,7 +3,9 @@ import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -115,6 +117,49 @@ class SampleTestCase(TestCase):
             reverse("vir_typer:vir_typer_upload", kwargs={"vir_typer_pk": pk})
         )
         self.assertEqual(resp.status_code, 200)
+
+    @mock.patch("olc_webportalv2.vir_typer.views.run_vir_typer.apply_async")
+    @mock.patch("olc_webportalv2.vir_typer.views.get_storage_client")
+    def test_vir_typer_upload_stages_files_in_sequences(
+        self, get_storage_client, apply_async
+    ):
+        self.client.login(username="TestViews", password="password")
+        project = VirTyperProject.objects.get(project_name="test_views")
+        filename = (
+            "P19954_2019FPP00000475214_VI482_11_GI_B05_M13-R17_G10_068.ab1"
+        )
+        response = self.client.post(
+            reverse(
+                "vir_typer:vir_typer_upload",
+                kwargs={"vir_typer_pk": project.pk},
+            ),
+            {
+                "file[0]": SimpleUploadedFile(
+                    filename,
+                    b"AB1 test data",
+                    content_type="application/octet-stream",
+                )
+            },
+        )
+
+        container_name = project.container_namer()
+        get_storage_client.return_value.ensure_container.assert_called_once_with(
+            container_name
+        )
+        get_storage_client.return_value.upload_bytes.assert_called_once_with(
+            container_name,
+            f"sequences/{filename}",
+            b"AB1 test data",
+            content_type="application/octet-stream",
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            VirTyperFiles.objects.filter(
+                sample_name__project_name=project,
+                sequence_file=filename,
+            ).exists()
+        )
+        apply_async.assert_called_once()
 
     def test_vir_typer_result_login_required(self):
         resp = self.client.get(

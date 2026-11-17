@@ -77,7 +77,7 @@ def run_vir_typer(vir_typer_request_pk):
                 sequences.append(vir_file.sequence_file)
         batch_config_file = os.path.join(run_folder, "batch_config.txt")
         command = (
-            "source $CONDA/activate /envs/virustyper && "
+            "source $CONDA/activate /envs/virus_typer && "
             f"mkdir {container_name}"
         )
         command += f" && virustyper -r {container_name} -s sequences/"
@@ -92,7 +92,7 @@ def run_vir_typer(vir_typer_request_pk):
 
         # Create the system call
         cmd = (
-            "source $CONDA/activate /envs/virustyper && "
+            "source $CONDA/activate /envs/virus_typer && "
             f"virustyper -r $AZ_BATCH_NODE_MOUNTS_DIR/{container_name} "
             f"-s $AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/sequences/"
         )

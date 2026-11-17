@@ -11,7 +11,7 @@ class VirTyperProject(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project_name = models.CharField(max_length=256)
     status = models.CharField(max_length=64, default="Unprocessed")
-    download_link = models.CharField(max_length=256, blank=True)
+    download_link = models.TextField(blank=True)
     created_at = models.DateField(auto_now_add=True)
     report = models.CharField(max_length=100000, blank=True)
 

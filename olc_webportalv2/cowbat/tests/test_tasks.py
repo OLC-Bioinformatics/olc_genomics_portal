@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -17,6 +18,7 @@ from olc_webportalv2.cowbat.tasks import (
     add_read_filenames_to_metadata,
     check_cowbat_progress,
     check_cowbat_tasks,
+    check_vir_typer_tasks,
     check_sample_sheet_format,
     cowbat_api_submit,
     cowbat_cleanup,
@@ -34,6 +36,110 @@ from olc_webportalv2.cowbat.tasks import (
 )
 from olc_webportalv2.geneseekr.models import GeneSeekrRequest, TopBlastHit
 from olc_webportalv2.users.models import User
+from olc_webportalv2.vir_typer.models import (
+    VirTyperAzureRequest,
+    VirTyperProject,
+)
+
+
+class VirTyperTaskFinalizationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="vir-typer-finalize-test")
+        self.project = VirTyperProject.objects.create(
+            user=self.user,
+            project_name="finalization-test",
+        )
+        self.tracker = VirTyperAzureRequest.objects.create(
+            project_name=self.project,
+            exit_code_file="NA",
+        )
+
+    def test_successful_report_is_saved_before_batch_cleanup(self):
+        job_name = self.project.container_namer()
+        cloud_task = mock.Mock(
+            state="completed",
+            execution_info=mock.Mock(exit_code=0),
+        )
+        batch_client = mock.Mock()
+        batch_client.task.list.return_value = [cloud_task]
+        batch_client.pool.delete.side_effect = BatchServiceError(
+            409, "pool is already being reclaimed"
+        )
+
+        def assert_complete_before_job_cleanup(**kwargs):
+            self.project.refresh_from_db()
+            self.assertEqual(self.project.status, "Complete")
+            self.assertFalse(
+                VirTyperAzureRequest.objects.filter(
+                    pk=self.tracker.pk
+                ).exists()
+            )
+
+        batch_client.job.delete.side_effect = assert_complete_before_job_cleanup
+        report = {"sample.ab1": {"allele": "GI"}}
+        mocked_open = mock.mock_open(read_data='{"sample.ab1":{"allele":"GI"}}')
+        output_dir = os.path.join(
+            "olc_webportalv2", "media", job_name
+        )
+        previous_archive = os.path.join(output_dir, f"{job_name}.zip")
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.create_batch_client",
+                return_value=batch_client,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client"
+            ) as storage_client_factory,
+            mock.patch("olc_webportalv2.cowbat.tasks.download_container"),
+            mock.patch("olc_webportalv2.cowbat.tasks.upload_blob_from_path"),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.generate_download_link",
+                return_value=(
+                    "https://example.test/" + "x" * 256
+                ),
+            ) as generate_link,
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.shutil.make_archive"
+            ) as make_archive,
+            mock.patch("olc_webportalv2.cowbat.tasks.shutil.rmtree"),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.remove"
+            ) as remove,
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.path.isfile",
+                side_effect=lambda path: path == previous_archive,
+            ),
+            mock.patch("builtins.open", mocked_open),
+        ):
+            check_vir_typer_tasks()
+
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.status, "Complete")
+        self.assertEqual(self.project.report, json.dumps(report))
+        self.assertEqual(
+            self.project.download_link,
+            "https://example.test/" + "x" * 256,
+        )
+        link_field = VirTyperProject._meta.get_field("download_link")
+        self.assertTrue(
+            link_field.max_length is None
+            or link_field.max_length >= len(self.project.download_link)
+        )
+        self.assertFalse(
+            VirTyperAzureRequest.objects.filter(pk=self.tracker.pk).exists()
+        )
+        generate_link.assert_called_once_with(
+            blob_service_client=storage_client_factory.return_value,
+            container_name=job_name,
+            blob_name=f"{job_name}.zip",
+            expiry=7,
+        )
+        remove.assert_any_call(previous_archive)
+        make_archive.assert_called_once_with(output_dir, "zip", output_dir)
+        batch_client.task.list.assert_called_once_with(job_name)
+        batch_client.job.delete.assert_called_once_with(job_id=job_name)
+        batch_client.pool.delete.assert_called_once_with(pool_id=job_name)
 
 
 class RunCowbatBatchTests(TestCase):

@@ -192,7 +192,7 @@ def vir_typer_upload(request, vir_typer_pk):
             for item in seq_files:
                 storage.upload_bytes(
                     container_name,
-                    item.name,
+                    os.path.join("sequences", item.name),
                     item.read(),
                     content_type=getattr(item, "content_type", None),
                 )

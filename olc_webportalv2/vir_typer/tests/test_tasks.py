@@ -72,6 +72,13 @@ class VirTyperTaskTests(TestCase):
         self.assertEqual(self.project.status, "Processing")
         self.assertEqual(submit.call_count, 1)
         self.assertEqual(self.project.project_azure_request.count(), 1)
+        command = submit.call_args.kwargs["command"]
+        self.assertIn("source $CONDA/activate /envs/virus_typer", command)
+        self.assertIn(
+            "-s $AZ_BATCH_NODE_MOUNTS_DIR/"
+            f"{self.project.container_namer()}/sequences/",
+            command,
+        )
 
     @mock.patch("olc_webportalv2.vir_typer.tasks.capture_exception")
     @mock.patch(
