@@ -67,7 +67,7 @@ def upload_metadata(seqtracking_csv, seqmetadata_csv):
 
             # Keep only LabIDs matching the expected format.
             if re.fullmatch(
-                '[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid
+                r'[A-Z]{3}-[A-Z]{2}-\d{4}-[A-Z]{2,3}-\d{4,5}', labid
             ):
                 seqdata.labid = labid
 
