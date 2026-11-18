@@ -11,6 +11,16 @@
 <br>
 <h1>{% trans "Sign In" %}</h1>
 
+{% if MICROSOFT_AUTH_ENABLED %}
+<div class="mb-3">
+  <a class="btn btn-outline-primary"
+     href="{% url 'microsoft_authentication:microsoft_authentication_login' %}">
+    {% trans "Sign in with Microsoft" %}
+  </a>
+</div>
+<p>{% trans "Or sign in with email:" %}</p>
+{% endif %}
+
 {#{% get_providers as socialaccount_providers %}#}
 {##}
 {#{% if socialaccount_providers %}#}
@@ -51,6 +61,13 @@
   <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
   
 </form>
+
+{% if ACCOUNT_ALLOW_REGISTRATION %}
+<p class="mt-3">
+  {% trans "New to FoodPort?" %}
+  <a href="{% url 'account_signup' %}">{% trans "Create an account" %}</a>
+</p>
+{% endif %}
 
 {% endblock %}
 

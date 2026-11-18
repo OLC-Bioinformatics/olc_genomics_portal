@@ -31,6 +31,11 @@ def auth_settings(request):
             "MICROSOFT_AUTH_ENABLED",
             False,
         ),
+        "ACCOUNT_ALLOW_REGISTRATION": getattr(
+            settings,
+            "ACCOUNT_ALLOW_REGISTRATION",
+            False,
+        ),
         "redirect_field_name": redirect_field_name,
         "redirect_field_value": redirect_field_value,
         "redirect_to": request.GET.get(

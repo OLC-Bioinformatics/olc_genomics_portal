@@ -18,6 +18,7 @@ import sentry_sdk
 
 # Third-party imports
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as language
 from kombu import Queue
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -505,14 +506,19 @@ LOGGING = {
 }
 
 # Azure tenant is also used by Microsoft authentication.
-VM_TENANT = env("VM_TENANT", default="")
+VM_TENANT = env("VM_TENANT", default="") or env(
+    "ENTRA_TENANT_ID", default=""
+)
 SITE_URL = env(
     "SITE_URL", default="https://foodport-dev.cloud-nuage.inspection.gc.ca"
 )
 if MICROSOFT_AUTH_ENABLED:
     AD_APP_ID = env("AD_APP_ID")
     AD_APP_SECRET = env("AD_APP_SECRET")
-    VM_TENANT = env("VM_TENANT")
+    if not VM_TENANT:
+        raise ImproperlyConfigured(
+            "MICROSOFT_AUTH_ENABLED requires VM_TENANT or ENTRA_TENANT_ID."
+        )
 else:
     AD_APP_ID = None
     AD_APP_SECRET = None
@@ -654,8 +660,4 @@ LOGIN_REDIRECT_URL = "/"  # optional and can be changed to any other url
 # False: it will only allow those users which are already created in Django
 # User model and will validate the email using Microsoft.
 MICROSOFT_CREATE_NEW_DJANGO_USER = True  # Optional, default value is True
-
-# Set this to False to prevent users from registering via the standard
-# django-allauth registration page. You may want to do this if you only
-# want users to be able to register via Microsoft AD authentication
-ACCOUNT_ALLOW_REGISTRATION = False
+MICROSOFT_NEW_DJANGO_USER_IS_STAFF = False

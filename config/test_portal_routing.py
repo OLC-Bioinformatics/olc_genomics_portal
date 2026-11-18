@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.template.loader import get_template
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import resolve, reverse
 
 
@@ -118,9 +118,28 @@ class PortalRoutingTests(TestCase):
         )
         self.assertContains(
             authenticated_response,
-            f'href="{logout_url}"',
+            f'action="{logout_url}"',
         )
+        self.assertContains(authenticated_response, 'name="csrfmiddlewaretoken"')
         self.assertNotContains(authenticated_response, 'id="log-in-link"')
+
+    def test_email_login_offers_signup_when_registration_is_enabled(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'<a href="{reverse("account_signup")}">Create an account</a>',
+        )
+        signup_response = self.client.get(reverse("account_signup"))
+        self.assertEqual(signup_response.status_code, 200)
+
+    @override_settings(ACCOUNT_ALLOW_REGISTRATION=False)
+    def test_email_login_hides_signup_when_registration_is_disabled(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Create an account")
 
     def test_language_selector_posts_and_sets_the_selected_language(self):
         """Post language selection and set the language cookie."""
