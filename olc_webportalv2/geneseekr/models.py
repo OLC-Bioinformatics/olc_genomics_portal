@@ -194,7 +194,7 @@ class ProkkaRequest(models.Model):
     seqids = ArrayField(
         models.CharField(max_length=24), blank=True, default=list, null=True
     )
-    download_link = models.CharField(max_length=256, blank=True)
+    download_link = models.TextField(blank=True)
     created_at = models.DateField(auto_now_add=True)
     other_input_files = ArrayField(
         models.CharField(max_length=64, blank=True, default=list), null=True

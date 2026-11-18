@@ -2368,10 +2368,6 @@ def handle_completed_tasks(
         if cloud_task.execution_info.exit_code != 0:
             exit_codes_good = False
 
-    # Delete the job and the pool
-    batch_client.job.delete(job_id=batch_job_name)
-    batch_client.pool.delete(pool_id=batch_job_name)
-
     # If all exit codes are good, handle successful tasks
     if exit_codes_good:
         handle_successful_tasks(batch_job_name, prokka_object)
@@ -2379,6 +2375,23 @@ def handle_completed_tasks(
         # Otherwise, set the status of the Prokka object to 'Error'
         prokka_object.status = "Error"
         prokka_object.save()
+
+    try:
+        batch_client.job.delete(job_id=batch_job_name)
+    except BatchServiceError as exc:
+        logger.warning(
+            "Prokka Batch job cleanup failed job=%s: %s",
+            batch_job_name,
+            exc,
+        )
+    try:
+        batch_client.pool.delete(pool_id=batch_job_name)
+    except BatchServiceError as exc:
+        logger.warning(
+            "Prokka Batch pool cleanup failed pool=%s: %s",
+            batch_job_name,
+            exc,
+        )
 
     # Delete the Prokka task
     ProkkaAzureRequest.objects.filter(id=prokka_task.id).delete()
@@ -2427,7 +2440,7 @@ def handle_successful_tasks(
         blob_service_client=blob_client,
         container_name=prokka_result_container,
         blob_name=os.path.basename(output_dir + ".zip"),
-        expiry=8,
+        expiry=7,
     )
 
     # Update the Prokka object with the download link and status

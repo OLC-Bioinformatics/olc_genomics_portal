@@ -25,6 +25,7 @@ from olc_webportalv2.cowbat.tasks import (
     generate_download_link,
     get_batch_blast_hits,
     handle_incomplete_tasks,
+    handle_successful_tasks,
     handle_task_completion,
     load_report,
     nextseq_run,
@@ -34,7 +35,11 @@ from olc_webportalv2.cowbat.tasks import (
     send_email,
     submit_batch,
 )
-from olc_webportalv2.geneseekr.models import GeneSeekrRequest, TopBlastHit
+from olc_webportalv2.geneseekr.models import (
+    GeneSeekrRequest,
+    ProkkaRequest,
+    TopBlastHit,
+)
 from olc_webportalv2.users.models import User
 from olc_webportalv2.vir_typer.models import (
     VirTyperAzureRequest,
@@ -140,6 +145,69 @@ class VirTyperTaskFinalizationTests(TestCase):
         batch_client.task.list.assert_called_once_with(job_name)
         batch_client.job.delete.assert_called_once_with(job_id=job_name)
         batch_client.pool.delete.assert_called_once_with(pool_id=job_name)
+
+
+class ProkkaTaskFinalizationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="prokka-finalize-test")
+        self.project = ProkkaRequest.objects.create(
+            user=self.user,
+            status="Processing",
+        )
+
+    def test_successful_outputs_store_long_link_with_seven_day_expiry(self):
+        job_name = f"prokka-{self.project.pk}"
+        output_dir = os.path.join("olc_webportalv2", "media", job_name)
+        download_link = "https://example.test/" + "x" * 256
+        storage_client = mock.Mock()
+
+        def assert_saved_before_cleanup(path):
+            self.project.refresh_from_db()
+            self.assertEqual(self.project.status, "Complete")
+            self.assertEqual(self.project.download_link, download_link)
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client",
+                return_value=storage_client,
+            ),
+            mock.patch("olc_webportalv2.cowbat.tasks.download_container"),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.path.isfile",
+                return_value=False,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.shutil.make_archive"
+            ) as make_archive,
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.upload_blob_from_path"
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.generate_download_link",
+                return_value=download_link,
+            ) as generate_link,
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.shutil.rmtree",
+                side_effect=assert_saved_before_cleanup,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.remove",
+                side_effect=assert_saved_before_cleanup,
+            ),
+        ):
+            handle_successful_tasks(job_name, self.project)
+
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.status, "Complete")
+        self.assertEqual(self.project.download_link, download_link)
+        self.assertGreater(len(self.project.download_link), 256)
+        make_archive.assert_called_once_with(output_dir, "zip", output_dir)
+        generate_link.assert_called_once_with(
+            blob_service_client=storage_client,
+            container_name=f"prokka-result-{self.project.pk}",
+            blob_name=f"{job_name}.zip",
+            expiry=7,
+        )
 
 
 class RunCowbatBatchTests(TestCase):

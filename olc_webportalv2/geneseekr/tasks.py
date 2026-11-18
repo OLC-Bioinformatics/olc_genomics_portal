@@ -56,25 +56,29 @@ def run_prokka(prokka_request_pk):
         seqids = prokka_request.seqids or []
         other_files = prokka_request.other_input_files or []
         command_parts = ['source $CONDA/activate /envs/prokka']
+        input_file_pattern = [
+            [f'processed-data/{seqid}.fasta', 'sequences']
+            for seqid in seqids
+        ]
         for seqid in seqids:
             command_parts.append(
                 f'prokka --outdir $AZ_BATCH_NODE_MOUNTS_DIR/'
                 f'{container_name}/{seqid} --prefix {seqid} --cpus 8 '
+                f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/'
                 f'sequences/{seqid}.fasta'
             )
         for other_file in other_files:
             file_name = os.path.basename(other_file)
             prefix = os.path.splitext(file_name)[0]
+            output_path = posixpath.join(container_name, prefix)
             command_parts.append(
                 f'prokka --outdir "$AZ_BATCH_NODE_MOUNTS_DIR"/'
-                f'{shlex.quote(other_file)} --prefix '
+                f'{shlex.quote(output_path)} --prefix '
                 f'{shlex.quote(prefix)} --cpus 8 '
-                f'sequences/{shlex.quote(file_name)}'
+                f'"$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}/'
+                f'sequences/{shlex.quote(file_name)}"'
             )
         cmd = ' && '.join(command_parts)
-        input_file_pattern = [
-            f'processed-data/{seqid}.fasta ' for seqid in seqids
-        ]
 
         # Submit the request to the AzureBatch service
         generic_api_submit(

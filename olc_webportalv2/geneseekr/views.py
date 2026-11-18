@@ -622,11 +622,14 @@ def prokka_request(request):
             storage.ensure_container(container_name)
             file_names = list()
             for other_file in request.FILES.getlist('other_files'):
-                file_name = os.path.join(container_name, other_file.name)
+                sequence_file = os.path.join(
+                    'sequences', os.path.basename(other_file.name)
+                )
+                file_name = os.path.join(container_name, sequence_file)
                 file_names.append(file_name)
                 storage.upload_bytes(
                     container_name,
-                    other_file.name,
+                    sequence_file,
                     other_file.read(),
                     content_type=getattr(other_file, 'content_type', None),
                 )

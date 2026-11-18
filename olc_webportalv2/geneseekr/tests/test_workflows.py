@@ -17,6 +17,7 @@ from olc_webportalv2.geneseekr.tasks import (
     _create_benchmark_download,
     run_amr_summary,
     run_mash,
+    run_prokka,
 )
 from olc_webportalv2.geneseekr.models import (
     AMRAzureRequest,
@@ -299,6 +300,69 @@ class GeneSeekrWorkflowTests(TestCase):
             content_type='text/plain',
         )
         self.assertEqual(run_amr_summary.apply_async.call_count, 1)
+
+    @mock.patch('olc_webportalv2.geneseekr.views.get_storage_client')
+    @mock.patch('olc_webportalv2.geneseekr.views.run_prokka')
+    def test_prokka_upload_is_staged_in_sequences_directory(
+        self, run_prokka_task, get_storage_client
+    ):
+        upload = SimpleUploadedFile('isolate.fasta', b'>isolate\nACGT\n')
+
+        response = self.client.post(
+            reverse('geneseekr:prokka_request'),
+            {'other_files': upload},
+        )
+
+        request = ProkkaRequest.objects.get(user=self.user)
+        storage = get_storage_client.return_value
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            request.other_input_files,
+            [f'prokka-{request.pk}/sequences/isolate.fasta'],
+        )
+        storage.upload_bytes.assert_called_once_with(
+            f'prokka-{request.pk}',
+            'sequences/isolate.fasta',
+            b'>isolate\nACGT\n',
+            content_type='text/plain',
+        )
+        self.assertEqual(run_prokka_task.apply_async.call_count, 1)
+
+    @mock.patch('olc_webportalv2.geneseekr.tasks.generic_api_submit')
+    def test_prokka_submission_stages_genome_inputs(self, generic_api_submit):
+        request = ProkkaRequest.objects.create(
+            user=self.user,
+            seqids=['2022-SEQ-0108'],
+        )
+        request.other_input_files = [
+            f'prokka-{request.pk}/sequences/isolate.fasta'
+        ]
+        request.save(update_fields=['other_input_files'])
+
+        run_prokka(request.pk)
+
+        submission = generic_api_submit.call_args.kwargs
+        self.assertIn(
+            'source $CONDA/activate /envs/prokka',
+            submission['command'],
+        )
+        self.assertEqual(
+            submission['input_file_pattern'],
+            [['processed-data/2022-SEQ-0108.fasta', 'sequences']],
+        )
+        self.assertIn(
+            f'$AZ_BATCH_NODE_MOUNTS_DIR/prokka-{request.pk}/'
+            'sequences/2022-SEQ-0108.fasta',
+            submission['command'],
+        )
+        self.assertIn(
+            f'sequences/isolate.fasta',
+            submission['command'],
+        )
+        self.assertIn(
+            f'prokka-{request.pk}/isolate',
+            submission['command'],
+        )
 
     @mock.patch('olc_webportalv2.geneseekr.tasks.generic_api_submit')
     def test_amr_submission_stages_inputs_and_uses_shared_database(
