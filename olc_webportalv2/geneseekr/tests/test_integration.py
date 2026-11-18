@@ -1,60 +1,58 @@
-from django.test import LiveServerTestCase
-from django.urls import reverse_lazy
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+from unittest import mock
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.urls import reverse
+
+from olc_webportalv2.geneseekr.models import GeneSeekrRequest
+from olc_webportalv2.metadata.models import SequenceData
 from olc_webportalv2.users.models import User
 
-# TODO: Standardize button styling; some links look like buttons while
-# others are actual buttons.
 
-
-class GeneSeekrIntegrationTest(LiveServerTestCase):
+class GeneSeekrSubmissionIntegrationTests(TestCase):
     def setUp(self):
-        options = Options()
-        options.headless = True
-        self.driver = webdriver.Firefox(
-            options=options, executable_path='/data/web/geckodriver'
+        self.user = User.objects.create_user(
+            username='geneseekr-upload-integration',
+            password='password',
         )
-        user = User.objects.create(
-            username='testuser', password='password', email='test@test.com'
+        SequenceData.objects.create(
+            seqid='2015-SEQ-0711',
+            quality='Pass',
+            genus='Listeria',
+            subspecies='',
         )
-        user.set_password('password')
-        user.save()
+        self.client.force_login(self.user)
 
-    def login(self):
-        self.driver.get(
-            '%s%s'
-            % (self.live_server_url, reverse_lazy('geneseekr:geneseekr_home'))
+    @mock.patch('olc_webportalv2.geneseekr.views.run_geneseekr')
+    def test_uploaded_fasta_is_saved_and_queued(self, run_task):
+        query_sequence = '>query\nACGT\n'
+        upload = SimpleUploadedFile(
+            'query.fasta',
+            query_sequence.encode('utf-8'),
+            content_type='text/plain',
         )
-        self.driver.find_element_by_id('id_login').send_keys('test@test.com')
-        self.driver.find_element_by_id('id_password').send_keys('password')
-        self.driver.find_element_by_xpath('//button[text()="Sign In"]').click()
-
-    def test_create_query(self):
-        # Login.
-        query_sequence = (
-            '>sequence\nACTGATCGTACGTACTGGTCTGATACTGGTCTAGCATGCTGA'
+        response = self.client.post(
+            reverse('geneseekr:geneseekr_query'),
+            {
+                'seqids': '2015-SEQ-0711',
+                'query_file': upload,
+                'name': 'Uploaded query',
+            },
         )
-        self.login()
-        # This takes us to home page - navigate to geneseekr page
-        # Dropdown menu
-        self.driver.find_element_by_xpath('//button[text()="Analyze"]').click()
-        self.driver.find_element_by_link_text('Find Genes').click()
-        # Now move to create query button.
-        self.driver.find_element_by_link_text(
-            'Create A GeneSeekr Query'
-        ).click()
-        # Now actually submit a query.
-        self.driver.find_element_by_id('id_name').send_keys('NewQuery')
-        self.driver.find_element_by_id('id_query_sequence').send_keys(
-            query_sequence
+
+        request = GeneSeekrRequest.objects.get(user=self.user)
+        self.assertRedirects(
+            response,
+            reverse(
+                'geneseekr:geneseekr_processing',
+                kwargs={'geneseekr_request_pk': request.pk},
+            ),
         )
-        self.driver.find_element_by_xpath(
-            '//button[text()="Run Query"]'
-        ).click()
-
-        # TODO: Add sample sequences so the browser workflow can complete.
-
-    def tearDown(self):
-        self.driver.close()
+        self.assertEqual(request.status, 'Processing')
+        self.assertEqual(request.query_sequence, query_sequence)
+        self.assertEqual(request.name, 'Uploaded query')
+        run_task.apply_async.assert_called_once_with(
+            queue='cowbat',
+            args=(request.pk,),
+            time_limit=600,
+        )

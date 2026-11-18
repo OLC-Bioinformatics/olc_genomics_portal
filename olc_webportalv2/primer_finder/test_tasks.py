@@ -1,6 +1,8 @@
 import json
+import tempfile
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+from pathlib import Path
 
 from django.test import TestCase
 
@@ -20,6 +22,7 @@ from olc_webportalv2.primer_finder.tasks import (
     _process_verifier_task,
     _submit_validator_task,
     _upload_validator_gene_targets,
+    post_validator_run,
 )
 from olc_webportalv2.users.models import User
 
@@ -394,6 +397,102 @@ class PrimerValidatorTaskTests(TestCase):
         self.assertEqual(self.request.status, 'Error')
         self.assertEqual(self.request.errors, analysis_task.error)
         finalize.assert_called_once_with(validator_request=self.request)
+
+    def test_post_run_saves_filtered_report_and_publishes_download_links(self):
+        self.request.report = json.dumps({"original": "report"})
+        self.request.save(update_fields=["report"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            gene_folder = Path(directory) / "gene"
+            gene_folder.mkdir()
+            gene_report = gene_folder / "hits.json"
+            gene_report.write_text(
+                json.dumps(
+                    {
+                        "query": "sample__invA",
+                        "target": "invA",
+                        "identity": "99.5",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch(
+                    "olc_webportalv2.primer_finder.tasks.get_storage_client"
+                ) as get_storage,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "_cleanup_blob_container"
+                ) as cleanup,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks.populate_report",
+                    return_value=(self.request, directory),
+                ),
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "categorize_gene_hits",
+                    return_value={"category": ["invA"]},
+                ) as categorize,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "categorize_gene_hit_details",
+                    return_value={"category": {"invA": ["sample__invA"]}},
+                ),
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "gene_exclusion_note",
+                    return_value="No exclusions applied.",
+                ),
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "filter_report_by_gene_categories",
+                    return_value='{"filtered": true}',
+                ) as filter_report,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks.create_details",
+                    return_value=self.request,
+                ) as create_details,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "_upload_summary_excel"
+                ) as upload_summary,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks."
+                    "_archive_reports_and_upload"
+                ) as archive_reports,
+                patch(
+                    "olc_webportalv2.primer_finder.tasks._generate_sas_urls",
+                    return_value=("excel-url", "archive-url"),
+                ) as generate_urls,
+            ):
+                result = post_validator_run(
+                    batch_job_name=self.request.container_namer(),
+                    validator_request=self.request,
+                )
+
+        self.request.refresh_from_db()
+        self.assertEqual(result, ("archive-url", "excel-url", directory))
+        self.assertEqual(self.request.status, "Complete")
+        self.assertEqual(self.request.report, '{"filtered": true}')
+        self.assertEqual(self.request.report_download_link, "archive-url")
+        self.assertEqual(self.request.summary_download_link, "excel-url")
+        self.assertEqual(
+            json.loads(self.request.validator_original_report),
+            {"original": "report"},
+        )
+        self.assertEqual(
+            self.request.gene_results[0]["query"],
+            "sample__invA",
+        )
+        cleanup.assert_called_once()
+        categorize.assert_called_once()
+        filter_report.assert_called_once()
+        create_details.assert_called_once()
+        upload_summary.assert_called_once()
+        archive_reports.assert_called_once()
+        generate_urls.assert_called_once()
+        get_storage.assert_called_once()
 
 
 class PrimerVerifierTaskTests(TestCase):
