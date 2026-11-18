@@ -254,7 +254,7 @@ def check_for_task_completion(
     #   case, give up.
     except Exception as exc:
         AmpliSeqRequest.objects.filter(pk=task.ampliseq.pk).update(
-            status="Error", errors=[str(exc)]
+            status="Error", error_list=[str(exc)]
         )
         # Delete task, so we don't keep iterating over it.
         AmpliSeqAzureTask.objects.filter(id=task.id).delete()
