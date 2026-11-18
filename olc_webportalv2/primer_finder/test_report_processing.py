@@ -415,13 +415,13 @@ class ValidatorSampleClassificationTests(TestCase):
                         'differences-boundary': {
                             'amplicon_length': 100,
                             'probe': {
-                                'probe': {'mismatches': 1, 'gaps': 1},
+                                'stn': {'mismatches': 1, 'gaps': 1},
                             },
                         },
                         'differences-over': {
                             'amplicon_length': 100,
                             'probe': {
-                                'probe': {'mismatches': 2, 'gaps': 1},
+                                'other': {'mismatches': 0, 'gaps': 0},
                             },
                         },
                     },
@@ -537,7 +537,7 @@ class PrimerReportGenerationTests(TestCase):
                             'accepted': {
                                 'amplicon_length': 100,
                                 'probe': {
-                                    'probe': {'mismatches': 1, 'gaps': 0},
+                                    'invA': {'mismatches': 1, 'gaps': 0},
                                 },
                             },
                             'rejected': {

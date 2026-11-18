@@ -750,12 +750,12 @@ def create_details(
                 )
 
                 # Probe prevalence and target-specific detection threshold.
-                probe_data = sequence_data.get('probe')
-                if probe_data and isinstance(probe_data, dict):
+                probe_info = _probe_info_for_target(
+                    sequence_data=sequence_data,
+                    target_name=primer_name,
+                )
+                if isinstance(probe_info, dict):
                     probe_total += 1
-                    probe_info = probe_data.get('probe', probe_data)
-                    if not isinstance(probe_info, dict):
-                        probe_info = {}
                     method = getattr(
                         configured_target,
                         'probe_evaluation_method',
@@ -862,6 +862,37 @@ def create_details(
     return request
 
 
+def _probe_info_for_target(sequence_data, target_name):
+    """Return probe metrics for a target, including legacy report shapes."""
+    probe_data = (
+        sequence_data.get('probe')
+        if isinstance(sequence_data, dict)
+        else None
+    )
+    if not isinstance(probe_data, dict):
+        return None
+
+    target_key = str(target_name or '').strip().lower()
+    probe_info = next(
+        (
+            value
+            for key, value in probe_data.items()
+            if str(key).strip().lower() == target_key
+            and isinstance(value, dict)
+        ),
+        None,
+    )
+    if probe_info is not None:
+        return probe_info
+
+    legacy_probe = probe_data.get('probe')
+    if isinstance(legacy_probe, dict):
+        return legacy_probe
+    if any(isinstance(value, dict) for value in probe_data.values()):
+        return None
+    return probe_data
+
+
 def validator_sample_results(request):
     """Evaluate target logic and classification for each reported sequence."""
     if not isinstance(request, ValidatorRequest) or not request.report:
@@ -906,10 +937,10 @@ def validator_sample_results(request):
                     ):
                         continue
                     if target.probe_sequence:
-                        probe = sequence_data.get('probe')
-                        if not isinstance(probe, dict):
-                            continue
-                        probe = probe.get('probe', probe)
+                        probe = _probe_info_for_target(
+                            sequence_data=sequence_data,
+                            target_name=target.name,
+                        )
                         if not isinstance(probe, dict):
                             continue
                         try:
