@@ -829,7 +829,7 @@ stages:
         if django_debug not in {"True", "False"}:
             raise SystemExit("DJANGO_DEBUG must be True or False.")
         env_lines = [
-            "MICROSOFT_AUTH_ENABLED=False",
+            "MICROSOFT_AUTH_ENABLED=True",
             f"DJANGO_DEBUG={django_debug}",
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
@@ -840,7 +840,7 @@ stages:
         (output_dir / "env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
 
         dotenv_lines = [
-            "MICROSOFT_AUTH_ENABLED=False",
+            "MICROSOFT_AUTH_ENABLED=True",
             f"DJANGO_DEBUG={django_debug}",
             f"DJANGO_ALLOWED_HOSTS=0.0.0.0,localhost,127.0.0.1,{target_host}",
         ]
@@ -969,6 +969,7 @@ stages:
 
           if command -v docker >/dev/null 2>&1; then
             rm -f celerybeat-schedule.db celerybeat.pid
+            docker compose build web celeryworker celerybeat flower
             docker compose down
             docker compose up -d
             docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
@@ -978,6 +979,7 @@ stages:
           if sudo -n true 2>/dev/null; then
             sudo -n env PATH="$PATH" docker compose version || true
             sudo rm -f celerybeat-schedule.db celerybeat.pid
+            sudo env PATH="$PATH" docker compose build web celeryworker celerybeat flower
             sudo env PATH="$PATH" docker compose down || true
             sudo env PATH="$PATH" docker compose up -d
             sudo env PATH="$PATH" docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
