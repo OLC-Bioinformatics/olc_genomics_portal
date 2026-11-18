@@ -27,7 +27,7 @@ WeasyPrint==70.0
 argon2-cffi==25.1.0
 
 # For user registration, either via email or social
-django-allauth==65.21.1
+django-allauth==65.22.1
 
 # Python-PostgreSQL Database Adapter
 psycopg2==2.9.13
