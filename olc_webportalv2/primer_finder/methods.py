@@ -3443,8 +3443,28 @@ def _upload_summary_excel(blob_client, container_name, request):
                 scalar_benchmark = getattr(request, benchmark_attribute, '')
                 panel_benchmarks = [scalar_benchmark] if scalar_benchmark else []
             benchmark_name = benchmark_panel_by_row.get((panel_name, seqid))
-            if not benchmark_name and len(panel_benchmarks) == 1:
-                benchmark_name = panel_benchmarks[0]
+            selected_benchmarks = [
+                str(name or '').strip().lower()
+                for name in panel_benchmarks
+                if str(name or '').strip()
+            ]
+            if not benchmark_name:
+                # BDS-Listeria report IDs use BDS-LM; the other selected
+                # dataset is unambiguous when it is the only remaining one.
+                if (
+                    'bds-listeria' in selected_benchmarks and
+                    str(seqid).upper().startswith('BDS-LM')
+                ):
+                    benchmark_name = 'bds-listeria'
+                else:
+                    other_benchmarks = [
+                        name for name in selected_benchmarks
+                        if name != 'bds-listeria'
+                    ]
+                    if len(other_benchmarks) == 1:
+                        benchmark_name = other_benchmarks[0]
+                    elif len(selected_benchmarks) == 1:
+                        benchmark_name = selected_benchmarks[0]
             benchmark_label = benchmark_labels.get(
                 str(benchmark_name or '').strip().lower(),
                 benchmark_name or 'ND',
@@ -3452,8 +3472,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             worksheet.write(row, 6, benchmark_label, cell_format)
             benchmark_versions = request.benchmark_versions or {}
             benchmark_version = benchmark_versions.get(
-                str(panel_benchmarks[0]).lower()
-                if panel_benchmarks else '',
+                str(benchmark_name or '').strip().lower(),
                 ''
             )
             metadata_result = _model_value(metadata, "result", "")

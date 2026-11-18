@@ -393,9 +393,11 @@ class ValidatorConsolidatedFormTests(TestCase):
 		user = User.objects.create_user(username='summary-target-probe-test')
 		request = ValidatorRequest.objects.create(
 			user=user,
+			inclusivity_panel=['listeria', 'bds-listeria'],
+			benchmark_versions={'bds-listeria': '1.0.0'},
 			validator_original_report=json.dumps({
 				'HLY': {'inclusivity': {
-					'strain-1': {
+					'BDS-LM001': {
 						'amplicon_length': '179',
 						'probe': {'HLY': {
 							'percent_id': 100.0,
@@ -403,7 +405,16 @@ class ValidatorConsolidatedFormTests(TestCase):
 							'mismatches': 0,
 							'mismatch_details': '',
 						}},
-					}
+					},
+					'GCA_000000001': {
+						'amplicon_length': '179',
+						'probe': {'HLY': {
+							'percent_id': 100.0,
+							'gaps': 0,
+							'mismatches': 0,
+							'mismatch_details': '',
+						}},
+					},
 				}},
 			}),
 		)
@@ -440,23 +451,24 @@ class ValidatorConsolidatedFormTests(TestCase):
 				worksheet = ElementTree.fromstring(
 					workbook.read('xl/worksheets/sheet1.xml')
 				)
-				row = next(
-					row for row in worksheet.iter(
+				workbook_values['rows'] = {}
+				for row in worksheet.iter(
 						'{http://schemas.openxmlformats.org/'
 						'spreadsheetml/2006/main}row'
-					)
-					if row.get('r') == '2'
-				)
-				workbook_values['row'] = {}
-				for cell in row:
-					value = cell.find(
-						'{http://schemas.openxmlformats.org/'
-						'spreadsheetml/2006/main}v'
-					)
-					text = value.text if value is not None else ''
-					if cell.get('t') == 's':
-						text = shared_strings[int(text)]
-					workbook_values['row'][cell.get('r')] = text
+				):
+					row_values = {}
+					for cell in row:
+						value = cell.find(
+							'{http://schemas.openxmlformats.org/'
+							'spreadsheetml/2006/main}v'
+						)
+						text = value.text if value is not None else ''
+						if cell.get('t') == 's':
+							text = shared_strings[int(text)]
+						column = cell.get('r').rstrip('0123456789')
+						row_values[column] = text
+					if row_values.get('B') in ('BDS-LM001', 'GCA_000000001'):
+						workbook_values['rows'][row_values['B']] = row_values
 
 		blob_client.create_blob_from_path.side_effect = read_workbook
 		_upload_summary_excel(
@@ -465,8 +477,13 @@ class ValidatorConsolidatedFormTests(TestCase):
 			request=request,
 		)
 
-		self.assertEqual(workbook_values['row']['S2'], 'Present')
-		self.assertEqual(float(workbook_values['row']['Y2']), 100.0)
+		rows = workbook_values['rows']
+		self.assertEqual(rows['BDS-LM001']['G'], 'BDS-Listeria')
+		self.assertEqual(rows['BDS-LM001']['I'], '1.0.0')
+		self.assertEqual(rows['BDS-LM001']['S'], 'Present')
+		self.assertEqual(float(rows['BDS-LM001']['Y']), 100.0)
+		self.assertEqual(rows['GCA_000000001']['G'], 'Listeria')
+		self.assertEqual(rows['GCA_000000001']['I'], 'ND')
 
 	def test_summary_workbook_adds_gene_reference_columns(self):
 		user = User.objects.create_user(username='summary-gene-columns-test')
