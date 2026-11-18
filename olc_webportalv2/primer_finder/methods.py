@@ -1943,15 +1943,15 @@ def _validator_logic_label(found_targets, required_targets, logic):
     return ''
 
 
-def _probe_passes(sequence_data, primer_name, configured_target):
-    """Apply a configured probe rule to a PrimerValidator report record."""
+def _probe_report_entry(sequence_data, primer_name):
+    """Find the probe record keyed by target name or legacy probe ID."""
     probe_data = (
         sequence_data.get('probe')
         if isinstance(sequence_data, dict)
         else None
     )
     if not isinstance(probe_data, dict):
-        return False
+        return None
 
     primer_key = str(primer_name or '').strip().lower()
     probe_info = next(
@@ -1964,7 +1964,13 @@ def _probe_passes(sequence_data, primer_name, configured_target):
     )
     if probe_info is None:
         probe_info = probe_data.get('probe', probe_data)
-    if not isinstance(probe_info, dict):
+    return probe_info if isinstance(probe_info, dict) else None
+
+
+def _probe_passes(sequence_data, primer_name, configured_target):
+    """Apply a configured probe rule to a PrimerValidator report record."""
+    probe_info = _probe_report_entry(sequence_data, primer_name)
+    if probe_info is None:
         return False
 
     method = getattr(
@@ -2772,8 +2778,8 @@ def _upload_summary_excel(blob_client, container_name, request):
 
     def _probe_values(data, primer_name=None):
         """Return probe alignment values and the configured pass decision."""
-        probe_data = data.get('probe') if isinstance(data, dict) else None
-        if not isinstance(probe_data, dict):
+        probe_info = _probe_report_entry(data, primer_name)
+        if probe_info is None:
             return {
                 'probe_presence': 'Absent',
                 'probe_gaps': 'ND',
@@ -2784,9 +2790,6 @@ def _upload_summary_excel(blob_client, container_name, request):
                 'probe_percent_identity': 'ND',
                 'probe_total_differences': 'ND',
             }
-        probe_info = probe_data.get('probe', probe_data)
-        if not isinstance(probe_info, dict):
-            probe_info = {}
         percent_id = _get_field(
             probe_info, ['percent_id', 'percent_identity'], 0
         )

@@ -389,6 +389,85 @@ class ValidatorConsolidatedFormTests(TestCase):
 		self.assertIn('Absent', strings)
 		self.assertIn('2C&gt;T', strings)
 
+	def test_validator_summary_workbook_reads_probe_keyed_by_target_name(self):
+		user = User.objects.create_user(username='summary-target-probe-test')
+		request = ValidatorRequest.objects.create(
+			user=user,
+			validator_original_report=json.dumps({
+				'HLY': {'inclusivity': {
+					'strain-1': {
+						'amplicon_length': '179',
+						'probe': {'HLY': {
+							'percent_id': 100.0,
+							'gaps': 0,
+							'mismatches': 0,
+							'mismatch_details': '',
+						}},
+					}
+				}},
+			}),
+		)
+		sample = ValidatorSample.objects.create(
+			validator_request=request,
+			name='HLY',
+		)
+		ValidatorTarget.objects.create(
+			sample=sample,
+			name='HLY',
+			probe_sequence='ACGT',
+		)
+		ValidatorPrimerSet.objects.create(
+			validator_request=request,
+			primer_name='HLY',
+		)
+		ValidatorPanel.objects.create(
+			validator_request=request,
+			genus='listeria',
+			panel='inclusivity',
+		)
+
+		workbook_values = {}
+		blob_client = mock.Mock()
+
+		def read_workbook(**kwargs):
+			with zipfile.ZipFile(kwargs['file_path']) as workbook:
+				shared_root = ElementTree.fromstring(
+					workbook.read('xl/sharedStrings.xml')
+				)
+				shared_strings = [
+					''.join(node.itertext()) for node in shared_root
+				]
+				worksheet = ElementTree.fromstring(
+					workbook.read('xl/worksheets/sheet1.xml')
+				)
+				row = next(
+					row for row in worksheet.iter(
+						'{http://schemas.openxmlformats.org/'
+						'spreadsheetml/2006/main}row'
+					)
+					if row.get('r') == '2'
+				)
+				workbook_values['row'] = {}
+				for cell in row:
+					value = cell.find(
+						'{http://schemas.openxmlformats.org/'
+						'spreadsheetml/2006/main}v'
+					)
+					text = value.text if value is not None else ''
+					if cell.get('t') == 's':
+						text = shared_strings[int(text)]
+					workbook_values['row'][cell.get('r')] = text
+
+		blob_client.create_blob_from_path.side_effect = read_workbook
+		_upload_summary_excel(
+			blob_client=blob_client,
+			container_name='primer-validator-target-probe-test',
+			request=request,
+		)
+
+		self.assertEqual(workbook_values['row']['S2'], 'Present')
+		self.assertEqual(float(workbook_values['row']['Y2']), 100.0)
+
 	def test_summary_workbook_adds_gene_reference_columns(self):
 		user = User.objects.create_user(username='summary-gene-columns-test')
 		request = ValidatorRequest.objects.create(
