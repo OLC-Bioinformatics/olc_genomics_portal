@@ -356,12 +356,29 @@ variable group in the **FoodPort** project. The group is initially created with
 created, marked secret, and set to the placeholder `__REPLACE_ME__`; leave the
 readiness flag false until all placeholders have been replaced.
 
-In Azure DevOps, open **Pipelines > Library > FoodPort-Dev-Portal-Secrets**.
+In a browser, open
+`https://dev.azure.com/<organization>/FoodPort/_library?itemType=VariableGroups`,
+replace `<organization>` with the Azure DevOps organization name, and select
+**Pipelines > Library > FoodPort-Dev-Portal-Secrets**. You can also navigate
+there from the Azure DevOps organization home page.
+
 Edit each existing variable using the exact name in the first column and enter
 the current value of the corresponding Key Vault secret in the second column.
-Keep every value marked secret using the lock icon. If you cannot read a Key
-Vault value, ask an authorized secret owner to enter it; do not put secret
-values in source control, pipeline logs, or chat.
+The deployment pipeline consumes the value in this variable group; the
+repository does not fetch `VM_IMAGE` directly from Key Vault. Keep every value
+marked secret using the lock icon. If you cannot read a Key Vault value, ask an
+authorized secret owner to enter it; do not put secret values in source
+control, pipeline logs, or chat.
+
+`VM_IMAGE` is an explicit Azure Compute Gallery image-version resource ID used
+for Azure Batch compute pools. It is not the operating-system image for the
+Dev portal VM: Terraform configures that VM separately with Canonical Ubuntu
+24.04 `latest` in `foodport-tf/dev-vm/main.tf`. To move new Batch pools to a
+new Gallery version, update the `VM_IMAGE` variable-group value to the full
+resource ID, including its `/versions/<version>` suffix, and rerun the Dev
+deployment pipeline. The pipeline has no automatic trigger; deployment writes
+the variable into the VM's `env` file and restarts the Compose services.
+Existing Batch pools are not changed by this update.
 
 | Variable name | Existing Key Vault secret |
 |---|---|
