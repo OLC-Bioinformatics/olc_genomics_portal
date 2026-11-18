@@ -402,6 +402,13 @@ values in source control, pipeline logs, or chat.
 `AZURE_ACCOUNT_KEY` is passed to the Batch service for Azure Blob mounts. Treat
 it as a storage-account secret; it is not passed to the web container or logged.
 
+`VM_IMAGE` is the Azure Compute Gallery image-version resource ID used by new
+Azure Batch pools, not the operating-system image for the portal VM. The
+portal VM's operating system is configured separately in `foodport-tf`.
+To use a newer Gallery image for future Batch pools, update `VM_IMAGE` to the
+full version resource ID and rerun the Dev deployment pipeline. Existing Batch
+pools are not changed by updating this value.
+
 | Variable name | Existing Key Vault secret |
 |---|---|
 | `SECRET_KEY` | `secret-key` |
