@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tempfile
+import warnings
 from decimal import Decimal
 from unittest import mock
 
@@ -689,21 +690,29 @@ class RunCowbatBatchTests(TestCase):
                     "SEQ-1,Sample 1,existing_R1.fastq.gz,\n"
                 )
 
-            add_read_filenames_to_metadata(
-                sequencing_run=run,
-                blob_service_client=mock.Mock(),
-                container_name="run-1",
-                reports_folder=reports_folder,
-                blob_filenames=[
-                    "SEQ-1_R1_a.fastq.gz",
-                    "SEQ-1_R1_b.fastq.gz",
-                    "SEQ-1_R2.fastq.gz",
-                ],
-            )
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter("always")
+                add_read_filenames_to_metadata(
+                    sequencing_run=run,
+                    blob_service_client=mock.Mock(),
+                    container_name="run-1",
+                    reports_folder=reports_folder,
+                    blob_filenames=[
+                        "SEQ-1_R1_a.fastq.gz",
+                        "SEQ-1_R1_b.fastq.gz",
+                        "SEQ-1_R2.fastq.gz",
+                    ],
+                )
 
             with open(report_path) as report:
                 report_contents = report.read()
 
+        self.assertFalse(
+            any(
+                "fillna with an incompatible value" in str(warning.message)
+                for warning in caught_warnings
+            )
+        )
         self.assertIn(
             "existing_R1.fastq.gz,SEQ-1_R2.fastq.gz", report_contents
         )

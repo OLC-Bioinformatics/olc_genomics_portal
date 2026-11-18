@@ -1204,7 +1204,7 @@ def add_read_filenames_to_metadata(
         if col not in df.columns:
             df[col] = ""
         else:
-            df[col] = df[col].fillna("").astype(str)
+            df[col] = df[col].astype("string").fillna("")
 
     # Populate
     for idx, row in df.iterrows():
