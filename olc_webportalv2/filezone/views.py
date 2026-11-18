@@ -160,7 +160,7 @@ def container_view(request, filezone_pk):
         storage = get_storage_client()
 
         # Upload all the files. One at a time
-        for _, file in request.FILES.items():
+        for _field_name, file in request.FILES.items():
             messages.info(request, f'Uploading: {file.name}')
             # Calculate the checksum
             blob_md5 = calculate_checksum(item=file)
@@ -294,7 +294,7 @@ def container_view(request, filezone_pk):
                 )
 
         # Repopulate the blob information
-        blob_data, _ = list_blobs(filezone_pk=filezone_pk)
+        blob_data, _blob_mapping = list_blobs(filezone_pk=filezone_pk)
 
         return render(
             request,

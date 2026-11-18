@@ -24,8 +24,14 @@ from olc_webportalv2.filezone.methods import (
     generate_sas,
 )
 from olc_webportalv2.filezone.tasks import (
+    archive,
     archive_multiple_containers,
+    calculate_md5_parallel,
+    list_blobs,
     locate_files,
+    prep_delete_blob,
+    rename_blob,
+    sanitise_rename,
 )
 from olc_webportalv2.filezone.templatetags.filezone_tags import (
     render_blob_hierarchy,
@@ -313,6 +319,134 @@ class FileZoneArchiveTests(SimpleTestCase):
 
 class FileZoneTaskTests(SimpleTestCase):
     """Verify task behavior for incomplete search requests."""
+
+    @patch('olc_webportalv2.filezone.tasks.generate_sas', return_value='url')
+    @patch('olc_webportalv2.filezone.tasks.format_blob_date', return_value='date')
+    @patch('olc_webportalv2.filezone.tasks.human_bytes', return_value='size')
+    @patch('olc_webportalv2.filezone.tasks.get_storage_client')
+    @patch('olc_webportalv2.filezone.tasks.ContainerName.objects.get')
+    def test_list_blobs_skips_empty_objects_and_builds_hierarchy(
+        self,
+        get_container,
+        get_client,
+        human_bytes,
+        format_blob_date_mock,
+        generate_sas_mock,
+    ):
+        """Return non-empty objects with calculated metadata in path order."""
+        get_container.return_value.container_name = 'run-1'
+        get_client.return_value.list_objects.return_value = [
+            SimpleNamespace(
+                name='nested/a.txt',
+                size=10,
+                last_modified='timestamp',
+                content_md5=base64.b64encode(b'a-md5').decode(),
+            ),
+            SimpleNamespace(
+                name='empty.txt',
+                size=0,
+                last_modified='timestamp',
+                content_md5=None,
+            ),
+            SimpleNamespace(
+                name='b.txt',
+                size=20,
+                last_modified='timestamp',
+                content_md5=base64.b64encode(b'b-md5').decode(),
+            ),
+        ]
+
+        hierarchy, pk_to_blob = list_blobs(filezone_pk=9)
+
+        self.assertEqual(list(pk_to_blob), [1, 2])
+        self.assertEqual(pk_to_blob[1]['blob_full_path'], 'b.txt')
+        self.assertEqual(
+            hierarchy['nested']['contents']['a.txt']['blob_md5'],
+            '612d6d6435',
+        )
+        self.assertNotIn('empty.txt', pk_to_blob[1]['blob_name'])
+        self.assertEqual(human_bytes.call_count, 2)
+        self.assertEqual(format_blob_date_mock.call_count, 2)
+        self.assertEqual(generate_sas_mock.call_count, 2)
+
+    @patch.object(FileLocate, 'calculate_md5', return_value='fallback-md5')
+    def test_md5_calculation_falls_back_when_storage_has_no_checksum(
+        self, calculate_md5
+    ):
+        blob = SimpleNamespace(name='result.txt', content_md5=None)
+        storage = Mock()
+
+        result = calculate_md5_parallel(storage, blob, 'run-1')
+
+        self.assertEqual(result, 'fallback-md5')
+        calculate_md5.assert_called_once_with(
+            blob_client=storage,
+            blob_file=blob,
+            container_name='run-1',
+        )
+
+    def test_rename_rejects_storage_special_characters(self):
+        self.assertEqual(sanitise_rename('new/name#.txt'), {'#'})
+
+    @patch('olc_webportalv2.filezone.tasks.get_storage_client')
+    def test_rename_copies_then_deletes_the_original(self, get_client):
+        storage = get_client.return_value
+
+        errors = rename_blob('old.txt', 'new.txt', 'run-1')
+
+        self.assertEqual(errors, [])
+        storage.copy_object.assert_called_once_with(
+            'run-1', 'old.txt', 'run-1', 'new.txt'
+        )
+        storage.delete_object.assert_called_once_with('run-1', 'old.txt')
+
+    def test_delete_helper_reports_each_failed_blob(self):
+        storage = Mock()
+        storage.delete_object.side_effect = [
+            None,
+            StorageServiceError(None, 'permission denied'),
+        ]
+
+        errors, failed_paths = prep_delete_blob(
+            storage,
+            [
+                {'blob_full_path': 'first.txt'},
+                {'blob_full_path': 'second.txt'},
+            ],
+            'run-1',
+        )
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(failed_paths, ['second.txt'])
+
+    @patch('olc_webportalv2.filezone.tasks.generate_archive_download_link')
+    def test_single_container_archive_keeps_relative_blob_paths(self, link):
+        storage = Mock()
+        storage.download_file.side_effect = lambda container, name, path: (
+            Path(path).write_bytes(f'{container}/{name}'.encode())
+        )
+        link.return_value = 'archive-url'
+        archived_names = []
+
+        def capture_archive(
+            blob_service_client,
+            container_name,
+            output_zipfile,
+        ):
+            with ZipFile(output_zipfile) as archive_file:
+                archived_names.extend(archive_file.namelist())
+            return 'archive-url'
+
+        link.side_effect = capture_archive
+        result = archive(
+            storage,
+            [{'blob_full_path': 'nested/result.txt'}],
+            'run-1',
+            12,
+        )
+
+        self.assertEqual(result, 'archive-url')
+        self.assertEqual(archived_names, ['nested/result.txt'])
 
     @patch('olc_webportalv2.filezone.tasks.Regexes.objects.get')
     def test_locate_files_rejects_missing_file_patterns(self, get_request):
