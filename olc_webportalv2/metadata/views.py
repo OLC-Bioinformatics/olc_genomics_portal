@@ -236,9 +236,9 @@ def metadata_home(request):
                 )
                 criteria_dict['genus'] = genus
 
-            pr = _('Pass + Reference')
-            r = _('Reference')
-            a = _('All')
+            pr = str(_('Pass + Reference'))
+            r = str(_('Reference'))
+            a = str(_('All'))
 
             # Deal with quality.
             if quality == _('Pass'):
