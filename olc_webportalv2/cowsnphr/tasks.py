@@ -910,13 +910,15 @@ def read_spreadsheet(report: str, excel: bool = False, index_col: bool = True):
             ).fillna("")
     # Remove any "Unnamed: X" cells
     if not excel:
-        for iterator in range(1000):
-            try:
-                report_dataframe.drop(
-                    columns=f"Unnamed: {iterator}", inplace=True
-                )
-            except KeyError:
-                pass
+        unnamed_columns = [
+            column
+            for column in report_dataframe.columns
+            if isinstance(column, str) and column.startswith("Unnamed: ")
+        ]
+        if unnamed_columns:
+            report_dataframe = report_dataframe.drop(
+                columns=unnamed_columns
+            )
     # Extract the headers from the dataframe
     if excel:
         report_headers = [
