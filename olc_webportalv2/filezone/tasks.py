@@ -9,7 +9,6 @@ import pathlib
 import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from email.utils import parsedate_to_datetime
 from typing import List, Tuple
 
 # Third-party imports
@@ -27,6 +26,7 @@ from olc_webportalv2.cowbat.tasks import (
 )
 from olc_webportalv2.filezone.methods import (
     FileLocate,
+    format_blob_date,
     generate_sas,
     human_bytes,
 )
@@ -161,13 +161,7 @@ def list_blobs(filezone_pk):
             blob_data[index - 1].update(
                 {
                     'blob_size': human_bytes(byte_count=blob.size or 0),
-                    'blob_date': (
-                        parsedate_to_datetime(blob.last_modified).strftime(
-                            '%Y/%m/%d, %H:%M:%S'
-                        )
-                        if blob.last_modified
-                        else ''
-                    ),
+                    'blob_date': format_blob_date(blob.last_modified),
                     'blob_download_link': generate_sas(
                         blob_name=blob.name,
                         container_name=container.container_name,

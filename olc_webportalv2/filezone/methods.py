@@ -7,7 +7,7 @@ import os
 import pathlib
 import re
 import tempfile
-from email.utils import parsedate_to_datetime
+from datetime import datetime
 from typing import Dict, List
 
 from olc_webportalv2.common.storage_client import get_storage_client
@@ -34,6 +34,13 @@ def human_bytes(byte_count: float) -> str:
 
     # Return formatted string with two decimal places and unit suffix
     return f'{byte_count:.2f} {suffixes[index]}'
+
+
+def format_blob_date(last_modified: str | None) -> str:
+    """Format an ISO-8601 Storage timestamp for FileZone display."""
+    if not last_modified:
+        return ''
+    return datetime.fromisoformat(last_modified).strftime('%Y/%m/%d, %H:%M:%S')
 
 
 def generate_sas(blob_name, container_name):
@@ -71,7 +78,7 @@ def generate_download_link(blob_client, container_name, blob_name, expiry=7):
     filename = blob_name.split('/')[-1]
     return blob_client.create_transfer_url(
         container_name,
-        'download',
+        'read',
         name=blob_name,
         expires_in_seconds=expiry * 24 * 60 * 60,
         content_disposition=f'attachment; filename="{filename}"',
@@ -362,16 +369,7 @@ class FileLocate:
                     sas_url = generate_sas(
                         blob_name=blob_file.name, container_name=container.name
                     )
-                    modified = (
-                        parsedate_to_datetime(blob_file.last_modified)
-                        if blob_file.last_modified
-                        else None
-                    )
-                    blob_date = (
-                        modified.strftime('%Y/%m/%d, %H:%M:%S')
-                        if modified
-                        else ''
-                    )
+                    blob_date = format_blob_date(blob_file.last_modified)
                     # Extract the MD5 information
                     try:
                         blob_md5 = binascii.hexlify(
@@ -381,7 +379,7 @@ class FileLocate:
                         blob_md5 = FileLocate.calculate_md5(
                             blob_client=blob_client,
                             blob_file=blob_file,
-                            container_name=container.container_name,
+                            container_name=container.name,
                         )
                     # Update the dictionaries with the metadata
                     files[container.name].append(

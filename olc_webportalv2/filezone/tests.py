@@ -4,6 +4,7 @@ import base64
 import hashlib
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 from zipfile import ZipFile
 
@@ -19,6 +20,7 @@ from olc_webportalv2.filezone.methods import (
     FileLocate,
     calculate_checksum,
     copy_blobs,
+    format_blob_date,
     generate_sas,
 )
 from olc_webportalv2.filezone.tasks import (
@@ -34,6 +36,13 @@ from olc_webportalv2.filezone.views import container_view
 class FileZoneStorageTests(SimpleTestCase):
     """Verify FileZone storage-client interactions."""
 
+    def test_format_blob_date_accepts_storage_service_timestamp(self):
+        """Format the ISO-8601 timestamp returned by the Storage service."""
+        self.assertEqual(
+            format_blob_date('2026-11-18T15:55:13+00:00'),
+            '2026/11/18, 15:55:13',
+        )
+
     @patch('olc_webportalv2.filezone.methods.get_storage_client')
     def test_generate_sas_uses_attachment_transfer_url(self, get_client):
         """Create a week-long download link with an attachment filename."""
@@ -45,7 +54,7 @@ class FileZoneStorageTests(SimpleTestCase):
         self.assertEqual(result, 'download-url')
         client.create_transfer_url.assert_called_once_with(
             'run-1',
-            'download',
+            'read',
             name='folder/result.zip',
             expires_in_seconds=7 * 24 * 60 * 60,
             content_disposition='attachment; filename="result.zip"',
@@ -117,6 +126,47 @@ class FileZoneStorageTests(SimpleTestCase):
             hashlib.md5(b'large blob').hexdigest(),
         )
         storage.download_file.assert_called_once()
+
+    @patch(
+        'olc_webportalv2.filezone.methods.generate_sas',
+        return_value='download-url',
+    )
+    @patch.object(FileLocate, 'calculate_md5', return_value='checksum')
+    def test_file_search_calculates_missing_checksum(
+        self,
+        calculate_md5,
+        generate_sas,
+    ):
+        """Use the storage container name when a search checksum is absent."""
+        storage = Mock()
+        blob = SimpleNamespace(
+            name='results/sample.fasta',
+            size=10,
+            last_modified='2026-11-18T15:55:13+00:00',
+            content_md5=None,
+        )
+        storage.list_objects.return_value = [blob]
+        container = SimpleNamespace(name='run-1')
+
+        files, ajax = FileLocate.locate_file(
+            blob_client=storage,
+            containers=[container],
+            expressions=['*.fasta'],
+            negative_expressions=[''],
+            debug=False,
+        )
+
+        calculate_md5.assert_called_once_with(
+            blob_client=storage,
+            blob_file=blob,
+            container_name='run-1',
+        )
+        generate_sas.assert_called_once_with(
+            blob_name='results/sample.fasta',
+            container_name='run-1',
+        )
+        self.assertEqual(files['run-1'][0]['blob_md5'], 'checksum')
+        self.assertEqual(ajax['data'][0]['blob_md5'], 'checksum')
 
 
 class FileZoneFormTests(SimpleTestCase):
