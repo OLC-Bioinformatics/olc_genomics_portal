@@ -33,6 +33,7 @@ from olc_webportalv2.primer_finder.methods import (
 	_upload_summary_excel,
 	_validator_classification_label,
 	_validator_logic_label,
+	_probe_passes,
 	_validator_probe_records,
 	categorize_gene_hits,
 	categorize_gene_hit_details,
@@ -74,6 +75,50 @@ from olc_webportalv2.users.models import User
 
 class ValidatorConsolidatedFormTests(TestCase):
 	"""Cover validation for the consolidated locked-down Validator input."""
+
+	def test_probe_passes_reads_probe_report_keyed_by_target_name(self):
+		configured_target = mock.Mock(
+			probe_evaluation_method='percent_identity',
+			probe_percent_identity=80.0,
+			probe_max_differences=2,
+		)
+		sequence_data = {
+			'probe': {
+				'HLY': {
+					'percent_id': 100.0,
+					'mismatches': 0,
+					'gaps': 0,
+				},
+			},
+		}
+
+		self.assertTrue(_probe_passes(
+			sequence_data=sequence_data,
+			primer_name='hly',
+			configured_target=configured_target,
+		))
+		self.assertFalse(_probe_passes(
+			sequence_data=sequence_data,
+			primer_name='Other target',
+			configured_target=configured_target,
+		))
+
+	def test_probe_passes_preserves_legacy_probe_report_shape(self):
+		sequence_data = {
+			'probe': {
+				'probe': {
+					'percent_id': 100.0,
+					'mismatches': 0,
+					'gaps': 0,
+				},
+			},
+		}
+
+		self.assertTrue(_probe_passes(
+			sequence_data=sequence_data,
+			primer_name='Darth_retest_Sep21',
+			configured_target=None,
+		))
 
 	def test_report_archive_skips_virtual_folder_markers(self):
 		blob_client = mock.Mock()

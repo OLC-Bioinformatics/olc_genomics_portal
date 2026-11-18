@@ -1943,6 +1943,80 @@ def _validator_logic_label(found_targets, required_targets, logic):
     return ''
 
 
+def _probe_passes(sequence_data, primer_name, configured_target):
+    """Apply a configured probe rule to a PrimerValidator report record."""
+    probe_data = (
+        sequence_data.get('probe')
+        if isinstance(sequence_data, dict)
+        else None
+    )
+    if not isinstance(probe_data, dict):
+        return False
+
+    primer_key = str(primer_name or '').strip().lower()
+    probe_info = next(
+        (
+            value for key, value in probe_data.items()
+            if str(key).strip().lower() == primer_key
+            and isinstance(value, dict)
+        ),
+        None,
+    )
+    if probe_info is None:
+        probe_info = probe_data.get('probe', probe_data)
+    if not isinstance(probe_info, dict):
+        return False
+
+    method = getattr(
+        configured_target,
+        'probe_evaluation_method',
+        'percent_identity'
+    )
+    percent_threshold = float(getattr(
+        configured_target,
+        'probe_percent_identity',
+        80.0
+    ))
+    difference_threshold = int(getattr(
+        configured_target,
+        'probe_max_differences',
+        2
+    ))
+
+    percent_id = probe_info.get(
+        'percent_id',
+        probe_info.get('percent_identity')
+    )
+    gaps = probe_info.get('gaps', probe_info.get('gap'))
+    mismatches = probe_info.get(
+        'mismatches',
+        probe_info.get('mismatch')
+    )
+
+    try:
+        observed_identity = float(percent_id)
+    except (TypeError, ValueError):
+        observed_identity = None
+
+    try:
+        observed_differences = (
+            int(float(mismatches)) + int(float(gaps))
+        )
+    except (TypeError, ValueError):
+        observed_differences = None
+
+    if method == 'max_differences':
+        return (
+            observed_differences is not None and
+            observed_differences <= difference_threshold
+        )
+
+    return (
+        observed_identity is not None and
+        observed_identity >= percent_threshold
+    )
+
+
 def create_details(
     *,  # Ensure that the following arguments are keyword arguments
     panel_model: Type[Union[VerifierPanel, ValidatorPanel]],
@@ -2024,72 +2098,6 @@ def create_details(
             (getattr(configured_target, 'probe_sequence', '') or '').strip()
         )
         return request_level_probe or target_probe
-
-    def probe_passes(sequence_data, primer_name):
-        """Apply the configured probe rule; missing hits do not pass."""
-        probe_data = (
-            sequence_data.get('probe')
-            if isinstance(sequence_data, dict)
-            else None
-        )
-        if not isinstance(probe_data, dict):
-            return False
-
-        probe_info = probe_data.get('probe', probe_data)
-        if not isinstance(probe_info, dict):
-            return False
-
-        configured_target = probe_configuration.get(
-            str(primer_name or '').strip().lower()
-        )
-        method = getattr(
-            configured_target,
-            'probe_evaluation_method',
-            'percent_identity'
-        )
-        percent_threshold = float(getattr(
-            configured_target,
-            'probe_percent_identity',
-            80.0
-        ))
-        difference_threshold = int(getattr(
-            configured_target,
-            'probe_max_differences',
-            2
-        ))
-
-        percent_id = probe_info.get(
-            'percent_id',
-            probe_info.get('percent_identity')
-        )
-        gaps = probe_info.get('gaps', probe_info.get('gap'))
-        mismatches = probe_info.get(
-            'mismatches',
-            probe_info.get('mismatch')
-        )
-
-        try:
-            observed_identity = float(percent_id)
-        except (TypeError, ValueError):
-            observed_identity = None
-
-        try:
-            observed_differences = (
-                int(float(mismatches)) + int(float(gaps))
-            )
-        except (TypeError, ValueError):
-            observed_differences = None
-
-        if method == 'max_differences':
-            return (
-                observed_differences is not None and
-                observed_differences <= difference_threshold
-            )
-
-        return (
-            observed_identity is not None and
-            observed_identity >= percent_threshold
-        )
 
     for primer in primer_set:
         primer_name = primer.primer_name
@@ -2177,7 +2185,13 @@ def create_details(
                 )
 
                 probe_hit = (
-                    probe_passes(sequence_data, primer_name)
+                    _probe_passes(
+                        sequence_data=sequence_data,
+                        primer_name=primer_name,
+                        configured_target=probe_configuration.get(
+                            str(primer_name or '').strip().lower()
+                        ),
+                    )
                     if primer_requires_probe
                     else False
                 )
