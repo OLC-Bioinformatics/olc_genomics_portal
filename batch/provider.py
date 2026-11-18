@@ -629,7 +629,10 @@ class AzureBatchProvider:
                 destination=models.OutputFileDestination(
                     container=models.OutputFileBlobContainerDestination(
                         container_url=write_url,
-                        path=f"azure_{name}",
+                        path=posixpath.join(
+                            data.get("log_prefix") or "",
+                            f"azure_{name}",
+                        ),
                     )
                 ),
                 upload_options=models.OutputFileUploadOptions(

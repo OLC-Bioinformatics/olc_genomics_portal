@@ -518,6 +518,7 @@ def _validate_payload(data):
         "output_patterns": data.get("output_file_pattern"),
         "output_container": data.get("output_container"),
         "output_prefix": data.get("output_prefix"),
+        "log_prefix": data.get("log_prefix"),
     }
     for field in ("input_patterns", "download_patterns", "output_patterns"):
         patterns = normalized[field]
@@ -534,6 +535,11 @@ def _validate_payload(data):
             raise TypeError(f"{field} must be a non-empty string")
     if "no_tidy" in data and not isinstance(data["no_tidy"], bool):
         raise TypeError("no_tidy must be a boolean")
+    log_prefix = normalized["log_prefix"]
+    if log_prefix is not None and (
+        not isinstance(log_prefix, str) or not log_prefix.strip()
+    ):
+        raise TypeError("log_prefix must be a non-empty string or None")
     environment_variables = data.get("environment_variables")
     if environment_variables is not None and (
         not isinstance(environment_variables, dict)

@@ -51,12 +51,21 @@ def test_nanopore_payload_normalizes_patterns():
     assert payload["output_patterns"] == ["output/"]
     assert payload["output_container"] == "nanopore-results"
     assert payload["output_prefix"] == "runs/260825-nanopore"
+    assert payload["log_prefix"] == "260825-nanopore/logs"
 
 
 def test_nanopore_payload_rejects_scalar_input_pattern():
     payload = valid_payload()
     payload["input_file_pattern"] = "nanopore-runs/42/input/**"
     with pytest.raises(TypeError):
+        api._validate_payload(payload)
+
+
+def test_submission_rejects_invalid_log_prefix():
+    payload = valid_payload()
+    payload["log_prefix"] = ["not", "a", "path"]
+
+    with pytest.raises(TypeError, match="log_prefix"):
         api._validate_payload(payload)
 
 
@@ -592,6 +601,7 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
             "environment_variables": {
                 "FOODPORT_INPUT_SAS_URL": "https://storage.example/input?sig=token",
             },
+            "log_prefix": "runs/validator/logs",
         }
     )
 
@@ -647,6 +657,13 @@ def test_submission_translates_pool_tasks_and_delegates_blob_work(monkeypatch):
     assert [output.file_pattern for output in tasks[1].output_files] == [
         "$AZ_BATCH_TASK_DIR/stderr.txt",
         "$AZ_BATCH_TASK_DIR/stdout.txt",
+    ]
+    assert [
+        output.destination.container.path
+        for output in tasks[1].output_files
+    ] == [
+        "runs/validator/logs/azure_stderr.txt",
+        "runs/validator/logs/azure_stdout.txt",
     ]
 
 
