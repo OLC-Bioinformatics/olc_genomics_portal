@@ -10,6 +10,7 @@ from olc_webportalv2.primer_finder.methods import (
     calculate_panel_percentage_from_counts,
     create_details,
     process_sequence_data_from_report,
+    sort_mismatch_details,
     validator_sample_results,
 )
 from olc_webportalv2.primer_finder.models import (
@@ -155,6 +156,27 @@ class PrimerFinderReportAggregationTests(unittest.TestCase):
                 panel_positive=0,
             ),
             {'percent': 0.0, 'positive': 0, 'total': 0},
+        )
+
+    def test_equal_mismatch_counts_are_sorted_deterministically(self):
+        details = {
+            'invA': {
+                'inclusivity': {
+                    'listeria': {
+                        'forward_details': {
+                            'C>T': 1,
+                            'A>G': 1,
+                        },
+                    },
+                },
+            },
+        }
+
+        sort_mismatch_details(details=details)
+
+        self.assertEqual(
+            details['invA']['inclusivity']['listeria']['forward_details'],
+            [('A>G', 1), ('C>T', 1)],
         )
 
     def test_gene_hit_classifier_reports_premature_internal_stops(self):
@@ -530,6 +552,7 @@ class PrimerReportGenerationTests(TestCase):
             project_name='validator-probe-report',
             forward_primer='ACGT',
             reverse_primer='TGCA',
+            benchmark_versions={'bds-listeria': '1.0.0'},
             report=json.dumps(
                 {
                     'invA': {
@@ -595,9 +618,8 @@ class PrimerReportGenerationTests(TestCase):
                 analysis='validator',
             )
 
-        genus_summary = json.loads(result.summary)['invA']['inclusivity'][
-            'listeria'
-        ]
+        summary = json.loads(result.summary)
+        genus_summary = summary['invA']['inclusivity']['listeria']
         self.assertEqual(
             (
                 genus_summary['percent'],
@@ -608,5 +630,14 @@ class PrimerReportGenerationTests(TestCase):
         )
         self.assertEqual(
             genus_summary['probe_prevalence'],
-            {'percent': 33.33, 'positive': 1, 'total': 3},
+            {
+                'percent': 33.33,
+                'positive': 1,
+                'negative': 2,
+                'total': 3,
+            },
+        )
+        self.assertEqual(
+            summary['_metadata'],
+            {'benchmark_versions': {'bds-listeria': '1.0.0'}},
         )

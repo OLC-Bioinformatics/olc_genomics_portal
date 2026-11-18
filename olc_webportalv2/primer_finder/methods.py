@@ -583,8 +583,7 @@ def sort_mismatch_details(
                             try:
                                 location[mismatches_key] = sorted(
                                     location[mismatches_key].items(),
-                                    key=lambda x: x[1],
-                                    reverse=True,
+                                    key=lambda item: (-item[1], item[0]),
                                 )
                             except AttributeError:
                                 pass
@@ -592,8 +591,7 @@ def sort_mismatch_details(
                             try:
                                 location[details_key] = sorted(
                                     location[details_key].items(),
-                                    key=lambda x: x[1],
-                                    reverse=True,
+                                    key=lambda item: (-item[1], item[0]),
                                 )
                             except AttributeError:
                                 pass
@@ -843,10 +841,15 @@ def create_details(
                 genus_details['probe_prevalence'] = {
                     'percent': probe_percent,
                     'positive': probe_positive,
+                    'negative': panel_total - probe_positive,
                     'total': panel_total,
                 }
 
     sort_mismatch_details(details=details)
+    if isinstance(request, ValidatorRequest):
+        details['_metadata'] = {
+            'benchmark_versions': request.benchmark_versions or {},
+        }
 
     request.summary = json.dumps(
         details, sort_keys=True, indent=4, separators=(',', ': ')
