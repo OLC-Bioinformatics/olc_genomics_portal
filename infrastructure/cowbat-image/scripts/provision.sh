@@ -17,6 +17,24 @@ install -D -m 0644 "$ROOT_CA_SOURCE" "$ROOT_CA_DEST"
 update-ca-certificates
 
 source /usr/bin/miniconda/bin/activate /envs/cowbat
+unset PERL5LIB
+
+conda create \
+  --yes \
+  --prefix /envs/prokka \
+  --channel conda-forge \
+  --channel bioconda \
+  --strict-channel-priority \
+  prokka=1.14.6
+
+source /usr/bin/miniconda/bin/activate /envs/prokka
+
+if ! prokka --version; then
+  echo "Prokka environment installation failed." >&2
+  exit 1
+fi
+
+source /usr/bin/miniconda/bin/activate /envs/cowbat
 
 python - <<'PY'
 import sys
