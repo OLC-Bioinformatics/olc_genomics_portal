@@ -5,6 +5,7 @@ Methods for the primer_finder app
 """
 
 # Standard imports
+import csv
 import json
 import logging
 import os
@@ -1312,6 +1313,37 @@ def exclusivity_panel_retrieve(inclusivity):
     """
 
 
+def _validator_classification_label(found_targets, required_targets, logic,
+                                    classification_rule):
+    """Apply classification precedence, then generic target logic."""
+    if classification_rule == 'salmonella':
+        return (
+            'Salmonella'
+            if set(found_targets).intersection(('inva', 'stn'))
+            else 'Not Salmonella'
+        )
+    if logic == 'AND':
+        passes = found_targets == required_targets
+    elif logic == 'OR':
+        passes = bool(found_targets)
+    else:
+        return None
+    return 'Detected' if passes else 'Not detected'
+
+
+def _validator_logic_label(found_targets, required_targets, logic):
+    """Return the human-readable result for the configured target logic."""
+    if logic == 'AND' and found_targets == required_targets:
+        return 'Pass: All targets matched'
+    if found_targets and logic == 'AND':
+        return 'Fail: At least one target matched'
+    if found_targets and logic == 'OR':
+        return 'Pass: At least one target matched'
+    if logic in ('AND', 'OR'):
+        return 'Fail: No targets matched'
+    return ''
+
+
 def _upload_summary_excel(blob_client, container_name, request):
     """
     Create a consolidated Excel report and upload it to Azure Blob Storage.
@@ -1324,7 +1356,9 @@ def _upload_summary_excel(blob_client, container_name, request):
     if xlsxwriter is None:
         return
 
-    report_text = getattr(request, 'report', None)
+    report_text = getattr(request, "validator_original_report", '') or getattr(
+        request, "report", None
+    )
     if not report_text:
         return
 
@@ -1336,18 +1370,43 @@ def _upload_summary_excel(blob_client, container_name, request):
     if not isinstance(report, dict):
         return
 
+    from olc_webportalv2.primer_finder.validator_gene_reports import (
+        _gene_percent_match,
+        _gene_query_key,
+        _gene_report_key,
+        _gene_value,
+    )
+
     primer_fields = [
-        ('amplicon length', 'amplicon_length'),
-        ('contig', 'contig'),
-        ('location', 'location'),
-        ('direction', 'direction'),
-        ('forward mismatch', 'forward_mismatch'),
-        ('forward mismatch details', 'forward_mismatch_details'),
-        ('reverse mismatch', 'reverse_mismatch'),
-        ('reverse mismatch details', 'reverse_mismatch_details'),
-        ('pseudoalignment', 'pseudoalignment'),
-        ('Total Mismatches', 'total_mismatch'),
+        ("amplicon length", "amplicon_length"),
+        ("contig", "contig"),
+        ("location", "location"),
+        ("direction", "direction"),
+        ("forward mismatch", "forward_mismatch"),
+        ("forward mismatch details", "forward_mismatch_details"),
+        ("reverse mismatch", "reverse_mismatch"),
+        ("reverse mismatch details", "reverse_mismatch_details"),
+        ("Total Mismatches", "total_mismatch"),
     ]
+
+    probe_fields = (
+        ("Probe Presence", "probe_presence"),
+        ("Probe Gaps", "probe_gaps"),
+        ("Probe Mismatches", "probe_mismatches"),
+        ("Probe Mismatch Details", "probe_mismatch_details"),
+        ("Probe Evaluation Method", "probe_evaluation_method"),
+        ("Probe Evaluation Threshold", "probe_evaluation_threshold"),
+        ("Probe Percent Identity", "probe_percent_identity"),
+        ("Probe Total Differences", "probe_total_differences"),
+)
+
+    has_probe = bool((getattr(request, "probe_sequence", "") or "").strip())
+    if isinstance(request, ValidatorRequest):
+        has_probe = has_probe or any(
+            (target.probe_sequence or '').strip()
+            for sample in request.samples.prefetch_related('targets')
+            for target in sample.targets.all()
+        )
 
     def _get_field(data, names, default=None):
         """Return the first available report field."""
@@ -1360,7 +1419,7 @@ def _upload_summary_excel(blob_client, container_name, request):
 
     def _clean_sequence(value):
         """Remove formatting whitespace from a sequence string."""
-        return ''.join(str(value or '').split()).upper()
+        return "".join(str(value or "").split()).upper()
 
     def _decode_details(value):
         """Decode HTML entities such as ``&gt;`` in mismatch details."""
@@ -1370,30 +1429,30 @@ def _upload_summary_excel(blob_client, container_name, request):
             from HTMLParser import HTMLParser
 
             unescape = HTMLParser().unescape
-        return unescape(str(value or ''))
+        return unescape(str(value or ""))
 
     def _primer_direction(header):
         """Determine whether a primer header is forward or reverse."""
-        header = str(header or '').strip().lower()
+        header = str(header or "").strip().lower()
         forward_suffixes = (
-            '-f',
-            '_f',
-            '.f',
-            ' forward',
-            '_forward',
+            "-f",
+            "_f",
+            ".f",
+            " forward",
+            "_forward",
         )
         reverse_suffixes = (
-            '-r',
-            '_r',
-            '.r',
-            ' reverse',
-            '_reverse',
+            "-r",
+            "_r",
+            ".r",
+            " reverse",
+            "_reverse",
         )
 
         if header.endswith(forward_suffixes):
-            return 'forward'
+            return "forward"
         if header.endswith(reverse_suffixes):
-            return 'reverse'
+            return "reverse"
         return None
 
     def _target_from_details(primer_sequence, details):
@@ -1408,12 +1467,12 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         primer_sequence = _clean_sequence(primer_sequence)
         if not primer_sequence:
-            return ''
+            return ""
 
         target = list(primer_sequence)
         detail_text = _decode_details(details)
         substitutions = re.findall(
-            r'(\d+)\s*([A-Za-z-])\s*>\s*([A-Za-z-])',
+            r"(\d+)\s*([A-Za-z-])\s*>\s*([A-Za-z-])",
             detail_text,
         )
 
@@ -1423,7 +1482,7 @@ def _upload_summary_excel(blob_client, container_name, request):
             if 0 <= index < len(target):
                 target[index] = target_base.upper()
 
-        return ''.join(target)
+        return "".join(target)
 
     def _pseudoalignment(primer_sequence, target_sequence, details):
         """Return a three-line, BLAST-like primer/target alignment."""
@@ -1437,23 +1496,23 @@ def _upload_summary_excel(blob_client, container_name, request):
             )
 
         if not primer_sequence or not target_sequence:
-            return _decode_details(details) or 'ND'
+            return _decode_details(details) or "ND"
 
         length = max(len(primer_sequence), len(target_sequence))
-        primer_sequence = primer_sequence.ljust(length, '-')
-        target_sequence = target_sequence.ljust(length, '-')
-        match_line = ''.join(
-            '|' if primer_base == target_base else ' '
+        primer_sequence = primer_sequence.ljust(length, "-")
+        target_sequence = target_sequence.ljust(length, "-")
+        match_line = "".join(
+            "|" if primer_base == target_base else " "
             for primer_base, target_base in zip(
                 primer_sequence,
                 target_sequence,
             )
         )
 
-        return (
-            f'Primer: {primer_sequence}\n'
-            f'        {match_line}\n'
-            f'Target: {target_sequence}'
+        return "Primer: {0}\n        {1}\nTarget: {2}".format(
+            primer_sequence,
+            match_line,
+            target_sequence,
         )
 
     def _combined_pseudoalignment(
@@ -1475,11 +1534,14 @@ def _upload_summary_excel(blob_client, container_name, request):
             reverse_target,
             reverse_details,
         )
-        return f'FORWARD\n{forward_alignment}\n\nREVERSE\n{reverse_alignment}'
+        return "FORWARD\n{0}\n\nREVERSE\n{1}".format(
+            forward_alignment,
+            reverse_alignment,
+        )
 
     def _parse_mismatch(value):
         """Convert a mismatch value to an integer when possible."""
-        if value in (None, '', 'ND'):
+        if value in (None, "", "ND"):
             return None
         try:
             return int(value)
@@ -1489,33 +1551,119 @@ def _upload_summary_excel(blob_client, container_name, request):
             except (TypeError, ValueError):
                 return None
 
+    probe_configuration = {}
+    if isinstance(request, ValidatorRequest):
+        for configured_sample in request.samples.prefetch_related('targets'):
+            for configured_target in configured_sample.targets.all():
+                probe_configuration[
+                    configured_target.name.strip().lower()
+                ] = configured_target
+
+    def _probe_values(data, primer_name=None):
+        """Return probe alignment values and the configured pass decision."""
+        probe_info = _probe_info_for_target(data, primer_name)
+        if probe_info is None:
+            return {
+                'probe_presence': 'Absent',
+                'probe_gaps': 'ND',
+                'probe_mismatches': 'ND',
+                'probe_mismatch_details': 'ND',
+                'probe_evaluation_method': 'ND',
+                'probe_evaluation_threshold': 'ND',
+                'probe_percent_identity': 'ND',
+                'probe_total_differences': 'ND',
+            }
+        percent_id = _get_field(
+            probe_info, ['percent_id', 'percent_identity'], 0
+        )
+        gaps = _get_field(probe_info, ['gaps', 'gap'], 'ND')
+        mismatches = _get_field(
+            probe_info, ['mismatches', 'mismatch'], 'ND'
+        )
+        configured_target = probe_configuration.get(
+            str(primer_name or '').strip().lower()
+        )
+        method = getattr(
+            configured_target, 'probe_evaluation_method', 'percent_identity'
+        )
+        percent_threshold = float(getattr(
+            configured_target, 'probe_percent_identity', 80.0
+        ))
+        difference_threshold = int(getattr(
+            configured_target, 'probe_max_differences', 2
+        ))
+        try:
+            observed_identity = float(percent_id)
+        except (TypeError, ValueError):
+            observed_identity = None
+        try:
+            observed_differences = int(float(mismatches)) + int(float(gaps))
+        except (TypeError, ValueError):
+            observed_differences = None
+
+        if method == 'max_differences':
+            present = (
+                observed_differences is not None and
+                observed_differences <= difference_threshold
+            )
+            threshold = difference_threshold
+        else:
+            method = 'percent_identity'
+            present = (
+                observed_identity is not None and
+                observed_identity >= percent_threshold
+            )
+            threshold = percent_threshold
+
+        result = {
+            "probe_presence": "Present" if present else "Absent",
+            "probe_gaps": gaps,
+            "probe_mismatches": mismatches,
+            "probe_evaluation_method": method,
+            "probe_evaluation_threshold": threshold,
+            "probe_percent_identity": (
+                round(observed_identity, 2) if observed_identity is not None else "ND"
+            ),
+            "probe_total_differences": (
+                observed_differences if observed_differences is not None else "ND"
+            ),
+            "probe_mismatch_details": _decode_details(
+                _get_field(probe_info, ["mismatch_details"], "")
+            )
+            or "ND",
+        }
+        return result
+
     def _location(data, model_object):
-        """Return an explicit location or constructed coordinates."""
+        """Return the explicit location or construct start-stop coordinates."""
         value = _get_field(
             data,
-            ['location', 'amplicon_range', 'GenomeLocation'],
+            ["location", "amplicon_range", "GenomeLocation"],
         )
-        if value not in (None, ''):
+        if value not in (None, ""):
             return value
 
-        start = _get_field(data, ['start_pos'])
-        stop = _get_field(data, ['stop_pos'])
+        start = _get_field(data, ["start_pos"])
+        stop = _get_field(data, ["stop_pos"])
         if model_object is not None:
             start = start or model_object.start_pos
             stop = stop or model_object.stop_pos
 
-        if start not in (None, '') and stop not in (None, ''):
-            return f'{start}-{stop}'
-        return 'ND'
+        if start not in (None, "") and stop not in (None, ""):
+            return "{0}-{1}".format(start, stop)
+        return "ND"
 
     # Collect one worksheet entry per panel/SEQID and retain per-primer data.
     entries = {}
     primer_names = set()
 
     for primer_name, primer_data in report.items():
-        if primer_name == 'validator_version':
+        if primer_name == "validator_version":
             continue
         if not isinstance(primer_data, dict):
+            continue
+        primer_name = str(primer_name or '').strip()
+        if not primer_name:
             continue
 
         primer_names.add(primer_name)
@@ -1525,42 +1673,131 @@ def _upload_summary_excel(blob_client, container_name, request):
 
             panel_name = str(panel_name).upper()
             for seqid, sequence_data in panel_data.items():
-                if seqid in ('percent', 'positive', 'total'):
+                if seqid in ("percent", "positive", "total"):
+                    continue
+                seqid = str(seqid or '').strip()
+                if not seqid:
                     continue
 
                 entry = entries.setdefault(
                     (panel_name, seqid),
-                    {'per_primer': {}},
+                    {"per_primer": {}},
                 )
-                entry['per_primer'][primer_name] = (
+                entry["per_primer"][primer_name] = (
                     sequence_data if isinstance(sequence_data, dict) else {}
                 )
 
-    primer_names = sorted(primer_names)
+    primer_names = sorted(
+        primer_names, key=lambda value: str(value or '')
+    )
+    gene_targets = primer_names[:]
+
+    selected_categories = set(
+        getattr(request, 'gene_exclusion_categories', None) or []
+    )
+    has_gene_references = False
+    if isinstance(request, ValidatorRequest):
+        has_gene_references = any(
+            (target.gene_sequence or '').strip() or target.reference_fasta
+            for sample in request.samples.prefetch_related('targets')
+            for target in sample.targets.all()
+        )
+    include_gene_categories = bool(
+        has_gene_references and selected_categories
+    )
+
+    def gene_label(reference):
+        """Map GeneSeekr reference IDs to configured primer/gene names."""
+        reference = str(reference or '').lower()
+        for gene in gene_targets:
+            normalized = gene.strip().lower()
+            if reference == normalized or reference.endswith('_' + normalized):
+                return gene
+        if 'm90846' in reference:
+            return next(
+                (gene for gene in gene_targets
+                 if gene.strip().lower() == 'inva'),
+                'invA',
+            )
+        if 'l16014' in reference or reference.endswith('_stn'):
+            return next(
+                (gene for gene in gene_targets
+                 if gene.strip().lower() == 'stn'),
+                'stn',
+            )
+        return str(reference)
+
+    gene_percent_matches = {}
+    if has_gene_references and isinstance(request, ValidatorRequest):
+        for record in request.gene_results or []:
+            report_key = _gene_report_key(_gene_value(record, 'report')).lower()
+            target_name = gene_label(_gene_value(
+                record, 'target', 'Target', 'subject_id', 'sseqid'
+            )).strip().lower()
+            identity = _gene_percent_match(record)
+            if report_key and target_name and identity is not None:
+                key = (report_key, target_name)
+                gene_percent_matches[key] = max(
+                    identity, gene_percent_matches.get(key, identity)
+                )
 
     # Load model data because query/ref strings and primer sequences may not
     # be included in request.report.
     if isinstance(request, PrimerVerifierRequest):
         sequence_model = VerifierSEQID
         primer_set_model = VerifierPrimerSet
-        request_filter = 'panel__verifier_request_id'
-        primer_request_filter = 'verifier_request_id'
+        request_filter = "panel__verifier_request_id"
+        primer_request_filter = "verifier_request_id"
     else:
         sequence_model = ValidatorSEQID
         primer_set_model = ValidatorPrimerSet
-        request_filter = 'panel__validator_request_id'
-        primer_request_filter = 'validator_request_id'
+        request_filter = "panel__validator_request_id"
+        primer_request_filter = "validator_request_id"
+
+    from olc_webportalv2.metadata.models import SequenceData
+    from olc_webportalv2.common.benchmarks import BENCHMARK_DATASETS
+    metadata_by_seqid = {
+        metadata.seqid: metadata
+        for metadata in SequenceData.objects.filter(
+            seqid__in=[entry_key[1] for entry_key in entries]
+        ).select_related('labid')
+    }
+
+    # The PrimerValidator workbook is the authoritative source for the
+    # benchmark strain columns. Keep database metadata as a fallback for
+    # processed sequences that are not present in the workbook exports.
+    metadata_directory = os.path.join(os.path.dirname(__file__), 'metadata')
+    metadata_files = (
+        ('inclusivity', 'bds-salmonella.csv'),
+        ('exclusivity', 'bds-exclusivity.csv'),
+        ('inclusivity', 'ncbi-salmonella.csv'),
+    )
+    entry_seqids = set(entry_key[1] for entry_key in entries)
+    metadata_by_panel_seqid = {}
+    for metadata_panel, metadata_filename in metadata_files:
+        metadata_path = os.path.join(metadata_directory, metadata_filename)
+        if not os.path.exists(metadata_path):
+            continue
+        with open(metadata_path, 'r', encoding='utf-8') as metadata_file:
+            for metadata_row in csv.DictReader(metadata_file):
+                seqid = metadata_row.get('seqid', '').strip()
+                if seqid and seqid in entry_seqids:
+                    metadata_by_panel_seqid[(metadata_panel, seqid)] = (
+                        metadata_row
+                    )
 
     sequence_query = (
         sequence_model.objects.filter(**{request_filter: request.pk})
         .select_related(
-            'panel',
-            'primer',
+            "panel",
+            "primer",
         )
-        .prefetch_related('primer__primer')
+        .prefetch_related("primer__primer")
     )
 
     model_values = {}
+    benchmark_panel_by_row = {}
+    benchmark_labels = dict(BENCHMARK_DATASETS)
 
     for sequence_object in sequence_query:
         if sequence_object.primer is None:
@@ -1573,6 +1810,127 @@ def _upload_summary_excel(blob_client, container_name, request):
             primer_name,
         )
         model_values[model_key] = sequence_object
+        benchmark_panel_by_row.setdefault(
+            (str(sequence_object.panel.panel).upper(), sequence_object.seqid),
+            sequence_object.panel.genus,
+        )
+
+    validator_classification_by_row = {}
+    validator_logic_by_row = {}
+    validator_logic_applied = False
+    validator_generic_result_by_row = {}
+    if isinstance(request, ValidatorRequest):
+        configured_samples = list(request.samples.prefetch_related('targets'))
+        salmonella_rules = [
+            sample for sample in configured_samples
+            if sample.classification_rule == 'salmonella'
+        ]
+        if salmonella_rules:
+            classification_targets = set(
+                target.name.strip().lower()
+                for sample in salmonella_rules
+                for target in sample.targets.all()
+            )
+            classification_targets.intersection_update(set(('inva', 'stn')))
+            required_targets = classification_targets
+            logic = ''
+        else:
+            required_targets = set(
+                target.name.strip().lower()
+                for sample in configured_samples
+                for target in sample.targets.all()
+            )
+            logic_values = set(
+                sample.logic for sample in configured_samples
+                if sample.logic in ('AND', 'OR')
+            )
+            logic = next(iter(logic_values), '') if len(logic_values) == 1 else ''
+            validator_logic_applied = bool(logic)
+
+        if required_targets and (salmonella_rules or logic):
+            probe_required_targets = set()
+
+            if isinstance(request, ValidatorRequest):
+                for sample in configured_samples:
+                    for target in sample.targets.all():
+                        if (target.probe_sequence or '').strip():
+                            probe_required_targets.add(
+                                target.name.strip().lower()
+                            )
+
+            # The legacy request-level probe applies to every configured
+            # target because it is submitted as the shared probe sequence.
+            if (
+                (getattr(request, 'probe_sequence', '') or '').strip()
+                and not probe_required_targets
+            ):
+                probe_required_targets.update(required_targets)
+
+            for panel_name, seqid in entries:
+                found_targets = set()
+                per_primer = entries[(panel_name, seqid)]['per_primer']
+
+                for target_name in required_targets:
+                    primer_name = next(
+                        (
+                            name for name in per_primer
+                            if name.strip().lower() == target_name
+                        ),
+                        target_name
+                    )
+                    model_object = model_values.get(
+                        (panel_name, seqid, primer_name)
+                    )
+                    report_data = per_primer.get(primer_name, {})
+                    amplicon_length = _get_field(
+                        report_data,
+                        ('amplicon_length', 'amplicon_size', 'AmpliconSize'),
+                        getattr(model_object, 'amplicon_length', '')
+                    )
+                    amplicon_detected = (
+                        str(amplicon_length or '').strip().lower() not in (
+                            '', 'nd', 'none', 'null', '0'
+                        )
+                    )
+
+                    if not amplicon_detected:
+                        continue
+
+                    if target_name in probe_required_targets:
+                        probe_values = _probe_values(report_data, primer_name)
+                        probe_detected = (
+                            str(probe_values.get('probe_presence') or '')
+                            .strip().lower() == 'present'
+                        )
+                        if not probe_detected:
+                            continue
+
+                    found_targets.add(target_name)
+
+                row_key = (panel_name, seqid)
+                if salmonella_rules:
+                    validator_classification_by_row[row_key] = (
+                        _validator_classification_label(
+                            found_targets,
+                            required_targets,
+                            logic,
+                            'salmonella'
+                        )
+                    )
+                else:
+                    validator_generic_result_by_row[row_key] = (
+                        _validator_classification_label(
+                            found_targets,
+                            required_targets,
+                            logic,
+                            'none'
+                        )
+                    )
+                    validator_logic_by_row[row_key] = _validator_logic_label(
+                        found_targets,
+                        required_targets,
+                        logic
+                    )
 
     # Load primer sequences independently of sequence hits. This ensures that
     # perfect matches and primer/SEQID combinations without a SEQID model row
@@ -1580,7 +1938,7 @@ def _upload_summary_excel(blob_client, container_name, request):
     primer_sequences = {}
     primer_set_query = primer_set_model.objects.filter(
         **{primer_request_filter: request.pk}
-    ).prefetch_related('primer')
+    ).prefetch_related("primer")
 
     for primer_set in primer_set_query:
         directional_sequences = {}
@@ -1591,23 +1949,30 @@ def _upload_summary_excel(blob_client, container_name, request):
             if direction is None:
                 unresolved_sequences.append(primer_object.primer_sequence)
             else:
-                directional_sequences[direction] = (
-                    primer_object.primer_sequence
-                )
+                directional_sequences[direction] = primer_object.primer_sequence
 
         # Some uploaded primer headers do not end with -F/-R. For a standard
         # two-primer set, use model order as a deterministic fallback.
-        if 'forward' not in directional_sequences and unresolved_sequences:
-            directional_sequences['forward'] = unresolved_sequences.pop(0)
-        if 'reverse' not in directional_sequences and unresolved_sequences:
-            directional_sequences['reverse'] = unresolved_sequences.pop(0)
+        if "forward" not in directional_sequences and unresolved_sequences:
+            directional_sequences["forward"] = unresolved_sequences.pop(0)
+        if "reverse" not in directional_sequences and unresolved_sequences:
+            directional_sequences["reverse"] = unresolved_sequences.pop(0)
 
         primer_sequences[primer_set.primer_name] = directional_sequences
 
-    def _model_value(model_object, attribute, default=''):
+    def _model_value(model_object, attribute, default=""):
         """Read an attribute from an optional model object."""
         if model_object is None:
             return default
+        if isinstance(model_object, dict):
+            aliases = {
+                "labid": "isolate_id",
+                "serotype": "serovar",
+            }
+            return model_object.get(
+                aliases.get(attribute, attribute),
+                default,
+            )
         return getattr(model_object, attribute, default)
 
     def _result(panel_name, seqid, primer_name, report_data):
@@ -1618,74 +1983,68 @@ def _upload_summary_excel(blob_client, container_name, request):
 
         forward_mismatch = _get_field(
             data,
-            ['forward_mismatch', 'ForwardMismatches'],
-            _model_value(model_object, 'forward_mismatch'),
+            ["forward_mismatch", "ForwardMismatches"],
+            _model_value(model_object, "forward_mismatch"),
         )
         reverse_mismatch = _get_field(
             data,
-            ['reverse_mismatch', 'ReverseMismatches'],
-            _model_value(model_object, 'reverse_mismatch'),
+            ["reverse_mismatch", "ReverseMismatches"],
+            _model_value(model_object, "reverse_mismatch"),
         )
         forward_details = _get_field(
             data,
-            ['forward_mismatch_details', 'ForwardMismatchDetails'],
-            _model_value(model_object, 'forward_mismatch_details'),
+            ["forward_mismatch_details", "ForwardMismatchDetails"],
+            _model_value(model_object, "forward_mismatch_details"),
         )
         reverse_details = _get_field(
             data,
-            ['reverse_mismatch_details', 'ReverseMismatchDetails'],
-            _model_value(model_object, 'reverse_mismatch_details'),
+            ["reverse_mismatch_details", "ReverseMismatchDetails"],
+            _model_value(model_object, "reverse_mismatch_details"),
         )
         total_mismatch = _get_field(
             data,
-            ['total_mismatch', 'TotalMismatches'],
-            _model_value(model_object, 'total_mismatch'),
+            ["total_mismatch", "TotalMismatches"],
+            _model_value(model_object, "total_mismatch"),
         )
 
-        if total_mismatch in (None, ''):
+        if total_mismatch in (None, ""):
             forward_value = _parse_mismatch(forward_mismatch)
             reverse_value = _parse_mismatch(reverse_mismatch)
             if forward_value is not None or reverse_value is not None:
                 total_mismatch = (forward_value or 0) + (reverse_value or 0)
 
-        forward_primer = sequences.get('forward', '')
-        reverse_primer = sequences.get('reverse', '')
-        forward_target = _model_value(model_object, 'forward_ref')
-        reverse_target = _model_value(model_object, 'reverse_ref')
+        forward_primer = sequences.get("forward", "")
+        reverse_primer = sequences.get("reverse", "")
+        forward_target = _model_value(model_object, "forward_ref")
+        reverse_target = _model_value(model_object, "reverse_ref")
 
         # Prefer stored aligned query strings where available. Otherwise use
         # the original primer sequence from VerifierPrimers/ValidatorPrimers.
-        forward_query = (
-            _model_value(model_object, 'forward_query') or forward_primer
-        )
-        reverse_query = (
-            _model_value(model_object, 'reverse_query') or reverse_primer
-        )
+        forward_query = _model_value(model_object, "forward_query") or forward_primer
+        reverse_query = _model_value(model_object, "reverse_query") or reverse_primer
 
-        return {
-            'amplicon_length': _get_field(
+        result = {
+            "amplicon_length": _get_field(
                 data,
-                ['amplicon_length', 'amplicon_size', 'AmpliconSize'],
-                _model_value(model_object, 'amplicon_length'),
+                ["amplicon_length", "amplicon_size", "AmpliconSize"],
+                _model_value(model_object, "amplicon_length"),
             ),
-            'contig': _get_field(
+            "contig": _get_field(
                 data,
-                ['contig', 'Contig'],
-                _model_value(model_object, 'contig'),
+                ["contig", "Contig"],
+                _model_value(model_object, "contig"),
             ),
-            'location': _location(data, model_object),
-            'direction': _get_field(
+            "location": _location(data, model_object),
+            "direction": _get_field(
                 data,
-                ['direction', 'orientation'],
-                _model_value(model_object, 'direction'),
+                ["direction", "orientation"],
+                _model_value(model_object, "direction"),
             ),
-            'forward_mismatch': forward_mismatch,
-            'forward_mismatch_details': _decode_details(forward_details)
-            or 'ND',
-            'reverse_mismatch': reverse_mismatch,
-            'reverse_mismatch_details': _decode_details(reverse_details)
-            or 'ND',
-            'pseudoalignment': _combined_pseudoalignment(
+            "forward_mismatch": forward_mismatch,
+            "forward_mismatch_details": _decode_details(forward_details) or "ND",
+            "reverse_mismatch": reverse_mismatch,
+            "reverse_mismatch_details": _decode_details(reverse_details) or "ND",
+            "pseudoalignment": _combined_pseudoalignment(
                 forward_query,
                 forward_target,
                 forward_details,
@@ -1693,11 +2052,13 @@ def _upload_summary_excel(blob_client, container_name, request):
                 reverse_target,
                 reverse_details,
             ),
-            'total_mismatch': total_mismatch,
+            "total_mismatch": total_mismatch,
         }
+        result.update(_probe_values(data, primer_name))
+        return result
 
     temp_file = tempfile.NamedTemporaryFile(
-        suffix='.xlsx',
+        suffix=".xlsx",
         delete=False,
     )
     temp_path = temp_file.name
@@ -1705,65 +2066,265 @@ def _upload_summary_excel(blob_client, container_name, request):
 
     try:
         workbook = xlsxwriter.Workbook(temp_path)
-        header_format = workbook.add_format(
-            {
-                'bold': True,
-                'bg_color': '#D9EAD3',
-                'border': 1,
-                'align': 'center',
-                'valign': 'vcenter',
-                'text_wrap': True,
-            }
-        )
+        header_options = {
+            "bold": True,
+            "bg_color": "#FFFFFF",
+            "border": 1,
+            "align": "center",
+            "valign": "vcenter",
+            "text_wrap": True,
+        }
+        header_format = workbook.add_format(header_options)
         cell_format = workbook.add_format(
             {
-                'border': 1,
-                'valign': 'vcenter',
+                "border": 1,
+                "valign": "vcenter",
             }
         )
         alignment_format = workbook.add_format(
             {
-                'border': 1,
-                'font_name': 'Courier New',
-                'font_size': 9,
-                'valign': 'vcenter',
-                'text_wrap': True,
+                "border": 1,
+                "font_name": "Courier New",
+                "font_size": 9,
+                "valign": "vcenter",
+                "text_wrap": True,
             }
         )
+        gene_colors = (
+            "#F2F2F2",  # gray
+            "#DDEBF7",  # blue
+            "#E2F0D9",  # green
+            "#E4DFEC",  # purple
+            "#E2E6C9",  # olive
+            "#FCE4D6",  # orange
+            "#FCE4EC",  # pink
+            "#FFF2CC",  # yellow
+            "#EAD7C0",  # brown
+            "#D0E0E3",  # teal
+            "#F4CCCC",  # coral
+        )
+        gene_formats = []
+        gene_header_formats = []
+        gene_alignment_formats = []
+        for gene_color in gene_colors:
+            gene_formats.append(workbook.add_format({
+                "border": 1,
+                "bg_color": gene_color,
+                "valign": "vcenter",
+                "text_wrap": True,
+            }))
+            gene_header_options = dict(header_options)
+            gene_header_options["bg_color"] = gene_color
+            gene_header_formats.append(workbook.add_format(gene_header_options))
+            gene_alignment_formats.append(workbook.add_format({
+                "border": 1,
+                "bg_color": gene_color,
+                "font_name": "Courier New",
+                "font_size": 9,
+                "valign": "vcenter",
+                "text_wrap": True,
+            }))
 
-        worksheet = workbook.add_worksheet('PrimerVerifierResults')
-        headers = ['SEQID', 'PANEL']
+        worksheet = workbook.add_worksheet("PrimerVerifierResults")
+        alignment_worksheet = workbook.add_worksheet("Pseudoalignments")
+        alignment_headers = [
+            "PANEL", "SEQID", "Primer", "Forward Mismatch",
+            "Forward Mismatch Details", "Reverse Mismatch",
+            "Reverse Mismatch Details", "Total Mismatches", "Pseudoalignment",
+        ]
+        for column, header in enumerate(alignment_headers):
+            alignment_worksheet.write(0, column, header, header_format)
+        alignment_row = 1
+        headers = [
+            "IsolateID", "SEQID", "Species", "Subspecies", "Serovar",
+            "PANEL", "BENCHMARK PANEL", "RESULT",
+        ]
+        if validator_logic_applied:
+            headers.append("LOGIC")
+        headers.append("Benchmark Version")
+        if include_gene_categories:
+            headers.append("Matched Exclusion Categories")
         for primer_name in primer_names:
             for field_label, field_name in primer_fields:
                 del field_name
-                headers.append(f'{field_label}  {primer_name}')
+                headers.append("{0}  {1}".format(field_label, primer_name))
+            if has_probe:
+                for field_label, field_name in probe_fields:
+                    del field_name
+                    headers.append(
+                        "{0}  {1}".format(field_label, primer_name)
+                    )
+            if has_gene_references:
+                headers.append("Gene Sequence Percent Match  {0}".format(
+                    primer_name
+                ))
 
         for column, header in enumerate(headers):
-            worksheet.write(0, column, header, header_format)
+            metadata_columns = 9 + int(validator_logic_applied)
+            if (
+                column < metadata_columns
+                or header in {
+                    "LOGIC",
+                    "Matched Exclusion Categories",
+                }
+            ):
+                output_format = header_format
+            else:
+                gene_start = metadata_columns + int(include_gene_categories)
+                gene_width = len(primer_fields)
 
-        panel_order = {'INCLUSIVITY': 0, 'EXCLUSIVITY': 1}
+                if has_probe:
+                    gene_width += len(probe_fields)
+
+                if has_gene_references:
+                    gene_width += 1
+                gene_index = (column - gene_start) // gene_width
+                output_format = gene_header_formats[
+                    gene_index % len(gene_header_formats)
+                ]
+            worksheet.write(0, column, header, output_format)
+
+        panel_order = {"INCLUSIVITY": 0, "EXCLUSIVITY": 1}
         sorted_keys = sorted(
             entries,
             key=lambda item: (
                 panel_order.get(item[0], 2),
                 item[0],
-                item[1],
+                str(item[1] or ''),
             ),
         )
 
         for row, entry_key in enumerate(sorted_keys, start=1):
             panel_name, seqid = entry_key
             entry = entries[entry_key]
-            worksheet.write(row, 0, seqid, cell_format)
-            worksheet.write(row, 1, panel_name, cell_format)
-            column = 2
-            row_has_alignment = False
-
-            for primer_name in primer_names:
-                report_data = entry['per_primer'].get(primer_name, {})
-                model_object = model_values.get(
-                    (panel_name, seqid, primer_name)
+            metadata = metadata_by_panel_seqid.get(
+                (panel_name.lower(), seqid),
+                metadata_by_seqid.get(seqid),
+            )
+            isolate_id = _model_value(metadata, "labid")
+            if isolate_id and not isinstance(isolate_id, str):
+                isolate_id = getattr(isolate_id, "labid", str(isolate_id))
+            isolate_id = isolate_id or seqid
+            genus = str(_model_value(metadata, "genus", "")).strip().lower()
+            worksheet.write(row, 0, isolate_id, cell_format)
+            worksheet.write(row, 1, seqid, cell_format)
+            worksheet.write(row, 2, _model_value(metadata, "species", "ND") or "ND", cell_format)
+            worksheet.write(row, 3, _model_value(metadata, "subspecies", "ND") or "ND", cell_format)
+            worksheet.write(row, 4, _model_value(metadata, "serotype", "ND") or "ND", cell_format)
+            worksheet.write(row, 5, panel_name, cell_format)
+            panel_benchmarks = (
+                request.inclusivity_panel
+                if panel_name == 'INCLUSIVITY'
+                else request.exclusivity_panel
+            )
+            if not panel_benchmarks:
+                benchmark_attribute = (
+                    'inclusivity_benchmark'
+                    if panel_name == 'INCLUSIVITY'
+                    else 'exclusivity_benchmark'
                 )
+                scalar_benchmark = getattr(request, benchmark_attribute, '')
+                panel_benchmarks = [scalar_benchmark] if scalar_benchmark else []
+            benchmark_name = benchmark_panel_by_row.get((panel_name, seqid))
+            selected_benchmarks = [
+                str(name or '').strip().lower()
+                for name in panel_benchmarks
+                if str(name or '').strip()
+            ]
+            if not benchmark_name:
+                if (
+                    'bds-listeria' in selected_benchmarks
+                    and str(seqid).upper().startswith('BDS-LM')
+                ):
+                    benchmark_name = 'bds-listeria'
+                else:
+                    other_benchmarks = [
+                        name for name in selected_benchmarks
+                        if name != 'bds-listeria'
+                    ]
+                    if len(other_benchmarks) == 1:
+                        benchmark_name = other_benchmarks[0]
+                    elif len(selected_benchmarks) == 1:
+                        benchmark_name = selected_benchmarks[0]
+            benchmark_label = benchmark_labels.get(
+                str(benchmark_name or '').strip().lower(),
+                benchmark_name or 'ND',
+            )
+            worksheet.write(row, 6, benchmark_label, cell_format)
+            benchmark_versions = request.benchmark_versions or {}
+            benchmark_version = benchmark_versions.get(
+                str(benchmark_name or '').strip().lower(),
+                ''
+            )
+            metadata_result = _model_value(metadata, "result", "")
+            calculated_result = validator_classification_by_row.get(
+                (panel_name, seqid)
+            )
+            if (
+                isinstance(request, ValidatorRequest) and
+                (panel_name, seqid) not in validator_generic_result_by_row and
+                calculated_result is None
+            ):
+                # Legacy Validator requests without configured AND/OR logic
+                # retain amplicon-only result behavior. Configured analyses
+                # use the probe-aware found_targets calculation above.
+                found_amplicon = any(
+                    str(_get_field(
+                        report_data,
+                        ('amplicon_length', 'amplicon_size', 'AmpliconSize'),
+                        ''
+                    ) or '').strip().lower() not in (
+                        '', 'nd', 'none', 'null', '0'
+                    )
+                    for report_data in entry['per_primer'].values()
+                )
+                validator_generic_result_by_row[(panel_name, seqid)] = (
+                    'Detected' if found_amplicon else 'Not detected'
+                )
+            worksheet.write(
+                row, 7,
+                    calculated_result or (
+                    validator_generic_result_by_row.get((panel_name, seqid))
+                    if isinstance(request, ValidatorRequest)
+                    else metadata_result or (
+                            "Salmonella" if genus == "salmonella"
+                            else "Not Salmonella"
+                        )
+                    ),
+                cell_format,
+            )
+            column = 8
+            if validator_logic_applied:
+                worksheet.write(
+                    row, column,
+                    validator_logic_by_row.get((panel_name, seqid), ''),
+                    cell_format,
+                )
+                column += 1
+            worksheet.write(row, column, benchmark_version or "ND", cell_format)
+            column += 1
+            categories = []
+            if isinstance(request, ValidatorRequest):
+                category_results = request.gene_exclusion_results or {}
+                normalized_seqid = _gene_query_key(seqid).lower()
+                categories = category_results.get(seqid)
+                if categories is None:
+                    categories = next(
+                        (
+                            values for query, values in
+                            category_results.items()
+                            if _gene_query_key(query).lower() == normalized_seqid
+                        ),
+                        [],
+                    )
+            if include_gene_categories:
+                worksheet.write(
+                    row, column, ', '.join(categories) or 'ND', cell_format
+                )
+                column += 1
+            for gene_index, primer_name in enumerate(primer_names):
+                report_data = entry["per_primer"].get(primer_name, {})
+                model_object = model_values.get((panel_name, seqid, primer_name))
                 has_hit = bool(report_data) or model_object is not None
                 result = _result(
                     panel_name,
@@ -1772,18 +2333,53 @@ def _upload_summary_excel(blob_client, container_name, request):
                     report_data,
                 )
 
+                mismatch_values = (
+                    result.get('forward_mismatch'),
+                    result.get('reverse_mismatch'),
+                    result.get('total_mismatch'),
+                )
+                has_mismatch = False
+                for mismatch_value in mismatch_values:
+                    try:
+                        if float(mismatch_value) > 0:
+                            has_mismatch = True
+                            break
+                    except (TypeError, ValueError):
+                        continue
+                pseudoalignment = result.get('pseudoalignment')
+                if has_mismatch and pseudoalignment not in (None, '', 'ND'):
+                    alignment_values = [
+                        panel_name,
+                        seqid,
+                        primer_name,
+                        result.get('forward_mismatch') or 'ND',
+                        result.get('forward_mismatch_details') or 'ND',
+                        result.get('reverse_mismatch') or 'ND',
+                        result.get('reverse_mismatch_details') or 'ND',
+                        result.get('total_mismatch') or 'ND',
+                        pseudoalignment,
+                    ]
+                    for alignment_column, alignment_value in enumerate(
+                            alignment_values):
+                        alignment_worksheet.write(
+                            alignment_row,
+                            alignment_column,
+                            alignment_value,
+                            alignment_format if alignment_column == 8
+                            else cell_format,
+                        )
+                    alignment_worksheet.set_row(alignment_row, 105)
+                    alignment_row += 1
+
                 for field_label, field_name in primer_fields:
                     del field_label
-                    value = result.get(field_name) if has_hit else 'ND'
-                    if value in (None, ''):
-                        value = 'ND'
+                    value = result.get(field_name) if has_hit else "ND"
+                    if value in (None, ""):
+                        value = "ND"
 
-                    output_format = cell_format
-                    if field_name == 'pseudoalignment':
-                        output_format = alignment_format
-                        if isinstance(value, str) and '\n' in value:
-                            row_has_alignment = True
-
+                    output_format = gene_formats[
+                        gene_index % len(gene_formats)
+                    ]
                     worksheet.write(
                         row,
                         column,
@@ -1792,7 +2388,38 @@ def _upload_summary_excel(blob_client, container_name, request):
                     )
                     column += 1
 
-            worksheet.set_row(row, 105 if row_has_alignment else 20)
+                if has_probe:
+                    for field_label, field_name in probe_fields:
+                        del field_label
+
+                        value = result.get(field_name)
+                        if value in (None, ""):
+                            value = "ND"
+
+                        worksheet.write(
+                            row,
+                            column,
+                            value,
+                            gene_formats[
+                                gene_index % len(gene_formats)
+                            ],
+                        )
+                        column += 1
+
+                if has_gene_references:
+                    percent_key = (
+                        _gene_report_key(seqid).lower(),
+                        primer_name.strip().lower(),
+                    )
+                    percent_match = gene_percent_matches.get(percent_key)
+                    worksheet.write(
+                        row, column,
+                        percent_match if percent_match is not None else 'ND',
+                        gene_formats[gene_index % len(gene_formats)],
+                    )
+                    column += 1
+
+            worksheet.set_row(row, 20)
 
         worksheet.autofilter(
             0,
@@ -1800,36 +2427,137 @@ def _upload_summary_excel(blob_client, container_name, request):
             max(len(sorted_keys), 1),
             max(len(headers) - 1, 0),
         )
-        worksheet.freeze_panes(1, 2)
+        worksheet.freeze_panes(
+            1, 9 + int(validator_logic_applied)
+        )
         worksheet.set_row(0, 54)
         worksheet.set_column(0, 0, 22)
         worksheet.set_column(1, 1, 14)
-
-        column = 2
+        worksheet.set_column(2, 4, 22)
+        worksheet.set_column(5, 6, 22)
+        if validator_logic_applied:
+            worksheet.set_column(7, 7, 22)
+            worksheet.set_column(8, 8, 18)
+        else:
+            worksheet.set_column(7, 7, 18)
+        if include_gene_categories:
+            category_column = 8 + int(validator_logic_applied)
+            worksheet.set_column(category_column, category_column, 28)
+        column = 8 + int(validator_logic_applied) + int(
+            include_gene_categories
+        )
         for primer_name in primer_names:
-            del primer_name
             for field_label, field_name in primer_fields:
                 del field_label
-                if field_name == 'pseudoalignment':
+                if field_name == "pseudoalignment":
                     worksheet.set_column(column, column, 48)
-                elif field_name == 'contig':
+                elif field_name == "contig":
                     worksheet.set_column(column, column, 22)
-                elif field_name == 'location':
+                elif field_name == "location":
                     worksheet.set_column(column, column, 18)
                 else:
                     worksheet.set_column(column, column, 15)
                 column += 1
+            if has_probe:
+                for field_label, field_name in probe_fields:
+                    del field_label
+
+                    if field_name == "probe_mismatch_details":
+                        width = 30
+                    elif field_name == "probe_evaluation_method":
+                        width = 22
+                    elif field_name == "probe_evaluation_threshold":
+                        width = 20
+                    elif field_name == "probe_percent_identity":
+                        width = 18
+                    elif field_name == "probe_total_differences":
+                        width = 18
+                    else:
+                        width = 15
+
+                    worksheet.set_column(
+                        column,
+                        column,
+                        width
+                    )
+                    column += 1
+            if has_gene_references:
+                worksheet.set_column(column, column, 18)
+                column += 1
+
+        audit_worksheet = workbook.add_worksheet("GeneCategoryAudit")
+        audit_headers = [
+            "Report", "Gene", "Category", "Reason", "Query", "Identity",
+            "Coverage", "Orientation", "Subject Start", "Subject End",
+            "Subject Length", "Query Start", "Query End", "Bit Score",
+            "Reference Gap", "Stop Subject Location", "Codon Change",
+            "Paired Query", "Paired Identity",
+            "Paired Subject Start", "Paired Subject End",
+        ]
+        for column, header in enumerate(audit_headers):
+            audit_worksheet.write(0, column, header, header_format)
+
+        audit_row = 1
+        for report_name, target_details in (
+                getattr(request, 'gene_exclusion_details', {}) or {}).items():
+            for target, evidence_items in target_details.items():
+                for evidence in evidence_items:
+                    hit = evidence.get('hit') or evidence.get('first_hit') or {}
+                    paired_hit = evidence.get('second_hit') or {}
+                    audit_values = [
+                        report_name, target, evidence.get('category', ''),
+                        evidence.get('reason', ''), hit.get('query', ''),
+                        hit.get('identity', ''), hit.get('coverage', ''),
+                        hit.get('orientation', ''), hit.get('subject_start', ''),
+                        hit.get('subject_end', ''), hit.get('subject_length', ''),
+                        hit.get('query_start', ''), hit.get('query_end', ''),
+                        hit.get('bit_score', ''), evidence.get('gap', ''),
+                        ', '.join(
+                            stop.get('subject_location', '')
+                            for stop in evidence.get('stop_evidence', [])
+                        ),
+                        ', '.join(
+                            stop.get('codon_change', '')
+                            for stop in evidence.get('stop_evidence', [])
+                            if stop.get('codon_change')
+                        ),
+                        paired_hit.get('query', ''), paired_hit.get('identity', ''),
+                        paired_hit.get('subject_start', ''),
+                        paired_hit.get('subject_end', ''),
+                    ]
+                    for column, value in enumerate(audit_values):
+                        audit_worksheet.write(audit_row, column, value, cell_format)
+                    audit_row += 1
+        audit_worksheet.autofilter(
+            0, 0, max(audit_row - 1, 1), len(audit_headers) - 1
+        )
+        audit_worksheet.freeze_panes(1, 0)
+        audit_worksheet.set_row(0, 36)
+        audit_worksheet.set_column(0, 1, 24)
+        audit_worksheet.set_column(2, 2, 20)
+        audit_worksheet.set_column(3, 3, 60)
+        audit_worksheet.set_column(4, 18, 18)
+
+        alignment_worksheet.autofilter(
+            0, 0, max(alignment_row - 1, 1), len(alignment_headers) - 1
+        )
+        alignment_worksheet.freeze_panes(1, 0)
+        alignment_worksheet.set_row(0, 36)
+        alignment_worksheet.set_column(0, 0, 16)
+        alignment_worksheet.set_column(1, 1, 20)
+        alignment_worksheet.set_column(2, 2, 24)
+        alignment_worksheet.set_column(3, 7, 20)
+        alignment_worksheet.set_column(8, 8, 72)
 
         workbook.close()
 
-        blob_name = f'reports/{container_name}_summary_report.xlsx'
+        blob_name = "reports/{0}_summary_report.xlsx".format(container_name)
         blob_client.upload_file(
             container_name,
             blob_name,
             temp_path,
             content_type=(
-                'application/vnd.openxmlformats-officedocument.'
-                'spreadsheetml.sheet'
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ),
         )
     finally:
