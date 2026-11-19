@@ -1,0 +1,303 @@
+{
+  "HLY": {
+    "exclusivity": {
+      "combined": {
+        "reverse_details": [
+          [
+            "5A>G",
+            5
+          ],
+          [
+            "5A>G;20C>T",
+            4
+          ]
+        ],
+        "reverse_mismatches": [
+          [
+            "1",
+            5
+          ],
+          [
+            "2",
+            4
+          ]
+        ]
+      },
+      "listeria-exclusivity": {
+        "percent": 1.68,
+        "positive": 9,
+        "probe_prevalence": {
+          "negative": 528,
+          "percent": 1.68,
+          "positive": 9,
+          "total": 537
+        },
+        "reverse_details": [
+          [
+            "5A>G",
+            5
+          ],
+          [
+            "5A>G;20C>T",
+            4
+          ]
+        ],
+        "reverse_mismatches": [
+          [
+            "1",
+            5
+          ],
+          [
+            "2",
+            4
+          ]
+        ],
+        "total": 537
+      }
+    },
+    "inclusivity": {
+      "bds-listeria": {
+        "forward_details": [
+          [
+            "3T>C",
+            122
+          ],
+          [
+            "16G>A",
+            4
+          ]
+        ],
+        "forward_mismatches": [
+          [
+            "1",
+            126
+          ]
+        ],
+        "percent": 100.0,
+        "positive": 212,
+        "probe_prevalence": {
+          "negative": 0,
+          "percent": 100.0,
+          "positive": 212,
+          "total": 212
+        },
+        "reverse_details": [
+          [
+            "5A>G",
+            130
+          ]
+        ],
+        "reverse_mismatches": [
+          [
+            "1",
+            130
+          ]
+        ],
+        "total": 212
+      },
+      "combined": {
+        "forward_details": [
+          [
+            "3T>C",
+            1669
+          ],
+          [
+            "16G>A",
+            5
+          ],
+          [
+            "22A>G",
+            4
+          ],
+          [
+            "3T>C;11T>A",
+            2
+          ],
+          [
+            "18C>T;19A>G;22A>G",
+            1
+          ],
+          [
+            "19A>G",
+            1
+          ],
+          [
+            "3T>C;19A>G",
+            1
+          ],
+          [
+            "9C>T",
+            1
+          ]
+        ],
+        "forward_mismatches": [
+          [
+            "1",
+            1680
+          ],
+          [
+            "2",
+            3
+          ],
+          [
+            "3",
+            1
+          ]
+        ],
+        "reverse_details": [
+          [
+            "5A>G",
+            2088
+          ],
+          [
+            "5A>G;20C>T",
+            8
+          ],
+          [
+            "5A>G;9C>T",
+            3
+          ],
+          [
+            "5A>G;17T>C",
+            2
+          ],
+          [
+            "14T>C",
+            1
+          ],
+          [
+            "2T>C",
+            1
+          ],
+          [
+            "5A>G;11T>C",
+            1
+          ],
+          [
+            "5A>G;6T>C",
+            1
+          ]
+        ],
+        "reverse_mismatches": [
+          [
+            "1",
+            2090
+          ],
+          [
+            "2",
+            15
+          ]
+        ]
+      },
+      "listeria": {
+        "forward_details": [
+          [
+            "3T>C",
+            1547
+          ],
+          [
+            "22A>G",
+            4
+          ],
+          [
+            "3T>C;11T>A",
+            2
+          ],
+          [
+            "16G>A",
+            1
+          ],
+          [
+            "18C>T;19A>G;22A>G",
+            1
+          ],
+          [
+            "19A>G",
+            1
+          ],
+          [
+            "3T>C;19A>G",
+            1
+          ],
+          [
+            "9C>T",
+            1
+          ]
+        ],
+        "forward_mismatches": [
+          [
+            "1",
+            1554
+          ],
+          [
+            "2",
+            3
+          ],
+          [
+            "3",
+            1
+          ]
+        ],
+        "percent": 99.93,
+        "positive": 2714,
+        "probe_prevalence": {
+          "negative": 2,
+          "percent": 99.93,
+          "positive": 2714,
+          "total": 2716
+        },
+        "reverse_details": [
+          [
+            "5A>G",
+            1958
+          ],
+          [
+            "5A>G;20C>T",
+            8
+          ],
+          [
+            "5A>G;9C>T",
+            3
+          ],
+          [
+            "5A>G;17T>C",
+            2
+          ],
+          [
+            "14T>C",
+            1
+          ],
+          [
+            "2T>C",
+            1
+          ],
+          [
+            "5A>G;11T>C",
+            1
+          ],
+          [
+            "5A>G;6T>C",
+            1
+          ]
+        ],
+        "reverse_mismatches": [
+          [
+            "1",
+            1960
+          ],
+          [
+            "2",
+            15
+          ]
+        ],
+        "total": 2716
+      }
+    }
+  },
+  "_metadata": {
+    "benchmark_versions": {
+      "bds-listeria": "1.0.0",
+      "listeria-exclusivity": "1.0.1"
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "HLY": {
+    "exclusivity": {
+      "combined": {
+        "total_mismatch": {
+          "1": {
+            "0, 5A>G": 5,
+            "totals": 5
+          },
+          "2": {
+            "0, 5A>G;20C>T": 4,
+            "totals": 4
+          }
+        }
+      },
+      "listeria-exclusivity": {
+        "total_mismatch": {
+          "1": {
+            "0, 5A>G": 5,
+            "totals": 5
+          },
+          "2": {
+            "0, 5A>G;20C>T": 4,
+            "totals": 4
+          }
+        }
+      }
+    },
+    "inclusivity": {
+      "bds-listeria": {
+        "total_mismatch": {
+          "0": {
+            "0, 0": 78,
+            "totals": 78
+          },
+          "1": {
+            "0, 5A>G": 8,
+            "16G>A, 0": 4,
+            "totals": 12
+          },
+          "2": {
+            "3T>C, 5A>G": 122,
+            "totals": 122
+          }
+        }
+      },
+      "combined": {
+        "total_mismatch": {
+          "0": {
+            "0, 0": 814,
+            "totals": 814
+          },
+          "1": {
+            "0, 14T>C": 1,
+            "0, 2T>C": 1,
+            "0, 5A>G": 422,
+            "16G>A, 0": 5,
+            "22A>G, 0": 1,
+            "3T>C, 0": 1,
+            "totals": 431
+          },
+          "2": {
+            "0, 5A>G;11T>C": 1,
+            "0, 5A>G;20C>T": 3,
+            "19A>G, 5A>G": 1,
+            "22A>G, 5A>G": 3,
+            "3T>C, 5A>G": 1657,
+            "9C>T, 5A>G": 1,
+            "totals": 1666
+          },
+          "3": {
+            "3T>C, 5A>G;17T>C": 2,
+            "3T>C, 5A>G;20C>T": 5,
+            "3T>C, 5A>G;6T>C": 1,
+            "3T>C, 5A>G;9C>T": 3,
+            "3T>C;11T>A, 5A>G": 2,
+            "3T>C;19A>G, 5A>G": 1,
+            "totals": 14
+          },
+          "4": {
+            "18C>T;19A>G;22A>G, 5A>G": 1,
+            "totals": 1
+          }
+        }
+      },
+      "listeria": {
+        "total_mismatch": {
+          "0": {
+            "0, 0": 736,
+            "totals": 736
+          },
+          "1": {
+            "0, 14T>C": 1,
+            "0, 2T>C": 1,
+            "0, 5A>G": 414,
+            "16G>A, 0": 1,
+            "22A>G, 0": 1,
+            "3T>C, 0": 1,
+            "totals": 419
+          },
+          "2": {
+            "0, 5A>G;11T>C": 1,
+            "0, 5A>G;20C>T": 3,
+            "19A>G, 5A>G": 1,
+            "22A>G, 5A>G": 3,
+            "3T>C, 5A>G": 1535,
+            "9C>T, 5A>G": 1,
+            "totals": 1544
+          },
+          "3": {
+            "3T>C, 5A>G;17T>C": 2,
+            "3T>C, 5A>G;20C>T": 5,
+            "3T>C, 5A>G;6T>C": 1,
+            "3T>C, 5A>G;9C>T": 3,
+            "3T>C;11T>A, 5A>G": 2,
+            "3T>C;19A>G, 5A>G": 1,
+            "totals": 14
+          },
+          "4": {
+            "18C>T;19A>G;22A>G, 5A>G": 1,
+            "totals": 1
+          }
+        }
+      }
+    }
+  }
+}
