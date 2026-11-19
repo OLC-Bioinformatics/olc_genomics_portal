@@ -116,6 +116,7 @@ class SequencingRun(models.Model):
     task_retry_count = models.PositiveIntegerField(default=0)
     task_started_at = models.DateTimeField(blank=True, null=True)
     task_submitted_at = models.DateTimeField(blank=True, null=True)
+    integration_test = models.BooleanField(default=False)
     rename_status = models.CharField(max_length=16, blank=True, default="")
     rename_target = models.CharField(max_length=64, blank=True, default="")
     pool_id = models.CharField(max_length=64, blank=True, default="")

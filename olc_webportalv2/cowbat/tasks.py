@@ -1052,7 +1052,11 @@ def cowbat_cleanup(sequencing_run_pk: int):
     )
 
     # Set the name of the blob container where the zip file will be uploaded
-    report_assembly_container = "reports-and-assemblies"
+    report_assembly_container = (
+        f"cowbat-integration-{sequencing_run.pk}"
+        if sequencing_run.integration_test
+        else "reports-and-assemblies"
+    )
 
     # Upload the zip file to the blob container
     upload_blob_from_path(
@@ -1115,7 +1119,7 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
     # Create a list of recipients based on the environment. In production,
     # send to default recipients
-    if settings.ENVIRONMENT == "PROD":
+    if settings.ENVIRONMENT == "PROD" and not sequencing_run.integration_test:
         recipient_list = [
             "catherine.carrillo@inspection.gc.ca",
             "monique.arts@inspection.gc.ca",

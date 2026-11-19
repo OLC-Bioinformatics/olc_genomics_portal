@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "description": "Completed COWBAT run 000000-aaa; one Salmonella sample.",
+  "input": {
+    "run_name": "000000-aaa",
+    "container_name": "000000-aaa",
+    "seqids": ["2018-CAL-0033"],
+    "basic_assembly": false,
+    "preprocess": false,
+    "nextseq": false,
+    "fastq_files": [
+      {
+        "name": "2018-CAL-0033_S1_L001_R1_001.fastq.gz",
+        "size": 5300280,
+        "sha256": "121e0ac90a39391106ecbe2d0dc98f36e3ff5831e4d1ece7a7348efa2279b3bc"
+      },
+      {
+        "name": "2018-CAL-0033_S1_L001_R2_001.fastq.gz",
+        "size": 5465064,
+        "sha256": "7ae54378e7a1427205df02f8cc8504aa45287c0505b086f7e1c20c31660c18c5"
+      }
+    ]
+  },
+  "expected": {
+    "ignored_summary_fields": ["AssemblyDate"],
+    "summary_numeric_tolerances": {
+      "NumContigs": 1,
+      "TotalLength": 700,
+      "AverageCoverageDepth": 0.002
+    },
+    "summary_metadata": [
+      {
+        "SeqID": "2018-CAL-0033",
+        "SampleName": "ND",
+        "Genus": "Salmonella",
+        "E_coli_Serotype": "ND",
+        "SISTR_serovar": "Enteritidis",
+        "GeneSeekr_Profile": "ND",
+        "Vtyper_Profile": "ND",
+        "rMLST_Result": "new",
+        "MLST_Result": "new",
+        "N50": "708",
+        "NumContigs": "659",
+        "TotalLength": "483256",
+        "AverageCoverageDepth": "4.0485",
+        "ConfindrContamSNVs": "0",
+        "SequencingDate": "ND",
+        "Analyst": "ND",
+        "Flowcell": "ND",
+        "MachineName": "ND",
+        "AssemblyDate": "2026-11-16",
+        "PipelineVersion": "0.5.0.23",
+        "Database": "0.5.0.23"
+      }
+    ],
+    "required_report_files": [
+      "amr_summary.csv",
+      "blast_output_alleles.txt",
+      "combinedMetadata.csv",
+      "confindr_report.csv",
+      "ec_report.tsv",
+      "ectyper.log",
+      "gdcs.csv",
+      "genesippr.csv",
+      "legacy_combinedMetadata.csv",
+      "legacy_vtyper.csv",
+      "mash.csv",
+      "mlst.csv",
+      "mlst_Salmonella.csv",
+      "mob_recon_summary.csv",
+      "preliminary_combinedMetadata.csv",
+      "prophages.csv",
+      "resfinder.csv",
+      "resfinder_assembled_blastn.xlsx",
+      "rmlst.csv",
+      "run_metrics_report.csv",
+      "seqsero.tsv",
+      "serosippr.csv",
+      "sistr.tsv",
+      "sixteens_full.csv",
+      "sixteens_full_sequences.fa",
+      "summaryMetadata.csv",
+      "univec.csv",
+      "verotoxin_kma_outputs.csv",
+      "verotoxin_summary.csv",
+      "virulence.csv"
+    ],
+    "combined_metadata_ignored_fields": [
+      "AssemblyDate",
+      "NumContigs",
+      "TotalLength",
+      "MeanInsertSize",
+      "InsertSizeSTD",
+      "AverageCoverageDepth",
+      "CoverageDepthSTD",
+      "TotalPredictedGenes",
+      "PredictedGenesOver500bp",
+      "PredictedGenesUnder500bp"
+    ],
+    "combined_metadata_sha256": "c4b870f79a00dde59c3687d097ee861b90eab360a39c53c73242781c37634a0d",
+    "combined_metadata_metrics": {
+      "NumContigs": "659",
+      "TotalLength": "483256",
+      "MeanInsertSize": "215.82",
+      "InsertSizeSTD": "96.96",
+      "AverageCoverageDepth": "4.0485",
+      "CoverageDepthSTD": "2.8258",
+      "TotalPredictedGenes": "3966",
+      "PredictedGenesOver500bp": "368",
+      "PredictedGenesUnder500bp": "3582"
+    },
+    "combined_metadata_tolerances": {
+      "NumContigs": 1,
+      "TotalLength": 700,
+      "MeanInsertSize": 0.1,
+      "InsertSizeSTD": 0.02,
+      "AverageCoverageDepth": 0.002,
+      "CoverageDepthSTD": 0.002,
+      "TotalPredictedGenes": 5,
+      "PredictedGenesOver500bp": 2,
+      "PredictedGenesUnder500bp": 6
+    },
+    "assembly_metrics": {
+      "contig_count": 3515,
+      "total_length": 1346327,
+      "n50": 401
+    },
+    "assembly_metric_tolerances": {
+      "contig_count": 1,
+      "total_length": 100,
+      "n50": 1
+    },
+    "canonical_report_ignored_fields": {
+      "reports/preliminary_combinedMetadata.csv": [
+        "AssemblyDate",
+        "PipelineVersion",
+        "NumContigs",
+        "TotalLength",
+        "MeanInsertSize",
+        "InsertSizeSTD",
+        "AverageCoverageDepth",
+        "CoverageDepthSTD",
+        "TotalPredictedGenes",
+        "PredictedGenesOver500bp",
+        "PredictedGenesUnder500bp"
+      ],
+      "reports/legacy_combinedMetadata.csv": [
+        "AssemblyDate",
+        "NumContigs",
+        "TotalLength",
+        "MeanInsertSize",
+        "InsertSizeSTD",
+        "AverageCoverageDepth",
+        "CoverageDepthSTD",
+        "TotalPredictedGenes",
+        "PredictedGenesOver500bp",
+        "PredictedGenesUnder500bp"
+      ],
+      "reports/univec.csv": ["Contig"]
+    },
+    "canonical_report_sha256": {
+      "reports/preliminary_combinedMetadata.csv": "2cd7d2a067835a7530e92a545977e53bbc546fefbf43e92b3028b5336c1973c2",
+      "reports/legacy_combinedMetadata.csv": "9c4e7e2539372bce28b7bb8695c8b4c06a71094f460e28ca70762068f9f48dac",
+      "reports/univec.csv": "7167dd60eb733b4398702b04e4645f4d002828db907b444166a33f5c25f82e38"
+    },
+    "workbook_values_sha256": "59262438d7e9f46211096efdea7257637dbc219baa52ade8c5880618f2b463ea",
+    "output_sha256": {
+      "reports/amr_summary.csv": "ab87011a54ac8130b9930c41e23b77fd8955a5b726bce46db805c1a68078b768",
+      "reports/confindr_report.csv": "78c120862991cd4156d4a9515fc3669750d31fda4b1a8bf09f5dffca8112bf98",
+      "reports/ec_report.tsv": "b86a05bcea65b2486515d84af3aef69f14273259e4596fe5d2d0de5605b69b30",
+      "reports/gdcs.csv": "6ea20002b9f823bc112a9fa2583c822486da1a8ad30f50e2a46caef891bc161e",
+      "reports/genesippr.csv": "93da2c2680be16e99b3c39354c539be134b27236cb46b35a94a5b7f4197665de",
+      "reports/legacy_vtyper.csv": "da96d7e0a10ce366335935b20fa2ab830b052625dc36e5a946ab2bf64907a531",
+      "reports/mash.csv": "cc739efae264107f8ab7188b1b7ca159a5480d606f52c88e985900890b9c4f66",
+      "reports/mlst.csv": "ba919ce2d6c7cfa66d879f49b3a8c518e141586a7e392551f1b45c7f6bb16146",
+      "reports/mlst_Salmonella.csv": "ba919ce2d6c7cfa66d879f49b3a8c518e141586a7e392551f1b45c7f6bb16146",
+      "reports/mob_recon_summary.csv": "c7a22b2476b8d9aef05853c7a7029998a4bbf43200067e8b48a53849eeb98266",
+      "reports/prophages.csv": "363a6d929db31de64df4bec6d7f8dea17041a58390377e692d4f3d439827a79f",
+      "reports/resfinder.csv": "afc28b99560df28dd353c641e81226ba4a3e0971a14cf024a7d1487cff2ddd8a",
+      "reports/rmlst.csv": "ba2e468ce7ee6d0a3de897d0a11c2cd075779a17df3931f919d53cabb8a4be91",
+      "reports/run_metrics_report.csv": "dd155468cae493b260ca2b771175d13709887b48152725739ab414ff46963b90",
+      "reports/seqsero.tsv": "78d1e581f4e57b0e1ca62453e300c06dfe30b914e16df76beb065afa09e1280b",
+      "reports/serosippr.csv": "45d7e88bf1180c37f224cd53e4443c86aa5a57cc5b48e93023967dcf109fa29c",
+      "reports/sistr.tsv": "0e14d3f00e10a13d1ddd92b1966bcf4bbc3bbd3f993a5102e01f9ef595e23c19",
+      "reports/sixteens_full.csv": "aabf32903784c2211b2c17731ab5adc83d1de74cc006210b5cc9b867c091c11c",
+      "reports/sixteens_full_sequences.fa": "66aef80e2f0933f006b559ac9d09c2f448593777560fcf04e0ca8fe81f00c0ca",
+      "reports/verotoxin_kma_outputs.csv": "7b80d1a137ab0ef8bfabaca71db368dd7564811649750ed5768f0feaa56a9ed5",
+      "reports/verotoxin_summary.csv": "da96d7e0a10ce366335935b20fa2ab830b052625dc36e5a946ab2bf64907a531",
+      "reports/virulence.csv": "21dd61ef212770e224e90b2b51be4a58a069ab734c4c22fdec46789db23d7237"
+    },
+    "archive_file": "{container}.zip"
+  }
+}

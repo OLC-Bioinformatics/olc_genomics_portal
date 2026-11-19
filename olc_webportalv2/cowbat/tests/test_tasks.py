@@ -1227,6 +1227,76 @@ class RunCowbatBatchTests(TestCase):
         self.assertEqual(rmtree.call_count, 1)
         self.assertEqual(send_email_mock.call_count, 5)
 
+    @override_settings(ENVIRONMENT="PROD")
+    def test_integration_cowbat_cleanup_suppresses_email_and_isolates_archive(
+        self,
+    ):
+        run = self.create_run(
+            container="000000-aaa",
+            integration_test=True,
+        )
+        blob_names = [
+            "BestAssemblies/SEQ-1.fasta",
+            "reports/combinedMetadata.csv",
+            "reports/summaryMetadata.csv",
+        ]
+        storage = mock.Mock()
+        storage.list_objects.return_value = []
+        archive_container = f"cowbat-integration-{run.pk}"
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client",
+                return_value=storage,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.download_blob_to_path"
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.add_read_filenames_to_metadata"
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.load_report",
+                return_value=True,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.path.isdir",
+                return_value=True,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.os.listdir",
+                return_value=[],
+            ),
+            mock.patch("olc_webportalv2.cowbat.tasks.shutil.make_archive"),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.upload_blob_from_path"
+            ) as upload_archive,
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.generate_download_link",
+                return_value="https://example.test/run.zip",
+            ),
+            mock.patch("olc_webportalv2.cowbat.tasks.shutil.rmtree"),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.send_email"
+            ) as send_email_mock,
+        ):
+            blobs = []
+            for name in blob_names:
+                blob = mock.Mock()
+                blob.name = name
+                blobs.append(blob)
+            storage.list_objects.return_value = blobs
+            storage.list_containers.return_value = []
+
+            cowbat_cleanup.run(run.pk)
+
+        upload_archive.assert_called_once()
+        self.assertEqual(
+            upload_archive.call_args.kwargs["container_name"],
+            archive_container,
+        )
+        send_email_mock.assert_not_called()
+
     @mock.patch("olc_webportalv2.cowbat.tasks.shutil.rmtree")
     @mock.patch("olc_webportalv2.cowbat.tasks.shutil.make_archive")
     @mock.patch("olc_webportalv2.cowbat.tasks.generate_download_link")
