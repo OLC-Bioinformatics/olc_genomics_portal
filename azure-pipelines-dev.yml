@@ -923,6 +923,24 @@ stages:
           find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
           find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
 
+          export FOODPORT_UID="$(id -u)"
+          export FOODPORT_GID="$(id -g)"
+          if [ "$FOODPORT_UID" -eq 0 ] || [ "$FOODPORT_GID" -eq 0 ]; then
+            echo 'ERROR: portal containers must run with a non-root deployment UID and GID.' >&2
+            exit 1
+          fi
+          mkdir -p sequences staticfiles olc_webportalv2/media
+          for writable_dir in staticfiles olc_webportalv2/media; do
+            if [ ! -w "$writable_dir" ] || [ ! -x "$writable_dir" ]; then
+              echo "ERROR: $REMOTE_DIR/$writable_dir must be writable by UID:GID $FOODPORT_UID:$FOODPORT_GID. Review its ownership; deployment will not change existing data ownership." >&2
+              exit 1
+            fi
+          done
+          if [ ! -r sequences ] || [ ! -x sequences ]; then
+            echo "ERROR: $REMOTE_DIR/sequences must be readable by UID:GID $FOODPORT_UID:$FOODPORT_GID." >&2
+            exit 1
+          fi
+
           python3 "$REMOTE_DIR/remote_deploy_env.py"
 
           CONDA_BIN="$HOME/miniconda/bin/conda"
@@ -968,8 +986,9 @@ stages:
           "$CONDA_BIN" run -n foodport python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Conda Requests TLS check passed')"
 
           if command -v docker >/dev/null 2>&1; then
-            rm -f celerybeat-schedule.db celerybeat.pid
             docker compose build web celeryworker celerybeat flower
+            docker compose run --rm --no-deps web \
+              python -c "import os, tempfile; paths=('/data/web/staticfiles', '/data/web/olc_webportalv2/media'); assert os.geteuid() != 0 and os.getegid() != 0; assert all(os.access(path, os.W_OK | os.X_OK) for path in paths); assert os.access('/sequences', os.R_OK | os.X_OK); [tempfile.TemporaryDirectory(dir=path).cleanup() for path in paths]"
             docker compose down
             docker compose up -d
             docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
@@ -978,11 +997,12 @@ stages:
 
           if sudo -n true 2>/dev/null; then
             sudo -n env PATH="$PATH" docker compose version || true
-            sudo rm -f celerybeat-schedule.db celerybeat.pid
-            sudo env PATH="$PATH" docker compose build web celeryworker celerybeat flower
-            sudo env PATH="$PATH" docker compose down || true
-            sudo env PATH="$PATH" docker compose up -d
-            sudo env PATH="$PATH" docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
+            sudo env PATH="$PATH" FOODPORT_UID="$FOODPORT_UID" FOODPORT_GID="$FOODPORT_GID" docker compose build web celeryworker celerybeat flower
+            sudo env PATH="$PATH" FOODPORT_UID="$FOODPORT_UID" FOODPORT_GID="$FOODPORT_GID" docker compose run --rm --no-deps web \
+              python -c "import os, tempfile; paths=('/data/web/staticfiles', '/data/web/olc_webportalv2/media'); assert os.geteuid() != 0 and os.getegid() != 0; assert all(os.access(path, os.W_OK | os.X_OK) for path in paths); assert os.access('/sequences', os.R_OK | os.X_OK); [tempfile.TemporaryDirectory(dir=path).cleanup() for path in paths]"
+            sudo env PATH="$PATH" FOODPORT_UID="$FOODPORT_UID" FOODPORT_GID="$FOODPORT_GID" docker compose down || true
+            sudo env PATH="$PATH" FOODPORT_UID="$FOODPORT_UID" FOODPORT_GID="$FOODPORT_GID" docker compose up -d
+            sudo env PATH="$PATH" FOODPORT_UID="$FOODPORT_UID" FOODPORT_GID="$FOODPORT_GID" docker compose exec -T web python -c "import requests; response = requests.get('https://pypi.org/simple/pip/', timeout=20); response.raise_for_status(); print('Web container TLS check passed')"
             exit 0
           fi
 

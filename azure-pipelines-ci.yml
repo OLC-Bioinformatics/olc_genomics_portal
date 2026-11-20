@@ -73,6 +73,14 @@ steps:
 
       docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
         run --rm --no-deps \
+        -e SECRET_KEY=ci-placeholder \
+        -e MICROSOFT_AUTH_ENABLED=false \
+        -e DJANGO_READ_DOT_ENV_FILE=false \
+        web \
+        python -c "import logging.config, os; from config.settings.prod import LOGGING; logging.config.dictConfig(LOGGING); paths=('manage.py', 'olc_webportalv2/taskapp/celery.py'); assert os.geteuid() != 0 and os.getegid() != 0, 'portal must run with non-root UID/GID'; assert all(os.access(path, os.R_OK) for path in paths), 'portal source must be readable by non-root UID'; assert os.access('worker_launcher.sh', os.X_OK), 'worker launcher must be executable'; print(f'Portal UID:GID: {os.geteuid()}:{os.getegid()}')"
+
+      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+        run --rm --no-deps \
         -v "$PWD:/workspace:ro" \
         -w /workspace \
         batch \

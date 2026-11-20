@@ -42,17 +42,38 @@ COPY requirements/base.txt /data/web/
 RUN python -m pip install --upgrade pip && \
     python -m pip install --require-hashes --no-cache-dir -r /data/web/base.txt
 
-COPY . /data/web/
-
 FROM builder AS test
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gettext && \
     rm -rf /var/lib/apt/lists/*
 
+COPY requirements/test.txt /data/web/requirements/test.txt
+
 RUN python -m pip install --require-hashes --no-cache-dir -r /data/web/requirements/test.txt
+
+COPY . /data/web/
 
 FROM runtime-base AS production
 
 COPY --from=builder /venv /venv
-COPY --from=builder /data/web /data/web
+COPY . /data/web/
+RUN chmod -R a+rX /data/web
+
+ENV HOME=/tmp \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN groupadd --system --gid 10001 foodport && \
+    useradd --uid 10001 --gid foodport \
+        --create-home --home-dir /home/foodport \
+        --shell /usr/sbin/nologin foodport && \
+    mkdir -p \
+        /data/web/staticfiles \
+        /data/web/olc_webportalv2/media \
+        /sequences && \
+    chown -R foodport:foodport \
+        /data/web/staticfiles \
+        /data/web/olc_webportalv2/media \
+        /sequences
+
+USER foodport:foodport

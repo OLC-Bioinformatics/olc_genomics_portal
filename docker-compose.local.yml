@@ -1,18 +1,22 @@
 services:
   web:
+    user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
     command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
     volumes:
       - ./:/data/web
 
   celeryworker:
+    user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
     volumes:
       - ./:/data/web
 
   celerybeat:
+    user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
     volumes:
       - ./:/data/web
 
   flower:
+    user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
     volumes:
       - ./:/data/web
 

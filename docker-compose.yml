@@ -2,6 +2,7 @@ services:
   web: &web
     restart: always
     build: .
+    user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
     expose:
       - "8000"
     links:
@@ -15,7 +16,7 @@ services:
         condition: service_healthy
     env_file: env
     volumes:
-      - ./sequences:/sequences
+      - ./sequences:/sequences:ro
       - ./staticfiles:/data/web/staticfiles
       - ./olc_webportalv2/media:/data/web/olc_webportalv2/media
     environment:
@@ -58,7 +59,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: ["/app/start.sh"]
 
   storage:
     restart: always
@@ -197,7 +197,7 @@ services:
       storage:
         condition: service_healthy
     ports: []
-    command: celery -A olc_webportalv2.taskapp beat -l info
+    command: celery -A olc_webportalv2.taskapp beat -l info --schedule=/tmp/foodport-celerybeat-schedule
 
   flower:
     restart: always

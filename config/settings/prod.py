@@ -476,7 +476,7 @@ LOGGING = {
         "file": {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(str(ROOT_DIR), "django_debug.log"),
+            "filename": os.path.join("/tmp", "django_debug.log"),
             "maxBytes": 10 * 1024 * 1024,  # 10 MB
             "backupCount": 5,
             "formatter": "verbose",

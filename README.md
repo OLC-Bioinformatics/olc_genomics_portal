@@ -13,12 +13,23 @@ Install Docker Compose v2 and obtain the deployment-specific `env` file from
 the portal maintainers. Do not commit `env` or `.env` files.
 
 The default Compose configuration is deployment-oriented: application code is
-baked into the images and Gunicorn does not run with autoreload. For local
+baked into the images and Gunicorn does not run with autoreload. Application
+containers default to UID/GID `1000:1000`, matching the current deployment
+bind-mount ownership. No exports are needed on that host. If your local
+account uses different IDs, override them before starting Compose. For local
 development, use the overlay:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
+
+The portal and Celery containers run as non-root. `staticfiles` and
+`olc_webportalv2/media` must be writable by the configured UID/GID; `sequences`
+is mounted read-only. Deployment checks these permissions and does not change
+ownership of existing data. Review and migrate ownership on existing bind
+mounts before deployment if they were previously written by root.
+Django's rotating diagnostic log is stored at `/tmp/django_debug.log` inside
+each container and is not preserved when a container is recreated.
 
 Stop local services without removing their named data volumes:
 
