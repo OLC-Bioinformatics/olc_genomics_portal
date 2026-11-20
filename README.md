@@ -1,7 +1,4 @@
-[![Build status](https://travis-ci.org/OLC-Bioinformatics/olc_genomics_portal.svg?master)](https://travis-ci.org/olc-bioinformatics)
-
-OLC Webportal V2
-================
+# FoodPort Genomics Portal
 
 A web portal for accessing CFIA genomic data, with some tools included.
 
@@ -9,51 +6,23 @@ The portal runs with Docker Compose. Django and Celery use internal Batch and
 Storage services rather than calling cloud-provider SDKs directly. Azure is the
 current backend; a local-cluster backend is planned.
 
-## Installing
+## Run locally
 
-You will need to: 
+Install Docker Compose v2 and obtain the deployment-specific `env` file from
+the portal maintainers. Do not commit `env` or `.env` files.
 
-- clone this repository
-- have docker-compose installed and working on your system
-- have an azure storage and azure batch account
-- have a sentry.io account and django dsn set up (see https://docs.sentry.io/platforms/python/django/ - this lets 
-you get emails/notifications whenever things go wrong!)
+The default Compose configuration is deployment-oriented: application code is
+baked into the images and Gunicorn does not run with autoreload. For local
+development, use the overlay:
 
-## Setup
-
-#### Azure Setup
-- create a custom VM image with tools you want to be able to run through the portal installed, and have it registered
-as an app through the azure portal that has access to batch service. This image must be in the same subscription as
-your Azure Batch account
-- The VM should have a `/databases` folder with any resources you need to run assembly pipeline/other things,
-and a `/envs` folder where conda environments are stored - see the `tasks.py` of various apps to see the commands that
-the VM actually runs
-- create a container called `raw-data` in your Azure storage account and store .fastq.gz files there - it's assumed that
-they're MiSeq files that start with SEQIDs **NOTE: No tools in the portal currently use raw data. This is a future TODO**
-- create a container called `processed-data` in your Azure storage account and put your illumina assemblies there. It's 
-assumed that they're named in the format seqid.fasta
-
-
-#### Making Your Env File
-
-Create a file called `env` that has the following variables that the portal will use:
-
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
-DB_NAME=yourpostgresdbname
-DB_USER=yourpostgresdbuser
-DB_PASS=yourdbpassword
-DB_SERVICE=postgres
-DB_PORT=5432
-SECRET_KEY=yourdjangosecretkey
-AZURE_ACCOUNT_NAME=yourazurestorageaccount
-AZURE_ACCOUNT_KEY=yourazurestoragekey
-BATCH_ACCOUNT_NAME=azurebatchaccountname
-BATCH_ACCOUNT_URL=https://azurebatchaccountname.canadacentral.batch.azure.com
-BATCH_ACCOUNT_KEY=batchaccountkey
-EMAIL_HOST_USER=youremail@gmail.com
-EMAIL_HOST_PASSWORD=emailpassword
-VM_IMAGE=/subscriptions/subscription_id/resourceGroups/subscription/providers/Microsoft.Compute/images/image_name
-SENTRY_DSN=your_sentry_dsn
+
+Stop local services without removing their named data volumes:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml down
 ```
 
 The Dev deployment pipeline receives its environment values from the
@@ -120,33 +89,12 @@ repository's default `docker-compose.yml`; the retired
 `docker-compose-prod.yml` instructions are no longer applicable.
  
  
-#### Adding in metadata/sequence data so the portal isn't useless
+## Data provisioning
 
-In the root of this repository there are 2 scripts used to get sequence data working - it's assumed that you're at OLC 
-and on the local network there, or they won't work at all. Here's what they do and how to use them.
-
-First, make a container in your Azure Storage account called `databases` - these scripts assume that it already exists.
-
-The `make_mash_sketch.py` script will create a mash sketch of all OLC's sequence data that the near neighbors tool needs 
-and upload the sketch to blob storage.
-To run it, just run `python make_mash_sketch.py` in a virtualenv with Azure Storage installed and provide the Azure account 
-name and key when prompted (you'll also need mash v2.1 installed and on your path). Once the script is done,
-you should be able to see a file called `sketchomatic.msh` in the `databases` blob storage container.
-
-The `make_mega_fasta.py` script will combine all of OLC's sequence files into one, make a BLAST database from it, and 
-upload the BLAST database to blob storage. You'll need to have BLAST installed on your machine to make this work, and have
-biopython/azure-storage available in your python environment. 
-
-Once both of those scripts have run, go to the machine the portal is running on and run `download_databases.py` from the root of
-this repository, providing azure account credentials when asked. This will download the files created by the
-previous two scripts from blob storage into the correct locations on your machine.
-
-Now sequence data is present, but no metadata is associated with the sequences. The metadata in the portal
-comes from OLC's access database. You'll need to export the SeqTracking and SeqMetadata queries from that database as CSV files,
-and then get them onto the machine the portal is running on. From there, attach into the web container as 
-previously described, and run `python3 manage.py upload_metadata SeqTracking.csv SeqMetadata.csv`. This should get all relevant metadata
-from those file into the portal's database. At this point, the portal should now be fully funcitonal! Woohoo!
-
+Sequence datasets and source metadata are provisioned separately from this
+repository. The historical README instructions referenced scripts that are no
+longer present; use the current deployment-specific data-ingestion procedure
+provided by the portal maintainers.
 
 ## Running tests
 
@@ -183,11 +131,19 @@ docker compose -p foodport-browser-tests \
   down
 ```
 
+## Continuous integration
+
+`azure-pipelines-ci.yml` runs the Django checks and tests, compiles translations,
+and runs the browser/static-asset tests on pushes to `main` and `dev`. For
+Azure Repos, configure a Build validation branch policy for this pipeline on
+each protected target branch; YAML `pr` triggers alone do not enable PR
+validation in Azure Repos.
+
 ## Azure DevOps deploy pipeline
 
-A separate deployment pipeline is available at `olc_genomics_portal/azure-pipelines.update.yml`.
-This pipeline is designed to run on pushes to `main`, SSH to the portal VM at `10.148.57.4`, pull the latest
-repo state, and restart the compose stack with `docker compose up -d --build`.
+The direct update pipeline is `azure-pipelines-update.yml`. It updates the main
+portal VM and rebuilds/recreates changed Compose services without first
+stopping the entire stack.
 
 ## External Terraform repo dependency
 
@@ -381,8 +337,8 @@ uses the authenticated internal service APIs.
 - bootstraps the remote VM via SSH if `bootstrapRemoteVm=true`
 - deploys the portal app using downloaded artifacts and secrets
 
-`olc_genomics_portal/azure-pipelines.update.yml` is a separate direct app update pipeline.
-It is intended for updates to an existing portal VM and runs a repo pull and compose stack restart.
+`olc_genomics_portal/azure-pipelines-update.yml` is a separate direct app update
+pipeline. It is intended for updates to an existing portal VM.
 
 ### Dev VM deployment variable group
 
@@ -541,7 +497,7 @@ az pipelines run --name "<your-full-infra-pipeline-name>" --branch main \
 
 ### Run the direct app update pipeline
 
-If you register `azure-pipelines.update.yml` as a separate pipeline, run:
+If you register `azure-pipelines-update.yml` as a separate pipeline, run:
 
 ```bash
 az pipelines run --name "<your-update-pipeline-name>" --branch main
@@ -553,5 +509,5 @@ This is the pipeline to use when you want to push a code update to the portal VM
 
 - Dev VM deploy pipeline: `olc_genomics_portal/azure-pipelines-dev.yml`
 - Full infra deploy pipeline: `olc_genomics_portal/azure-pipelines-full-infra.yml`
-- Direct app update pipeline: `olc_genomics_portal/azure-pipelines.update.yml`
+- Direct app update pipeline: `olc_genomics_portal/azure-pipelines-update.yml`
 - Legacy dispatcher pipeline: `olc_genomics_portal/azure-pipelines.yml` (deprecated)
