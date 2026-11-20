@@ -46,3 +46,15 @@ The test database volume is preserved.
 
 `docker compose -p foodport-test -f docker-compose-test.yml down` stops the
 container but preserves the isolated test database volume.
+
+## Continuous integration
+
+The Azure Pipelines definition in `azure-pipelines-ci.yml` runs dependency
+consistency, Django system, critical Flake8, translation-compilation, and
+Django test checks, then runs the browser/static-asset tests and builds the
+web, Batch, Storage, Redmine, and Nginx images. Azure Repos requires a Build
+validation branch policy to make this pipeline a required PR check.
+
+The CI job does not run `makemigrations --check`: the current legacy model
+state produces existing migration proposals. Resolve that baseline drift
+before adding the command as a blocking check.

@@ -1,0 +1,72 @@
+trigger:
+  branches:
+    include:
+      - main
+      - dev
+
+pr:
+  branches:
+    include:
+      - main
+      - dev
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+
+  - bash: |
+      set -euo pipefail
+
+      project="foodport-ci-${BUILD_BUILDID}"
+      browser_project="${project}-browser"
+
+      cleanup() {
+        docker compose -p "$browser_project" \
+          -f docker-compose-test.yml \
+          -f docker-compose-browser-test.yml \
+          down --volumes --remove-orphans
+        docker compose -p "$project" \
+          -f docker-compose-test.yml \
+          down --volumes --remove-orphans
+      }
+      trap cleanup EXIT
+
+      docker compose -p "$project" \
+        -f docker-compose-test.yml \
+        run --build --rm test-runner \
+        /bin/bash -lc \
+        "python -m pip check && \
+         python manage.py check && \
+         flake8 --select=E9,F63,F7,F82 && \
+         python manage.py compilemessages && \
+         coverage run -m pytest -q && \
+         coverage report --show-missing"
+
+      git diff --exit-code -- olc_webportalv2/locale
+
+      docker compose -p "$browser_project" \
+        -f docker-compose-test.yml \
+        -f docker-compose-browser-test.yml \
+        up --build --abort-on-container-exit --exit-code-from test-runner test-runner
+    displayName: Run Django, translation, and browser validation
+
+  - bash: |
+      set -euo pipefail
+
+      temporary_env=0
+      if [ ! -e env ]; then
+        : > env
+        temporary_env=1
+      fi
+      cleanup() {
+        if [ "$temporary_env" -eq 1 ]; then
+          rm -- env
+        fi
+      }
+      trap cleanup EXIT
+
+      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+        build web batch storage redmine nginx
+    displayName: Build deployment images
