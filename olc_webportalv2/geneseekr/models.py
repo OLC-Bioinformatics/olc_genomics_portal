@@ -23,6 +23,12 @@ class GeneSeekrRequest(models.Model):
     name = models.CharField(max_length=50, blank=True, null=True)
     emails_array = ArrayField(models.EmailField(max_length=100), blank=True, null=True, default=list)
     error = models.CharField(max_length=10000, blank=True)
+    align = models.BooleanField(default=False)
+    cutoff = models.IntegerField(default=70)
+    evalue = models.CharField(max_length=32, default='1E-5')
+    fasta_output = models.BooleanField(default=False)
+    unique = models.BooleanField(default=True)
+    benchmark_versions = JSONField(default=dict, blank=True)
    
 
 class GeneSeekrAzureRequest(models.Model):
@@ -116,7 +122,7 @@ class AMRAzureRequest(models.Model):
 class ProkkaRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     seqids = ArrayField(models.CharField(max_length=24), blank=True, default=list, null=True)
-    download_link = models.CharField(max_length=256, blank=True)
+    download_link = models.TextField(blank=True)
     created_at = models.DateField(auto_now_add=True)
     other_input_files = ArrayField(models.CharField(max_length=64, blank=True, default=list), null=True)
     status = models.CharField(max_length=64, default='Unprocessed')

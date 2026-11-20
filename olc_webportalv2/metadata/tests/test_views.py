@@ -20,5 +20,10 @@ class MetadataTest(TestCase):
         resp = self.client.get(reverse('metadata:metadata_home'))
         self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.
 
+    def test_sequence_data_subspecies_defaults_to_empty_string(self):
+        sequence_data = SequenceData.objects.get(seqid='1234-SEQ-0001')
+
+        self.assertEqual(sequence_data.subspecies, '')
+
     def tearDown(self):
         pass

@@ -55,6 +55,15 @@ class SampleTestCase(TestCase):
                                              sequence_file='P19954_2019_VI483_11_GI_B05_M13-R17_G10_074.ab1')
         files.save()
 
+    def test_download_link_accepts_long_url(self):
+        project = VirTyperProject.objects.get(project_name='test_views')
+        download_link = 'https://storage.example/' + ('a' * 300)
+        project.download_link = download_link
+        project.save(update_fields=['download_link'])
+        project.refresh_from_db()
+
+        self.assertEqual(project.download_link, download_link)
+
     def test_vir_typer_home_login_required(self):
         resp = self.client.get(reverse('vir_typer:vir_typer_home'))
         self.assertEqual(resp.status_code, 302)  # Should get 302 redirected if user is not logged in.

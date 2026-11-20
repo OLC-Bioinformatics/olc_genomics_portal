@@ -52,7 +52,22 @@ class GeneSeekrWorkflowTests(TestCase):
         self.assertEqual(request.status, 'Processing')
         self.assertEqual(request.query_sequence, '>query\nACGT')
         self.assertEqual(request.name, 'Workflow query')
+        self.assertFalse(request.align)
+        self.assertEqual(request.cutoff, 70)
+        self.assertEqual(request.evalue, '1E-5')
+        self.assertFalse(request.fasta_output)
+        self.assertTrue(request.unique)
+        self.assertEqual(request.benchmark_versions, {})
         self.assertEqual(run_task.apply_async.call_count, 1)
+
+    def test_prokka_download_link_accepts_long_url(self):
+        download_link = 'https://storage.example/' + ('a' * 300)
+        request = ProkkaRequest.objects.create(
+            user=self.user,
+            download_link=download_link,
+        )
+
+        self.assertEqual(request.download_link, download_link)
 
     def test_processing_page_saves_new_email(self):
         request = GeneSeekrRequest.objects.create(
