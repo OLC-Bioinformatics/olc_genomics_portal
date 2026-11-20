@@ -32,6 +32,9 @@ steps:
         docker compose -p "$project" \
           -f docker-compose-test.yml \
           down --volumes --remove-orphans
+        # This Microsoft-hosted agent is ephemeral; free test image/cache space
+        # before the deployment images are built in the next step.
+        docker system prune --all --force
       }
       trap cleanup EXIT
 
@@ -73,7 +76,8 @@ steps:
       }
       trap cleanup EXIT
 
-      docker compose -p "$project" build web batch storage redmine nginx rag
+      docker compose --parallel 1 -p "$project" \
+        build web batch storage redmine nginx rag
 
       docker compose -p "$project" run \
         --detach --no-deps --name "$batch_container" batch
