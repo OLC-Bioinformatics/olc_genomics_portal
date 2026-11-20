@@ -22,6 +22,7 @@ from olc_webportalv2.common.benchmarks import (
     INCLUSIVITY_BENCHMARK_CHOICES,
     validate_benchmark_panel,
 )
+from olc_webportalv2.common.forms import CompactLabelSuffixMixin
 from olc_webportalv2.metadata.models import Genus, SequenceData
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
@@ -808,12 +809,13 @@ class PrimerValidatorForm(ModelForm):
         }
 
 
-class ValidatorExperimentForm(forms.Form):
+class ValidatorExperimentForm(CompactLabelSuffixMixin, forms.Form):
     """Request-wide PrimerValidator configuration."""
 
     project_name = forms.CharField(
         required=False,
         max_length=256,
+        label=_('Project Name'),
         help_text=_(
             'Optional: give this experiment a name you will recognize later.'
         ),
@@ -854,6 +856,7 @@ class ValidatorExperimentForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
     classification_rule = forms.ChoiceField(
+        label=_('Classification rule'),
         choices=(
             ('none', _('No classification rule')),
             ('salmonella', _('Salmonella: invA or stn required')),
@@ -861,6 +864,7 @@ class ValidatorExperimentForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
     logic = forms.ChoiceField(
+        label=_('Logic'),
         choices=(('', _('No logic')), ('AND', _('All')), ('OR', _('Any'))),
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'}),
@@ -870,7 +874,7 @@ class ValidatorExperimentForm(forms.Form):
         ),
     )
     gene_exclusion_categories = forms.MultipleChoiceField(
-        label=_('Sample exclusion gene-analysis categories:'),
+        label=_('Sample exclusion gene-analysis categories'),
         choices=(
             ('FRAME_SHIFT', _('Frame shift')),
             ('INTERNAL_STOP', _('Internal stop')),
@@ -887,11 +891,13 @@ class ValidatorExperimentForm(forms.Form):
         ),
     )
     inclusivity_panel = forms.MultipleChoiceField(
+        label=_('Inclusivity Panel'),
         choices=INCLUSIVITY_BENCHMARK_CHOICES,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
     )
     exclusivity_panel = forms.MultipleChoiceField(
+        label=_('Exclusivity Panel'),
         choices=EXCLUSIVITY_BENCHMARK_CHOICES,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
@@ -928,7 +934,7 @@ class ValidatorExperimentForm(forms.Form):
         return cleaned_data
 
 
-class ValidatorTargetForm(forms.Form):
+class ValidatorTargetForm(CompactLabelSuffixMixin, forms.Form):
     """One sample target, with primer, probe, and optional gene references."""
 
     sample_name = forms.CharField(

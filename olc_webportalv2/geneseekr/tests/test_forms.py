@@ -47,6 +47,21 @@ class GeneSeekrFormTest(TestCase):
         self.assertEqual(seqid_list, ['2015-SEQ-0711', '2015-SEQ-0712'])
         self.assertEqual(query_sequence, '>fasta_name\nATCGACTGACTAGTCA')
 
+    def test_nearest_neighbor_labels_are_translated_without_spaced_colons(self):
+        with override('fr'):
+            form = NearNeighborForm()
+
+            self.assertEqual(form['name'].label, 'Nom')
+            self.assertEqual(form['seqid'].label, 'SeqID')
+            self.assertEqual(
+                form['number_neighbors'].label,
+                'Nombre de voisins',
+            )
+            for field_name in ('name', 'seqid', 'number_neighbors'):
+                label = form[field_name].label_tag()
+                self.assertIn(':</label>', label)
+                self.assertNotIn('\xa0:', label)
+
     def test_valid_geneseekr_form_genus_input_fasta_text(self):
         form = GeneSeekrForm(
             {

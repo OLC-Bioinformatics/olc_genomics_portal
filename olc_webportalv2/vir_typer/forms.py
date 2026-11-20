@@ -5,7 +5,10 @@ from django.forms import ModelForm
 from django.forms.formsets import BaseFormSet
 from django.utils.translation import gettext_lazy as _
 
-from olc_webportalv2.common.forms import MultipleFileField
+from olc_webportalv2.common.forms import (
+    CompactLabelSuffixMixin,
+    MultipleFileField,
+)
 from olc_webportalv2.vir_typer.models import VirTyperProject, VirTyperRequest
 
 
@@ -166,7 +169,7 @@ class VirTyperFileForm(forms.Form):
         return query_file_list
 
 
-class EmailForm(forms.Form):
+class EmailForm(CompactLabelSuffixMixin, forms.Form):
     """Collect an email address for VirusTyper notifications."""
 
-    email = forms.EmailField(max_length=50, label=_("Email "))
+    email = forms.EmailField(max_length=50, label=_("Email"))

@@ -1,5 +1,7 @@
+from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
+from django.utils.translation import override
 
 from olc_webportalv2.primer_finder.forms import (
     PrimerVerifierForm,
@@ -7,6 +9,10 @@ from olc_webportalv2.primer_finder.forms import (
     ValidatorTargetForm,
     ValidatorTargetFormSetFactory,
 )
+
+
+class DefaultLabelSuffixForm(forms.Form):
+    value = forms.CharField(label='Label')
 
 
 class PrimerVerifierFormTests(SimpleTestCase):
@@ -78,6 +84,50 @@ class PrimerVerifierFormTests(SimpleTestCase):
 
 
 class ValidatorFormTests(SimpleTestCase):
+    def test_french_default_form_suffix_has_no_preceding_space(self):
+        with override('fr'):
+            label = DefaultLabelSuffixForm()['value'].label_tag()
+
+        self.assertIn('Label:</label>', label)
+        self.assertNotIn('\xa0:', label)
+
+    def test_request_form_labels_are_translated_without_spaced_colons(self):
+        with override('fr'):
+            form = ValidatorExperimentForm()
+            target_form = ValidatorTargetForm()
+
+            self.assertEqual(form['project_name'].label, 'Nom du projet')
+            self.assertEqual(
+                form['inclusivity_panel'].label, 'Panel d’inclusivité'
+            )
+            self.assertEqual(
+                form['exclusivity_panel'].label, 'Panel d’exclusivité'
+            )
+            self.assertEqual(
+                form['classification_rule'].label,
+                'Règle de classification',
+            )
+            self.assertEqual(form['logic'].label, 'Logique')
+            self.assertEqual(
+                str(form.fields['classification_rule'].choices[0][1]),
+                'Aucune règle de classification',
+            )
+            self.assertEqual(
+                str(form.fields['classification_rule'].choices[1][1]),
+                'Règle Salmonella (invA ou stn requis)',
+            )
+
+            for bound_field in (
+                form['project_name'],
+                form['classification_rule'],
+                form['logic'],
+                form['gene_exclusion_categories'],
+                target_form['sample_name'],
+            ):
+                label = bound_field.label_tag()
+                self.assertIn(':</label>', label)
+                self.assertNotIn('\xa0:', label)
+
     def test_experiment_form_enforces_panel_overlap_and_amplicon_order(self):
         valid = ValidatorExperimentForm(
             data={

@@ -2,6 +2,7 @@ import re
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.translation import override
 
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
@@ -178,6 +179,16 @@ class PrimerFinderLandingUiTests(TestCase):
                 response,
                 f'href="{reverse(create_route)}"',
             )
+
+    def test_primer_verifier_name_remains_unchanged_in_french(self):
+        self.user.language = 'fr'
+        self.user.save(update_fields=['language'])
+        with override('fr'):
+            response = self.client.get(reverse('primer_finder:primer_home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<h3>PrimerVerifier</h3>', html=True)
+        self.assertNotContains(response, 'Vérifié')
 
     def test_create_forms_render_fields_and_submit_buttons(self):
         validator_response = self.client.get(

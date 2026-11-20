@@ -9,6 +9,7 @@ from django.utils.translation import override
 from olc_webportalv2.users.models import User
 from olc_webportalv2.vir_typer.forms import (
     BaseVirTyperSampleFormSet,
+    EmailForm,
     VirTyperProjectForm,
     VirTyperSampleForm,
 )
@@ -19,6 +20,15 @@ from olc_webportalv2.vir_typer.models import (
 )
 
 __author__ = "adamkoziol"
+
+
+class VirusTyperLabelTests(TestCase):
+    def test_email_label_has_compact_colon_in_french(self):
+        with override("fr"):
+            label = EmailForm()["email"].label_tag()
+
+        self.assertIn("Courriel:</label>", label)
+        self.assertNotIn("\xa0:", label)
 
 
 class VirusTyperProject(TestCase):

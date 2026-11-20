@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FoodPort\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 10:11-0500\n"
+"POT-Creation-Date: 2026-11-20 11:41-0500\n"
 "PO-Revision-Date: 2026-11-19 19:51+0000\n"
 "Last-Translator: FoodPort translation team\n"
 "Language-Team: French\n"
@@ -99,8 +99,9 @@ msgstr "aucun"
 
 #: olc_webportalv2/ampliseq/forms.py:54 olc_webportalv2/cowsnphr/forms.py:26
 #: olc_webportalv2/cowsnphr/forms.py:80
-#: olc_webportalv2/primer_finder/forms.py:128
-#: olc_webportalv2/primer_finder/forms.py:713
+#: olc_webportalv2/primer_finder/forms.py:129
+#: olc_webportalv2/primer_finder/forms.py:714
+#: olc_webportalv2/primer_finder/forms.py:818
 #: olc_webportalv2/templates/ampliseq/ampliseq_home.html:46
 #: olc_webportalv2/templates/cowsnphr/cowsnphr_home.html:63
 #: olc_webportalv2/templates/cowsnphr/cowsnphr_seqid.html:18
@@ -108,17 +109,17 @@ msgstr "aucun"
 #: olc_webportalv2/templates/primer_finder/validator_home.html:22
 #: olc_webportalv2/templates/primer_finder/verifier_home.html:23
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:15
-#: olc_webportalv2/vir_typer/forms.py:114
+#: olc_webportalv2/vir_typer/forms.py:117
 msgid "Project Name"
 msgstr "Nom du projet"
 
 #: olc_webportalv2/ampliseq/forms.py:55
-#: olc_webportalv2/primer_finder/forms.py:958
+#: olc_webportalv2/primer_finder/forms.py:964
 msgid "Forward primer sequence"
 msgstr "Séquence de l’amorce sens"
 
 #: olc_webportalv2/ampliseq/forms.py:56
-#: olc_webportalv2/primer_finder/forms.py:969
+#: olc_webportalv2/primer_finder/forms.py:975
 msgid "Reverse primer sequence"
 msgstr "Séquence de l’amorce antisens"
 
@@ -187,20 +188,20 @@ msgstr "Nom du conteneur Blob contenant les fichiers de séquence"
 #: olc_webportalv2/ampliseq/forms.py:87 olc_webportalv2/ampliseq/forms.py:106
 #: olc_webportalv2/ampliseq/forms.py:129 olc_webportalv2/ampliseq/forms.py:132
 #: olc_webportalv2/cowsnphr/forms.py:33 olc_webportalv2/cowsnphr/forms.py:87
-#: olc_webportalv2/geneseekr/forms.py:290
-#: olc_webportalv2/geneseekr/forms.py:380
-#: olc_webportalv2/geneseekr/forms.py:456
-#: olc_webportalv2/geneseekr/forms.py:532
-#: olc_webportalv2/primer_finder/forms.py:152
-#: olc_webportalv2/primer_finder/forms.py:167
-#: olc_webportalv2/primer_finder/forms.py:722
-#: olc_webportalv2/primer_finder/forms.py:740
+#: olc_webportalv2/geneseekr/forms.py:293
+#: olc_webportalv2/geneseekr/forms.py:383
+#: olc_webportalv2/geneseekr/forms.py:459
+#: olc_webportalv2/geneseekr/forms.py:535
+#: olc_webportalv2/primer_finder/forms.py:153
+#: olc_webportalv2/primer_finder/forms.py:168
+#: olc_webportalv2/primer_finder/forms.py:723
+#: olc_webportalv2/primer_finder/forms.py:741
 #: olc_webportalv2/templates/cowbat/upload_interop.html:32
 msgid "Optional"
 msgstr "Facultatif"
 
 #: olc_webportalv2/ampliseq/forms.py:93 olc_webportalv2/ampliseq/forms.py:99
-#: olc_webportalv2/vir_typer/forms.py:112
+#: olc_webportalv2/vir_typer/forms.py:115
 msgid "Required"
 msgstr "Obligatoire"
 
@@ -231,7 +232,7 @@ msgid "Container Name"
 msgstr "Nom de Contig"
 
 #: olc_webportalv2/ampliseq/forms.py:192 olc_webportalv2/cowsnphr/forms.py:144
-#: olc_webportalv2/filezone/forms.py:24 olc_webportalv2/geneseekr/forms.py:114
+#: olc_webportalv2/filezone/forms.py:24 olc_webportalv2/geneseekr/forms.py:117
 msgid "Autocomplete ..."
 msgstr "Saisissez pour rechercher…"
 
@@ -615,6 +616,10 @@ msgstr "Aucun fichier POD5 n’a été enregistré."
 #: olc_webportalv2/api/views.py:1494
 msgid "All registered files must be uploaded."
 msgstr "Tous les fichiers enregistrés doivent être téléversés."
+
+#: olc_webportalv2/common/forms.py:6
+msgid ":"
+msgstr ":"
 
 #: olc_webportalv2/cowbat/forms.py:19
 msgid "YYMMDD_LAB"
@@ -1153,15 +1158,15 @@ msgstr "cowsnphr_amino_acid_summary/<int:cowsnphr_pk>/"
 msgid "cowsnphr_autocompleter/"
 msgstr "cowsnphr_autocompleter/"
 
-#: olc_webportalv2/data/forms.py:19 olc_webportalv2/geneseekr/forms.py:90
-#: olc_webportalv2/geneseekr/forms.py:294
-#: olc_webportalv2/geneseekr/forms.py:384
-#: olc_webportalv2/geneseekr/forms.py:460
+#: olc_webportalv2/data/forms.py:19 olc_webportalv2/geneseekr/forms.py:93
+#: olc_webportalv2/geneseekr/forms.py:297
+#: olc_webportalv2/geneseekr/forms.py:387
+#: olc_webportalv2/geneseekr/forms.py:463
 #: olc_webportalv2/sequence_database/forms.py:297
 msgid "YYYY-LAB-####"
 msgstr "AAAA-LAB-####"
 
-#: olc_webportalv2/data/forms.py:27 olc_webportalv2/geneseekr/forms.py:547
+#: olc_webportalv2/data/forms.py:27 olc_webportalv2/geneseekr/forms.py:550
 msgid "Cannot be blank"
 msgstr "Ne peut pas être vide!"
 
@@ -1176,7 +1181,7 @@ msgstr ""
 "attendu est YYYY-LAB-####. Assurez-vous également de saisir une SeqID par "
 "ligne. SeqID invalides : %(seqids)s"
 
-#: olc_webportalv2/data/forms.py:55 olc_webportalv2/geneseekr/forms.py:342
+#: olc_webportalv2/data/forms.py:55 olc_webportalv2/geneseekr/forms.py:345
 #, python-format
 msgid ""
 "One or more of the SEQIDs you entered was not found in our database. SEQIDs "
@@ -1429,174 +1434,10 @@ msgstr ""
 "Le message suivant a été reçu lors de la tentative de suppression de "
 "%(blobs)s dans le conteneur %(container)s"
 
-#: olc_webportalv2/geneseekr/forms.py:26 olc_webportalv2/geneseekr/forms.py:288
-#: olc_webportalv2/geneseekr/forms.py:378
-#: olc_webportalv2/geneseekr/forms.py:454
-msgid "Name: "
-msgstr "Nom: "
-
-#: olc_webportalv2/geneseekr/forms.py:27
-msgid "SeqID: "
-msgstr "SeqID : "
-
-#: olc_webportalv2/geneseekr/forms.py:30
-msgid "Number neighbors: "
-msgstr "Nombre de voisins: "
-
-#: olc_webportalv2/geneseekr/forms.py:47
-msgid "Must enter at least one of SeqID or uploaded file."
-msgstr "Vous devez saisir au moins un SeqID ou téléverser un fichier."
-
-#: olc_webportalv2/geneseekr/forms.py:51
-msgid "Only enter one of SeqID and uploaded file."
-msgstr "Saisissez un seul SeqID ou téléversez un fichier."
-
-#: olc_webportalv2/geneseekr/forms.py:57
-msgid "Uploaded file must be in FASTA format and filename must end with .fasta"
-msgstr ""
-"Le fichier téléversé doit être au format FASTA et son nom doit se terminer "
-"par .fasta."
-
-#: olc_webportalv2/geneseekr/forms.py:64
-msgid ""
-"Requested SEQID is not in the database. Correct format for SeqID is YYYY-LAB-"
-"####. Please check your SEQID and try again."
-msgstr ""
-"Le SeqID demandé est introuvable dans la base de données. Le format attendu "
-"est YYYY-LAB-####. Veuillez vérifier le SeqID et réessayer."
-
-#: olc_webportalv2/geneseekr/forms.py:74
-msgid ""
-"Invalid number of nearest neighbors requested. Valid values are from 1 to "
-"250."
-msgstr ""
-"Le nombre de voisins les plus proches n'est pas valide. Les valeurs valides "
-"vont de 1 à 250."
-
-#: olc_webportalv2/geneseekr/forms.py:96
-msgid ""
-">Gene \n"
-" ACGTACGT"
-msgstr ""
-">Gène \n"
-" ACGTACGT"
-
-#: olc_webportalv2/geneseekr/forms.py:140
-#: olc_webportalv2/geneseekr/forms.py:322
-#: olc_webportalv2/geneseekr/forms.py:405
-#: olc_webportalv2/geneseekr/forms.py:482
-#, python-format
-msgid ""
-"One or more of the SEQIDs you entered was not formatted correctly. Correct "
-"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
-"line. Invalid SEQIDs: %s"
-msgstr ""
-"Une ou plusieurs des SEQID saisies ne sont pas au bon format. Le format "
-"attendu est YYYY-LAB-####. Assurez-vous également de saisir une SeqID par "
-"ligne. SeqID invalides : %s"
-
-#: olc_webportalv2/geneseekr/forms.py:160
-#: olc_webportalv2/geneseekr/forms.py:425
-#: olc_webportalv2/geneseekr/forms.py:502
-#, python-format
-msgid ""
-"One or more of the SEQIDs you entered was not found in our database. SEQIDs "
-"not found: %s"
-msgstr ""
-"Une ou plusieurs des SeqID saisies sont introuvables dans notre base de "
-"données. SeqID introuvables : %s"
-
-#: olc_webportalv2/geneseekr/forms.py:184
-#, python-format
-msgid ""
-"Your query did not correspond to any sequences in our database: query was "
-"for sequences from genus %s"
-msgstr ""
-"Votre requête ne correspondait à aucune séquence dans notre base de "
-"données : la requête portait sur des séquences du genre %s"
-
-#: olc_webportalv2/geneseekr/forms.py:194
-#, python-format
-msgid ""
-"Your query did not correspond to any sequences in our database: query was "
-"for sequences NOT from genus %s"
-msgstr ""
-"Votre requête ne correspondait à aucune séquence dans notre base de "
-"données : la requête portait sur des séquences NON issues du genre %s"
-
-#: olc_webportalv2/geneseekr/forms.py:205
-msgid ""
-"No input found! You must submit a FASTA sequence by pasting it into the text "
-"box or uploading a FASTA file."
-msgstr ""
-"Aucune entrée trouvée ! Vous devez soumettre une séquence FASTA en la "
-"collant dans la zone de texte ou en téléversant un fichier FASTA."
-
-#: olc_webportalv2/geneseekr/forms.py:213
-msgid ""
-"Multiple inputs found! You must submit a FASTA sequence by pasting it into "
-"the text box or uploading a FASTA file, but not both."
-msgstr ""
-"Plusieurs entrées trouvées ! Vous devez soumettre une séquence FASTA en la "
-"collant dans la zone de texte ou en téléversant un fichier FASTA, mais pas "
-"les deux."
-
-#: olc_webportalv2/geneseekr/forms.py:230
-#: olc_webportalv2/geneseekr/forms.py:257
-msgid ""
-"Your FASTA sequence contains invalid characters. Sequence should only "
-"contain valid nucleotides (A, C, T, G, N)."
-msgstr ""
-"Votre séquence FASTA contient des caractères non valides. La séquence ne "
-"doit contenir que des nucléotides valides (A, C, T, G, N)."
-
-#: olc_webportalv2/geneseekr/forms.py:239
-#: olc_webportalv2/geneseekr/forms.py:266
-msgid ""
-"Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA"
-msgstr ""
-"Séquence FASTA invalide saisie. Le format correct est: >nomdeséquence  "
-"ACTGATCGA"
-
-#: olc_webportalv2/geneseekr/forms.py:274
-#, python-format
-msgid ""
-"FASTA sequence length maximum is 10000 bases. Your input sequence had %s "
-"bases."
-msgstr ""
-"La longueur maximale de la séquence FASTA est de 10000 bases. Votre séquence "
-"d'entrée avait des %s bases"
-
-#: olc_webportalv2/geneseekr/forms.py:301
-msgid "Number of diversitree strains"
-msgstr "Nombre de souches de diversitree"
-
-#: olc_webportalv2/geneseekr/forms.py:352
-#, python-format
-msgid "Too many Diversitree strains selected; must be %s or less"
-msgstr "Trop de souches Diversitree sélectionnées, doivent être en %s ou moins"
-
-#: olc_webportalv2/geneseekr/forms.py:361
-#: olc_webportalv2/geneseekr/forms.py:436
-#: olc_webportalv2/geneseekr/forms.py:516
-msgid "All files uploaded must be in FASTA format with the extension .fasta"
-msgstr ""
-"Tous les fichiers téléversés doivent être au format FASTA et porter "
-"l’extension .fasta."
-
-#: olc_webportalv2/geneseekr/forms.py:367
-msgid "At least two input sequences must be given."
-msgstr "Au moins deux séquences d'entrée doivent être données."
-
-#: olc_webportalv2/geneseekr/forms.py:443
-msgid "At least one input sequence must be given."
-msgstr "Au moins une séquence d'entrée doit être donnée."
-
-#: olc_webportalv2/geneseekr/forms.py:510
-msgid "Must enter at least one SeqID or upload at least one file."
-msgstr "Vous devez saisir au moins un SeqID ou téléverser au moins un fichier."
-
-#: olc_webportalv2/geneseekr/forms.py:530
+#: olc_webportalv2/geneseekr/forms.py:29 olc_webportalv2/geneseekr/forms.py:291
+#: olc_webportalv2/geneseekr/forms.py:381
+#: olc_webportalv2/geneseekr/forms.py:457
+#: olc_webportalv2/geneseekr/forms.py:533
 #: olc_webportalv2/templates/filezone/container_view.html:113
 #: olc_webportalv2/templates/geneseekr/amr_home.html:19
 #: olc_webportalv2/templates/geneseekr/geneseekr_home.html:19
@@ -1609,12 +1450,179 @@ msgstr "Vous devez saisir au moins un SeqID ou téléverser au moins un fichier.
 msgid "Name"
 msgstr "Nom"
 
-#: olc_webportalv2/geneseekr/forms.py:539
-#: olc_webportalv2/vir_typer/forms.py:172
-msgid "Email "
+#: olc_webportalv2/geneseekr/forms.py:30
+#: olc_webportalv2/sequence_database/views.py:457
+#: olc_webportalv2/sequence_database/views.py:531
+#: olc_webportalv2/templates/metadata/metadata_browse.html:10
+#: olc_webportalv2/templates/metadata/metadata_results.html:29
+#: olc_webportalv2/templates/sequence_database/database_results.html:29
+msgid "SeqID"
+msgstr "SeqID"
+
+#: olc_webportalv2/geneseekr/forms.py:33
+msgid "Number of neighbors"
+msgstr "Nombre de voisins"
+
+#: olc_webportalv2/geneseekr/forms.py:50
+msgid "Must enter at least one of SeqID or uploaded file."
+msgstr "Vous devez saisir au moins un SeqID ou téléverser un fichier."
+
+#: olc_webportalv2/geneseekr/forms.py:54
+msgid "Only enter one of SeqID and uploaded file."
+msgstr "Saisissez un seul SeqID ou téléversez un fichier."
+
+#: olc_webportalv2/geneseekr/forms.py:60
+msgid "Uploaded file must be in FASTA format and filename must end with .fasta"
+msgstr ""
+"Le fichier téléversé doit être au format FASTA et son nom doit se terminer "
+"par .fasta."
+
+#: olc_webportalv2/geneseekr/forms.py:67
+msgid ""
+"Requested SEQID is not in the database. Correct format for SeqID is YYYY-LAB-"
+"####. Please check your SEQID and try again."
+msgstr ""
+"Le SeqID demandé est introuvable dans la base de données. Le format attendu "
+"est YYYY-LAB-####. Veuillez vérifier le SeqID et réessayer."
+
+#: olc_webportalv2/geneseekr/forms.py:77
+msgid ""
+"Invalid number of nearest neighbors requested. Valid values are from 1 to "
+"250."
+msgstr ""
+"Le nombre de voisins les plus proches n'est pas valide. Les valeurs valides "
+"vont de 1 à 250."
+
+#: olc_webportalv2/geneseekr/forms.py:99
+msgid ""
+">Gene \n"
+" ACGTACGT"
+msgstr ""
+">Gène \n"
+" ACGTACGT"
+
+#: olc_webportalv2/geneseekr/forms.py:143
+#: olc_webportalv2/geneseekr/forms.py:325
+#: olc_webportalv2/geneseekr/forms.py:408
+#: olc_webportalv2/geneseekr/forms.py:485
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not formatted correctly. Correct "
+"format is YYYY-LAB-####. Also, ensure that you have entered one SEQID per "
+"line. Invalid SEQIDs: %s"
+msgstr ""
+"Une ou plusieurs des SEQID saisies ne sont pas au bon format. Le format "
+"attendu est YYYY-LAB-####. Assurez-vous également de saisir une SeqID par "
+"ligne. SeqID invalides : %s"
+
+#: olc_webportalv2/geneseekr/forms.py:163
+#: olc_webportalv2/geneseekr/forms.py:428
+#: olc_webportalv2/geneseekr/forms.py:505
+#, python-format
+msgid ""
+"One or more of the SEQIDs you entered was not found in our database. SEQIDs "
+"not found: %s"
+msgstr ""
+"Une ou plusieurs des SeqID saisies sont introuvables dans notre base de "
+"données. SeqID introuvables : %s"
+
+#: olc_webportalv2/geneseekr/forms.py:187
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:197
+#, python-format
+msgid ""
+"Your query did not correspond to any sequences in our database: query was "
+"for sequences NOT from genus %s"
+msgstr ""
+"Votre requête ne correspondait à aucune séquence dans notre base de "
+"données : la requête portait sur des séquences NON issues du genre %s"
+
+#: olc_webportalv2/geneseekr/forms.py:208
+msgid ""
+"No input found! You must submit a FASTA sequence by pasting it into the text "
+"box or uploading a FASTA file."
+msgstr ""
+"Aucune entrée trouvée ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléversant un fichier FASTA."
+
+#: olc_webportalv2/geneseekr/forms.py:216
+msgid ""
+"Multiple inputs found! You must submit a FASTA sequence by pasting it into "
+"the text box or uploading a FASTA file, but not both."
+msgstr ""
+"Plusieurs entrées trouvées ! Vous devez soumettre une séquence FASTA en la "
+"collant dans la zone de texte ou en téléversant un fichier FASTA, mais pas "
+"les deux."
+
+#: olc_webportalv2/geneseekr/forms.py:233
+#: olc_webportalv2/geneseekr/forms.py:260
+msgid ""
+"Your FASTA sequence contains invalid characters. Sequence should only "
+"contain valid nucleotides (A, C, T, G, N)."
+msgstr ""
+"Votre séquence FASTA contient des caractères non valides. La séquence ne "
+"doit contenir que des nucléotides valides (A, C, T, G, N)."
+
+#: olc_webportalv2/geneseekr/forms.py:242
+#: olc_webportalv2/geneseekr/forms.py:269
+msgid ""
+"Invalid FASTA sequence entered. Correct format is: >sequencename ACTGATCGA"
+msgstr ""
+"Séquence FASTA invalide saisie. Le format correct est: >nomdeséquence  "
+"ACTGATCGA"
+
+#: olc_webportalv2/geneseekr/forms.py:277
+#, python-format
+msgid ""
+"FASTA sequence length maximum is 10000 bases. Your input sequence had %s "
+"bases."
+msgstr ""
+"La longueur maximale de la séquence FASTA est de 10000 bases. Votre séquence "
+"d'entrée avait des %s bases"
+
+#: olc_webportalv2/geneseekr/forms.py:304
+msgid "Number of diversitree strains"
+msgstr "Nombre de souches de diversitree"
+
+#: olc_webportalv2/geneseekr/forms.py:355
+#, python-format
+msgid "Too many Diversitree strains selected; must be %s or less"
+msgstr "Trop de souches Diversitree sélectionnées, doivent être en %s ou moins"
+
+#: olc_webportalv2/geneseekr/forms.py:364
+#: olc_webportalv2/geneseekr/forms.py:439
+#: olc_webportalv2/geneseekr/forms.py:519
+msgid "All files uploaded must be in FASTA format with the extension .fasta"
+msgstr ""
+"Tous les fichiers téléversés doivent être au format FASTA et porter "
+"l’extension .fasta."
+
+#: olc_webportalv2/geneseekr/forms.py:370
+msgid "At least two input sequences must be given."
+msgstr "Au moins deux séquences d'entrée doivent être données."
+
+#: olc_webportalv2/geneseekr/forms.py:446
+msgid "At least one input sequence must be given."
+msgstr "Au moins une séquence d'entrée doit être donnée."
+
+#: olc_webportalv2/geneseekr/forms.py:513
+msgid "Must enter at least one SeqID or upload at least one file."
+msgstr "Vous devez saisir au moins un SeqID ou téléverser au moins un fichier."
+
+#: olc_webportalv2/geneseekr/forms.py:542
+#: olc_webportalv2/templates/users/user_detail.html:36
+#: olc_webportalv2/vir_typer/forms.py:175
+msgid "Email"
 msgstr "Courriel"
 
-#: olc_webportalv2/geneseekr/forms.py:549
+#: olc_webportalv2/geneseekr/forms.py:552
 msgid "Must be in proper email format"
 msgstr "Doit être dans le bon format de courriel"
 
@@ -1814,7 +1822,7 @@ msgid "Pass + Reference"
 msgstr "Passe + Référence"
 
 #: olc_webportalv2/metadata/views.py:241
-#: olc_webportalv2/primer_finder/forms.py:864
+#: olc_webportalv2/primer_finder/forms.py:868
 msgid "All"
 msgstr "Tous"
 
@@ -1846,24 +1854,24 @@ msgstr ""
 msgid "upload_success/"
 msgstr "upload_success/"
 
-#: olc_webportalv2/primer_finder/forms.py:32
+#: olc_webportalv2/primer_finder/forms.py:33
 msgid "Zero"
 msgstr "Zéro"
 
-#: olc_webportalv2/primer_finder/forms.py:33
+#: olc_webportalv2/primer_finder/forms.py:34
 msgid "One"
 msgstr "Un"
 
-#: olc_webportalv2/primer_finder/forms.py:34
+#: olc_webportalv2/primer_finder/forms.py:35
 msgid "Two"
 msgstr "Deux"
 
-#: olc_webportalv2/primer_finder/forms.py:35
+#: olc_webportalv2/primer_finder/forms.py:36
 msgid "Three"
 msgstr "Trois"
 
-#: olc_webportalv2/primer_finder/forms.py:57
-#: olc_webportalv2/primer_finder/forms.py:66
+#: olc_webportalv2/primer_finder/forms.py:58
+#: olc_webportalv2/primer_finder/forms.py:67
 #: olc_webportalv2/sequence_database/models.py:303
 #: olc_webportalv2/sequence_database/models.py:388
 #: olc_webportalv2/sequence_database/views.py:462
@@ -1872,87 +1880,87 @@ msgstr "Trois"
 msgid "Genus"
 msgstr "Genre"
 
-#: olc_webportalv2/primer_finder/forms.py:60
-#: olc_webportalv2/primer_finder/forms.py:69
+#: olc_webportalv2/primer_finder/forms.py:61
+#: olc_webportalv2/primer_finder/forms.py:70
 msgid "Search genus ..."
 msgstr "Chercher "
 
-#: olc_webportalv2/primer_finder/forms.py:75
-#: olc_webportalv2/primer_finder/forms.py:84
+#: olc_webportalv2/primer_finder/forms.py:76
+#: olc_webportalv2/primer_finder/forms.py:85
 msgid "Specific SeqIDs"
 msgstr "SeqID spécifiques"
 
-#: olc_webportalv2/primer_finder/forms.py:78
-#: olc_webportalv2/primer_finder/forms.py:87
+#: olc_webportalv2/primer_finder/forms.py:79
+#: olc_webportalv2/primer_finder/forms.py:88
 msgid "Search SeqIDs ..."
 msgstr "Rechercher des SeqID…"
 
-#: olc_webportalv2/primer_finder/forms.py:92
-#: olc_webportalv2/primer_finder/forms.py:98
+#: olc_webportalv2/primer_finder/forms.py:93
+#: olc_webportalv2/primer_finder/forms.py:99
 msgid "No benchmark dataset"
 msgstr "Aucun jeu de données benchmark"
 
-#: olc_webportalv2/primer_finder/forms.py:94
-#: olc_webportalv2/primer_finder/forms.py:100
+#: olc_webportalv2/primer_finder/forms.py:95
+#: olc_webportalv2/primer_finder/forms.py:101
 msgid "Benchmark dataset"
 msgstr "Jeu de données benchmark"
 
-#: olc_webportalv2/primer_finder/forms.py:129
+#: olc_webportalv2/primer_finder/forms.py:130
 msgid "Primer Sequence(s)"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/primer_finder/forms.py:130
-#: olc_webportalv2/primer_finder/forms.py:716
+#: olc_webportalv2/primer_finder/forms.py:131
+#: olc_webportalv2/primer_finder/forms.py:717
 msgid "Probe Sequence"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/primer_finder/forms.py:131
+#: olc_webportalv2/primer_finder/forms.py:132
 msgid "Maximum Number of Mismatches"
 msgstr "Nombre maximal de mésappariements"
 
-#: olc_webportalv2/primer_finder/forms.py:132
+#: olc_webportalv2/primer_finder/forms.py:133
 msgid "Minimum Amplicon Size"
 msgstr "Taille minimale du produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:133
+#: olc_webportalv2/primer_finder/forms.py:134
 msgid "Maximum Amplicon Size"
 msgstr "Taille maximale du produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:135
+#: olc_webportalv2/primer_finder/forms.py:136
 msgid "Allow searching for amplicons over multiple contigs?"
 msgstr ""
 "Autoriser la recherche de produits d’amplification sur plusieurs contigs ?"
 
-#: olc_webportalv2/primer_finder/forms.py:137
-#: olc_webportalv2/primer_finder/forms.py:847
+#: olc_webportalv2/primer_finder/forms.py:138
+#: olc_webportalv2/primer_finder/forms.py:849
 msgid "Minimum distance between amplicons"
 msgstr "Distance minimale entre les produits d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:139
+#: olc_webportalv2/primer_finder/forms.py:140
 msgid "Genus/Genera to include in inclusivity panel"
 msgstr "Genre(s) à inclure dans le panel d’inclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:142
+#: olc_webportalv2/primer_finder/forms.py:143
 msgid "Genus/Genera to include in exclusivity panel"
 msgstr "Genre(s) à inclure dans le panel d’exclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:144
+#: olc_webportalv2/primer_finder/forms.py:145
 msgid "Genus to include in inclusivity panel"
 msgstr "Genre à inclure dans le panel d’inclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:145
+#: olc_webportalv2/primer_finder/forms.py:146
 msgid "Genus to include in exclusivity panel"
 msgstr "Genre à inclure dans le panel d’exclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:146
+#: olc_webportalv2/primer_finder/forms.py:147
 msgid "Specific inclusivity SeqIDs"
 msgstr "SeqID spécifiques du panel d’inclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:147
+#: olc_webportalv2/primer_finder/forms.py:148
 msgid "Specific exclusivity SeqIDs"
 msgstr "SeqID spécifiques du panel d’exclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:159
+#: olc_webportalv2/primer_finder/forms.py:160
 msgid ""
 ">Primer_Sequence1-F \n"
 " ACGTACGT... \n"
@@ -1968,41 +1976,41 @@ msgstr ""
 " >Primer_Sequence2-F \n"
 " ...."
 
-#: olc_webportalv2/primer_finder/forms.py:235
+#: olc_webportalv2/primer_finder/forms.py:236
 msgid "Empty primer header"
 msgstr "En-tête d’amorce vide"
 
-#: olc_webportalv2/primer_finder/forms.py:249
+#: olc_webportalv2/primer_finder/forms.py:250
 #, python-brace-format
 msgid "Primer {name} must end with -F or -R (e.g., zraS1-F)"
 msgstr "L’amorce {name} doit se terminer par -F ou -R (p. ex. zraS1-F)"
 
-#: olc_webportalv2/primer_finder/forms.py:262
+#: olc_webportalv2/primer_finder/forms.py:263
 #, python-brace-format
 msgid "Primer {name} must contain exactly one hyphen before F/R"
 msgstr "L’amorce {name} doit contenir exactement un trait d’union avant F/R"
 
-#: olc_webportalv2/primer_finder/forms.py:276
+#: olc_webportalv2/primer_finder/forms.py:277
 #, python-brace-format
 msgid "Primer {name} has an empty base name before the suffix"
 msgstr "Le nom de base de l’amorce {name} est vide avant le suffixe"
 
-#: olc_webportalv2/primer_finder/forms.py:288
+#: olc_webportalv2/primer_finder/forms.py:289
 #, python-brace-format
 msgid "Primer {name} must end with -F or -R"
 msgstr "L’amorce {name} doit se terminer par -F ou -R"
 
-#: olc_webportalv2/primer_finder/forms.py:339
+#: olc_webportalv2/primer_finder/forms.py:340
 #, python-brace-format
 msgid "Duplicate primer header {name}"
 msgstr "En-tête d’amorce en double : {name}"
 
-#: olc_webportalv2/primer_finder/forms.py:364
+#: olc_webportalv2/primer_finder/forms.py:365
 #, python-brace-format
 msgid "Primer {name} does not have any sequence data"
 msgstr "L’amorce {name} ne contient aucune donnée de séquence"
 
-#: olc_webportalv2/primer_finder/forms.py:391
+#: olc_webportalv2/primer_finder/forms.py:392
 #, python-brace-format
 msgid ""
 "Primer {name} has an illegal character:\n"
@@ -2011,7 +2019,7 @@ msgstr ""
 "L’amorce {name} contient un caractère non autorisé :\n"
 "{info}"
 
-#: olc_webportalv2/primer_finder/forms.py:400
+#: olc_webportalv2/primer_finder/forms.py:401
 #, python-brace-format
 msgid ""
 "Primer {name} has multiple illegal characters:\n"
@@ -2020,29 +2028,29 @@ msgstr ""
 "L’amorce {name} contient plusieurs caractères non autorisés :\n"
 "{info}"
 
-#: olc_webportalv2/primer_finder/forms.py:416
+#: olc_webportalv2/primer_finder/forms.py:417
 msgid "No valid primers supplied"
 msgstr "Aucune amorce valide n’a été fournie"
 
-#: olc_webportalv2/primer_finder/forms.py:425
+#: olc_webportalv2/primer_finder/forms.py:426
 #, python-brace-format
 msgid "Primer set {name} is missing a {direction} primer"
 msgstr "Il manque une amorce {direction} dans l’ensemble d’amorces {name}"
 
-#: olc_webportalv2/primer_finder/forms.py:437
+#: olc_webportalv2/primer_finder/forms.py:438
 msgid "At least one forward primer (-F) is required"
 msgstr "Au moins une amorce sens (-F) est requise"
 
-#: olc_webportalv2/primer_finder/forms.py:441
+#: olc_webportalv2/primer_finder/forms.py:442
 msgid "At least one reverse primer (-R) is required"
 msgstr "Au moins une amorce antisens (-R) est requise"
 
-#: olc_webportalv2/primer_finder/forms.py:469
+#: olc_webportalv2/primer_finder/forms.py:470
 msgid "Please provide FASTA-formatted forward and reverse primers"
 msgstr "Veuillez fournir des amorces sens et antisens au format FASTA"
 
-#: olc_webportalv2/primer_finder/forms.py:488
-#: olc_webportalv2/primer_finder/forms.py:788
+#: olc_webportalv2/primer_finder/forms.py:489
+#: olc_webportalv2/primer_finder/forms.py:789
 msgid ""
 "Only the following characters are allowed in the probe sequence: A, C, G, "
 "and T"
@@ -2050,37 +2058,37 @@ msgstr ""
 "Seuls les caractères suivants sont permis dans la séquence de la sonde : A, "
 "C, G et T"
 
-#: olc_webportalv2/primer_finder/forms.py:524
+#: olc_webportalv2/primer_finder/forms.py:525
 msgid "Select at least one benchmark, genus, or SeqID for either panel."
 msgstr ""
 "Sélectionnez au moins un benchmark, un genre ou un SeqID pour l’un des "
 "panels."
 
-#: olc_webportalv2/primer_finder/forms.py:538
+#: olc_webportalv2/primer_finder/forms.py:539
 msgid "A benchmark dataset cannot be assigned to both panels."
 msgstr "Un jeu de données benchmark ne peut pas être attribué aux deux panels."
 
-#: olc_webportalv2/primer_finder/forms.py:545
+#: olc_webportalv2/primer_finder/forms.py:546
 msgid "A genus cannot be assigned to both panels."
 msgstr "Un genre ne peut pas être attribué aux deux panels."
 
-#: olc_webportalv2/primer_finder/forms.py:547
+#: olc_webportalv2/primer_finder/forms.py:548
 msgid "A SeqID cannot be assigned to both panels."
 msgstr "Un SeqID ne peut pas être attribué aux deux panels."
 
-#: olc_webportalv2/primer_finder/forms.py:571
+#: olc_webportalv2/primer_finder/forms.py:572
 msgid "The minimum amplicon size cannot be lower than 0 bp"
 msgstr ""
 "La taille minimale du produit d’amplification ne peut pas être inférieure à "
 "0 pb"
 
-#: olc_webportalv2/primer_finder/forms.py:577
+#: olc_webportalv2/primer_finder/forms.py:578
 #, python-brace-format
 msgid "The minimum amplicon size cannot be greater than {max} bp"
 msgstr ""
 "La taille minimale du produit d’amplification ne peut pas dépasser {max} pb"
 
-#: olc_webportalv2/primer_finder/forms.py:587
+#: olc_webportalv2/primer_finder/forms.py:588
 #, python-brace-format
 msgid ""
 "Please enter an integer between 0 and {max} for the minimum amplicon size"
@@ -2088,19 +2096,19 @@ msgstr ""
 "Veuillez saisir un entier entre 0 et {max} pour la taille minimale du "
 "produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:599
+#: olc_webportalv2/primer_finder/forms.py:600
 msgid "The maximum amplicon size cannot be lower than 0 bp"
 msgstr ""
 "La taille maximale du produit d’amplification ne peut pas être inférieure à "
 "0 pb"
 
-#: olc_webportalv2/primer_finder/forms.py:605
+#: olc_webportalv2/primer_finder/forms.py:606
 #, python-brace-format
 msgid "The maximum amplicon size cannot be greater than {max} bp"
 msgstr ""
 "La taille maximale du produit d’amplification ne peut pas dépasser {max} pb"
 
-#: olc_webportalv2/primer_finder/forms.py:615
+#: olc_webportalv2/primer_finder/forms.py:616
 #, python-brace-format
 msgid ""
 "Please enter an integer between 0 and {max} for the maximum amplicon size"
@@ -2108,20 +2116,20 @@ msgstr ""
 "Veuillez saisir un entier entre 0 et {max} pour la taille maximale du "
 "produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:628
+#: olc_webportalv2/primer_finder/forms.py:629
 msgid "The minimum distance between amplicons cannot be lower than 0 bp"
 msgstr ""
 "La distance minimale entre les produits d’amplification ne peut pas être "
 "inférieure à 0 pb"
 
-#: olc_webportalv2/primer_finder/forms.py:636
+#: olc_webportalv2/primer_finder/forms.py:637
 #, python-brace-format
 msgid "The minimum distance between amplicons cannot be greater than {max} bp"
 msgstr ""
 "La distance minimale entre les produits d’amplification ne peut pas dépasser "
 "{max} pb"
 
-#: olc_webportalv2/primer_finder/forms.py:646
+#: olc_webportalv2/primer_finder/forms.py:647
 #, python-brace-format
 msgid ""
 "Please enter an integer between 0 and {max} for the minimum distance between "
@@ -2130,68 +2138,76 @@ msgstr ""
 "Veuillez saisir un entier entre 0 et {max} pour la distance minimale entre "
 "les produits d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:688
+#: olc_webportalv2/primer_finder/forms.py:689
 msgid "This genus is not present in the sequence database."
 msgstr "Créer des requêtes complexes sur la base de données des séquences."
 
-#: olc_webportalv2/primer_finder/forms.py:714
+#: olc_webportalv2/primer_finder/forms.py:715
 msgid "Forward Primer Sequence"
 msgstr "Séquence de l’amorce sens"
 
-#: olc_webportalv2/primer_finder/forms.py:715
+#: olc_webportalv2/primer_finder/forms.py:716
 msgid "Reverse Primer Sequence"
 msgstr "Séquence de l’amorce antisens"
 
-#: olc_webportalv2/primer_finder/forms.py:717
+#: olc_webportalv2/primer_finder/forms.py:718
 msgid "Inclusivity panel"
 msgstr "Panel d’inclusivité"
 
-#: olc_webportalv2/primer_finder/forms.py:728
-#: olc_webportalv2/primer_finder/forms.py:734
+#: olc_webportalv2/primer_finder/forms.py:729
+#: olc_webportalv2/primer_finder/forms.py:735
 msgid "ACGTACGT..."
 msgstr "ACGTACGT..."
 
-#: olc_webportalv2/primer_finder/forms.py:796
+#: olc_webportalv2/primer_finder/forms.py:797
 msgid "Please select an option for the inclusivity panel."
 msgstr "Veuillez sélectionner une option pour le panel d’inclusivité."
 
-#: olc_webportalv2/primer_finder/forms.py:818
+#: olc_webportalv2/primer_finder/forms.py:820
 msgid "Optional: give this experiment a name you will recognize later."
 msgstr "Facultatif : donnez à cette expérience un nom facile à reconnaître."
 
-#: olc_webportalv2/primer_finder/forms.py:826
+#: olc_webportalv2/primer_finder/forms.py:828
 msgid "Maximum number of mismatches"
 msgstr "Nombre maximal de mésappariements"
 
-#: olc_webportalv2/primer_finder/forms.py:833
+#: olc_webportalv2/primer_finder/forms.py:835
 msgid "Minimum amplicon size"
 msgstr "Taille minimale du produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:840
+#: olc_webportalv2/primer_finder/forms.py:842
 msgid "Maximum amplicon size"
 msgstr "Taille maximale du produit d’amplification"
 
-#: olc_webportalv2/primer_finder/forms.py:853
+#: olc_webportalv2/primer_finder/forms.py:855
 msgid "Allow searching across multiple contigs"
 msgstr "Autoriser la recherche sur plusieurs contigs"
 
-#: olc_webportalv2/primer_finder/forms.py:858
-msgid "No classification rule"
-msgstr "Classification putative"
-
 #: olc_webportalv2/primer_finder/forms.py:859
-msgid "Salmonella: invA or stn required"
-msgstr "Le nom de l'échantillon est obligatoire"
+msgid "Classification rule"
+msgstr "Règle de classification"
 
-#: olc_webportalv2/primer_finder/forms.py:864
+#: olc_webportalv2/primer_finder/forms.py:861
+msgid "No classification rule"
+msgstr "Aucune règle de classification"
+
+#: olc_webportalv2/primer_finder/forms.py:862
+msgid "Salmonella: invA or stn required"
+msgstr "Règle Salmonella (invA ou stn requis)"
+
+#: olc_webportalv2/primer_finder/forms.py:867
+msgid "Logic"
+msgstr "Logique"
+
+#: olc_webportalv2/primer_finder/forms.py:868
 msgid "No logic"
 msgstr "Aucune logique"
 
-#: olc_webportalv2/primer_finder/forms.py:864
+#: olc_webportalv2/primer_finder/forms.py:868
 msgid "Any"
 msgstr "Au moins une"
 
-#: olc_webportalv2/primer_finder/forms.py:868
+#: olc_webportalv2/primer_finder/forms.py:872
 msgid ""
 "Applies to targets in each sample. Leave as No logic to evaluate targets "
 "independently."
@@ -2199,158 +2215,166 @@ msgstr ""
 "S’applique aux cibles de chaque échantillon. Choisissez « Aucune logique » "
 "pour évaluer les cibles indépendamment."
 
-#: olc_webportalv2/primer_finder/forms.py:873
-msgid "Sample exclusion gene-analysis categories:"
-msgstr "Catégories d’analyse génique à exclure des échantillons :"
+#: olc_webportalv2/primer_finder/forms.py:877
+msgid "Sample exclusion gene-analysis categories"
+msgstr "Catégories d’analyse génique à exclure des échantillons"
 
-#: olc_webportalv2/primer_finder/forms.py:875
+#: olc_webportalv2/primer_finder/forms.py:879
 msgid "Frame shift"
 msgstr "Décalage du cadre de lecture"
 
-#: olc_webportalv2/primer_finder/forms.py:876
+#: olc_webportalv2/primer_finder/forms.py:880
 msgid "Internal stop"
 msgstr "Codon stop interne"
 
-#: olc_webportalv2/primer_finder/forms.py:877
+#: olc_webportalv2/primer_finder/forms.py:881
 msgid "Partial contig end"
 msgstr "Extrémité partielle du contig"
 
-#: olc_webportalv2/primer_finder/forms.py:878
+#: olc_webportalv2/primer_finder/forms.py:882
 msgid "Extended gene"
 msgstr "Gène étendu"
 
-#: olc_webportalv2/primer_finder/forms.py:907
+#: olc_webportalv2/primer_finder/forms.py:894
+msgid "Inclusivity Panel"
+msgstr "Panel d’inclusivité"
+
+#: olc_webportalv2/primer_finder/forms.py:900
+msgid "Exclusivity Panel"
+msgstr "Panel d’exclusivité"
+
+#: olc_webportalv2/primer_finder/forms.py:913
 msgid "Select at least one inclusivity or exclusivity panel."
 msgstr "Sélectionnez au moins un panel d’inclusivité ou d’exclusivité."
 
-#: olc_webportalv2/primer_finder/forms.py:914
+#: olc_webportalv2/primer_finder/forms.py:920
 #, python-brace-format
 msgid "A panel cannot be selected as both inclusivity and exclusivity: {0}."
 msgstr ""
 "Un panel ne peut pas être sélectionné à la fois pour l’inclusivité et "
 "l’exclusivité : {0}."
 
-#: olc_webportalv2/primer_finder/forms.py:924
+#: olc_webportalv2/primer_finder/forms.py:930
 msgid "Minimum amplicon size cannot exceed maximum amplicon size."
 msgstr ""
 "La taille minimale du produit d’amplification ne peut pas dépasser sa taille "
 "maximale."
 
-#: olc_webportalv2/primer_finder/forms.py:937
-#: olc_webportalv2/primer_finder/forms.py:941
+#: olc_webportalv2/primer_finder/forms.py:943
+#: olc_webportalv2/primer_finder/forms.py:947
 msgid "Sample name"
 msgstr "Échantillon"
 
-#: olc_webportalv2/primer_finder/forms.py:947
+#: olc_webportalv2/primer_finder/forms.py:953
 msgid "Target name"
 msgstr "Nom de la cible"
 
-#: olc_webportalv2/primer_finder/forms.py:962
-#: olc_webportalv2/primer_finder/forms.py:973
+#: olc_webportalv2/primer_finder/forms.py:968
+#: olc_webportalv2/primer_finder/forms.py:979
 msgid "5' - 3' primer sequence"
 msgstr "Séquence d’amorce 5′-3′"
 
-#: olc_webportalv2/primer_finder/forms.py:980
+#: olc_webportalv2/primer_finder/forms.py:986
 msgid "Probe (optional)"
 msgstr "Sonde (facultative)"
 
-#: olc_webportalv2/primer_finder/forms.py:984
+#: olc_webportalv2/primer_finder/forms.py:990
 msgid "Optional probe sequence"
 msgstr "Séquence ajustée"
 
-#: olc_webportalv2/primer_finder/forms.py:991
+#: olc_webportalv2/primer_finder/forms.py:997
 #: olc_webportalv2/templates/primer_finder/validator_request.html:158
 #: olc_webportalv2/templates/primer_finder/validator_request.html:254
 msgid "Identity"
 msgstr "Pourcentage Identité"
 
-#: olc_webportalv2/primer_finder/forms.py:992
+#: olc_webportalv2/primer_finder/forms.py:998
 #: olc_webportalv2/templates/primer_finder/validator_request.html:163
 #: olc_webportalv2/templates/primer_finder/validator_request.html:259
 msgid "Differences"
 msgstr "Référence"
 
-#: olc_webportalv2/primer_finder/forms.py:1026
-#: olc_webportalv2/primer_finder/forms.py:1119
+#: olc_webportalv2/primer_finder/forms.py:1032
+#: olc_webportalv2/primer_finder/forms.py:1125
 msgid "Gene sequence"
 msgstr "Retourne toutes les séquences"
 
-#: olc_webportalv2/primer_finder/forms.py:1037
+#: olc_webportalv2/primer_finder/forms.py:1043
 msgid "Target-specific multi-FASTA upload"
 msgstr "Téléversement d’un fichier multi-FASTA propre à la cible"
 
-#: olc_webportalv2/primer_finder/forms.py:1048
+#: olc_webportalv2/primer_finder/forms.py:1054
 msgid "Enter a valid target name."
 msgstr "Saisissez un nom de cible valide."
 
-#: olc_webportalv2/primer_finder/forms.py:1056
+#: olc_webportalv2/primer_finder/forms.py:1062
 msgid "Enter a valid sample name."
 msgstr "Saisissez un nom d’échantillon valide."
 
-#: olc_webportalv2/primer_finder/forms.py:1060
+#: olc_webportalv2/primer_finder/forms.py:1066
 msgid "Forward primer"
 msgstr "Amorce sens"
 
-#: olc_webportalv2/primer_finder/forms.py:1061
+#: olc_webportalv2/primer_finder/forms.py:1067
 msgid "Reverse primer"
 msgstr "Amorce antisens"
 
-#: olc_webportalv2/primer_finder/forms.py:1067
+#: olc_webportalv2/primer_finder/forms.py:1073
 msgid "This field is required."
 msgstr "Identifiant SIESAL est obligatoire"
 
-#: olc_webportalv2/primer_finder/forms.py:1072
+#: olc_webportalv2/primer_finder/forms.py:1078
 msgid "Probe"
 msgstr "Sonde"
 
-#: olc_webportalv2/primer_finder/forms.py:1087
+#: olc_webportalv2/primer_finder/forms.py:1093
 msgid "Enter the minimum probe percent identity."
 msgstr "Saisissez le pourcentage minimal d’identité de la sonde."
 
-#: olc_webportalv2/primer_finder/forms.py:1096
+#: olc_webportalv2/primer_finder/forms.py:1102
 msgid "Enter the maximum probe differences."
 msgstr "Saisissez le nombre maximal de différences pour la sonde."
 
-#: olc_webportalv2/primer_finder/forms.py:1107
+#: olc_webportalv2/primer_finder/forms.py:1113
 msgid "Enter a valid FASTA sequence."
 msgstr "Saisissez une séquence FASTA valide."
 
-#: olc_webportalv2/primer_finder/forms.py:1116
+#: olc_webportalv2/primer_finder/forms.py:1122
 msgid "Gene sequences may contain only A, C, G, T, or N."
 msgstr ""
 "Les séquences géniques ne peuvent contenir que les lettres A, C, G, T ou N."
 
-#: olc_webportalv2/primer_finder/forms.py:1137
+#: olc_webportalv2/primer_finder/forms.py:1143
 msgid "Upload a valid UTF-8 FASTA file."
 msgstr "Téléversez un fichier FASTA UTF-8 valide."
 
-#: olc_webportalv2/primer_finder/forms.py:1147
+#: olc_webportalv2/primer_finder/forms.py:1153
 msgid "The FASTA file contains no records."
 msgstr "Le fichier FASTA ne contient aucun enregistrement."
 
-#: olc_webportalv2/primer_finder/forms.py:1156
+#: olc_webportalv2/primer_finder/forms.py:1162
 msgid "FASTA record identifiers must be unique."
 msgstr "Les identifiants des enregistrements FASTA doivent être uniques."
 
-#: olc_webportalv2/primer_finder/forms.py:1162
+#: olc_webportalv2/primer_finder/forms.py:1168
 msgid "FASTA sequences may contain only A, C, G, T, or N."
 msgstr ""
 "Les séquences FASTA ne peuvent contenir que les lettres A, C, G, T ou N."
 
-#: olc_webportalv2/primer_finder/forms.py:1175
+#: olc_webportalv2/primer_finder/forms.py:1181
 #, python-brace-format
 msgid "{0} may contain only A, C, G, T, or N."
 msgstr "{0} ne peut contenir que les lettres A, C, G, T ou N."
 
-#: olc_webportalv2/primer_finder/forms.py:1216
+#: olc_webportalv2/primer_finder/forms.py:1222
 msgid "Target names must be unique."
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/primer_finder/forms.py:1226
+#: olc_webportalv2/primer_finder/forms.py:1232
 msgid "Each Salmonella sample requires an invA or stn target."
 msgstr "Chaque échantillon de Salmonella doit contenir une cible invA ou stn."
 
-#: olc_webportalv2/primer_finder/forms.py:1232
+#: olc_webportalv2/primer_finder/forms.py:1238
 msgid "The selected logic requires at least two targets per sample."
 msgstr "La logique sélectionnée exige au moins deux cibles par échantillon."
 
@@ -2682,14 +2706,6 @@ msgstr "serovar_autocompleter/"
 #: olc_webportalv2/sequence_database/views.py:94
 msgid "The requested OLC network ID was not found."
 msgstr "L’identifiant de réseau OLC demandé est introuvable."
-
-#: olc_webportalv2/sequence_database/views.py:457
-#: olc_webportalv2/sequence_database/views.py:531
-#: olc_webportalv2/templates/metadata/metadata_browse.html:10
-#: olc_webportalv2/templates/metadata/metadata_results.html:29
-#: olc_webportalv2/templates/sequence_database/database_results.html:29
-msgid "SeqID"
-msgstr "SeqID"
 
 #: olc_webportalv2/templates/403_csrf.html:4
 #: olc_webportalv2/templates/403_csrf.html:7
@@ -5510,7 +5526,7 @@ msgstr "Identifiant de séquence"
 #: olc_webportalv2/templates/geneseekr/geneseekr_results.html:51
 #: olc_webportalv2/templates/geneseekr/neighbor_result.html:92
 #: olc_webportalv2/templates/geneseekr/tree_result.html:94
-#: olc_webportalv2/vir_typer/forms.py:144
+#: olc_webportalv2/vir_typer/forms.py:147
 msgid "Lab ID"
 msgstr "Identifiant labo"
 
@@ -5937,7 +5953,7 @@ msgstr ""
 #: olc_webportalv2/templates/primer_finder/primer_home.html:30
 #: olc_webportalv2/templates/primer_finder/verifier_home.html:17
 msgid "PrimerVerifier"
-msgstr "Vérifié"
+msgstr "PrimerVerifier"
 
 #: olc_webportalv2/templates/primer_finder/primer_home.html:28
 msgid "Determine binding of primer sets against genus-specific panels"
@@ -6653,10 +6669,6 @@ msgstr "Rang"
 msgid "Update Info"
 msgstr "Réviser"
 
-#: olc_webportalv2/templates/users/user_detail.html:36
-msgid "Email"
-msgstr "Courriel"
-
 #: olc_webportalv2/templates/users/user_detail.html:41
 msgid "Update Email"
 msgstr "Mettre à jour le courriel"
@@ -6725,13 +6737,13 @@ msgstr "Projet:"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:18
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:52
-#: olc_webportalv2/vir_typer/forms.py:141
+#: olc_webportalv2/vir_typer/forms.py:144
 msgid "Sample Name"
 msgstr "Échantillon"
 
 #: olc_webportalv2/templates/vir_typer/vir_typer_results.html:19
 #: olc_webportalv2/templates/vir_typer/vir_typer_results_to_pdf.html:53
-#: olc_webportalv2/vir_typer/forms.py:143
+#: olc_webportalv2/vir_typer/forms.py:146
 msgid "LSTS ID"
 msgstr "Identifiant SIESAL"
 
@@ -6856,65 +6868,65 @@ msgstr "Région du Grand Toronto"
 msgid "N/A"
 msgstr "S.O."
 
-#: olc_webportalv2/vir_typer/forms.py:29
+#: olc_webportalv2/vir_typer/forms.py:32
 msgid "Sample Names must be unique. The following sample names are repeated: "
 msgstr ""
 "Les noms d'échantillons doivent être uniques. Les noms suivants sont "
 "répétés: "
 
-#: olc_webportalv2/vir_typer/forms.py:41
+#: olc_webportalv2/vir_typer/forms.py:44
 msgid "LSTS IDs must be unique. The following LSTS IDs are repeated: "
 msgstr ""
 "Les identifiants SIESAL doivent être uniques. Les identifiants suivants sont "
 "répétés: "
 
-#: olc_webportalv2/vir_typer/forms.py:58
+#: olc_webportalv2/vir_typer/forms.py:61
 msgid "Sample Name is required"
 msgstr "Le nom de l'échantillon est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:60
+#: olc_webportalv2/vir_typer/forms.py:63
 msgid "LSTS ID is required"
 msgstr "Identifiant SIESAL est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:62
+#: olc_webportalv2/vir_typer/forms.py:65
 msgid "Isolate Source is required"
 msgstr "La source de l'échantillon est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:64
+#: olc_webportalv2/vir_typer/forms.py:67
 msgid "Analyst Name is required"
 msgstr "Le nom de l'analyste est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:66
+#: olc_webportalv2/vir_typer/forms.py:69
 msgid "Reception Date is required"
 msgstr "La date de réception est obligatoire"
 
-#: olc_webportalv2/vir_typer/forms.py:117
+#: olc_webportalv2/vir_typer/forms.py:120
 #: olc_webportalv2/vir_typer/views.py:142
 #: olc_webportalv2/vir_typer/views.py:662
 msgid "Project Name must be unique"
 msgstr "Le nom du projet doit être unique"
 
-#: olc_webportalv2/vir_typer/forms.py:118
+#: olc_webportalv2/vir_typer/forms.py:121
 msgid "Project Name is required"
 msgstr "Le nom du projet est requis"
 
-#: olc_webportalv2/vir_typer/forms.py:142
+#: olc_webportalv2/vir_typer/forms.py:145
 msgid "Date received"
 msgstr "Date de réception"
 
-#: olc_webportalv2/vir_typer/forms.py:145
+#: olc_webportalv2/vir_typer/forms.py:148
 msgid "Subunit"
 msgstr "Sous-unité"
 
-#: olc_webportalv2/vir_typer/forms.py:146
+#: olc_webportalv2/vir_typer/forms.py:149
 msgid "Putative classification"
 msgstr "Classification putative"
 
-#: olc_webportalv2/vir_typer/forms.py:147
+#: olc_webportalv2/vir_typer/forms.py:150
 msgid "Isolate source"
 msgstr "Source de l'échantillon"
 
-#: olc_webportalv2/vir_typer/forms.py:148
+#: olc_webportalv2/vir_typer/forms.py:151
 msgid "Analyst name"
 msgstr "Nom de l'analyste"
 
@@ -6965,6 +6977,15 @@ msgstr "Projet"
 #: olc_webportalv2/vir_typer/views.py:656
 msgid "updated"
 msgstr "mis à jour"
+
+#~ msgid "Name: "
+#~ msgstr "Nom: "
+
+#~ msgid "SeqID: "
+#~ msgstr "SeqID : "
+
+#~ msgid "Email "
+#~ msgstr "Courriel"
 
 #, fuzzy
 #~| msgid "CFIA St. Hyacinthe"

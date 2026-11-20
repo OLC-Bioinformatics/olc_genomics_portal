@@ -16,18 +16,21 @@ from django.utils.translation import gettext_lazy as _
 
 # Local imports
 from olc_webportalv2.common.benchmarks import BENCHMARK_CHOICES
-from olc_webportalv2.common.forms import MultipleFileField
+from olc_webportalv2.common.forms import (
+    CompactLabelSuffixMixin,
+    MultipleFileField,
+)
 from olc_webportalv2.metadata.models import Genus, SequenceData
 
 
-class NearNeighborForm(forms.Form):
+class NearNeighborForm(CompactLabelSuffixMixin, forms.Form):
     """Validate nearest-neighbor query input."""
 
-    name = forms.CharField(max_length=56, label=_('Name: '), required=False)
-    seqid = forms.CharField(max_length=24, label=_('SeqID: '), required=False)
+    name = forms.CharField(max_length=56, label=_('Name'), required=False)
+    seqid = forms.CharField(max_length=24, label=_('SeqID'), required=False)
     uploaded_file = forms.FileField(label='', required=False)
     number_neighbors = forms.IntegerField(
-        label=_('Number neighbors: '), initial=2, required=True
+        label=_('Number of neighbors'), initial=2, required=True
     )
 
     def clean(self):
@@ -78,7 +81,7 @@ class NearNeighborForm(forms.Form):
         return self.cleaned_data
 
 
-class GeneSeekrForm(forms.Form):
+class GeneSeekrForm(CompactLabelSuffixMixin, forms.Form):
     """Validate a GeneSeekr request and select its input sequences."""
 
     # Options for benchmark database selection
@@ -281,11 +284,11 @@ class GeneSeekrForm(forms.Form):
         return self.cleaned_data
 
 
-class TreeForm(forms.Form):
+class TreeForm(CompactLabelSuffixMixin, forms.Form):
     """Validate phylogenetic tree analysis input."""
 
     name = forms.CharField(
-        label=_('Name: '),
+        label=_('Name'),
         required=False,
         widget=forms.TextInput(attrs={'placeholder': _('Optional')}),
     )
@@ -371,11 +374,11 @@ class TreeForm(forms.Form):
         return self.cleaned_data
 
 
-class AMRForm(forms.Form):
+class AMRForm(CompactLabelSuffixMixin, forms.Form):
     """Validate antimicrobial-resistance analysis input."""
 
     name = forms.CharField(
-        label=_('Name: '),
+        label=_('Name'),
         required=False,
         widget=forms.TextInput(attrs={'placeholder': _('Optional')}),
     )
@@ -447,11 +450,11 @@ class AMRForm(forms.Form):
         return self.cleaned_data
 
 
-class ProkkaForm(forms.Form):
+class ProkkaForm(CompactLabelSuffixMixin, forms.Form):
     """Validate Prokka annotation input."""
 
     name = forms.CharField(
-        label=_('Name: '),
+        label=_('Name'),
         required=False,
         widget=forms.TextInput(attrs={'placeholder': _('Optional')}),
     )
@@ -523,7 +526,7 @@ class ProkkaForm(forms.Form):
         return self.cleaned_data
 
 
-class NameForm(forms.Form):
+class NameForm(CompactLabelSuffixMixin, forms.Form):
     """Collect an optional user-assigned request name."""
 
     name = forms.CharField(
@@ -533,10 +536,10 @@ class NameForm(forms.Form):
     )
 
 
-class EmailForm(forms.Form):
+class EmailForm(CompactLabelSuffixMixin, forms.Form):
     """Validate an email address used for request notifications."""
 
-    email = forms.CharField(max_length=50, label=_('Email '), required=False)
+    email = forms.CharField(max_length=50, label=_('Email'), required=False)
 
     def clean(self):
         """Reject blank or malformed email addresses."""

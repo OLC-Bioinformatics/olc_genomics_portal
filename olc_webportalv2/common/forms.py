@@ -1,6 +1,17 @@
 """Form fields for accepting multiple file uploads."""
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
+
+FORM_LABEL_SUFFIX = _(":")
+
+class CompactLabelSuffixMixin:
+    """Use a colon label suffix without locale-specific preceding spacing."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize a form with compact label punctuation by default."""
+        kwargs.setdefault("label_suffix", FORM_LABEL_SUFFIX)
+        super().__init__(*args, **kwargs)
 
 
 class MultipleFileInput(forms.ClearableFileInput):
