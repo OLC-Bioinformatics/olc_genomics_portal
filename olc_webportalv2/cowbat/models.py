@@ -101,6 +101,7 @@ class SequencingRun(models.Model):
     basic_assembly = models.BooleanField(default=False)
     preprocess = models.BooleanField(default=False)
     nextseq = models.BooleanField(default=False, null=True)
+    integration_test = models.BooleanField(default=False)
 
     def __str__(self):
         return self.run_name

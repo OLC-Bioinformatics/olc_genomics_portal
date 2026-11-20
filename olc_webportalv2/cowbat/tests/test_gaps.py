@@ -530,6 +530,7 @@ class CowbatWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(run.user, self.user)
         self.assertEqual(run.nextseq, True)
+        self.assertFalse(run.integration_test)
         self.assertEqual(
             response.url,
             reverse('cowbat:upload_assembly_upload', kwargs={'sequencing_run_pk': run.pk}),
