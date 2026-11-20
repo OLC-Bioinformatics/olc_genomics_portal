@@ -10,4 +10,7 @@ env
 .git/
 .gitignore
 models/
+tests/
+evaluation-results/*
+!evaluation-results/.gitkeep
 

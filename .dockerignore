@@ -28,11 +28,27 @@ redmine/*.cache
 
 # Python and build artifacts
 __pycache__/
+**/__pycache__/
 *.pyc
 *.log
 *.tmp
 *.cache
 .DS_Store
+/.env
+/.env.*
+/env
+/.venv/
+/venv/
+/ENV/
+/staticfiles/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+/.cache/
+/.coverage*
+/coverage.xml
+/htmlcov/
+/messages.mo
 
 # compose/pipeline/config not needed in image build
 docker-compose*.yml

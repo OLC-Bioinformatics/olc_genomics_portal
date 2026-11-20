@@ -1,3 +1,5 @@
+# Legacy Cookiecutter requirements; current deployments use the root Dockerfile
+# and requirements/base.txt. Retained only for the legacy Dockerfile below.
 # Pro-tip: Try not to put anything here. Avoid dependencies in
 #	production that aren't in development.
 -r base.txt

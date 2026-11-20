@@ -1,0 +1,7 @@
+certs/
+*.crt
+*.key
+*.pem
+*.log
+.git/
+.gitignore
