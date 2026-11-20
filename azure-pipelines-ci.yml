@@ -69,7 +69,7 @@ steps:
       trap cleanup EXIT
 
       docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
-        build web batch storage redmine nginx
+        build web batch storage redmine nginx rag
 
       docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
         run --rm --no-deps \
@@ -79,4 +79,11 @@ steps:
         /bin/bash -lc \
         "python -m pip install --no-cache-dir pip-tools==7.7.0 && \
          bash utility/compile_python_requirements.sh --check"
-    displayName: Build deployment images
+
+      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+        run --rm --no-deps \
+        -v "$PWD/rag/tests:/app/tests:ro" \
+        -e RAG_DB_PASSWORD=ci-placeholder \
+        rag \
+        python -m pytest -q /app/tests
+    displayName: Build and validate deployment images

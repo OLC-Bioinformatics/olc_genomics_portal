@@ -33,7 +33,7 @@ The following are configured under `services.rag.environment` or `env_file`.
 - `EMBEDDING_MODEL` (`BAAI/bge-small-en-v1.5`): model name.
 - `EMBEDDING_MODEL_REVISION`: pinned model revision.
 - `EMBEDDING_DIMENSION` (`384`): vector dimension; must match the database column.
-- `EMBEDDING_DEVICE` (`cpu`): inference device.
+- `EMBEDDING_DEVICE` (`cpu`): inference device. The RAG image uses CPU-only PyTorch; GPU/CUDA inference requires a separate image build.
 - `EMBEDDING_BATCH_SIZE` (`32`): indexing batch size.
 - `EMBEDDING_NORMALIZE` (`true`): normalization behavior.
 - `HF_HUB_OFFLINE` and `TRANSFORMERS_OFFLINE` (`1`): prohibit runtime downloads.

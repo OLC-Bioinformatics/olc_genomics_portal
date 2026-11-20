@@ -26,7 +26,11 @@ WORKDIR /app
 
 COPY requirements.txt /app/requirements.txt
 
-RUN pip install --require-hashes --no-cache-dir -r /app/requirements.txt
+RUN pip install \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    --require-hashes \
+    --no-cache-dir \
+    -r /app/requirements.txt
 
 RUN useradd \
     --create-home \
