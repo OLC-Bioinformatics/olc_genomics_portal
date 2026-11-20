@@ -3,12 +3,14 @@ trigger:
     include:
       - main
       - dev
+      - foodport
 
 pr:
   branches:
     include:
       - main
       - dev
+      - foodport
 
 pool:
   vmImage: ubuntu-latest
@@ -57,21 +59,39 @@ steps:
       set -euo pipefail
 
       temporary_env=0
+      project="foodport-image-ci-${BUILD_BUILDID}"
+      batch_container="${project}-batch-smoke"
       if [ ! -e env ]; then
         : > env
         temporary_env=1
       fi
       cleanup() {
+        docker rm -f "$batch_container" >/dev/null 2>&1 || true
         if [ "$temporary_env" -eq 1 ]; then
           rm -- env
         fi
       }
       trap cleanup EXIT
 
-      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
-        build web batch storage redmine nginx rag
+      docker compose -p "$project" build web batch storage redmine nginx rag
 
-      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+      docker compose -p "$project" run \
+        --detach --no-deps --name "$batch_container" batch
+
+      for attempt in $(seq 1 30); do
+        if docker exec "$batch_container" python -c "import json, urllib.request; response = urllib.request.urlopen('http://localhost:5000/health', timeout=2); assert json.load(response) == {'status': 'ok'}" >/dev/null 2>&1; then
+          echo "Batch startup and /health smoke test passed"
+          break
+        fi
+        if [ "$attempt" -eq 30 ]; then
+          docker logs "$batch_container" || true
+          echo "ERROR: Batch did not become healthy." >&2
+          exit 1
+        fi
+        sleep 2
+      done
+
+      docker compose -p "$project" \
         run --rm --no-deps \
         -e SECRET_KEY=ci-placeholder \
         -e MICROSOFT_AUTH_ENABLED=false \
@@ -79,7 +99,7 @@ steps:
         web \
         python -c "import logging.config, os; from config.settings.prod import LOGGING; logging.config.dictConfig(LOGGING); paths=('manage.py', 'olc_webportalv2/taskapp/celery.py'); assert os.geteuid() != 0 and os.getegid() != 0, 'portal must run with non-root UID/GID'; assert all(os.access(path, os.R_OK) for path in paths), 'portal source must be readable by non-root UID'; assert os.access('worker_launcher.sh', os.X_OK), 'worker launcher must be executable'; print(f'Portal UID:GID: {os.geteuid()}:{os.getegid()}')"
 
-      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+      docker compose -p "$project" \
         run --rm --no-deps \
         -v "$PWD:/workspace:ro" \
         -w /workspace \
@@ -88,7 +108,7 @@ steps:
         "python -m pip install --no-cache-dir pip-tools==7.7.0 && \
          bash utility/compile_python_requirements.sh --check"
 
-      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+      docker compose -p "$project" \
         run --rm --no-deps \
         -v "$PWD/rag/tests:/app/tests:ro" \
         -e RAG_DB_PASSWORD=ci-placeholder \
