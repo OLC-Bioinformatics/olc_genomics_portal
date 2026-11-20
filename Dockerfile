@@ -1,4 +1,5 @@
 # filepath: /home/cfiaadmin/FoodPort/olc_genomics_portal/Dockerfile
+# syntax=docker/dockerfile:1
 FROM ubuntu:26.04 AS runtime-base
 
 RUN apt-get update && \
@@ -14,8 +15,12 @@ RUN apt-get update && \
         fonts-dejavu-core && \
     rm -rf /var/lib/apt/lists/*
 
-COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
-RUN update-ca-certificates
+RUN --mount=type=bind,source=.,target=/build-context,ro \
+    if [ -f /build-context/GoC-GdC-Root-A.crt ]; then \
+        cp /build-context/GoC-GdC-Root-A.crt \
+            /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt && \
+        update-ca-certificates; \
+    fi
 
 ENV PATH="/venv/bin:$PATH" \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \

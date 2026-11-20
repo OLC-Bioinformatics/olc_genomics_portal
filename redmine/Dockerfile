@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM redmine:6.1.2
 
 # Install git, CA certificates, and build tools so the plugin and native gems can be installed.
@@ -17,8 +18,11 @@ RUN git init /usr/src/redmine/plugins/entra_id && \
 COPY plugins/redmine_assistant \
     /usr/src/redmine/plugins/redmine_assistant
 
-# Install the local CA so the corporate intercepting proxy can validate rubygems.org.
-COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+RUN --mount=type=bind,source=.,target=/build-context,ro \
+    if [ -f /build-context/GoC-GdC-Root-A.crt ]; then \
+        cp /build-context/GoC-GdC-Root-A.crt \
+            /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt; \
+    fi
 
 # Copy the boot script and set permissions. The boot script will wait for the database to be ready before starting the Redmine web server.
 COPY boot-redmine.sh /usr/src/redmine/boot-redmine.sh

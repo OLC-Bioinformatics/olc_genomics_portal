@@ -11,6 +11,8 @@ is planned.
 
 Install Docker Compose v2 and obtain the deployment-specific `env` file from
 the portal maintainers. Do not commit `env` or `.env` files.
+The local `GoC-GdC-Root-A.crt` trust anchor is optional for clean builds; if
+present in a Docker build context, images add it to the system trust store.
 
 The default Compose configuration is deployment-oriented: application code is
 baked into the images and Gunicorn does not run with autoreload. Application

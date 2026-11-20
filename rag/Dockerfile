@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
@@ -14,13 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Add the Government of Canada root CA to the system trust store.
-# This allows pip and other HTTPS clients to validate connections passing
-# through the corporate TLS-intercepting proxy.
-COPY GoC-GdC-Root-A.crt \
-    /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
-
-RUN update-ca-certificates
+RUN --mount=type=bind,source=.,target=/build-context,ro \
+    if [ -f /build-context/GoC-GdC-Root-A.crt ]; then \
+        cp /build-context/GoC-GdC-Root-A.crt \
+            /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt && \
+        update-ca-certificates; \
+    fi
 
 WORKDIR /app
 

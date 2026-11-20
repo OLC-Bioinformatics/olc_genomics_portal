@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,8 +13,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
-RUN update-ca-certificates
+RUN --mount=type=bind,source=.,target=/build-context,ro \
+    if [ -f /build-context/GoC-GdC-Root-A.crt ]; then \
+        cp /build-context/GoC-GdC-Root-A.crt \
+            /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt && \
+        update-ca-certificates; \
+    fi
 
 COPY storage/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && pip install --require-hashes -r /app/requirements.txt
