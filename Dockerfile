@@ -17,11 +17,8 @@ RUN apt-get update --fix-missing && \
         python3-venv \
         postgresql-client \
         postgresql-server-dev-all \
-        gettext \
         ncbi-blast+ \
-        xvfb \
         docker.io \
-        firefox \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
         libharfbuzz0b \
@@ -42,7 +39,6 @@ ENV PATH="/venv/bin:$PATH" \
 
 COPY requirements/base.txt /data/web/
 
-RUN pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org"
 RUN pip install --upgrade pip
 RUN pip install -r base.txt --ignore-installed
 
@@ -50,6 +46,10 @@ RUN pip install -r base.txt --ignore-installed
 COPY . /data/web/
 
 FROM portal-base AS test
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gettext && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -r /data/web/requirements/test.txt
 

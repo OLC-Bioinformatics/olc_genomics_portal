@@ -1,0 +1,29 @@
+services:
+  web:
+    command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
+    volumes:
+      - ./:/data/web
+
+  celeryworker:
+    volumes:
+      - ./:/data/web
+
+  celerybeat:
+    volumes:
+      - ./:/data/web
+
+  flower:
+    volumes:
+      - ./:/data/web
+
+  batch:
+    volumes:
+      - ./batch:/app
+
+  storage:
+    volumes:
+      - ./storage:/app
+
+  rag:
+    volumes:
+      - ./rag:/app

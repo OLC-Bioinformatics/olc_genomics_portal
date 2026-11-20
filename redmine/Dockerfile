@@ -6,8 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
 
 
 # Install the EntraID plugin for Redmine.
-RUN rm -rf /usr/src/redmine/plugins/entra_id && \
-    git clone https://github.com/eea/redmine_entra_id.git /usr/src/redmine/plugins/entra_id
+RUN git init /usr/src/redmine/plugins/entra_id && \
+    git -C /usr/src/redmine/plugins/entra_id remote add origin \
+        https://github.com/eea/redmine_entra_id.git && \
+    git -C /usr/src/redmine/plugins/entra_id fetch --depth 1 origin \
+        5549f4c2f7be8ed60659321c9e63927989382591 && \
+    git -C /usr/src/redmine/plugins/entra_id checkout --detach FETCH_HEAD
 
 # Install the local Redmine documentation assistant plugin.
 COPY plugins/redmine_assistant \

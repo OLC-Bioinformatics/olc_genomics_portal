@@ -15,9 +15,10 @@ services:
         condition: service_healthy
     env_file: env
     volumes:
-      - ./:/data/web
       - ./sequences:/sequences
       - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
+      - ./staticfiles:/data/web/staticfiles
+      - ./olc_webportalv2/media:/data/web/olc_webportalv2/media
     environment:
       POSTGRES_USER: myproject_web
       USE_DOCKER: "yes"
@@ -37,13 +38,13 @@ services:
       COWSNPHR_IMAGE: ""
     ports:
       - "8000"
-    command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --reload -w 4 -b :8000 -t 3600"
+    command: /bin/bash -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application -w 4 -b :8000 -t 3600"
 
   batch:
     restart: always
     build:
-      context: ./batch
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: batch/Dockerfile
     ports:
       - "5000:5000"
     env_file: env
@@ -62,15 +63,13 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    volumes:
-      - ./batch:/app
     command: ["/app/start.sh"]
 
   storage:
     restart: always
     build:
-      context: ./storage
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: storage/Dockerfile
     expose:
       - "5001"
     env_file: env
@@ -159,9 +158,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    volumes_from:
-      - web
     volumes:
+      - ./staticfiles:/data/web/staticfiles:ro
       # - ./nginx/certs:/etc/nginx/certs:ro
       - /etc/foodport/tls:/etc/nginx/certs:ro
     links:
@@ -262,7 +260,6 @@ services:
       - HF_HUB_OFFLINE=1
       - TRANSFORMERS_OFFLINE=1
     volumes:
-      - ./rag:/app
       - ../redmine-docs/docs:/documentation:ro
       - rag-model-cache:/models
     healthcheck:

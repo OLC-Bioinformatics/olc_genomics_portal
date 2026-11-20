@@ -14,7 +14,8 @@ ls -la /app || true
 
 # Warn if API file is missing
 if [ ! -f /app/api.py ]; then
-  echo "[batch] WARNING: /app/api.py not found. Is the volume mounted?"
+  echo "[batch] ERROR: /app/api.py is missing from the built image." >&2
+  exit 1
 fi
 
 # Start gunicorn

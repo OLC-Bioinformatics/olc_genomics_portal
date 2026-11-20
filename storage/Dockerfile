@@ -2,15 +2,23 @@ FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org"
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY provider.py api.py test_api.py ./
+COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+RUN update-ca-certificates
+
+COPY storage/requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+
+COPY storage/provider.py storage/api.py ./
 
 EXPOSE 5001
 CMD ["gunicorn", "--workers", "2", "--bind", "0.0.0.0:5001", "api:app"]
