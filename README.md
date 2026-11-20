@@ -3,8 +3,9 @@
 A web portal for accessing CFIA genomic data, with some tools included.
 
 The portal runs with Docker Compose. Django and Celery use internal Batch and
-Storage services rather than calling cloud-provider SDKs directly. Azure is the
-current backend; a local-cluster backend is planned.
+Storage services rather than calling cloud-provider SDKs directly or accessing
+the host Docker socket. Azure is the current backend; a local-cluster backend
+is planned.
 
 ## Run locally
 
@@ -138,6 +139,13 @@ and runs the browser/static-asset tests on pushes to `main` and `dev`. For
 Azure Repos, configure a Build validation branch policy for this pipeline on
 each protected target branch; YAML `pr` triggers alone do not enable PR
 validation in Azure Repos.
+
+Python dependency inputs use `.in` files; the corresponding `.txt` files are
+generated, hash-locked requirements. Regenerate them with
+`bash utility/compile_python_requirements.sh` and verify them with
+`bash utility/compile_python_requirements.sh --check`. Run the script with
+Python 3.14 for portal/Storage locks and Python 3.12 for Batch/RAG locks; CI
+checks both interpreter groups.
 
 ## Azure DevOps deploy pipeline
 

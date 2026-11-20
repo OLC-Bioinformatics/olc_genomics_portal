@@ -7,7 +7,6 @@ RUN apt-get update && \
         python3 \
         postgresql-client \
         ncbi-blast+ \
-        docker.io \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
         libharfbuzz0b \
@@ -41,7 +40,7 @@ RUN python3 -m venv /venv
 COPY requirements/base.txt /data/web/
 
 RUN python -m pip install --upgrade pip && \
-    python -m pip install --no-cache-dir -r /data/web/base.txt
+    python -m pip install --require-hashes --no-cache-dir -r /data/web/base.txt
 
 COPY . /data/web/
 
@@ -51,7 +50,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends gettext && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python -m pip install --no-cache-dir -r /data/web/requirements/test.txt
+RUN python -m pip install --require-hashes --no-cache-dir -r /data/web/requirements/test.txt
 
 FROM runtime-base AS production
 

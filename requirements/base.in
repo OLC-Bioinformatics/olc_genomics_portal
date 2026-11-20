@@ -1,0 +1,118 @@
+# Pinned portal requirements input, compiled to base.txt with hashes.
+wheel==0.48.0
+
+# Bleeding edge Django
+django==6.1.3
+
+# Configuration
+django-environ==0.14.0
+
+# Forms
+django-crispy-forms==2.7
+crispy-bootstrap5==2026.9
+
+# Form autocompletion
+django-autocomplete-light==5.0.0
+
+# Models
+django-model-utils==5.0.0
+
+# Images
+Pillow==13.0.0
+
+# HTML-to-PDF reports
+WeasyPrint==70.0
+
+# Password storage
+argon2-cffi==25.1.0
+
+# For user registration, either via email or social
+django-allauth==65.22.1
+
+# Python-PostgreSQL Database Adapter
+psycopg2==2.9.13
+
+# Unicode slugification
+awesome-slugify==1.6.5
+
+django-redis==7.0.0
+redis==6.4.0
+
+# Celery/Kombu requires Redis 6.2+ for ZRANGE BYSCORE.
+celery==5.6.3
+flower==2.2.0
+
+# Sentry, for error reporting
+sentry-sdk==2.75.0
+
+# Django rest framework
+djangorestframework==3.18.3
+
+# Custom requirements beyond cookiecutter-django
+adal==1.2.7
+amqp==5.4.2
+asn1crypto==1.5.1
+atomicwrites==1.4.1
+attrs==26.1.0
+
+Babel==2.18.0
+billiard==4.3.2
+biopython==1.88
+certifi==2026.10.23
+cffi==2.1.1
+chardet==7.7.0
+Click==8.5.1
+confindr==0.8.2
+cryptography==50.0.2
+cycler==0.12.1
+defusedxml==0.7.1
+django-filter==26.2
+django-multiselectfield==1.0.1
+django-pandas==0.6.7
+django-tables2==3.0.1
+django-widget-tweaks==1.5.1
+gunicorn==26.2.0
+idna==3.20
+interop==1.9.0
+isodate==0.7.2
+kiwisolver==1.5.1
+kombu==5.6.2
+matplotlib==3.11.2
+more-itertools==11.2.1
+msrest==0.7.1
+msrestazure==0.6.4.post1
+numpy==2.5.5
+openpyxl==3.1.5
+oauthlib==4.0.1
+olefile==0.47
+pandas==3.1.1
+pluggy==1.7.0
+psutil==7.2.2
+py==1.11.0
+pycparser==3.12
+PyJWT==2.15.1
+pyparsing==3.3.3
+# Keep python-dateutil on the compatible 2.x line for the current Celery stack.
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+regex==2026.11.19
+requests==2.34.2
+requests-oauthlib==2.0.0
+seaborn==0.13.2
+sqlparse==0.6.1
+strainchoosr==0.1.7
+termcolor==3.3.0
+tornado==6.6.1
+# awesome-slugify 1.6.5 requires Unidecode<0.05.
+Unidecode==0.4.21
+urllib3==2.8.0
+vine==5.1.0
+XlsxWriter==3.3.3
+xlrd==2.0.2
+
+# Azure AD
+django-microsoft-authentication==0.1.6
+
+# Redmine
+python-redmine==2.5.0
+pymysql==1.2.4

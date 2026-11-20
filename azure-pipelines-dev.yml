@@ -958,7 +958,7 @@ stages:
             || [ "$(cat "$requirements_hash_file")" != "$requirements_hash" ]; then
             echo "Installing Python dependencies into 'foodport' environment"
             "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade pip
-            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade -r "$REMOTE_DIR/requirements/base.txt"
+            "$CONDA_BIN" run -n foodport python -m pip install --disable-pip-version-check --upgrade --require-hashes -r "$REMOTE_DIR/requirements/base.txt"
             printf '%s\n' "$requirements_hash" > "${requirements_hash_file}.tmp"
             mv "${requirements_hash_file}.tmp" "$requirements_hash_file"
           else

@@ -16,15 +16,10 @@ services:
     env_file: env
     volumes:
       - ./sequences:/sequences
-      - /var/run/docker.sock:/var/run/docker.sock # send docker commands from the django docker container
       - ./staticfiles:/data/web/staticfiles
       - ./olc_webportalv2/media:/data/web/olc_webportalv2/media
     environment:
       POSTGRES_USER: myproject_web
-      USE_DOCKER: "yes"
-      DOCKER_SOCKET: /var/run/docker.sock
-      DOCKER_GROUP: dockerhost
-      DOCKER_HOST: unix:///var/run/docker.sock
       AZURE_ACCOUNT_NAME: ""
       AZURE_ACCOUNT_KEY: ""
       BATCH_ACCOUNT_NAME: ""

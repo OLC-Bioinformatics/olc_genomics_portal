@@ -16,7 +16,7 @@ COPY GoC-GdC-Root-A.crt /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
 RUN update-ca-certificates
 
 COPY storage/requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+RUN pip install --upgrade pip && pip install --require-hashes -r /app/requirements.txt
 
 COPY storage/provider.py storage/api.py ./
 

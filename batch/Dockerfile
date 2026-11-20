@@ -47,7 +47,7 @@ ENV CONDA_DEFAULT_ENV=batch
 ENV PATH=/opt/conda/envs/batch/bin:$PATH
 
 COPY batch/requirements.txt /opt/batch-requirements.txt
-RUN python -m pip install --no-cache-dir -r /opt/batch-requirements.txt
+RUN python -m pip install --require-hashes --no-cache-dir -r /opt/batch-requirements.txt
 
 WORKDIR /app
 

@@ -38,6 +38,7 @@ steps:
         run --build --rm test-runner \
         /bin/bash -lc \
         "python -m pip check && \
+         bash utility/compile_python_requirements.sh --check && \
          python manage.py check && \
          flake8 --select=E9,F63,F7,F82 && \
          python manage.py compilemessages && \
@@ -69,4 +70,13 @@ steps:
 
       docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
         build web batch storage redmine nginx
+
+      docker compose -p "foodport-image-ci-${BUILD_BUILDID}" \
+        run --rm --no-deps \
+        -v "$PWD:/workspace:ro" \
+        -w /workspace \
+        batch \
+        /bin/bash -lc \
+        "python -m pip install --no-cache-dir pip-tools==7.7.0 && \
+         bash utility/compile_python_requirements.sh --check"
     displayName: Build deployment images
