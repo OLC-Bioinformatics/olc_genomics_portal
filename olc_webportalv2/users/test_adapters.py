@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase, override_settings
 
@@ -5,6 +7,27 @@ from olc_webportalv2.users.adapters import AccountAdapter, SocialAccountAdapter
 
 
 class RegistrationAdapterTests(SimpleTestCase):
+    def test_new_email_account_inherits_the_selected_language(self):
+        user = get_user_model()()
+        request = SimpleNamespace(LANGUAGE_CODE="fr")
+        form = SimpleNamespace(
+            cleaned_data={
+                "username": "french-user",
+                "email": "french-user@example.com",
+                "password1": "test-password",
+            }
+        )
+
+        saved_user = AccountAdapter().save_user(
+            request,
+            user,
+            form,
+            commit=False,
+        )
+
+        self.assertIs(saved_user, user)
+        self.assertEqual(user.language, "fr")
+
     @override_settings(ACCOUNT_ALLOW_REGISTRATION=True)
     def test_account_and_social_adapters_allow_registration(self):
         account_adapter = AccountAdapter()

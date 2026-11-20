@@ -63,7 +63,7 @@
 
 
 <h3 style="color: #333; font-family: 'Arial', sans-serif; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
-    Container {{ container.container_name }}
+    {% trans "Container" %} {{ container.container_name }}
 </h3>
 
 <div id="upload-div" class="center" style="width: 300px;"></div>
@@ -94,7 +94,7 @@
     {% endif %}
     <!-- Loading Placeholder with Spinner -->
     <div id="loadingPlaceholder" style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
-        <p style="font-size: 18px; color: #343a40; margin-bottom: 20px; font-weight: bold;">Loading data, please wait...</p>
+        <p style="font-size: 18px; color: #343a40; margin-bottom: 20px; font-weight: bold;">{% trans "Loading data, please wait..." %}</p>
         <div class="spinner" style="border: 4px solid rgba(0,0,0,.1); width: 50px; height: 50px; border-radius: 50%; border-left-color: #343a40; animation: spin 1s linear infinite;"></div>
     </div>
     <div id="file-system-view" style="display: none;"> <!-- Initially hide the table container -->
@@ -102,7 +102,7 @@
         <!-- Search Warning -->
         <div class="center-container">
             <div id="search-warning">
-                Your search keystrokes are registered but may not be shown until the search function completes.
+                {% trans "Your search keystrokes are registered but may not be shown until the search function completes." %}
             </div>
         </div>
         
@@ -128,6 +128,7 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
 <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
 <script src="{% static 'js/dropzone.js' %}"></script>
+<script src="{% static 'js/dropzone_i18n.js' %}"></script>
 <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script type="text/javascript">
     function progressSpinner() {
@@ -138,7 +139,7 @@
           div.setAttribute('class', 'loader');
           div.id = 'spindiv';
           let text = document.createElement('H4');
-          let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+          let message = document.createTextNode("{% trans 'File upload in progress. Do not refresh this page!' %}");
           text.appendChild(message);
           spinnerdiv.appendChild(text);
           spinnerdiv.appendChild(div);

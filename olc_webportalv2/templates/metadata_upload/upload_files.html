@@ -6,7 +6,7 @@
 {% block content %}
 <html>
 <head>
-    <h2>Upload Metadata Files</h2>
+    <h2>{% trans "Upload Metadata Files" %}</h2>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
@@ -69,7 +69,7 @@
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form|crispy }}
-        <button type="submit" class="btn btn-primary">Upload</button>
+        <button type="submit" class="btn btn-primary">{% trans "Upload" %}</button>
     </form>
     <div class="spinner"></div>
 </body>

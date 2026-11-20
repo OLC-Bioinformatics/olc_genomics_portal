@@ -7,6 +7,7 @@ from django.conf import settings  # To access azure credentials
 from django.contrib.postgres.fields import ArrayField
 from django.core.files.storage import FileSystemStorage
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 # Create your models here.
 # TODO: InterOp file doesn't (I don't think) get used at all any more.
@@ -55,16 +56,16 @@ class SequencingRun(models.Model):
     """Track sequencing run metadata, workflow state, and uploaded files."""
 
     WORKFLOW_STATE_CHOICES = (
-        ("created", "Created"),
-        ("uploading", "Uploading"),
-        ("upload_complete", "Upload complete"),
-        ("submitting", "Submitting"),
-        ("submitted", "Submitted"),
-        ("processing", "Processing"),
-        ("stopping", "Stopping"),
-        ("ready", "Ready"),
-        ("complete", "Complete"),
-        ("error", "Error"),
+        ("created", _("Created")),
+        ("uploading", _("Uploading")),
+        ("upload_complete", _("Upload complete")),
+        ("submitting", _("Submitting")),
+        ("submitted", _("Submitted")),
+        ("processing", _("Processing")),
+        ("stopping", _("Stopping")),
+        ("ready", _("Ready")),
+        ("complete", _("Complete")),
+        ("error", _("Error")),
     )
 
     user = models.ForeignKey(
@@ -174,10 +175,10 @@ class NanoporeFile(models.Model):
     """Track a POD5 upload and its processing assignment."""
 
     STATUS_CHOICES = (
-        ("prepared", "Prepared"),
-        ("uploading", "Uploading"),
-        ("uploaded", "Uploaded"),
-        ("error", "Error"),
+        ("prepared", _("Prepared")),
+        ("uploading", _("Uploading")),
+        ("uploaded", _("Uploaded")),
+        ("error", _("Error")),
     )
     sequencing_run = models.ForeignKey(
         SequencingRun, on_delete=models.CASCADE, related_name="nanopore_files"
@@ -210,13 +211,13 @@ class NanoporeRun(models.Model):
     """Store Nanopore run configuration and lifecycle timestamps."""
 
     STATUS_CHOICES = (
-        ("created", "Created"),
-        ("uploading", "Uploading"),
-        ("ready", "Ready"),
-        ("processing", "Processing"),
-        ("stopping", "Stopping"),
-        ("complete", "Complete"),
-        ("error", "Error"),
+        ("created", _("Created")),
+        ("uploading", _("Uploading")),
+        ("ready", _("Ready")),
+        ("processing", _("Processing")),
+        ("stopping", _("Stopping")),
+        ("complete", _("Complete")),
+        ("error", _("Error")),
     )
     sequencing_run = models.OneToOneField(
         SequencingRun, on_delete=models.CASCADE, related_name="nanopore_run"
@@ -273,13 +274,13 @@ class NanoporeProcessingBatch(models.Model):
     """Track submission and completion state for one Nanopore generation."""
 
     STATUS_CHOICES = (
-        ("pending", "Pending"),
-        ("submitting", "Submitting"),
-        ("submitted", "Submitted"),
-        ("running", "Running"),
-        ("published", "Published"),
-        ("complete", "Complete"),
-        ("failed", "Failed"),
+        ("pending", _("Pending")),
+        ("submitting", _("Submitting")),
+        ("submitted", _("Submitted")),
+        ("running", _("Running")),
+        ("published", _("Published")),
+        ("complete", _("Complete")),
+        ("failed", _("Failed")),
     )
     sequencing_run = models.ForeignKey(
         SequencingRun,

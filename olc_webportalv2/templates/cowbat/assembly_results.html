@@ -11,7 +11,7 @@
 <br>
 
 <!-- Display the title of the summary report -->
-<h4>Summary Report for {{ sequencing_run.run_name }} </h4>
+<h4>{% blocktrans with run_name=sequencing_run.run_name %}Summary Report for {{ run_name }}{% endblocktrans %}</h4>
 
 <!-- Start of the table -->
 <table id="assembly-table" class="table table-hover display nowrap" style="width:100%">

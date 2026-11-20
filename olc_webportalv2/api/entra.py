@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework import permissions, status, views
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
@@ -217,7 +218,7 @@ class EntraDesktopExchangeView(views.APIView):
                 )
         except Exception:
             return Response(
-                {"detail": "Entra authentication failed."},
+                {"detail": _("Entra authentication failed.")},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response(

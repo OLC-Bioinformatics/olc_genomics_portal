@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
-<h1>Upload Successful</h1>
-<p>Your files have been uploaded and processed successfully.</p>
-<a href="{% url 'metadata_upload:upload_files' %}">Upload More Files</a>
+<h1>{% trans "Upload Successful" %}</h1>
+<p>{% trans "Your files have been uploaded and processed successfully." %}</p>
+<a href="{% url 'metadata_upload:upload_files' %}">{% trans "Upload More Files" %}</a>
 {% endblock %}

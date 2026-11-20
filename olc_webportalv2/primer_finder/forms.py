@@ -934,6 +934,7 @@ class ValidatorTargetForm(forms.Form):
     sample_name = forms.CharField(
         required=False,
         max_length=128,
+        label=_('Sample name'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -943,6 +944,7 @@ class ValidatorTargetForm(forms.Form):
     )
     target_name = forms.CharField(
         max_length=62,
+        label=_('Target name'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
@@ -953,20 +955,22 @@ class ValidatorTargetForm(forms.Form):
     forward_primer = forms.CharField(
         required=False,
         max_length=64,
+        label=_('Forward primer sequence'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control validator-sequence-input',
-                'placeholder': "5' - 3' primer sequence",
+                'placeholder': _("5' - 3' primer sequence"),
             }
         ),
     )
     reverse_primer = forms.CharField(
         required=False,
         max_length=64,
+        label=_('Reverse primer sequence'),
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control validator-sequence-input',
-                'placeholder': "5' - 3' primer sequence",
+                'placeholder': _("5' - 3' primer sequence"),
             }
         ),
     )
@@ -1019,6 +1023,7 @@ class ValidatorTargetForm(forms.Form):
     gene_sequence = forms.CharField(
         required=False,
         max_length=100000,
+        label=_('Gene sequence'),
         widget=forms.Textarea(
             attrs={
                 'class': 'form-control validator-sequence-input',

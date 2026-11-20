@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
+from html import unescape
+
 from django.db.utils import IntegrityError
+from django.forms import formset_factory
 from django.test import TestCase
+from django.utils.translation import override
 
 from olc_webportalv2.users.models import User
 from olc_webportalv2.vir_typer.forms import (
+    BaseVirTyperSampleFormSet,
     VirTyperProjectForm,
     VirTyperSampleForm,
 )
@@ -130,6 +135,36 @@ class VirusTyperRequest(TestCase):
         }
         form = VirTyperSampleForm(sample)
         self.assertFalse(form.is_valid())
+
+    def test_formset_required_field_message_is_translated(self):
+        sample_formset = formset_factory(
+            VirTyperSampleForm,
+            formset=BaseVirTyperSampleFormSet,
+            extra=1,
+        )
+        data = {
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            "form-0-sample_name": "",
+            "form-0-date_received": "2019-08-01",
+            "form-0-LSTS_ID": "2019FPP00000475214",
+            "form-0-lab_ID": "STH",
+            "form-0-subunit": "1",
+            "form-0-putative_classification": "NOVI",
+            "form-0-isolate_source": "huître",
+            "form-0-analyst_name": "Rachel",
+        }
+
+        with override("fr"):
+            formset = sample_formset(data)
+
+            self.assertFalse(formset.is_valid())
+            self.assertIn(
+                "Le nom de l'échantillon est obligatoire",
+                unescape(str(formset.non_form_errors())),
+            )
 
     def test_request_form_bulk_create(self):
         sample_data = list()

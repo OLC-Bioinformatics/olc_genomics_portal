@@ -26,6 +26,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
     <script src="{% static 'js/dropzone.js' %}"></script>
+    <script src="{% static 'js/dropzone_i18n.js' %}"></script>
     <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
     function progressSpinner() {
@@ -36,7 +37,7 @@
             div.setAttribute('class', 'loader');
             div.id = 'spindiv';
             let text = document.createElement('H4');
-            let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+            let message = document.createTextNode("{% trans 'File upload in progress. Do not refresh this page!' %}");
             text.appendChild(message);
             spinnerdiv.appendChild(text);
             spinnerdiv.appendChild(div);
@@ -59,8 +60,8 @@
             let errorOccurred = false; 
             this.on("error", function(file, message) {
                 // If the error message is about an unacceptable file type
-                if (message === "You can't upload files of this type.") {
-                    message = "Invalid file type. Please upload .gz or .csv files.";
+                if (message === "{% trans "You can't upload files of this type." as invalid_file_type %}{{ invalid_file_type|escapejs }}") {
+                    message = "{% trans 'Invalid file type. Please upload .gz or .csv files.' as invalid_file_type_message %}{{ invalid_file_type_message|escapejs }}";
                     errorOccurred = true;  // Set the flag to true
                 }
                 myDropzone.options.autoProcessQueue = false;

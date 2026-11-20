@@ -185,10 +185,11 @@ class ContainerForm(forms.Form):
 
     container_name = forms.ModelChoiceField(
         queryset=ContainerName.objects.all(),
+        label=_("Container Name"),
         widget=autocomplete.ModelSelect2(
             url="ampliseq:ampliseq_autocompleter",
             attrs={
-                "data-placeholder": "Autocomplete ...",
+                "data-placeholder": _("Autocomplete ..."),
                 "style": "max-width: 18em",
             },
         ),

@@ -432,6 +432,7 @@ var Dropzone = function (_Emitter) {
          * be ignored.
          */
         dictFallbackText: "Please use the fallback form below to upload your files like in the olden days.",
+        dictFallbackButton: "Upload!",
 
         /**
          * If the filesize is too big.
@@ -1463,7 +1464,7 @@ var Dropzone = function (_Emitter) {
       if (this.options.dictFallbackText) {
         fieldsString += "<p>" + this.options.dictFallbackText + "</p>";
       }
-      fieldsString += "<input type=\"file\" name=\"" + this._getParamName(0) + "\" " + (this.options.uploadMultiple ? 'multiple="multiple"' : undefined) + " /><input type=\"submit\" value=\"Upload!\"></div>";
+      fieldsString += "<input type=\"file\" name=\"" + this._getParamName(0) + "\" " + (this.options.uploadMultiple ? 'multiple="multiple"' : undefined) + " /><input type=\"submit\" value=\"" + this.options.dictFallbackButton + "\"></div>";
 
       var fields = Dropzone.createElement(fieldsString);
       if (this.element.tagName !== "FORM") {

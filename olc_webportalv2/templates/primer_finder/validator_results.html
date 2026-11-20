@@ -5,7 +5,7 @@
 {% load display_filters %}
 {% block content %}
 
-<h4>Summary Report for {{ primer_validator_request.project_name }}</h4>
+<h4>{% blocktrans with project_name=primer_validator_request.project_name %}Summary Report for {{ project_name }}{% endblocktrans %}</h4>
 {% if primer_validator_request.gene_exclusion_note %}
 <div class="alert alert-warning" role="alert">
     {{ primer_validator_request.gene_exclusion_note }}
@@ -15,11 +15,11 @@
 <table class="table table-hover display nowrap" style="width:100%">
     <thead>
         <tr>
-            <th>Primer</th>
-            <th>Panel</th>
-            <th>Positive</th>
-            <th>Total</th>
-            <th>Percent</th>
+            <th>{% trans "Primer" %}</th>
+            <th>{% trans "Panel" %}</th>
+            <th>{% trans "Positive" %}</th>
+            <th>{% trans "Total" %}</th>
+            <th>{% trans "Percent" %}</th>
         </tr>
     </thead>
     <tbody>
@@ -39,12 +39,12 @@
                 <input type="button" class="btn btn-outline-success btn-sm" style="float: right"
                     data-primer-detail-toggle="true" data-primer="{{ primer }}"
                     data-panel="{{ panel }}" aria-expanded="false"
-                    value="Show {{ panel }} details" />
+                    value="{% blocktrans with panel=panel %}Show {{ panel }} details{% endblocktrans %}" />
                 {% else %}
                 <input type="button" class="btn btn-outline-danger btn-sm" style="float: right"
                     data-primer-detail-toggle="true" data-primer="{{ primer }}"
                     data-panel="{{ panel }}" aria-expanded="false"
-                    value="Show {{ panel }} details" />
+                    value="{% blocktrans with panel=panel %}Show {{ panel }} details{% endblocktrans %}" />
                 {% endif %}
             </td>
             <td>
@@ -68,26 +68,26 @@
                     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title">{{ primer }} {{ panel }} details</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <h5 class="modal-title">{% blocktrans with primer=primer panel=panel %}{{ primer }} {{ panel }} details{% endblocktrans %}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
                             </div>
                             <div class="modal-body">
                                 <table class="table table-hover display nowrap" style="width:100%">
                                     <tr>
-                                        <td colspan="2">Forward Mismatches</td>
-                                        <td colspan="2">Forward Mismatch Details</td>
-                                        <td colspan="2">Reverse Mismatches</td>
-                                        <td colspan="2">Reverse Mismatch Details</td>
+                                        <td colspan="2">{% trans "Forward Mismatches" %}</td>
+                                        <td colspan="2">{% trans "Forward Mismatch Details" %}</td>
+                                        <td colspan="2">{% trans "Reverse Mismatches" %}</td>
+                                        <td colspan="2">{% trans "Reverse Mismatch Details" %}</td>
                                     </tr>
                                     <tr>
-                                        <td>Number of Mismatches</td>
-                                        <td>Hits</td>
-                                        <td>Mismatch Details</td>
-                                        <td>Hits</td>
-                                        <td>Number of Mismatches</td>
-                                        <td>Hits</td>
-                                        <td>Mismatch Details</td>
-                                        <td>Hits</td>
+                                        <td>{% trans "Number of Mismatches" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Mismatch Details" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Number of Mismatches" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Mismatch Details" %}</td>
+                                        <td>{% trans "Hits" %}</td>
                                     </tr>
                                     <tr>
                                         <td>
@@ -212,27 +212,27 @@
                     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title">{{ primer }} {{ panel }} <em>{{ genus|capfirst }}</em> details
+                                <h5 class="modal-title">{% blocktrans with primer=primer panel=panel genus=genus|capfirst %}{{ primer }} {{ panel }} {{ genus }} details{% endblocktrans %}
                                 </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
                             </div>
                             <div class="modal-body">
                                 <table class="table table-hover display nowrap" style="width:100%">
                                     <tr>
-                                        <td colspan="2">Forward Mismatches</td>
-                                        <td colspan="2">Forward Mismatch Details</td>
-                                        <td colspan="2">Reverse Mismatches</td>
-                                        <td colspan="2">Reverse Mismatch Details</td>
+                                        <td colspan="2">{% trans "Forward Mismatches" %}</td>
+                                        <td colspan="2">{% trans "Forward Mismatch Details" %}</td>
+                                        <td colspan="2">{% trans "Reverse Mismatches" %}</td>
+                                        <td colspan="2">{% trans "Reverse Mismatch Details" %}</td>
                                     </tr>
                                     <tr>
-                                        <td>Number of Mismatches</td>
-                                        <td>Hits</td>
-                                        <td>Mismatch Details</td>
-                                        <td>Hits</td>
-                                        <td>Number of Mismatches</td>
-                                        <td>Hits</td>
-                                        <td>Mismatch Details</td>
-                                        <td>Hits</td>
+                                        <td>{% trans "Number of Mismatches" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Mismatch Details" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Number of Mismatches" %}</td>
+                                        <td>{% trans "Hits" %}</td>
+                                        <td>{% trans "Mismatch Details" %}</td>
+                                        <td>{% trans "Hits" %}</td>
                                     </tr>
                                     <tr>
                                         <td>

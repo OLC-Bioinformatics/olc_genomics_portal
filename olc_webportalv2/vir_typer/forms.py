@@ -46,7 +46,13 @@ class BaseVirTyperSampleFormSet(BaseFormSet):
             except KeyError:
                 pass
             if "sample_name" not in key_names:
-                if form._errors["sample_name"][0] != "This field is required.":
+                sample_name_errors = form.errors.as_data().get(
+                    "sample_name", []
+                )
+                if (
+                    sample_name_errors
+                    and sample_name_errors[0].code != "required"
+                ):
                     error_list.append(form._errors["sample_name"])
                 else:
                     error_list.append(_("Sample Name is required"))
@@ -163,4 +169,4 @@ class VirTyperFileForm(forms.Form):
 class EmailForm(forms.Form):
     """Collect an email address for VirusTyper notifications."""
 
-    email = forms.EmailField(max_length=50, label="Email ")
+    email = forms.EmailField(max_length=50, label=_("Email "))

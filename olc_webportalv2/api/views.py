@@ -15,6 +15,7 @@ from django.db import IntegrityError, transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework import (
     generics,
     parsers,
@@ -258,8 +259,7 @@ class StartCowbatView(generics.RetrieveAPIView):
                 return JsonResponse(
                     {
                         "status": (
-                            "Some files were missing. "
-                            "Could not start assembly."
+                            _("Some files were missing. Could not start assembly.")
                         )
                     }
                 )
@@ -274,16 +274,22 @@ class StartCowbatView(generics.RetrieveAPIView):
             return JsonResponse(
                 {
                     "status": (
-                        f"Started assembly of run {self.kwargs['run_name']}"
+                        _("Started assembly of run %(run_name)s")
+                        % {"run_name": self.kwargs["run_name"]}
                     )
                 }
             )
         return JsonResponse(
             {
                 "status": (
-                    f"Did not start assembly for "
-                    f"{self.kwargs['run_name']}. Status for "
-                    f"{self.kwargs['run_name']} is {sequencing_run.status}"
+                    _(
+                        "Did not start assembly for %(run_name)s. "
+                        "Status for %(run_name)s is %(status)s"
+                    )
+                    % {
+                        "run_name": self.kwargs["run_name"],
+                        "status": sequencing_run.status,
+                    }
                 )
             }
         )
@@ -305,8 +311,10 @@ class ResearchAssemblyView(generics.GenericAPIView):
         return Response(
             {
                 "message": (
-                    "This endpoint accepts POST requests to initiate the "
-                    "assembly process for research sequencing runs."
+                    _(
+                        "This endpoint accepts POST requests to initiate the "
+                        "assembly process for research sequencing runs."
+                    )
                 )
             }
         )
@@ -331,7 +339,8 @@ class ResearchAssemblyView(generics.GenericAPIView):
             # Initialize response data with the status message
             response_data = {
                 "status": (
-                    f"Started assembly of run {sequencing_run.run_name}"
+                    _("Started assembly of run %(run_name)s")
+                    % {"run_name": sequencing_run.run_name}
                 )
             }
 
@@ -462,7 +471,7 @@ class SequencingRunViewSet(viewsets.ModelViewSet):
         raw = request.query_params.get("run_name")
         if not raw:
             return Response(
-                {"error": "run_name query param required"},
+                {"error": _("The run_name query parameter is required.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         norm = normalize_run_name(raw)
@@ -672,9 +681,9 @@ def _validate_nanopore_path(path):
     """
     path = str(path or "").replace("\\", "/")
     if not path or path.startswith("/") or ".." in path.split("/"):
-        raise ValueError("Invalid relative path.")
+        raise ValueError(_("Invalid relative path."))
     if not path.lower().endswith(".pod5"):
-        raise ValueError("Only POD5 files are accepted.")
+        raise ValueError(_("Only POD5 files are accepted."))
     return posixpath.normpath(path)
 
 
@@ -732,7 +741,7 @@ class NanoporeRunView(NanoporeAPIView):
         if not run_name:
             return Response(
                 {
-                    "error": "A valid run name is required.",
+                    "error": _("A valid run name is required."),
                     "field": "run_name",
                     "request_id": request_id,
                 },
@@ -741,7 +750,7 @@ class NanoporeRunView(NanoporeAPIView):
         if SequencingRun.objects.filter(run_name__iexact=run_name).exists():
             return Response(
                 {
-                    "error": "A run with this name already exists.",
+                    "error": _("A run with this name already exists."),
                     "field": "run_name",
                     "request_id": request_id,
                 },
@@ -757,8 +766,10 @@ class NanoporeRunView(NanoporeAPIView):
             return Response(
                 {
                     "error": (
-                        "Could not verify run name availability in storage. "
-                        "Please retry later."
+                        _(
+                            "Could not verify run name availability in "
+                            "storage. Please retry later."
+                        )
                     ),
                     "field": "run_name",
                     "request_id": request_id,
@@ -769,8 +780,10 @@ class NanoporeRunView(NanoporeAPIView):
             return Response(
                 {
                     "error": (
-                        "Run name is already in use in storage; "
-                        "choose a new name."
+                        _(
+                            "Run name is already in use in storage; "
+                            "choose a new name."
+                        )
                     ),
                     "field": "run_name",
                     "request_id": request_id,
@@ -783,7 +796,7 @@ class NanoporeRunView(NanoporeAPIView):
         except IntegrityError:
             return Response(
                 {
-                    "error": "A run with this name already exists.",
+                    "error": _("A run with this name already exists."),
                     "field": "run_name",
                     "request_id": request_id,
                 },
@@ -795,7 +808,7 @@ class NanoporeRunView(NanoporeAPIView):
             )
             return Response(
                 {
-                    "error": "Nanopore run could not be created.",
+                    "error": _("Nanopore run could not be created."),
                     "request_id": request_id,
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -986,16 +999,19 @@ class NanoporeRunDetailView(NanoporeAPIView):
             return None
 
         status_messages = {
-            "pending": "Waiting for the processing task to start.",
-            "submitting": "Submitting the processing task to Azure Batch.",
-            "submitted": "Processing task submitted; waiting for a worker.",
-            "running": "Nanopore processing is running.",
+            "pending": _("Waiting for the processing task to start."),
+            "submitting": _("Submitting the processing task to Azure Batch."),
+            "submitted": _("Processing task submitted; waiting for a worker."),
+            "running": _("Nanopore processing is running."),
             "published": (
-                "The next iteration is queued for the active processing task."
+                _(
+                    "The next iteration is queued for the active processing "
+                    "task."
+                )
             ),
-            "complete": "Nanopore processing is complete.",
-            "failed": "Nanopore processing failed.",
-            "collecting": "Waiting for the upload collection window.",
+            "complete": _("Nanopore processing is complete."),
+            "failed": _("Nanopore processing failed."),
+            "collecting": _("Waiting for the upload collection window."),
         }
 
         if current_batch is not None:
@@ -1010,7 +1026,7 @@ class NanoporeRunDetailView(NanoporeAPIView):
         error = getattr(display_batch, "error", "") or ""
         message = error or status_messages.get(
             processing_status,
-            "Nanopore processing status is unavailable.",
+            _("Nanopore processing status is unavailable."),
         )
 
         return {
@@ -1071,7 +1087,7 @@ class NanoporeLatestResultView(NanoporeAPIView):
         blob_client = get_storage_client()
         if not blob_client.object_exists(container_name, latest_blob_name):
             return Response(
-                {"error": "Results are not published yet."},
+                {"error": _("Results are not published yet.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -1093,7 +1109,7 @@ class NanoporeLatestResultView(NanoporeAPIView):
             or latest_payload.get("run_name") != run.run_name
         ):
             return Response(
-                {"error": "Latest results belong to another run."},
+                {"error": _("Latest results belong to another run.")},
                 status=status.HTTP_409_CONFLICT,
             )
         generation = latest_payload.get("generation")
@@ -1112,7 +1128,7 @@ class NanoporeLatestResultView(NanoporeAPIView):
             ).first()
         if processing_batch is None:
             return Response(
-                {"error": "Latest iteration is not registered."},
+                {"error": _("Latest iteration is not registered.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -1154,7 +1170,7 @@ class NanoporeLatestResultView(NanoporeAPIView):
                     processing_batch.generation,
                 )
                 return Response(
-                    {"error": "Latest result could not be verified."},
+                    {"error": _("Latest result could not be verified.")},
                     status=status.HTTP_502_BAD_GATEWAY,
                 )
 
@@ -1185,7 +1201,7 @@ class NanoporeIterationResultView(NanoporeAPIView):
             container_name, blob_name
         ):
             return Response(
-                {"error": "Iteration results are not published yet."},
+                {"error": _("Iteration results are not published yet.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -1203,7 +1219,7 @@ class NanoporeIterationResultView(NanoporeAPIView):
                 generation,
             )
             return Response(
-                {"error": "Iteration result manifest is invalid."},
+                {"error": _("Iteration result manifest is invalid.")},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         except Exception:
@@ -1213,7 +1229,7 @@ class NanoporeIterationResultView(NanoporeAPIView):
                 generation,
             )
             return Response(
-                {"error": "Iteration result manifest could not be loaded."},
+                {"error": _("Iteration result manifest could not be loaded.")},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
@@ -1225,7 +1241,7 @@ class NanoporeIterationResultView(NanoporeAPIView):
             result_generation = None
         if result_generation != int(generation):
             return Response(
-                {"error": "Result generation does not match."},
+                {"error": _("Result generation does not match.")},
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(
@@ -1258,7 +1274,7 @@ class NanoporeFilePrepareView(NanoporeAPIView):
         run = _nanopore_run(request, run_pk)
         if run.workflow_state not in ("created", "uploading", "processing"):
             return Response(
-                {"error": "Run is not accepting uploads."},
+                {"error": _("Run is not accepting uploads.")},
                 status=status.HTTP_409_CONFLICT,
             )
         try:
@@ -1274,12 +1290,12 @@ class NanoporeFilePrepareView(NanoporeAPIView):
             size_bytes = int(request.data.get("size_bytes"))
         except (TypeError, ValueError):
             return Response(
-                {"error": "size_bytes must be an integer."},
+                {"error": _("size_bytes must be an integer.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if size_bytes < 1:
             return Response(
-                {"error": "size_bytes must be positive."},
+                {"error": _("size_bytes must be positive.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         raw_container = getattr(
@@ -1296,7 +1312,7 @@ class NanoporeFilePrepareView(NanoporeAPIView):
         )
         if not created and nanopore_file.size_bytes != size_bytes:
             return Response(
-                {"error": "File size conflicts with existing manifest."},
+                {"error": _("File size conflicts with existing manifest.")},
                 status=status.HTTP_409_CONFLICT,
             )
         blob_client = get_storage_client()
@@ -1359,7 +1375,7 @@ class NanoporeFileCompleteView(NanoporeAPIView):
         )
         if run.workflow_state in ("stopping", "complete", "error"):
             return Response(
-                {"error": "Run is no longer accepting files."},
+                {"error": _("Run is no longer accepting files.")},
                 status=status.HTTP_409_CONFLICT,
             )
 
@@ -1388,11 +1404,15 @@ class NanoporeFileCompleteView(NanoporeAPIView):
                     nanopore_file.pk,
                 )
                 return Response(
-                    {"error": "Could not verify uploaded blob; please retry."},
+                    {
+                        "error": _(
+                            "Could not verify uploaded blob; please retry."
+                        )
+                    },
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             return Response(
-                {"error": "Uploaded blob was not found."},
+                {"error": _("Uploaded blob was not found.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1401,7 +1421,7 @@ class NanoporeFileCompleteView(NanoporeAPIView):
             nanopore_file.error = "Uploaded size does not match manifest."
             nanopore_file.save(update_fields=["status", "error"])
             return Response(
-                {"error": nanopore_file.error},
+                {"error": _("Uploaded size does not match manifest.")},
                 status=status.HTTP_409_CONFLICT,
             )
 
@@ -1466,12 +1486,12 @@ class NanoporeFinalizeView(NanoporeAPIView):
 
             if not run.nanopore_files.exists():
                 return Response(
-                    {"error": "No POD5 files have been registered."},
+                    {"error": _("No POD5 files have been registered.")},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             if run.nanopore_files.exclude(status="uploaded").exists():
                 return Response(
-                    {"error": "All registered files must be uploaded."},
+                    {"error": _("All registered files must be uploaded.")},
                     status=status.HTTP_409_CONFLICT,
                 )
 

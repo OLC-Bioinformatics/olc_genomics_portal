@@ -21,7 +21,7 @@ class ContainerForm(forms.Form):
         widget=autocomplete.ModelSelect2(
             url='filezone:filezone_autocompleter',
             attrs={
-                'data-placeholder': 'Autocomplete ...',
+                'data-placeholder': _('Autocomplete ...'),
                 'style': 'max-width: 18em',
             },
         ),

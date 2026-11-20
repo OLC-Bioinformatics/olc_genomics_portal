@@ -1,0 +1,388 @@
+# French translations for FoodPort.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FoodPort\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-19 15:56-0500\n"
+"PO-Revision-Date: 2026-11-19 19:26+0000\n"
+"Last-Translator: FoodPort translation team\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:47
+#, javascript-format
+msgid "Available %s"
+msgstr "%s disponibles"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:53
+#, javascript-format
+msgid ""
+"This is the list of available %s. You may choose some by selecting them in "
+"the box below and then clicking the \"Choose\" arrow between the two boxes."
+msgstr ""
+"Voici la liste des %s disponibles. Pour en choisir, sélectionnez-les dans la "
+"liste ci-dessous, puis cliquez sur la flèche « Choisir » entre les deux "
+"listes."
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:69
+#, javascript-format
+msgid "Type into this box to filter down the list of available %s."
+msgstr ""
+"Saisissez du texte dans ce champ pour filtrer la liste des %s disponibles."
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:74
+msgid "Filter"
+msgstr "Filtrer"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:78
+msgid "Choose all"
+msgstr "Tout sélectionner"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:78
+#, javascript-format
+msgid "Click to choose all %s at once."
+msgstr "Cliquez pour sélectionner tous les éléments de la liste %s."
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:84
+msgid "Choose"
+msgstr "Choisir"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:86
+msgid "Remove"
+msgstr "Retirer"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:92
+#, javascript-format
+msgid "Chosen %s"
+msgstr "Sélection : %s"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:98
+#, javascript-format
+msgid ""
+"This is the list of chosen %s. You may remove some by selecting them in the "
+"box below and then clicking the \"Remove\" arrow between the two boxes."
+msgstr ""
+"Voici la liste des %s sélectionnés. Pour en retirer, sélectionnez-les dans "
+"la liste ci-dessous, puis cliquez sur la flèche « Retirer » entre les deux "
+"listes."
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:108
+msgid "Remove all"
+msgstr "Tout retirer"
+
+#: olc_webportalv2/static/admin/js/SelectFilter2.js:108
+#, javascript-format
+msgid "Click to remove all chosen %s at once."
+msgstr "Cliquez pour retirer tous les éléments sélectionnés de la liste %s."
+
+#: olc_webportalv2/static/admin/js/actions.js:48
+#: olc_webportalv2/static/admin/js/actions.min.js:2
+msgid "%(sel)s of %(cnt)s selected"
+msgid_plural "%(sel)s of %(cnt)s selected"
+msgstr[0] "Sélection : %(sel)s sur %(cnt)s"
+msgstr[1] "Sélection : %(sel)s sur %(cnt)s"
+
+#: olc_webportalv2/static/admin/js/actions.js:117
+#: olc_webportalv2/static/admin/js/actions.min.js:5
+msgid ""
+"You have unsaved changes on individual editable fields. If you run an "
+"action, your unsaved changes will be lost."
+msgstr ""
+"Certains champs modifiables ont des changements non enregistrés. Si vous "
+"lancez une action, ces changements seront perdus."
+
+#: olc_webportalv2/static/admin/js/actions.js:129
+#: olc_webportalv2/static/admin/js/actions.min.js:5
+msgid ""
+"You have selected an action, but you haven't saved your changes to "
+"individual fields yet. Please click OK to save. You'll need to re-run the "
+"action."
+msgstr ""
+"Vous avez sélectionné une action, mais les changements apportés aux champs "
+"individuels ne sont pas enregistrés. Cliquez sur OK pour les enregistrer, "
+"puis relancez l’action."
+
+#: olc_webportalv2/static/admin/js/actions.js:131
+#: olc_webportalv2/static/admin/js/actions.min.js:6
+msgid ""
+"You have selected an action, and you haven't made any changes on individual "
+"fields. You're probably looking for the Go button rather than the Save "
+"button."
+msgstr ""
+"Vous avez sélectionné une action sans modifier les champs individuels. Vous "
+"cherchez probablement le bouton « Exécuter » plutôt que le bouton "
+"« Enregistrer »."
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:13
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:118
+msgid "Now"
+msgstr "Maintenant"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:14
+msgid "Midnight"
+msgstr "Minuit"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:15
+msgid "6 a.m."
+msgstr "6 h"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:16
+msgid "Noon"
+msgstr "Midi"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:17
+msgid "6 p.m."
+msgstr "18 h"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:83
+#, javascript-format
+msgid "Note: You are %s hour ahead of server time."
+msgid_plural "Note: You are %s hours ahead of server time."
+msgstr[0] ""
+"Remarque : votre heure locale a %s heure d’avance sur celle du serveur."
+msgstr[1] ""
+"Remarque : votre heure locale a %s heures d’avance sur celle du serveur."
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:91
+#, javascript-format
+msgid "Note: You are %s hour behind server time."
+msgid_plural "Note: You are %s hours behind server time."
+msgstr[0] ""
+"Remarque : votre heure locale a %s heure de retard sur celle du serveur."
+msgstr[1] ""
+"Remarque : votre heure locale a %s heures de retard sur celle du serveur."
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:136
+msgid "Choose a Time"
+msgstr "Choisir une heure"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:166
+msgid "Choose a time"
+msgstr "Choisir l’heure"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:183
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:343
+msgid "Cancel"
+msgstr "Annuler"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:248
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:328
+msgid "Today"
+msgstr "Aujourd’hui"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:265
+msgid "Choose a Date"
+msgstr "Choisir une date"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:322
+msgid "Yesterday"
+msgstr "Hier"
+
+#: olc_webportalv2/static/admin/js/admin/DateTimeShortcuts.js:334
+msgid "Tomorrow"
+msgstr "Demain"
+
+#: olc_webportalv2/static/admin/js/calendar.js:12
+msgid "January"
+msgstr "janvier"
+
+#: olc_webportalv2/static/admin/js/calendar.js:13
+msgid "February"
+msgstr "février"
+
+#: olc_webportalv2/static/admin/js/calendar.js:14
+msgid "March"
+msgstr "mars"
+
+#: olc_webportalv2/static/admin/js/calendar.js:15
+msgid "April"
+msgstr "avril"
+
+#: olc_webportalv2/static/admin/js/calendar.js:16
+msgid "May"
+msgstr "mai"
+
+#: olc_webportalv2/static/admin/js/calendar.js:17
+msgid "June"
+msgstr "juin"
+
+#: olc_webportalv2/static/admin/js/calendar.js:18
+msgid "July"
+msgstr "juillet"
+
+#: olc_webportalv2/static/admin/js/calendar.js:19
+msgid "August"
+msgstr "août"
+
+#: olc_webportalv2/static/admin/js/calendar.js:20
+msgid "September"
+msgstr "septembre"
+
+#: olc_webportalv2/static/admin/js/calendar.js:21
+msgid "October"
+msgstr "octobre"
+
+#: olc_webportalv2/static/admin/js/calendar.js:22
+msgid "November"
+msgstr "novembre"
+
+#: olc_webportalv2/static/admin/js/calendar.js:23
+msgid "December"
+msgstr "décembre"
+
+#: olc_webportalv2/static/admin/js/calendar.js:26
+msgctxt "one letter Sunday"
+msgid "S"
+msgstr "D"
+
+#: olc_webportalv2/static/admin/js/calendar.js:27
+msgctxt "one letter Monday"
+msgid "M"
+msgstr "L"
+
+#: olc_webportalv2/static/admin/js/calendar.js:28
+msgctxt "one letter Tuesday"
+msgid "T"
+msgstr "M"
+
+#: olc_webportalv2/static/admin/js/calendar.js:29
+msgctxt "one letter Wednesday"
+msgid "W"
+msgstr "M"
+
+#: olc_webportalv2/static/admin/js/calendar.js:30
+msgctxt "one letter Thursday"
+msgid "T"
+msgstr "J"
+
+#: olc_webportalv2/static/admin/js/calendar.js:31
+msgctxt "one letter Friday"
+msgid "F"
+msgstr "V"
+
+#: olc_webportalv2/static/admin/js/calendar.js:32
+msgctxt "one letter Saturday"
+msgid "S"
+msgstr "S"
+
+#: olc_webportalv2/static/admin/js/collapse.js:10
+#: olc_webportalv2/static/admin/js/collapse.js:21
+#: olc_webportalv2/static/admin/js/collapse.min.js:4
+#: olc_webportalv2/static/admin/js/collapse.min.js:5
+msgid "Show"
+msgstr "Afficher"
+
+#: olc_webportalv2/static/admin/js/collapse.js:18
+#: olc_webportalv2/static/admin/js/collapse.min.js:4
+msgid "Hide"
+msgstr "Masquer"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:9
+msgid "Drop files to upload or click"
+msgstr "Déposez des fichiers pour les téléverser ou cliquez."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:10
+msgid "Your browser does not support drag'n'drop file uploads."
+msgstr "Votre navigateur ne prend pas en charge le téléversement de fichiers par glisser-déposer."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:11
+msgid ""
+"Please use the fallback form below to upload your files like in the olden "
+"days."
+msgstr "Veuillez utiliser le formulaire de remplacement ci-dessous pour téléverser vos fichiers."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:12
+msgid "Upload!"
+msgstr "Téléverser !"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:13
+msgid "File is too big ({{filesize}}MiB). Max filesize: {{maxFilesize}}MiB."
+msgstr "Le fichier est trop volumineux ({{filesize}} Mio). Taille maximale : {{maxFilesize}} Mio."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:14
+msgid "You can't upload files of this type."
+msgstr "Vous ne pouvez pas téléverser ce type de fichier."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:15
+msgid "Server responded with {{statusCode}} code."
+msgstr "Le serveur a répondu avec le code {{statusCode}}."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:16
+msgid "Cancel upload"
+msgstr "Annuler le téléversement"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:17
+msgid "Upload canceled."
+msgstr "Téléversement annulé."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:18
+msgid "Are you sure you want to cancel this upload?"
+msgstr "Voulez-vous vraiment annuler ce téléversement ?"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:19
+msgid "You can not upload any more files."
+msgstr "Vous ne pouvez plus téléverser de fichiers."
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:21
+msgid "TB"
+msgstr "To"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:22
+msgid "GB"
+msgstr "Go"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:23
+msgid "MB"
+msgstr "Mo"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:24
+msgid "KB"
+msgstr "Ko"
+
+#: olc_webportalv2/static/js/dropzone_i18n.js:25
+msgid "B"
+msgstr "o"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:12
+msgid "File upload progress"
+msgstr "Progression du téléversement des fichiers"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:28
+msgid "Queued"
+msgstr "En attente"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:80
+msgid "Failed during %(phase)s"
+msgstr "Échec pendant %(phase)s"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:81
+msgid "Failed"
+msgstr "Échec"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:94
+msgid "Preparing upload"
+msgstr "Préparation du téléversement"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:108
+msgid "Uploading (%(percent)s%%)"
+msgstr "Téléversement (%(percent)s %%)"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:118
+msgid "Retrying (attempt %(attempt)s of %(total)s)"
+msgstr "Nouvelle tentative (essai %(attempt)s sur %(total)s)"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:128
+msgid "Complete"
+msgstr "Terminé"
+
+#: olc_webportalv2/static/js/upload_file_progress.js:143
+msgid "Not uploaded"
+msgstr "Non téléversé"

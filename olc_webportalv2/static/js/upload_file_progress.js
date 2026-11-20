@@ -1,11 +1,15 @@
 (function(window) {
   'use strict';
 
+  function translate(localized, values) {
+    return values ? window.interpolate(localized, values, true) : localized;
+  }
+
   function create(container, files, fileAttempts) {
     fileAttempts = fileAttempts || 2;
     container.textContent = '';
     var heading = document.createElement('h5');
-    heading.textContent = 'File upload progress';
+    heading.textContent = translate(window.gettext('File upload progress'));
     container.appendChild(heading);
 
     var entries = files.map(function(file) {
@@ -21,7 +25,7 @@
 
       var status = document.createElement('span');
       status.className = 'text-muted ml-2';
-      status.textContent = 'Queued';
+      status.textContent = translate(window.gettext('Queued'));
 
       heading.appendChild(fileName);
       heading.appendChild(status);
@@ -72,8 +76,9 @@
 
     function setFailure(entry, error) {
       entry.state = 'failed';
-      entry.status.textContent = 'Failed' +
-        (error.phase ? ' during ' + error.phase : '');
+      entry.status.textContent = error.phase ?
+        translate(window.gettext('Failed during %(phase)s'), { phase: error.phase }) :
+        translate(window.gettext('Failed'));
       entry.bar.className = 'progress-bar bg-danger';
     }
 
@@ -86,7 +91,7 @@
         var entry = findEntry(file);
         if (entry && entry.state === 'queued') {
           entry.state = 'uploading';
-          entry.status.textContent = 'Preparing upload';
+          entry.status.textContent = translate(window.gettext('Preparing upload'));
         }
       },
       onProgress: function(file, uploadedBytes, totalBytes) {
@@ -99,15 +104,19 @@
         setPercent(entry, percent);
         if (entry.state !== 'retrying' || uploadedBytes > 0) {
           entry.state = 'uploading';
-          entry.status.textContent = 'Uploading (' + percent + '%)';
+          entry.status.textContent = translate(
+            window.gettext('Uploading (%(percent)s%%)'),
+            { percent: percent }
+          );
         }
       },
       onRetry: function(file, attempt) {
         var entry = findEntry(file);
         if (entry) {
           entry.state = 'retrying';
-          entry.status.textContent = (
-            'Retrying (attempt ' + attempt + ' of ' + fileAttempts + ')'
+          entry.status.textContent = translate(
+            window.gettext('Retrying (attempt %(attempt)s of %(total)s)'),
+            { attempt: attempt, total: fileAttempts }
           );
           setPercent(entry, 0);
         }
@@ -116,7 +125,7 @@
         var entry = findEntry(file);
         if (entry) {
           entry.state = 'complete';
-          entry.status.textContent = 'Complete';
+          entry.status.textContent = translate(window.gettext('Complete'));
           entry.bar.className = 'progress-bar bg-success';
           setPercent(entry, 100);
         }
@@ -131,7 +140,7 @@
         entries.forEach(function(entry) {
           if (entry.state === 'queued') {
             entry.state = 'skipped';
-            entry.status.textContent = 'Not uploaded';
+            entry.status.textContent = translate(window.gettext('Not uploaded'));
           }
         });
       }

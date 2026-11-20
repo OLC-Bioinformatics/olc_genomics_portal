@@ -5,7 +5,10 @@ import logging
 import smtplib
 from unittest import mock
 
-from django.test import SimpleTestCase
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.test import SimpleTestCase, TestCase
+from django.utils import translation
 
 from olc_webportalv2.common.benchmarks import (
     EXCLUSIVITY_BENCHMARK_CHOICES,
@@ -14,6 +17,7 @@ from olc_webportalv2.common.benchmarks import (
     select_benchmark_blob,
     validate_benchmark_panel,
 )
+from olc_webportalv2.common.email_i18n import recipient_language
 from olc_webportalv2.common.methods import (
     _redact_sas_urls,
     generic_api_submit,
@@ -48,6 +52,26 @@ class BenchmarkArchiveTests(SimpleTestCase):
             validate_benchmark_panel(
                 benchmark_name="shigella-exclusivity",
                 panel="inclusivity",
+            )
+
+
+class RecipientLanguageTests(TestCase):
+    def test_registered_recipient_uses_saved_language(self):
+        user = get_user_model().objects.create_user(
+            username="french-recipient",
+            email="recipient@example.com",
+            password="test-password",
+            language="fr",
+        )
+
+        with recipient_language(user.email):
+            self.assertEqual(translation.get_language(), "fr")
+
+    def test_unregistered_recipient_uses_site_default(self):
+        with recipient_language("unregistered@example.com"):
+            self.assertEqual(
+                translation.get_language(),
+                settings.LANGUAGE_CODE,
             )
 
     def test_shigella_archive_selection_uses_highest_version(self):

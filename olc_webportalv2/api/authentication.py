@@ -4,6 +4,7 @@ import binascii
 import os
 
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -42,7 +43,7 @@ class DesktopTokenAuthentication(BaseAuthentication):
         if not parts or parts[0].lower() != self.keyword.lower():
             return None
         if len(parts) != 2:
-            raise AuthenticationFailed("Invalid token header.")
+            raise AuthenticationFailed(_("Invalid token header."))
 
         token = (
             DesktopAccessToken.objects.select_related("user")
@@ -52,9 +53,9 @@ class DesktopTokenAuthentication(BaseAuthentication):
         if token is None:
             return None
         if token.expires_at <= timezone.now():
-            raise AuthenticationFailed("Invalid or expired token.")
+            raise AuthenticationFailed(_("Invalid or expired token."))
         if not token.user.is_active:
-            raise AuthenticationFailed("User account is inactive.")
+            raise AuthenticationFailed(_("User account is inactive."))
         return token.user, token
 
 

@@ -78,12 +78,17 @@ class COWSNPhRTaskLogicTests(TestCase):
             ref='2015-SEQ-0711',
             seqid_errors=[],
             save=Mock(),
+            user=SimpleNamespace(language='fr'),
         )
         file_locate.return_value.main.return_value = ({}, {})
 
         self.assertIsNone(find_ref(request))
 
         self.assertEqual(request.status, 'Error')
+        self.assertIn(
+            'Impossible de trouver un fichier FASTA',
+            request.seqid_errors[0],
+        )
         self.assertIn('2015-SEQ-0711', request.seqid_errors[0])
         request.save.assert_called_once()
 
@@ -93,6 +98,7 @@ class COWSNPhRTaskLogicTests(TestCase):
             seqids=['2015-SEQ-0711'],
             seqid_errors=[],
             save=Mock(),
+            user=SimpleNamespace(language='fr'),
         )
         file_locate.return_value.main.return_value = (
             {
@@ -116,6 +122,7 @@ class COWSNPhRTaskLogicTests(TestCase):
             seqids=['2015-SEQ-0711'],
             seqid_errors=[],
             save=Mock(),
+            user=SimpleNamespace(language='fr'),
         )
         file_locate.return_value.main.return_value = (
             {'run-1': [{'blob_name': '2015-SEQ-0711_R1.fastq.gz'}]},
@@ -125,12 +132,20 @@ class COWSNPhRTaskLogicTests(TestCase):
         self.assertIsNone(find_query(request))
 
         self.assertEqual(request.status, 'Error')
+        self.assertIn(
+            'Impossible de trouver un ou plusieurs fichiers .fastq.gz',
+            request.seqid_errors[0],
+        )
         self.assertIn('2015-SEQ-0711', request.seqid_errors[0])
         request.save.assert_called_once()
 
+    @patch(
+        'olc_webportalv2.common.email_i18n.get_recipient_language',
+        return_value='en-ca',
+    )
     @patch('olc_webportalv2.cowsnphr.tasks.send_email')
     def test_successful_task_saves_status_and_notifies_subscribers(
-        self, send_email
+        self, send_email, get_recipient_language
     ):
         request = SimpleNamespace(
             status='Processing',
@@ -149,9 +164,16 @@ class COWSNPhRTaskLogicTests(TestCase):
         self.assertEqual(
             send_email.call_args.kwargs['recipient'], 'alerts@example.com'
         )
+        get_recipient_language.assert_called_once_with('alerts@example.com')
 
+    @patch(
+        'olc_webportalv2.common.email_i18n.get_recipient_language',
+        return_value='en-ca',
+    )
     @patch('olc_webportalv2.cowsnphr.tasks.send_email')
-    def test_failed_task_saves_status_and_reports_errors(self, send_email):
+    def test_failed_task_saves_status_and_reports_errors(
+        self, send_email, get_recipient_language
+    ):
         request = SimpleNamespace(
             status='Processing',
             emails_array=['alerts@example.com'],
@@ -168,6 +190,7 @@ class COWSNPhRTaskLogicTests(TestCase):
         self.assertIn(
             'Batch task failed', send_email.call_args.kwargs['body']
         )
+        get_recipient_language.assert_called_once_with('alerts@example.com')
 
     @patch('olc_webportalv2.cowsnphr.tasks.COWSNPhRRequest.objects.get')
     def test_unusable_batch_node_is_rebooted(self, get_request):

@@ -678,9 +678,15 @@ def validate_research_files(storage, container_name, files):
         sample_reads = reads_by_sample[sample]
         for read_name in ("R1", "R2"):
             if len(sample_reads[read_name]) > 1:
-                errors.append(f"Duplicate {read_name} file for {sample}.")
+                errors.append(
+                    _("Duplicate %(read)s file for %(sample)s.")
+                    % {"read": read_name, "sample": sample}
+                )
             elif not sample_reads[read_name]:
-                errors.append(f"{sample} is missing {read_name}.")
+                errors.append(
+                    _("%(sample)s is missing %(read)s.")
+                    % {"sample": sample, "read": read_name}
+                )
         if sample_reads["R1"] and sample_reads["R2"]:
             seqids.append(sample)
 
@@ -722,7 +728,7 @@ def validate_research_files(storage, container_name, files):
                 None,
             )
             if header_index is None:
-                errors.append("SampleSheet.csv has no data header.")
+                errors.append(_("SampleSheet.csv has no data header."))
             else:
                 header = [
                     re.sub(r"[^a-z0-9]", "", cell.strip().lower())
@@ -747,8 +753,10 @@ def validate_research_files(storage, container_name, files):
                     )
                 if sample_column is None:
                     errors.append(
-                        "SampleSheet.csv must contain a Sample_ID or "
-                        "Sample_Name column."
+                        _(
+                            "SampleSheet.csv must contain a Sample_ID or "
+                            "Sample_Name column."
+                        )
                     )
                 else:
                     sample_sheet_ids = {
@@ -759,14 +767,20 @@ def validate_research_files(storage, container_name, files):
                     }
                     for sample in sorted(sample_sheet_ids - set(seqids)):
                         errors.append(
-                            f"{sample} is listed in SampleSheet.csv but has "
-                            "no complete FASTQ pair."
+                            _(
+                                "%(sample)s is listed in SampleSheet.csv "
+                                "but has no complete FASTQ pair."
+                            )
+                            % {"sample": sample}
                         )
         except Exception as exc:
             log.exception(
                 "Could not validate SampleSheet.csv in %s.", container_name
             )
-            errors.append(f"Could not read SampleSheet.csv: {exc}")
+            errors.append(
+                _("Could not read SampleSheet.csv: %(detail)s")
+                % {"detail": exc}
+            )
         finally:
             if temporary_path and os.path.exists(temporary_path):
                 os.unlink(temporary_path)
@@ -1177,7 +1191,7 @@ def upload_sequence_blob_sas(request, sequencing_run_pk):
         or any(ord(character) < 32 for character in filename)
     ):
         return JsonResponse(
-            {"error": "A valid file name is required."}, status=400
+            {"error": _("A valid file name is required.")}, status=400
         )
     try:
         upload_url = get_research_storage().upload_url(
@@ -1190,7 +1204,7 @@ def upload_sequence_blob_sas(request, sequencing_run_pk):
             sequencing_run.pk,
         )
         return JsonResponse(
-            {"error": "Could not prepare the file upload."},
+            {"error": _("Could not prepare the file upload.")},
             status=503,
         )
     return JsonResponse({"upload_url": upload_url, "blob_name": filename})

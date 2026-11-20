@@ -161,7 +161,10 @@ def container_view(request, filezone_pk):
 
         # Upload all the files. One at a time
         for _field_name, file in request.FILES.items():
-            messages.info(request, f'Uploading: {file.name}')
+            messages.info(
+                request,
+                _('Uploading: %(filename)s') % {'filename': file.name},
+            )
             # Calculate the checksum
             blob_md5 = calculate_checksum(item=file)
 

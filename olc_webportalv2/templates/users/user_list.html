@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load static i18n %}
-{% block title %}Members{% endblock %}
+{% block title %}{% trans "Members" %}{% endblock %}
 
 {% block content %}
     <br>
 <div class="container">
-  <h2>Users</h2>
+  <h2>{% trans "Users" %}</h2>
 
   <div class="list-group">
     {% for user in user_list %}

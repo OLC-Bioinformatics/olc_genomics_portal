@@ -33,6 +33,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone as django_timezone
+from django.utils.translation import gettext as _
 from sentry_sdk import capture_exception
 from strainchoosr import strainchoosr
 
@@ -44,6 +45,7 @@ from olc_webportalv2.common.batch_client import (
     BatchServiceError,
 )
 from olc_webportalv2.common.batch_recovery import retry_failed_pool_resize
+from olc_webportalv2.common.email_i18n import recipient_language
 from olc_webportalv2.common.benchmarks import normalise_benchmark_name
 from olc_webportalv2.common.methods import (
     create_batch_client,
@@ -1130,34 +1132,35 @@ def cowbat_cleanup(sequencing_run_pk: int):
 
         # Send customized emails to each recipient based on their role
         for recipient in recipient_list:
-            if recipient in {
-                "ashley.cooper@inspection.gc.ca",
-                "bridgette.kelly@inspection.gc.ca",
-            }:
-                body = (
-                    "Please download the blob container to local OLC storage. "
-                )
-            elif recipient == "monique.arts@inspection.gc.ca":
-                body = "Please add this data to the OLC database. "
-            else:
-                body = ""
+            with recipient_language(recipient):
+                if recipient in {
+                    "ashley.cooper@inspection.gc.ca",
+                    "bridgette.kelly@inspection.gc.ca",
+                }:
+                    body = _(
+                        "Please download the blob container to local OLC storage. "
+                    )
+                elif recipient == "monique.arts@inspection.gc.ca":
+                    body = _("Please add this data to the OLC database. ")
+                else:
+                    body = ""
 
-            body += (
-                "Reports and assemblies are available at the "
-                f"following link: {sas_url}\n"
-            )
-            if realtime_strains:
-                body += (
-                    "In this run, the following strains will need "
-                    f"ROGAs created: {realtime_strains}"
-                )
+                body += _(
+                    "Reports and assemblies are available at the "
+                    "following link: %(url)s\n"
+                ) % {"url": sas_url}
+                if realtime_strains:
+                    body += _(
+                        "In this run, the following strains will need "
+                        "ROGAs created: %(strains)s"
+                    ) % {"strains": realtime_strains}
 
-            # Attempt to send the emails
-            send_email(
-                subject=f"Run {sequencing_run} has finished assembly.",
-                body=body,
-                recipient=recipient,
-            )
+                send_email(
+                    subject=_("Run %(run)s has finished assembly.")
+                    % {"run": sequencing_run},
+                    body=body,
+                    recipient=recipient,
+                )
 
 
 def add_read_filenames_to_metadata(
@@ -2796,14 +2799,24 @@ def check_geneseekr_tasks():
                 # Send email to users
                 email_list = geneseekr_request.emails_array
                 for email in email_list:
-                    send_email(
-                        subject=f"Geneseekr Query {geneseekr_request} has "
-                        "finished.",
-                        body=f"This email is to inform you that the Geneseekr"
-                        f" Query {geneseekr_request} has completed and is "
-                        f"available at the following link {sas_url}",
-                        recipient=email,
-                    )
+                    with recipient_language(email):
+                        send_email(
+                            subject=_(
+                                "Geneseekr Query %(request)s has finished."
+                            )
+                            % {"request": geneseekr_request},
+                            body=_(
+                                "This email is to inform you that the "
+                                "Geneseekr Query %(request)s has completed "
+                                "and is available at the following link "
+                                "%(url)s"
+                            )
+                            % {
+                                "request": geneseekr_request,
+                                "url": sas_url,
+                            },
+                            recipient=email,
+                        )
 
                 # Finally, do some cleanup
                 shutil.rmtree(run_folder)

@@ -117,6 +117,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "olc_webportalv2.users.middleware.AccountLanguageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]

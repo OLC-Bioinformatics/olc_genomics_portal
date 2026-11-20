@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.forms.formsets import formset_factory
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils.translation import gettext_lazy as _
 from django_tables2.config import RequestConfig
 from django_tables2.paginators import LazyPaginator
 from rest_framework import generics, pagination, permissions
@@ -89,7 +90,11 @@ class OLNDetail(generics.RetrieveAPIView):
         Args:
             exc: The exception raised while handling the request.
         """
-        return JsonResponse({'ERROR': str(exc)})
+        if isinstance(exc, OLNID.DoesNotExist):
+            error = _("The requested OLC network ID was not found.")
+        else:
+            error = str(exc)
+        return JsonResponse({'ERROR': error})
 
 
 class SequenceDataList(generics.ListCreateAPIView):
@@ -449,18 +454,18 @@ def database_filter(request):
                 seqid_list.append(sequence_data.seqid)
                 cfiaid_list.append(sequence_data.cfiaid.cfiaid)
             headers = [
-                'SeqID',
-                'CFIA ID',
-                'rMLST Profile',
-                'MLST Profile',
-                'MLST Clonal Complex',
-                'Genus',
-                'Species',
-                'Serovar',
-                'GeneSeekr Profile',
-                'Vtyper Profile',
-                'Database Version',
-                'Typing Date',
+                _('SeqID'),
+                _('CFIA ID'),
+                _('rMLST Profile'),
+                _('MLST Profile'),
+                _('MLST Clonal Complex'),
+                _('Genus'),
+                _('Species'),
+                _('Serovar'),
+                _('GeneSeekr Profile'),
+                _('Vtyper Profile'),
+                _('Database Version'),
+                _('Typing Date'),
             ]
             paginator = Paginator(qs.order_by('seqid'), 100)
             result = paginator.page(1)
@@ -523,18 +528,18 @@ def database_query(request):
     seqid_list = list()
     cfiaid_list = list()
     headers = [
-        'SeqID',
-        'CFIA ID',
-        'rMLST Profile',
-        'MLST Profile',
-        'MLST Clonal Complex',
-        'Genus',
-        'Species',
-        'Serovar',
-        'GeneSeekr Profile',
-        'Vtyper Profile',
-        'Database Version',
-        'Typing Date',
+        _('SeqID'),
+        _('CFIA ID'),
+        _('rMLST Profile'),
+        _('MLST Profile'),
+        _('MLST Clonal Complex'),
+        _('Genus'),
+        _('Species'),
+        _('Serovar'),
+        _('GeneSeekr Profile'),
+        _('Vtyper Profile'),
+        _('Database Version'),
+        _('Typing Date'),
     ]
     if request.method == 'POST':
         database_date = DatabaseDateForm(request.POST)

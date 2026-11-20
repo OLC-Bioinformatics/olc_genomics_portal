@@ -25,6 +25,8 @@ class NginxStaticAssetHttpTests(SimpleTestCase):
             ("js/jquery-3.7.1.min.js", "application/javascript"),
             ("js/bootstrap.min.js", "application/javascript"),
             ("js/project.js", "application/javascript"),
+            ("js/dropzone_i18n.js", "application/javascript"),
+            ("js/datatables-fr.json", "application/json"),
         )
 
         for asset_path, expected_content_type in assets:

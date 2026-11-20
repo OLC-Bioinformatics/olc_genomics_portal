@@ -14,7 +14,7 @@ from olc_webportalv2.metadata import views
 app_name = 'metadata'
 
 schema_view = get_schema_view(
-    title='Metadata API',
+    title=_('Metadata API'),
 )
 
 # URL patterns for the metadata app

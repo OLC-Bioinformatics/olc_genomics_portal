@@ -2,16 +2,25 @@
 {% load i18n widget_tweaks %}
 {% load crispy_forms_tags %}
 {% load dictionary_keys %}
+{% trans "Horizontal" as horizontal_label %}
+{% trans "Vertical" as vertical_label %}
+{% trans "Circular" as circular_label %}
+{% trans "Tree" as tree_label %}
+{% trans "Weighted" as weighted_label %}
+{% trans "Dendrogram" as dendrogram_label %}
+{% trans "Smooth" as smooth_label %}
+{% trans "Square" as square_label %}
+{% trans "Straight" as straight_label %}
 
 {% block content %}
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="TidyTree is a client-side renderer for Phylogenetic Trees, based on the TidyTree Javascript Library.">
+    <meta name="description" content="{% trans 'TidyTree is a client-side renderer for phylogenetic trees, based on the TidyTree JavaScript library.' %}">
     <meta name="theme-color" content="#ffffff">
     <meta name="msapplication-TileColor" content="#2b5797">
-    <title>Tidy Tree</title>
+    <title>TidyTree</title>
     <link rel="icon" type="image/x-icon" href="{% static 'images/faviconLeaf.ico'%}" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
     <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css" integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
@@ -107,7 +116,7 @@
     </div>
     <br><br>
       <form class="form-inline my-2 my-lg-0">
-        <input id="search" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+        <input id="search" class="form-control mr-sm-2" type="search" placeholder="{% trans 'Search' %}" aria-label="{% trans 'Search' %}">
       </form>
     </div>
   </header>
@@ -125,7 +134,7 @@
                 aria-expanded="false"
                 aria-controls="collapseSourceData"
               >
-                Source Data
+                {% trans "Source Data" %}
               </button>
             </h5>
           </div>
@@ -138,12 +147,12 @@
             <div class="card-body">
               <div class="form-group">
                 <label for="source" class="btn btn-primary"
-                  >Load Newick Tree</label
+                  >{% trans "Load Newick Tree" %}</label
                 >
                 <input type="file" id="source" class="d-none">
               </div>
               <div class="form-group">
-                <button id="reset" class="btn btn-danger">Reset Tree</button>
+                <button id="reset" class="btn btn-danger">{% trans "Reset Tree" %}</button>
               </div>
             </div>
           </div>
@@ -159,7 +168,7 @@
                 aria-expanded="false"
                 aria-controls="collapseLayout"
               >
-                Layout
+                {% trans "Layout" %}
               </button>
             </h5>
           </div>
@@ -171,11 +180,11 @@
           >
             <div class="card-body">
               <div class="form-group">
-                <label for="layout">Layout</label>
+                <label for="layout">{% trans "Layout" %}</label>
                 <select id="layout" class="form-control form-control-sm"></select>
               </div>
               <div class="form-group">
-                <label for="hStretch">Horizontal Stretch</label>
+                <label for="hStretch">{% trans "Horizontal Stretch" %}</label>
                 <input
                   type="range"
                   min="0.1"
@@ -186,7 +195,7 @@
                >
               </div>
               <div class="form-group">
-                <label for="vStretch">Vertical Stretch</label>
+                <label for="vStretch">{% trans "Vertical Stretch" %}</label>
                 <input
                   type="range"
                   min="0.1"
@@ -197,7 +206,7 @@
                >
               </div>
               <div class="form-group">
-                <label for="rotation">Rotation</label>
+                <label for="rotation">{% trans "Rotation" %}</label>
                 <input
                   type="range"
                   min="0"
@@ -207,7 +216,7 @@
                >
               </div>
               <div class="form-group">
-                <label for="type">Type</label>
+                <label for="type">{% trans "Type" %}</label>
                 <select id="type" class="form-control form-control-sm"></select>
               </div>
             </div>
@@ -224,7 +233,7 @@
                 aria-expanded="false"
                 aria-controls="collapseBranches"
               >
-                Branches
+                {% trans "Branches" %}
               </button>
             </h5>
           </div>
@@ -236,18 +245,18 @@
           >
             <div class="card-body">
               <div class="form-group">
-                <label for="mode">Mode</label>
+                <label for="mode">{% trans "Mode" %}</label>
                 <select id="mode" class="form-control form-control-sm"></select>
               </div>
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="branchNodes" type="checkbox"> Branch Nodes
+                    <input id="branchNodes" type="checkbox"> {% trans "Branch Nodes" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label> Branch Node Size </label>
+                <label>{% trans "Branch Node Size" %}</label>
                 <input
                   id="branchNodeSize"
                   class="skip"
@@ -261,12 +270,12 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="branchLabels" type="checkbox"> Branch Labels
+                    <input id="branchLabels" type="checkbox"> {% trans "Branch Labels" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Branch Label Size</label>
+                <label>{% trans "Branch Label Size" %}</label>
                 <input
                   id="branchLabelSize"
                   class="skip"
@@ -280,13 +289,12 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="branchDistances" type="checkbox"> Branch
-                    Distances
+                    <input id="branchDistances" type="checkbox"> {% trans "Branch Distances" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Branch Distance Size</label>
+                <label>{% trans "Branch Distance Size" %}</label>
                 <input
                   id="branchDistanceSize"
                   class="skip"
@@ -311,7 +319,7 @@
                 aria-expanded="false"
                 aria-controls="collapseLeaves"
               >
-                Leaves
+                {% trans "Leaves" %}
               </button>
             </h5>
           </div>
@@ -325,13 +333,12 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="leafNodes" type="checkbox" checked> Leaf
-                    Nodes
+                    <input id="leafNodes" type="checkbox" checked> {% trans "Leaf Nodes" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Leaf Node Size</label>
+                <label>{% trans "Leaf Node Size" %}</label>
                 <input
                   id="leafNodeSize"
                   class="skip"
@@ -345,12 +352,12 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="leafLabels" type="checkbox" checked> Leaf Labels
+                    <input id="leafLabels" type="checkbox" checked> {% trans "Leaf Labels" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Leaf Label Size</label>
+                <label>{% trans "Leaf Label Size" %}</label>
                 <input
                   id="leafLabelSize"
                   class="skip"
@@ -364,7 +371,7 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="equidistantLeaves" type="checkbox" checked> Equidistant Leaves
+                    <input id="equidistantLeaves" type="checkbox" checked> {% trans "Equidistant Leaves" %}
                   </label>
                 </div>
               </div>
@@ -382,7 +389,7 @@
                 aria-expanded="false"
                 aria-controls="collapseMeta"
               >
-                Meta
+                {% trans "Metadata" %}
               </button>
             </h5>
           </div>
@@ -396,12 +403,12 @@
               <div class="form-group">
                 <div class="switch">
                   <label>
-                    <input id="ruler" type="checkbox" checked> Ruler
+                    <input id="ruler" type="checkbox" checked> {% trans "Ruler" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Background</label>
+                <label>{% trans "Background" %}</label>
                 <input
                   type="color"
                   id="background"
@@ -413,12 +420,12 @@
                 <div class="switch">
                   <label>
                     <input id="tooltips" type="checkbox" class="skip">
-                    Tooltips
+                    {% trans "Tooltips" %}
                   </label>
                 </div>
               </div>
               <div class="form-group">
-                <label>Animation Time</label>
+                <label>{% trans "Animation Time" %}</label>
                 <input
                   id="animation"
                   type="range"
@@ -439,16 +446,16 @@
 
   <div id="context-menu" class="btn-group">
     <div class="dropdown-menu dropdown-menu-start show">
-      <button id="reroot" class="dropdown-item">Set As Root</button>
-      <button id="rotate" class="dropdown-item">Rotate</button>
-      <button id="flip" class="dropdown-item">Flip</button>
-      <button id="sort" class="dropdown-item">Sort</button>
+      <button id="reroot" class="dropdown-item">{% trans "Set As Root" %}</button>
+      <button id="rotate" class="dropdown-item">{% trans "Rotate" %}</button>
+      <button id="flip" class="dropdown-item">{% trans "Flip" %}</button>
+      <button id="sort" class="dropdown-item">{% trans "Sort" %}</button>
       <div class="dropdown-divider"></div>
-      <button id="remove" class="dropdown-item">Remove</button>
-      <button id="isolate" class="dropdown-item">Isolate</button>
-      <button id="excise" class="dropdown-item">Excise</button>
-      <button id="simplify" class="dropdown-item">Simplify</button>
-      <button id="consolidate" class="dropdown-item">Consolidate</button>
+      <button id="remove" class="dropdown-item">{% trans "Remove" %}</button>
+      <button id="isolate" class="dropdown-item">{% trans "Isolate" %}</button>
+      <button id="excise" class="dropdown-item">{% trans "Excise" %}</button>
+      <button id="simplify" class="dropdown-item">{% trans "Simplify" %}</button>
+      <button id="consolidate" class="dropdown-item">{% trans "Consolidate" %}</button>
     </div>
   </div>
 
@@ -465,26 +472,22 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="aboutModalLabel">About TidyTree</h5>
+          <h5 class="modal-title" id="aboutModalLabel">{% trans "About TidyTree" %}</h5>
           <button
             type="button"
             class="close"
             data-dismiss="modal"
-            aria-label="Close"
+            aria-label="{% trans 'Close' %}"
           >
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body">
           <p>
-            TidyTree is a web application for rendering Phylogenetic Trees
-            in-browser. No analysis performed by TidyTree is ever transmitted
-            over the internet, making it safe for use with trees that contain
-            Personally-Identifiable Information.
+            {% blocktrans %}TidyTree is a web application for rendering phylogenetic trees in a browser. TidyTree never transmits its analyses over the internet, making it safe to use with trees that contain personally identifiable information.{% endblocktrans %}
           </p>
           <p>
-            TidyTree was built by the Molecular Epidemiology and Bionformatics
-            Team at the CDC in Atlanta.
+            {% blocktrans %}TidyTree was built by the Molecular Epidemiology and Bioinformatics Team at the CDC in Atlanta.{% endblocktrans %}
           </p>
           <p>
             <a
@@ -492,7 +495,7 @@
               target="_blank"
               rel="noreferrer noopener"
               class="ifOnline"
-              >Click Here to See MEBT's Other Tools</a
+              >{% trans "Click Here to See MEBT's Other Tools" %}</a
             >
           </p>
         </div>
@@ -502,7 +505,7 @@
             class="btn btn-secondary"
             data-dismiss="modal"
           >
-            Got it!
+            {% trans "Got it!" %}
           </button>
         </div>
       </div>
@@ -530,19 +533,19 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="exportModalLabel">Export</h5>
+          <h5 class="modal-title" id="exportModalLabel">{% trans "Export" %}</h5>
           <button
             type="button"
             class="close"
             data-dismiss="modal"
-            aria-label="Close"
+            aria-label="{% trans 'Close' %}"
           >
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body row">
           <div class="form-group col">
-            <label for="export-filename">Filename</label>
+            <label for="export-filename">{% trans "Filename" %}</label>
             <input
               type="text"
               id="export-filename"
@@ -550,7 +553,7 @@
            >
           </div>
           <div class="form-group col">
-            <label for="export-format">Format</label>
+            <label for="export-format">{% trans "Format" %}</label>
             <select id="export-format" class="form-control form-control-sm skip">
               <option selected>nwk</option>
               <option>png</option>
@@ -564,7 +567,7 @@
             class="btn btn-secondary"
             data-dismiss="modal"
           >
-            Cancel
+            {% trans "Cancel" %}
           </button>
           <button
             type="button"
@@ -572,7 +575,7 @@
             class="btn btn-primary"
             data-dismiss="modal"
           >
-            Export
+            {% trans "Export" %}
           </button>
         </div>
       </div>
@@ -610,6 +613,24 @@
       buildTree();
     });
 
+    const optionLabels = {
+      layout: {
+        horizontal: "{{ horizontal_label|escapejs }}",
+        vertical: "{{ vertical_label|escapejs }}",
+        circular: "{{ circular_label|escapejs }}"
+      },
+      type: {
+        tree: "{{ tree_label|escapejs }}",
+        weighted: "{{ weighted_label|escapejs }}",
+        dendrogram: "{{ dendrogram_label|escapejs }}"
+      },
+      mode: {
+        smooth: "{{ smooth_label|escapejs }}",
+        square: "{{ square_label|escapejs }}",
+        straight: "{{ straight_label|escapejs }}"
+      }
+    };
+
     ["layout", "mode", "type"].forEach(thing => {
       var title = "valid" + thing[0].toUpperCase() + thing.slice(1) + "s";
       d3.select("#" + thing)
@@ -617,7 +638,8 @@
         .data(TidyTree[title])
         .enter()
         .append("option")
-        .text(d => d);
+        .attr("value", d => d)
+        .text(d => optionLabels[thing][d] || d);
     });
 
     d3.select("#source").on("input", function() {

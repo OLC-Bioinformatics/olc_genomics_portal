@@ -201,6 +201,19 @@ class NanoporeLatestResultTests(APITestCase):
         )
 
     @patch("olc_webportalv2.api.views.get_storage_client")
+    def test_latest_result_error_uses_requested_language(self, client_class):
+        self.client.force_authenticate(user=self.user)
+        client_class.return_value.object_exists.return_value = False
+
+        response = self.client.get(self.url.replace("/en-ca/", "/fr/"))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.data["error"],
+            "Les résultats ne sont pas encore publiés.",
+        )
+
+    @patch("olc_webportalv2.api.views.get_storage_client")
     def test_latest_result_returns_short_lived_read_url(self, client_class):
         manifest = NanoporeManifest.objects.create(
             sequencing_run=self.run,

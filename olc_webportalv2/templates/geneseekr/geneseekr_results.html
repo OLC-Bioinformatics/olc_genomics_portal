@@ -47,8 +47,8 @@
                 <table id="sequence-by-sequence-table" class="table table-hover compact display">
                     <thead>
                     <tr>
-                        <th>SeqID</th>
-                        <th>LabID</th>
+                        <th>{% trans "Sequence ID" %}</th>
+                        <th>{% trans "Lab ID" %}</th>
                         {% for key, value in geneseekr_request.geneseekr_results.items %}
                             <th>{{ key }}</th>
                         {% endfor %}

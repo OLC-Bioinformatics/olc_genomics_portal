@@ -21,11 +21,11 @@ class User(AbstractUser):
 
     # Extending the user model (custom)
     rank_choices = (
-        ('Diagnostic', 'Diagnostic'),
-        ('Research', 'Research'),
-        ('Manager', 'Manager'),
-        ('Quality', 'Quality'),
-        ('Super', 'Super'),
+        ('Diagnostic', _('Diagnostic')),
+        ('Research', _('Research')),
+        ('Manager', _('Manager')),
+        ('Quality', _('Quality')),
+        ('Super', _('Super')),
     )
 
     NA = 'N/A'
@@ -52,14 +52,14 @@ class User(AbstractUser):
         (LONGEUIL, 'Longeuil'),
         (FALLOWFIELD, 'Fallowfield'),
         (CARLING, 'Carling'),
-        (GTA, 'Greater Toronto Area'),
+        (GTA, _('Greater Toronto Area')),
         (WINNIPEG, 'Winnipeg'),
         (SASKATOON, 'Saskatoon'),
         (CALGARY, 'Calgary'),
         (LETHBRIDGE, 'Lethbridge'),
         (BURNABY, 'Burnaby'),
         (SIDNEY, 'Sidney'),
-        (NA, 'N/A')
+        (NA, _('N/A'))
     )
 
     lab = models.CharField(max_length=100, choices=lab_choices, blank=True, default=15)

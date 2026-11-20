@@ -3,6 +3,7 @@
 from datetime import date
 
 from django.test import TestCase
+from django.utils.translation import override
 from django.urls import reverse
 
 from olc_webportalv2.sequence_database.models import (
@@ -51,6 +52,71 @@ class SequenceDatabaseSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['seqids'], [])
         self.assertEqual(list(response.context['query_table']), [])
+
+    def test_database_query_toggle_labels_are_translated(self):
+        """Render the dynamic ID-list toggle labels in French."""
+        self.user = User.objects.get(username='TestUser')
+        self.user.language = 'fr'
+        self.user.save(update_fields=['language'])
+        self.client.force_login(self.user)
+
+        with override('fr'):
+            response = self.client.post(
+                reverse('sequence_database:database_query').replace(
+                    '/en-ca/', '/fr/'
+                ),
+                data={
+                    'form-TOTAL_FORMS': '0',
+                    'form-INITIAL_FORMS': '0',
+                    'form-MIN_NUM_FORMS': '0',
+                    'form-MAX_NUM_FORMS': '1000',
+                },
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="Afficher la liste des SeqID"')
+        self.assertContains(response, 'data-hide-label="Masquer la liste des SeqID"')
+
+    def test_database_filter_headers_are_translated(self):
+        """Translate the labels for columns in filtered sequence results."""
+        self.user = User.objects.get(username='TestUser')
+        self.user.language = 'fr'
+        self.user.save(update_fields=['language'])
+        self.client.force_login(self.user)
+
+        with override('fr'):
+            response = self.client.post(
+                reverse('sequence_database:database_filter').replace(
+                    '/en-ca/', '/fr/'
+                ),
+                data={},
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Profil MLST')
+        self.assertContains(response, 'Date de typage')
+
+    def test_missing_oln_id_error_is_translated(self):
+        """A missing OLC network ID returns a localized API error."""
+        user = User.objects.get(username='TestUser')
+        user.language = 'fr'
+        user.save(update_fields=['language'])
+        self.client.force_login(user)
+
+        with override('fr'):
+            response = self.client.get(
+                reverse(
+                    'sequence_database:olndata_detail',
+                    kwargs={'oln_id': 'missing'},
+                )
+            )
+
+        self.assertEqual(
+            response.json(),
+            {'ERROR': 'L’identifiant de réseau OLC demandé est introuvable.'},
+        )
 
     def test_id_search_rejects_identifiers_with_invalid_characters(self):
         """Do not turn malformed identifiers into valid partial matches."""

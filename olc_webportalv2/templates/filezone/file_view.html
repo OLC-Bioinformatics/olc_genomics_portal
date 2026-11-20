@@ -29,7 +29,7 @@
     <table id="blob-table" class="table table-hover" style="width:100%">
         <thead>
             <tr style="text-align:center">
-            <th><input title="Select All/None" type="checkbox" class="selectAll" name="selectAll"  value="yes" onclick="checkPage(this)">  </th>
+            <th><input title="{% trans 'Select All/None' %}" type="checkbox" class="selectAll" name="selectAll"  value="yes" onclick="checkPage(this)">  </th>
             <th>{% trans "Container"%}</th>
             <th>{% trans "Blob Name"%}</th>
             <th>{% trans "Blob Size"%}</th>
@@ -171,12 +171,14 @@
         selected_options.value = pks;
 
         var selected = selected_rows.length;
+        var copyFileText = selected == 1
+            ? '{% trans "Copy the selected file" %}'
+            : '{% trans "Copy the selected files" %}';
+        var copyButtonText = selected == 1
+            ? '{% trans "Copy file" %}'
+            : '{% trans "Copy files" %}';
         var destination = document.getElementById('desired_container');
         if(selected) {
-            var grammar = '{% trans "iles" %}';
-            if(selected == 1) {
-                grammar = '{% trans "ile" %}';
-            }
             Swal.fire({
                 title: '{% trans "Copy" %}',
                 text: '{% trans "Select destination container. Note that your supplied container name will be converted to lowercase, and any underscores will be replaced with dashes" %}',
@@ -220,10 +222,10 @@
                     if (result.value) {
                         Swal.fire({
                             title: '{% trans "Copy" %}',
-                            text: '{% trans "Copy the selected f" %}' + grammar + '{% trans " to " %}' + destination.value + "?",
+                            text: copyFileText + '{% trans " to the container " %}' + destination.value + "?",
                             showCancelButton: true,
                             confirmButtonColor: '#2BBE26',
-                            confirmButtonText: '{% trans "Copy F" %}' + grammar,
+                            confirmButtonText: copyButtonText,
                             cancelButtonText:'{% trans "Cancel"%}',
                             reverseButtons: true
                         }).then(function(result) {

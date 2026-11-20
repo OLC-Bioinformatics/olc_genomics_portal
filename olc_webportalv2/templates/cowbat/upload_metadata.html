@@ -59,6 +59,7 @@
   <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
   <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
   <script src="{% static 'js/dropzone.js' %}"></script>
+  <script src="{% static 'js/dropzone_i18n.js' %}"></script>
   <script src="{% static 'js/papaparse.min.js' %}"></script>
   <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script type="text/javascript">
@@ -229,8 +230,8 @@
                               $('#submit').prop('disabled', true);
                               filesTable.rows[6].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
                               filesTable.rows[6].cells[1].classList.add('table-danger');
-                              alert('One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.\n' +
-                                'Correct format is YYYY-LAB-####.\nIncorrectly formatted SEQIDs: ' + seqidlist.toString());
+                              alert("{% trans 'One or more SEQIDs specified on SampleSheet.csv did not have correct formatting.' %}\n" +
+                                "{% trans 'Correct format is YYYY-LAB-####.' %}\n{% trans 'Incorrectly formatted SEQIDs: ' %}" + seqidlist.toString());
                             }
                           }
                         }
@@ -268,8 +269,8 @@
                               $('#submit').prop('disabled', true);
                               filesTable.rows[3].cells[1].innerHTML = '<i class=\"fa fa-ban fa-1x\"></i>';
                               filesTable.rows[3].cells[1].classList.add('table-danger');
-                              alert('One or more SEQIDs specified in GenerateFASTQRunStatistics.xml was not found in your SampleSheet.\n' +
-                                'You\'ll need to remove your xml file, modify it, and reupload. IDs that were not found in SampleSheet are: ' + bad_seqids_in_run_stats.toString());
+                              alert("{% trans 'One or more SEQIDs specified in GenerateFASTQRunStatistics.xml was not found in your SampleSheet.' %}\n" +
+                                "{% trans 'You will need to remove your XML file, modify it, and upload it again. SEQIDs not found in SampleSheet: ' %}" + bad_seqids_in_run_stats.toString());
                             }
                           }
                         }

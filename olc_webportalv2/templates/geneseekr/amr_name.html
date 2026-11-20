@@ -12,7 +12,7 @@
   {% csrf_token %}
   {%trans "Previous Name:"%} {{amr_request.name}} </br></br>
   {{form}} </br></br>
- <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:amr_home' %}">Back</a></button>  <button type='submit' class='btn btn-success'>Save Changes</button>
+ <button class='btn btn-outline-dark'> <a class="bkwd" href="{% url 'geneseekr:amr_home' %}">{% trans "Back" %}</a></button>  <button type='submit' class='btn btn-success'>{% trans "Save Changes" %}</button>
   </form>
 
 {% endblock %}

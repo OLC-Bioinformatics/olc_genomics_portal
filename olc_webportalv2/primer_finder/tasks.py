@@ -19,10 +19,12 @@ from typing import Any, Tuple
 # Third-party imports
 from Bio import SeqIO
 from celery import shared_task
+from django.utils.translation import gettext as _
 
 # Django imports
 from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.common.batch_recovery import batch_pool_id_from_job_id
+from olc_webportalv2.common.email_i18n import recipient_language
 from olc_webportalv2.common.benchmarks import (
     benchmark_archive_info,
     select_benchmark_blob,
@@ -783,23 +785,24 @@ def _handle_successful_verifier_run(
     )
     email_list = verifier_request.emails_array
     for email in email_list:
-        subject = (
-            'PrimerVerifier Analysis '
-            f'"{verifier_request.project_name}" Complete'
-        )
-        body = (
-            f'Dear {verifier_request.user},\n'
-            f'Your PrimerVerifier analysis, '
-            f'"{verifier_request.project_name}", is complete.\n'
-            f'Raw PrimerVerifier outputs are available here: '
-            f'{report_sas_url}.\n\n'
-            f'Summarised outputs are available here: {summary_sas_url}.\n\n'
-            'Best regards,\n'
-            'The FoodPort development team'
-        )
-
-        # Send the email
-        send_email(subject=subject, body=body, recipient=email)
+        with recipient_language(email):
+            subject = _('PrimerVerifier Analysis "%(project)s" Complete') % {
+                "project": verifier_request.project_name,
+            }
+            body = _(
+                "Dear %(user)s,\n"
+                'Your PrimerVerifier analysis, "%(project)s", is complete.\n'
+                "Raw PrimerVerifier outputs are available here: %(report)s.\n\n"
+                "Summarised outputs are available here: %(summary)s.\n\n"
+                "Best regards,\n"
+                "The FoodPort development team"
+            ) % {
+                "user": verifier_request.user,
+                "project": verifier_request.project_name,
+                "report": report_sas_url,
+                "summary": summary_sas_url,
+            }
+            send_email(subject=subject, body=body, recipient=email)
     if verifier_request.report:
         shutil.rmtree(run_folder)
 
@@ -817,18 +820,20 @@ def _handle_failed_verifier_run(
     # Extract the email list from the request
     email_list = verifier_request.emails_array
     for email in email_list:
-        project_name = verifier_request.project_name
-        subject = f'PrimerVerifier Analysis "{project_name}" Failed'
-        body = (
-            f'Dear {verifier_request.user},\n'
-            f'Your PrimerVerifier analysis, '
-            f'"{verifier_request.project_name}", has failed.\n'
-            'Sorry for the inconvenience,\n'
-            'The FoodPort development team'
-        )
-
-        # Send the email
-        send_email(subject=subject, body=body, recipient=email)
+        with recipient_language(email):
+            subject = _('PrimerVerifier Analysis "%(project)s" Failed') % {
+                "project": verifier_request.project_name,
+            }
+            body = _(
+                "Dear %(user)s,\n"
+                'Your PrimerVerifier analysis, "%(project)s", has failed.\n'
+                "Sorry for the inconvenience,\n"
+                "The FoodPort development team"
+            ) % {
+                "user": verifier_request.user,
+                "project": verifier_request.project_name,
+            }
+            send_email(subject=subject, body=body, recipient=email)
     verifier_request.status = 'Error'
     verifier_request.save()
 
@@ -1497,21 +1502,24 @@ def _handle_successful_validator_run(
     )
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = (
-            f'PrimerValidator Analysis '
-            f'"{validator_request.project_name}" Complete'
-        )
-        body = (
-            f'Dear {validator_request.user},\n'
-            f'Your PrimerValidator analysis, '
-            f'"{validator_request.project_name}", is complete.\n'
-            f'Raw PrimerValidator outputs are available '
-            f'here: {report_sas_url}.\n\n'
-            f'Summarised outputs are available here: {summary_sas_url}.\n\n'
-            'Best regards,\n'
-            'The FoodPort development team'
-        )
-        send_email(subject=subject, body=body, recipient=email)
+        with recipient_language(email):
+            subject = _('PrimerValidator Analysis "%(project)s" Complete') % {
+                "project": validator_request.project_name,
+            }
+            body = _(
+                "Dear %(user)s,\n"
+                'Your PrimerValidator analysis, "%(project)s", is complete.\n'
+                "Raw PrimerValidator outputs are available here: %(report)s.\n\n"
+                "Summarised outputs are available here: %(summary)s.\n\n"
+                "Best regards,\n"
+                "The FoodPort development team"
+            ) % {
+                "user": validator_request.user,
+                "project": validator_request.project_name,
+                "report": report_sas_url,
+                "summary": summary_sas_url,
+            }
+            send_email(subject=subject, body=body, recipient=email)
     if validator_request.report:
         shutil.rmtree(run_folder)
 
@@ -1525,18 +1533,20 @@ def _handle_failed_validator_run(
     """
     email_list = validator_request.emails_array or []
     for email in email_list:
-        subject = (
-            f'PrimerValidator Analysis '
-            f'"{validator_request.project_name}" Failed'
-        )
-        body = (
-            f'Dear {validator_request.user},\n'
-            f'Your PrimerValidator analysis, '
-            f'"{validator_request.project_name}", has failed.\n'
-            'Sorry for the inconvenience,\n'
-            'The FoodPort development team'
-        )
-        send_email(subject=subject, body=body, recipient=email)
+        with recipient_language(email):
+            subject = _('PrimerValidator Analysis "%(project)s" Failed') % {
+                "project": validator_request.project_name,
+            }
+            body = _(
+                "Dear %(user)s,\n"
+                'Your PrimerValidator analysis, "%(project)s", has failed.\n'
+                "Sorry for the inconvenience,\n"
+                "The FoodPort development team"
+            ) % {
+                "user": validator_request.user,
+                "project": validator_request.project_name,
+            }
+            send_email(subject=subject, body=body, recipient=email)
     validator_request.status = 'Error'
     validator_request.save()
 

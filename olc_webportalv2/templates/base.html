@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
   {% endblock %}
 
+  <script src="{% url 'javascript-catalog' %}"></script>
   <!-- Load jQuery and its DAL bridge before page-level form media initializes widgets. -->
   <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'autocomplete_light/jquery.init.js' %}"></script>
@@ -41,7 +42,7 @@
       </a>
       <button class="navbar-toggler tog ms-auto" type="button" data-bs-toggle="collapse"
         data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
-        aria-label="Toggle navigation">
+        aria-label="{% trans 'Toggle navigation' %}">
         <i class="fas fa-bars" style="color:white"></i>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -94,7 +95,7 @@
                   class="far fa-comment-alt"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">{% trans "Find Near Neighbors " %}<i
                   class="fas fa-code-branch"></i></a>
-              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">VirusTyper <i
+              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">{% trans "Virus Typer" %} <i
                   class="fas fa-pastafarianism"></i></a>
               <a class="dropdown-item" href="{% url 'primer_finder:primer_home' %}">{% trans "Find Primers " %}
                 <i class="fas fa-align-right"></i></a>
@@ -114,6 +115,7 @@
               {% csrf_token %}
               {% get_current_language as LANGUAGE_CODE %}
               {% get_available_languages as LANGUAGES %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
               <div class="form-group">
                 <select name="language" class="form-select sel-lang" onchange="this.form.submit()">
                   {% for language in LANGUAGES %}
@@ -290,23 +292,22 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>Virus Typer</h3>
+                <h3>{% trans "Virus Typer" %}</h3>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article8">{% trans "Perform typing on viral sequences." %}</p>
-                <a class="btn btn-primary btn-lg w-100 mt-auto" href="{% url 'vir_typer:vir_typer_home' %}">Virus
-                  Typer</a>
+                <a class="btn btn-primary btn-lg w-100 mt-auto"                 href="{% url 'vir_typer:vir_typer_home' %}">{% trans "Virus Typer" %}</a>
               </div>
             </div>
             <!--Primer Finding-->
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>PrimerFinder</h3>
+                <h3>{% trans "PrimerFinder" %}</h3>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article9">{% trans "Determine primer binding to assemblies" %}</p>
                 <a class="btn btn-primary btn-lg w-100 mt-auto"
-                   href="{% url 'primer_finder:primer_home' %}">PrimerFinder</a>
+                   href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder" %}</a>
               </div>
             </div>
           </div>
@@ -378,7 +379,7 @@
     function getLanguage() {
       var lang = document.documentElement.lang;
       if (lang === "fr") {
-        return '//cdn.datatables.net/plug-ins/1.10.6/i18n/French.json'
+        return "{% static 'js/datatables-fr.json' %}";
       }
     }
   </script>

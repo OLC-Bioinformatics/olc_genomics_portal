@@ -1,6 +1,7 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import QueryDict
 from django.test import TestCase
+from django.utils.translation import override
 
 from olc_webportalv2.geneseekr.forms import (
     AMRForm,
@@ -251,6 +252,16 @@ class AMRFormTest(TestCase):
     def test_invalid_form_wrong_seqid_does_not_exist(self):
         form = AMRForm({'seqids': '2222-SEQ-0711 2015-SEQ-0712'}, QueryDict())
         self.assertFalse(form.is_valid())
+
+    def test_missing_seqid_error_is_translated(self):
+        with override('fr'):
+            form = AMRForm({'seqids': '2222-SEQ-9999'}, QueryDict())
+
+            self.assertFalse(form.is_valid())
+            self.assertIn(
+                'SeqID introuvables',
+                str(form.non_field_errors()),
+            )
 
     def test_invalid_form_blank(self):
         form = AMRForm({'seqids': ''}, QueryDict())

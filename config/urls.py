@@ -7,7 +7,10 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.utils.translation import gettext_lazy as _
 from django.views import defaults as default_views
+from django.views.i18n import JavaScriptCatalog
 from django.views.generic import TemplateView
+
+from olc_webportalv2.users.views import set_language
 
 urlpatterns = [
     path(
@@ -35,7 +38,16 @@ if settings.MICROSOFT_AUTH_ENABLED:
 
 
 urlpatterns += [
-    path("i18n/", include("django.conf.urls.i18n")),
+    path(
+        "i18n/setlang/",
+        set_language,
+        name="set_language",
+    ),
+    path(
+        "i18n/jsi18n/",
+        JavaScriptCatalog.as_view(),
+        name="javascript-catalog",
+    ),
     path("api-auth/", include("rest_framework.urls")),
 ]
 

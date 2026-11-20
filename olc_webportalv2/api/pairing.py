@@ -12,6 +12,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
@@ -170,7 +171,7 @@ class PairingExchangeView(views.APIView):
                 pairing.save(update_fields=["used_at"])
         except Exception:
             return Response(
-                {"detail": "Pairing authentication failed."},
+                {"detail": _("Pairing authentication failed.")},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response(

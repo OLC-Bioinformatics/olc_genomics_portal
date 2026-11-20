@@ -2,6 +2,7 @@
 
 # Django imports
 from django.urls import path
+from django.utils.translation import gettext_lazy as _
 from rest_framework.authtoken.views import obtain_auth_token
 
 # Third party imports
@@ -24,7 +25,7 @@ from olc_webportalv2.api.pairing import (
 app_name = "api"
 
 schema_view = get_schema_view(
-    title="API",
+    title=_("API"),
 )
 
 # Router

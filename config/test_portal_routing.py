@@ -4,8 +4,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.template.loader import get_template
-from django.test import Client, TestCase, override_settings
+from django.test import (
+    Client,
+    RequestFactory,
+    TestCase,
+    override_settings,
+)
 from django.urls import resolve, reverse
+from django.utils.translation import override
 
 
 class PortalRoutingTests(TestCase):
@@ -35,6 +41,56 @@ class PortalRoutingTests(TestCase):
             get_template("cowbat/research_assembly_home.html")
         )
 
+    def test_cowsnphr_tree_template_compiles(self):
+        """Load the translated tree page without template syntax errors."""
+        self.assertIsNotNone(get_template("cowsnphr/cowsnphr_tree.html"))
+
+    def test_dropzone_upload_templates_compile(self):
+        """Load each template that initializes the localized Dropzone UI."""
+        templates = (
+            "ampliseq/upload_sequence_data.html",
+            "cowbat/custom_assembly_create.html",
+            "cowbat/custom_assembly_upload.html",
+            "cowbat/upload_interop.html",
+            "cowbat/upload_metadata.html",
+            "cowbat/upload_sequence_data.html",
+            "cowsnphr/cowsnphr_upload.html",
+            "filezone/container_view.html",
+            "vir_typer/vir_typer_upload_sequences.html",
+        )
+
+        for template in templates:
+            with self.subTest(template=template):
+                self.assertIsNotNone(get_template(template))
+
+    def test_validator_target_labels_are_translated(self):
+        """Translate labels rendered from dynamically added target forms."""
+        from olc_webportalv2.primer_finder.forms import ValidatorTargetForm
+
+        with override("fr"):
+            form = ValidatorTargetForm()
+
+            self.assertEqual(
+                str(form["target_name"].label),
+                "Nom de la cible",
+            )
+
+    def test_cowsnphr_tree_dropdowns_translate_labels_keep_values(self):
+        """Translate TidyTree options without changing library values."""
+        request = RequestFactory().get("/")
+        request.phylogenetic_tree = ""
+
+        with override("fr"):
+            html = get_template("cowsnphr/cowsnphr_tree.html").render(
+                {"request": request}
+            )
+
+        self.assertIn('horizontal: "Horizontal"', html)
+        self.assertIn('circular: "Circulaire"', html)
+        self.assertIn('weighted: "Arbre pondéré"', html)
+        self.assertIn('smooth: "Courbe lissée"', html)
+        self.assertIn('.attr("value", d => d)', html)
+
     def test_home_uses_bootstrap_5_data_attributes(self):
         """Render the home page with Bootstrap 5 navigation attributes."""
         response = Client().get("/", HTTP_HOST="localhost")
@@ -47,6 +103,14 @@ class PortalRoutingTests(TestCase):
         self.assertIn('data-bs-target="#navbarSupportedContent"', html)
         self.assertIn('aria-labelledby="metadataDropdownButton"', html)
         self.assertIn('aria-labelledby="dropdownMenuButton"', html)
+
+    def test_french_home_translates_the_virus_typer_links(self):
+        """Render the Virus Typer links using the existing French label."""
+        response = self.client.get("/", HTTP_ACCEPT_LANGUAGE="fr")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Typage viral")
+        self.assertNotContains(response, ">VirusTyper")
 
     def test_home_and_about_render_the_shared_portal_shell(self):
         """Render the common navigation and scripts on both landing pages."""
@@ -185,6 +249,60 @@ class PortalRoutingTests(TestCase):
         self.assertEqual(denied_response.status_code, 403)
         self.assertEqual(accepted_response.status_code, 302)
 
+    def test_javascript_catalog_uses_the_selected_language(self):
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "fr"
+
+        response = self.client.get("/i18n/jsi18n/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "En attente")
+        self.assertContains(
+            response,
+            '"Drop files to upload or click": "D\\u00e9posez',
+        )
+
+    def test_authenticated_language_selector_updates_account_preference(self):
+        """Persist the selector's language in the authenticated user account."""
+        user = get_user_model().objects.create_user(
+            username="language-preference-test",
+            password="password",
+            language="en-ca",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("set_language"),
+            {"language": "fr", "next": "/en-ca/users/"},
+        )
+
+        user.refresh_from_db()
+        self.assertEqual(user.language, "fr")
+        self.assertEqual(
+            response.cookies[settings.LANGUAGE_COOKIE_NAME].value,
+            "fr",
+        )
+        self.assertEqual(response["Location"], "/fr/users/")
+
+    def test_authenticated_account_language_overrides_browser_cookie(self):
+        """Apply the saved account language on each authenticated request."""
+        user = get_user_model().objects.create_user(
+            username="account-language-test",
+            password="password",
+            language="fr",
+        )
+        self.client.force_login(user)
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = "en-ca"
+
+        redirect_response = self.client.get("/en-ca/users/")
+
+        self.assertEqual(redirect_response.status_code, 302)
+        self.assertEqual(redirect_response["Location"], "/fr/users/")
+
+        response = self.client.get(redirect_response["Location"])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<html lang="fr">')
+        self.assertEqual(response["Content-Language"], "fr")
+
     def test_base_assets_exist_and_jquery_precedes_project_javascript(self):
         """Find base assets and ensure jQuery loads before project scripts."""
         response = Client().get("/", HTTP_HOST="localhost")
@@ -198,6 +316,7 @@ class PortalRoutingTests(TestCase):
             "js/jquery-3.7.1.min.js",
             "js/bootstrap.min.js",
             "js/project.js",
+            "js/dropzone_i18n.js",
         ):
             with self.subTest(asset=asset):
                 self.assertIsNotNone(finders.find(asset))

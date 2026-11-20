@@ -16,7 +16,7 @@ from olc_webportalv2.sequence_database import views
 app_name = 'sequence_database'
 
 schema_view = get_schema_view(
-    title='Metadata API',
+    title=_('Metadata API'),
 )
 
 # URL patterns for the sequence_database app

@@ -1,6 +1,7 @@
 """Database models for VirusTyper projects and analysis results."""
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from olc_webportalv2.users.models import User
 
@@ -46,7 +47,7 @@ class VirTyperRequest(models.Model):
     STHY = "STH"
     BURNABY = "BUR"
     LABS = [
-        (STHY, "St. Hyacinthe"),
+        (STHY, _("St. Hyacinthe")),
         (BURNABY, "Burnaby"),
     ]
 
@@ -55,10 +56,10 @@ class VirTyperRequest(models.Model):
     HAV = "HAV"
     MNV = "MNV"
     VIRUSES = [
-        (NORI, "Norovirus genogroup 1"),
-        (NORII, "Norovirus genogroup 2"),
-        (HAV, "Hepatitus A"),
-        (MNV, "Murine norovirus"),
+        (NORI, _("Norovirus genogroup 1")),
+        (NORII, _("Norovirus genogroup 2")),
+        (HAV, _("Hepatitus A")),
+        (MNV, _("Murine norovirus")),
     ]
 
     project_name = models.ForeignKey(

@@ -6,7 +6,7 @@
 {% block content %}
     <h2>{%trans "GeneSeekr Query"%}</h2>
     <br>
-    <h3>Please only use 50 or fewer sequences, or your GeneSeekr analyses will (likely) fail!</h3>
+    <h3>{% trans "Please only use 50 or fewer sequences, or your GeneSeekr analyses will (likely) fail!" %}</h3>
     <br>
     <form action='' enctype="multipart/form-data" method="post">
         {% if form.errors %}

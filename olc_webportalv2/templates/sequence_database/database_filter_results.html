@@ -6,7 +6,10 @@
 {% block content %}
 
 <h2>{% trans 'Database Filtering Results'%}</h2>
-<input type="button" class="btn btn-dark btn-sm" style="float: left" id="myButton1" value="Show Lists of IDs"
+<input type="button" class="btn btn-dark btn-sm" style="float: left" id="myButton1"
+       value="{% trans 'Show Lists of IDs' %}"
+       data-show-label="{% trans 'Show Lists of IDs' %}"
+       data-hide-label="{% trans 'Hide Lists of IDs' %}"
        onclick="hideList()"/>
 <br><br>
 <div id="myDIV" style="display:none;">
@@ -104,16 +107,14 @@
 <script type="text/javascript">
     function hideList() {
         let x = document.getElementById("myDIV");
+        let button = document.getElementById("myButton1");
         if (x.style.display === "none") {
             x.style.display = "block";
+            button.value = button.dataset.hideLabel;
         } else {
             x.style.display = "none";
+            button.value = button.dataset.showLabel;
         }
-    if (document.getElementById("myButton1").value === 'Show Lists of IDs') {
-         document.getElementById("myButton1").value = "Hide Lists of IDs";
-    } else {
-        document.getElementById("myButton1").value = 'Show Lists of IDs'
-    }
     }
   </script>
 

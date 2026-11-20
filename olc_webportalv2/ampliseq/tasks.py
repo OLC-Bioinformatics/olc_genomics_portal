@@ -9,6 +9,7 @@ import shutil
 
 # Celery Task Management
 from celery import shared_task
+from django.utils.translation import gettext as _
 
 # Django
 from django.db import DatabaseError
@@ -23,6 +24,7 @@ from olc_webportalv2.ampliseq.models import (
     ContainerName,
 )
 from olc_webportalv2.common.batch_client import BatchServiceClient
+from olc_webportalv2.common.email_i18n import recipient_language
 from olc_webportalv2.common.methods import (
     create_batch_client,
     generic_api_submit,
@@ -453,23 +455,31 @@ def task_succeeded(ampliseq: AmpliSeqRequest):
     download_results(ampliseq=ampliseq)
     # Send emails
     for email in ampliseq.emails_array:
-        send_email(
-            subject=f'AmpliSeq Analysis "{ampliseq.project_name}" Complete',
-            body=f"Dear {ampliseq.user},\n"
-            f'Your AmpliSeq analysis, "{ampliseq.project_name}", '
-            "is complete.\n"
-            f"The AmpliSeq analysis results are available "
-            f"here: {ampliseq.results_download_link}.\n"
-            f"The AmpliSeq report is available here: "
-            f"{ampliseq.execution_report_download_link}.\n"
-            f"The AmpliSeq trace is available here: "
-            f"{ampliseq.execution_trace_download_link}.\n"
-            f"The AmpliSeq timeline is available here: "
-            f"{ampliseq.execution_timeline_download_link}\n\n"
-            "Best regards,\n"
-            "The FoodPort development team",
-            recipient=email,
-        )
+        with recipient_language(email):
+            send_email(
+                subject=_('AmpliSeq Analysis "%(project)s" Complete')
+                % {"project": ampliseq.project_name},
+                body=_(
+                    "Dear %(user)s,\n"
+                    'Your AmpliSeq analysis, "%(project)s", is complete.\n'
+                    "The AmpliSeq analysis results are available "
+                    "here: %(results)s.\n"
+                    "The AmpliSeq report is available here: %(report)s.\n"
+                    "The AmpliSeq trace is available here: %(trace)s.\n"
+                    "The AmpliSeq timeline is available here: %(timeline)s\n\n"
+                    "Best regards,\n"
+                    "The FoodPort development team"
+                )
+                % {
+                    "user": ampliseq.user,
+                    "project": ampliseq.project_name,
+                    "results": ampliseq.results_download_link,
+                    "report": ampliseq.execution_report_download_link,
+                    "trace": ampliseq.execution_trace_download_link,
+                    "timeline": ampliseq.execution_timeline_download_link,
+                },
+                recipient=email,
+            )
 
 
 def task_failed(ampliseq):
@@ -480,18 +490,30 @@ def task_failed(ampliseq):
 
     """
     # Send emails
-    errors = "\n".join(ampliseq.error_list) if ampliseq.error_list else "None"
     for email in ampliseq.emails_array:
-        send_email(
-            subject=f'AmpliSeq Analysis "{ampliseq.project_name}" Failed',
-            body=f"Dear {ampliseq.user},\n"
-            f'Your AmpliSeq analysis, "{ampliseq.project_name}", '
-            "has failed.\n"
-            f"The following errors were recorded: {errors}\n\n"
-            "Sorry for the inconvenience,\n"
-            "The FoodPort development team",
-            recipient=email,
-        )
+        with recipient_language(email):
+            errors = (
+                "\n".join(ampliseq.error_list)
+                if ampliseq.error_list
+                else _("None")
+            )
+            send_email(
+                subject=_('AmpliSeq Analysis "%(project)s" Failed')
+                % {"project": ampliseq.project_name},
+                body=_(
+                    "Dear %(user)s,\n"
+                    'Your AmpliSeq analysis, "%(project)s", has failed.\n'
+                    "The following errors were recorded: %(errors)s\n\n"
+                    "Sorry for the inconvenience,\n"
+                    "The FoodPort development team"
+                )
+                % {
+                    "user": ampliseq.user,
+                    "project": ampliseq.project_name,
+                    "errors": errors,
+                },
+                recipient=email,
+            )
 
     # Update the model with the error status
     ampliseq.status = "Error"

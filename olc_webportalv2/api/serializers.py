@@ -4,6 +4,7 @@
 import re
 
 # Third party imports
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 # Local imports
@@ -107,8 +108,10 @@ class SequencingRunSerializer(serializers.ModelSerializer):
         # Use re to determine whether the consolidated pattern matches
         if not re.fullmatch(pattern, value):
             raise serializers.ValidationError(
-                "Invalid run name. Use 5-6 digits followed by '-' or '_' "
-                "and lowercase letters."
+                _(
+                    "Invalid run name. Use 5-6 digits followed by '-' or '_' "
+                    "and lowercase letters."
+                )
             )
         return normalize_run_name(value)
 
@@ -128,8 +131,10 @@ class SequencingRunSerializer(serializers.ModelSerializer):
         # Ensure that both basic_assembly and preprocess are not both selected
         if data.get("basic_assembly") and data.get("preprocess"):
             raise serializers.ValidationError(
-                "Basic assembly and Preprocess options are mutually exclusive."
-                " Please only select one."
+                _(
+                    "Basic assembly and Preprocess options are mutually "
+                    "exclusive. Please only select one."
+                )
             )
         return data
 
@@ -238,7 +243,7 @@ class NanoporeRunSerializer(SequencingRunSerializer):
 
         """
         if value not in self.BARCODE_KITS:
-            raise serializers.ValidationError("Unsupported barcode kit.")
+            raise serializers.ValidationError(_("Unsupported barcode kit."))
         return value
 
     def validate(self, data):
@@ -258,7 +263,7 @@ class NanoporeRunSerializer(SequencingRunSerializer):
         barcode_values = data.get("barcode_values", [])
         if len(barcode_values) != len(set(barcode_values)):
             raise serializers.ValidationError(
-                {"barcode_values": "Barcode values must be unique."}
+                {"barcode_values": _("Barcode values must be unique.")}
             )
         sample_metadata = data.get("sample_metadata", {})
         samples = (
@@ -268,43 +273,55 @@ class NanoporeRunSerializer(SequencingRunSerializer):
         )
         if not isinstance(samples, list) or not samples:
             raise serializers.ValidationError(
-                {"sample_metadata": "samples must be a non-empty list."}
+                {"sample_metadata": _("Samples must be a non-empty list.")}
             )
         if len(samples) != len(barcode_values):
             raise serializers.ValidationError(
-                {"sample_metadata": "Every barcode must have one sample."}
+                {"sample_metadata": _("Every barcode must have one sample.")}
             )
         seen_barcodes = []
         seen_seqids = []
         for sample in samples:
             if not isinstance(sample, dict):
                 raise serializers.ValidationError(
-                    {"sample_metadata": "Each sample must be an object."}
+                    {"sample_metadata": _("Each sample must be an object.")}
                 )
             barcode = sample.get("barcode")
             seqid = sample.get("seqid")
             if barcode not in barcode_values:
                 raise serializers.ValidationError(
-                    {"sample_metadata": "Sample barcode is not configured."}
+                    {
+                        "sample_metadata": _(
+                            "Sample barcode is not configured."
+                        )
+                    }
                 )
             if barcode in seen_barcodes:
                 raise serializers.ValidationError(
-                    {"sample_metadata": "Sample barcodes must be unique."}
+                    {"sample_metadata": _("Sample barcodes must be unique.")}
                 )
             if not isinstance(seqid, str) or not re.match(
                 r"^\d{4}-MIN-\d{4}$", seqid
             ):
                 raise serializers.ValidationError(
-                    {"sample_metadata": "SEQIDs must match YYYY-MIN-NNNN."}
+                    {
+                        "sample_metadata": _(
+                            "SeqIDs must match YYYY-MIN-NNNN."
+                        )
+                    }
                 )
             if seqid in seen_seqids:
                 raise serializers.ValidationError(
-                    {"sample_metadata": "SEQIDs must be unique."}
+                    {"sample_metadata": _("SeqIDs must be unique.")}
                 )
             olnid = sample.get("olnid")
             if not isinstance(olnid, str) or not olnid.strip():
                 raise serializers.ValidationError(
-                    {"sample_metadata": "Every sample requires an OLNID."}
+                    {
+                        "sample_metadata": _(
+                            "Every sample requires an OLNID."
+                        )
+                    }
                 )
             seen_barcodes.append(barcode)
             seen_seqids.append(seqid)
@@ -312,7 +329,7 @@ class NanoporeRunSerializer(SequencingRunSerializer):
             raise serializers.ValidationError(
                 {
                     "sample_metadata": (
-                        "Every configured barcode must be present."
+                        _("Every configured barcode must be present.")
                     )
                 }
             )

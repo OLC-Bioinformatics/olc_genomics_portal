@@ -437,8 +437,49 @@
     })(window);
 </script>
 
+{% trans "No files in this folder." as i18n_no_files_in_folder %}
+{% blocktrans with path="%(path)s" asvar i18n_folder_path %}Folder: {{ path }}{% endblocktrans %}
+{% trans "Root folder" as i18n_root_folder %}
+{% trans "No files selected" as i18n_no_files_selected %}
+{% blocktrans with count="%(count)s" asvar i18n_files_ready %}Files ready to upload: {{ count }}{% endblocktrans %}
+{% trans "Rename queued. Container renaming can take a few minutes. This page will reload automatically when it finishes." as i18n_rename_queued %}
+{% trans "Rename in progress. Container renaming can take a few minutes. This page will reload automatically when it finishes." as i18n_rename_in_progress %}
+{% trans "Rename complete. Refreshing the run." as i18n_rename_complete %}
+{% trans "The run rename failed." as i18n_rename_failed %}
+{% blocktrans with completed="%(completed)s" total="%(total)s" message="%(message)s" asvar i18n_upload_count %}Completed {{ completed }} of {{ total }}. {{ message }}{% endblocktrans %}
+{% trans "All files uploaded." as i18n_all_files_uploaded %}
+{% trans "Upload complete. Refresh the file list to verify." as i18n_upload_complete %}
+{% blocktrans with name="%(name)s" current="%(current)s" total="%(total)s" asvar i18n_uploading_file %}Uploading {{ name }} ({{ current }} of {{ total }}).{% endblocktrans %}
+{% blocktrans with name="%(name)s" attempt="%(attempt)s" total="%(total)s" asvar i18n_retrying_file %}Retrying {{ name }} (attempt {{ attempt }} of {{ total }}).{% endblocktrans %}
+{% blocktrans with name="%(name)s" percent="%(percent)s" asvar i18n_uploading_progress %}Uploading {{ name }}: {{ percent }}{% endblocktrans %}
+{% blocktrans with name="%(name)s" asvar i18n_uploaded_file %}Uploaded {{ name }}{% endblocktrans %}
+{% blocktrans with name="%(name)s" phase="%(phase)s" status="%(status)s" asvar i18n_upload_failed_phase %}Could not upload {{ name }} during {{ phase }} (HTTP {{ status }}).{% endblocktrans %}
+{% blocktrans with name="%(name)s" status="%(status)s" asvar i18n_upload_failed %}Could not upload {{ name }} (HTTP {{ status }}).{% endblocktrans %}
 <script>
 (function() {
+  var messages = {
+    noFilesInFolder: '{{ i18n_no_files_in_folder|escapejs }}',
+    folderPath: '{{ i18n_folder_path|escapejs }}',
+    rootFolder: '{{ i18n_root_folder|escapejs }}',
+    noFilesSelected: '{{ i18n_no_files_selected|escapejs }}',
+    filesReady: '{{ i18n_files_ready|escapejs }}',
+    renameQueued: '{{ i18n_rename_queued|escapejs }}',
+    renameInProgress: '{{ i18n_rename_in_progress|escapejs }}',
+    renameComplete: '{{ i18n_rename_complete|escapejs }}',
+    renameFailed: '{{ i18n_rename_failed|escapejs }}',
+    uploadCount: '{{ i18n_upload_count|escapejs }}',
+    allFilesUploaded: '{{ i18n_all_files_uploaded|escapejs }}',
+    uploadComplete: '{{ i18n_upload_complete|escapejs }}',
+    uploadingFile: '{{ i18n_uploading_file|escapejs }}',
+    retryingFile: '{{ i18n_retrying_file|escapejs }}',
+    uploadingProgress: '{{ i18n_uploading_progress|escapejs }}',
+    uploadedFile: '{{ i18n_uploaded_file|escapejs }}',
+    uploadFailedPhase: '{{ i18n_upload_failed_phase|escapejs }}',
+    uploadFailed: '{{ i18n_upload_failed|escapejs }}'
+  };
+  var interpolate = function(message, values) {
+    return window.interpolate(message, values, true);
+  };
   var selectAll = document.getElementById('select-all');
   var fileList = document.getElementById('research-file-list');
   var fileBack = document.getElementById('research-file-back');
@@ -506,12 +547,14 @@
       var emptyRow = document.createElement('tr');
       var emptyCell = document.createElement('td');
       emptyCell.colSpan = 2;
-      emptyCell.textContent = 'No files in this folder.';
+      emptyCell.textContent = messages.noFilesInFolder;
       emptyRow.appendChild(emptyCell);
       fileList.appendChild(emptyRow);
     }
     fileBack.hidden = !currentFilePath;
-    filePathLabel.textContent = currentFilePath ? 'Folder: /' + currentFilePath : 'Root folder';
+    filePathLabel.textContent = currentFilePath ?
+      interpolate(messages.folderPath, { path: '/' + currentFilePath }) :
+      messages.rootFolder;
     selectAll.checked = false;
   };
   fileBack.addEventListener('click', function() {
@@ -546,7 +589,9 @@
     uploadButton.disabled = selectedFiles.length === 0;
     refreshButton.hidden = true;
     progressBar.style.width = '0%';
-    queueStatus.textContent = selectedFiles.length ? selectedFiles.length + ' file(s) ready to upload.' : 'No files selected';
+    queueStatus.textContent = selectedFiles.length ?
+      interpolate(messages.filesReady, { count: selectedFiles.length }) :
+      messages.noFilesSelected;
     status.textContent = '';
   };
   dropzone.addEventListener('click', function() { fileInput.click(); });
@@ -571,7 +616,7 @@
   renameForm.addEventListener('submit', function() {
     renameButton.disabled = true;
     renameStatus.hidden = false;
-    renameStatusText.textContent = 'Rename queued. Container renaming can take a few minutes. This page will reload automatically when it finishes.';
+    renameStatusText.textContent = messages.renameQueued;
   });
   var checkRenameStatus = function() {
     fetch("{% url 'cowbat:research_assembly_rename_status' sequencing_run_pk=sequencing_run.pk %}", {
@@ -586,18 +631,17 @@
         renameStatus.hidden = false;
         renameStatus.className = 'alert alert-info';
         renameStatusText.textContent = data.status === 'queued' ?
-          'Rename queued. Container renaming can take a few minutes. This page will reload automatically when it finishes.' :
-          'Rename in progress. Container renaming can take a few minutes. This page will reload automatically when it finishes.';
+          messages.renameQueued : messages.renameInProgress;
         window.setTimeout(checkRenameStatus, 2000);
       } else if (data.complete && renamePending) {
         renameStatus.hidden = false;
         renameStatus.className = 'alert alert-info';
-        renameStatusText.textContent = 'Rename complete. Refreshing the run.';
+        renameStatusText.textContent = messages.renameComplete;
         window.location.reload();
       } else if (data.status === 'failed') {
         renameStatus.hidden = false;
         renameStatus.className = 'alert alert-danger';
-        renameStatusText.textContent = data.error || 'The run rename failed.';
+        renameStatusText.textContent = data.error || messages.renameFailed;
       }
     }).catch(function() {
       if (renamePending) { window.setTimeout(checkRenameStatus, 2000); }
@@ -619,17 +663,19 @@
     dropzone.setAttribute('aria-disabled', 'true');
 
     var updateQueue = function (message) {
-      queueStatus.textContent = (
-        'Completed ' + completed + ' of ' + files.length + '. ' + message
-      );
+      queueStatus.textContent = interpolate(messages.uploadCount, {
+        completed: completed,
+        total: files.length,
+        message: message
+      });
     };
 
     var uploadNext = function () {
       if (index >= files.length) {
         uploading = false;
         progressBar.style.width = '100%';
-        updateQueue('All files uploaded.');
-        status.textContent = 'Upload complete. Refresh the file list to verify.';
+        updateQueue(messages.allFilesUploaded);
+        status.textContent = messages.uploadComplete;
         refreshButton.hidden = false;
         return;
       }
@@ -637,9 +683,11 @@
       var file = files[index];
       index += 1;
 
-      updateQueue(
-        'Uploading ' + file.name + ' (' + index + ' of ' + files.length + ').'
-      );
+      updateQueue(interpolate(messages.uploadingFile, {
+        name: file.name,
+        current: index,
+        total: files.length
+      }));
 
       window.FoodPortAzureBlockUploader.prepareAndUpload(
         file,
@@ -650,34 +698,43 @@
           maxAttempts: 5,
           fileAttempts: 2,
           onRetry: function (retryingFile, attempt) {
-            status.textContent = (
-              'Retrying ' + retryingFile.name + ' (attempt ' +
-              attempt + ' of 2).'
-            );
+            status.textContent = interpolate(messages.retryingFile, {
+              name: retryingFile.name,
+              attempt: attempt,
+              total: 2
+            });
           },
           onProgress: function (uploadedBytes, totalBytes) {
             var percent = totalBytes ?
               Math.round(uploadedBytes / totalBytes * 100) : 0;
             progressBar.style.width = percent + '%';
-            status.textContent = (
-              'Uploading ' + file.name + ': ' + percent + '%'
-            );
+            status.textContent = interpolate(messages.uploadingProgress, {
+              name: file.name,
+              percent: percent
+            }) + '%';
           }
         }
       ).then(function () {
         completed += 1;
         progressBar.style.width = '0%';
-        status.textContent = 'Uploaded ' + file.name;
+        status.textContent = interpolate(messages.uploadedFile, {
+          name: file.name
+        });
         uploadNext();
       }).catch(function (error) {
         uploading = false;
         uploadButton.disabled = false;
         dropzone.setAttribute('aria-disabled', 'false');
-        status.textContent = (
-          'Could not upload ' + file.name +
-          (error.phase ? ' during ' + error.phase : '') + ' (HTTP ' +
-          (error.status || 0) + ').'
-        );
+        status.textContent = error.phase ?
+          interpolate(messages.uploadFailedPhase, {
+            name: file.name,
+            phase: error.phase,
+            status: error.status || 0
+          }) :
+          interpolate(messages.uploadFailed, {
+            name: file.name,
+            status: error.status || 0
+          });
 
         if (window.console && console.error) {
           console.error('Azure block upload failed:', {

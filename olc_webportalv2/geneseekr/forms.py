@@ -24,7 +24,7 @@ class NearNeighborForm(forms.Form):
     """Validate nearest-neighbor query input."""
 
     name = forms.CharField(max_length=56, label=_('Name: '), required=False)
-    seqid = forms.CharField(max_length=24, label='SeqID: ', required=False)
+    seqid = forms.CharField(max_length=24, label=_('SeqID: '), required=False)
     uploaded_file = forms.FileField(label='', required=False)
     number_neighbors = forms.IntegerField(
         label=_('Number neighbors: '), initial=2, required=True
@@ -111,7 +111,7 @@ class GeneSeekrForm(forms.Form):
         widget=autocomplete.ModelSelect2(
             url='geneseekr:genus_autocompleter',
             attrs={
-                'data-placeholder': 'Autocomplete ...',
+                'data-placeholder': _('Autocomplete ...'),
                 'style': 'max-width: 18em',
             },
         ),
@@ -338,9 +338,11 @@ class TreeForm(forms.Form):
                 bad_seqids.append(seqid)
         if len(bad_seqids) > 0:
             raise forms.ValidationError(
-                'One or more of the SEQIDs you entered was not found in '
-                'our database. '
-                f'SEQIDs not found: {bad_seqids}'
+                _(
+                    'One or more of the SEQIDs you entered was not found in '
+                    'our database. SEQIDs not found: %(seqids)s'
+                )
+                % {'seqids': bad_seqids}
             )
         # Diversitree strains can't be greater than total strains
         if number_diversitree_strains is not None:
@@ -534,7 +536,7 @@ class NameForm(forms.Form):
 class EmailForm(forms.Form):
     """Validate an email address used for request notifications."""
 
-    email = forms.CharField(max_length=50, label='Email ', required=False)
+    email = forms.CharField(max_length=50, label=_('Email '), required=False)
 
     def clean(self):
         """Reject blank or malformed email addresses."""

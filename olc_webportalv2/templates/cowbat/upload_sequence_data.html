@@ -79,6 +79,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/basic.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/dropzone.css' %}"/>
     <script src="{% static 'js/dropzone.js' %}"></script>
+    <script src="{% static 'js/dropzone_i18n.js' %}"></script>
     <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script type="text/javascript">
     function progressSpinner() {
@@ -89,7 +90,7 @@
             div.setAttribute('class', 'loader');
             div.id = 'spindiv';
             let text = document.createElement('H4');
-            let message = document.createTextNode('File upload in progress. Do not refresh this page!');
+            let message = document.createTextNode("{% trans 'File upload in progress. Do not refresh this page!' %}");
             text.appendChild(message);
             spinnerdiv.appendChild(text);
             spinnerdiv.appendChild(div);

@@ -1,10 +1,26 @@
+from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
+from django.utils import translation
+from django.views.i18n import set_language as django_set_language
 from django.views.generic import DetailView, ListView, RedirectView, UpdateView
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils import translation
-
 from .models import User
+
+
+def set_language(request):
+    """Persist language changes for authenticated users and keep the cookie."""
+    language = request.POST.get("language")
+    supported_languages = {code for code, _name in settings.LANGUAGES}
+    if (
+        request.method == "POST"
+        and request.user.is_authenticated
+        and language in supported_languages
+    ):
+        request.user.language = language
+        request.user.save(update_fields=["language"])
+    return django_set_language(request)
+
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User

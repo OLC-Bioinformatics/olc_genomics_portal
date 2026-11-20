@@ -3,6 +3,7 @@ import os
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from olc_webportalv2.cowbat.models import SequencingRun
@@ -44,9 +45,9 @@ class TestAPI(APITestCase):
         storage_patcher.start()
         self.addCleanup(storage_patcher.stop)
 
-        user = User.objects.create(username="TestUser")
-        user.set_password("password")
-        user.save()
+        self.user = User.objects.create(username="TestUser")
+        self.user.set_password("password")
+        self.user.save()
 
     def test_upload_get_requires_auth(self):
         response = self.client.get("/en-ca/api/upload/fake_run/fake_file")
@@ -216,6 +217,23 @@ class TestAPI(APITestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 401)
+
+    def test_missing_run_name_query_is_translated(self):
+        self.user.language = "fr"
+        self.user.save(update_fields=["language"])
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            reverse("localized_api:research_assembly_runs-exists").replace(
+                "/en-ca/", "/fr/"
+            )
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"error": "Le paramètre run_name est obligatoire."},
+        )
 
     @patch.dict(os.environ, {"EMAIL_RELAY_SECRET": "secret"})
     def test_email_relay_missing_fields(self):

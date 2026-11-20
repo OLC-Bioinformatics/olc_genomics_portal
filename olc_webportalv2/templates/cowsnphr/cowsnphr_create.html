@@ -42,7 +42,7 @@
 <br>
 {% comment %} Only allow the user to refresh the containers if the files are already in blob storage {% endcomment %}
 {% if not upload %}
-<a href='{% url 'cowsnphr:refresh' %}'><button class="btn btn-secondary btn"> Refresh Containers</button></a>
+<a href='{% url 'cowsnphr:refresh' %}'><button class="btn btn-secondary btn">{% trans "Refresh Containers" %}</button></a>
 {% endif %}
 
 {% endblock %}

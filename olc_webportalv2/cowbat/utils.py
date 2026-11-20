@@ -6,6 +6,8 @@ from __future__ import unicode_literals
 
 import re
 
+from django.utils.translation import gettext as _
+
 
 def normalize_run_name(raw):
     """Normalize a run name in the same way as the API serializer.
@@ -46,7 +48,9 @@ def normalize_research_run_name(raw):
         )
     ):
         raise ValueError(
-            "Run name must start with a five- or six-digit date followed by "
-            "a lab or instrument identifier."
+            _(
+                "Run name must start with a five- or six-digit date followed "
+                "by a lab or instrument identifier."
+            )
         )
     return run_name

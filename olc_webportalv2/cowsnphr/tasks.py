@@ -17,12 +17,14 @@ from django.core.files.uploadedfile import UploadedFile
 
 # Django imports
 from django.db import DatabaseError
-from django.utils.translation import gettext
+from django.utils import translation
+from django.utils.translation import gettext as _
 
 # Sentry
 from sentry_sdk import capture_exception
 
 from olc_webportalv2.common.batch_client import BatchServiceClient
+from olc_webportalv2.common.email_i18n import recipient_language
 
 # Portal-specific imports
 from olc_webportalv2.common.methods import (
@@ -296,7 +298,7 @@ def find_ref(cowsnphr: COWSNPhRRequest):
         file_exclude_regex=[],
         debug=True,
     )
-    file_matches, _ = file_obj.main()
+    file_matches, _file_errors = file_obj.main()
     if file_matches:
         ref = file_matches["processed-data"]
         return ref
@@ -308,21 +310,23 @@ def find_ref(cowsnphr: COWSNPhRRequest):
         file_exclude_regex=[],
         debug=True,
     )
-    file_matches, _ = file_obj.main()
+    file_matches, _file_errors = file_obj.main()
     # Update the database entry with an error that the reference file SEQID
     # could not be located
     if not file_matches:
-        cowsnphr.seqid_errors.append(
-            gettext(
-                f"Could not locate a FASTA file for the supplied reference "
-                f"genome {cowsnphr.ref}"
+        with translation.override(cowsnphr.user.language):
+            cowsnphr.seqid_errors.append(
+                _(
+                    "Could not locate a FASTA file for the supplied "
+                    "reference genome %(reference)s"
+                )
+                % {"reference": cowsnphr.ref}
             )
-        )
         cowsnphr.status = "Error"
         cowsnphr.save()
         return None
     # Try to use a reference in the "BestAssemblies" folder
-    for _, ref_list in file_matches.items():
+    for _container_name, ref_list in file_matches.items():
         for ref_dict in ref_list:
             if "BestAssemblies" in ref_dict["blob_name"]:
                 return [ref_dict]
@@ -364,15 +368,17 @@ def find_query(cowsnphr: COWSNPhRRequest) -> list[dict] | None:
         file_exclude_regex=["trimmed", "baited"],
         debug=True,
     )
-    file_matches, _ = file_obj.main()
+    file_matches, _file_errors = file_obj.main()
     # If no files were returned, update the database with the error
     if not file_matches:
-        cowsnphr.seqid_errors.append(
-            gettext(
-                f"Could not locate .fastq.gz files for the supplied query "
-                f"genomes {','.join(cowsnphr.seqids)}"
+        with translation.override(cowsnphr.user.language):
+            cowsnphr.seqid_errors.append(
+                _(
+                    "Could not locate .fastq.gz files for the supplied "
+                    "query genomes %(seqids)s"
+                )
+                % {"seqids": ",".join(cowsnphr.seqids)}
             )
-        )
         cowsnphr.status = "Error"
         cowsnphr.save()
         return None
@@ -385,7 +391,7 @@ def find_query(cowsnphr: COWSNPhRRequest) -> list[dict] | None:
     for seqid in cowsnphr.seqids:
         presence_dict[seqid] = {"R1": False, "R2": False}
     # Iterate over all the matches
-    for _, file_list in file_matches.items():
+    for _container_name, file_list in file_matches.items():
         for file_dict in file_list:
             for seqid in cowsnphr.seqids:
                 if seqid in file_dict["blob_name"]:
@@ -403,12 +409,14 @@ def find_query(cowsnphr: COWSNPhRRequest) -> list[dict] | None:
     for seqid, presence in presence_dict.items():
         # Check if either the forward or reverse reads are missing
         if presence["R1"] is False or presence["R2"] is False:
-            cowsnphr.seqid_errors.append(
-                gettext(
-                    f"Could not locate one or more .fastq.gz files for "
-                    f"SEQID {seqid}"
+            with translation.override(cowsnphr.user.language):
+                cowsnphr.seqid_errors.append(
+                    _(
+                        "Could not locate one or more .fastq.gz files for "
+                        "SEQID %(seqid)s"
+                    )
+                    % {"seqid": seqid}
                 )
-            )
             cowsnphr.status = "Error"
             cowsnphr.save()
             errors = True
@@ -635,19 +643,24 @@ def task_succeeded(cowsnphr: COWSNPhRRequest):
     cowsnphr.save()
     # Send emails
     for email in cowsnphr.emails_array or []:
-        send_email(
-            subject=f'COWSNPhR Analysis "{cowsnphr.project_name}" Complete',
-            body=(
-                f"Dear {cowsnphr.user},\n\n"
-                f'Your COWSNPhR analysis, "{cowsnphr.project_name}", is '
-                "complete.\n\n"
-                "Reports are available for "
-                f"download: {cowsnphr.archive_download_link}\n\n"
-                "Best regards,\n"
-                "The FoodPort development team"
-            ),
-            recipient=email,
-        )
+        with recipient_language(email):
+            send_email(
+                subject=_('COWSNPhR Analysis "%(project)s" Complete')
+                % {"project": cowsnphr.project_name},
+                body=_(
+                    "Dear %(user)s,\n\n"
+                    'Your COWSNPhR analysis, "%(project)s", is complete.\n\n'
+                    "Reports are available for download: %(download)s\n\n"
+                    "Best regards,\n"
+                    "The FoodPort development team"
+                )
+                % {
+                    "user": cowsnphr.user,
+                    "project": cowsnphr.project_name,
+                    "download": cowsnphr.archive_download_link,
+                },
+                recipient=email,
+            )
 
 
 def task_failed(cowsnphr):
@@ -658,20 +671,26 @@ def task_failed(cowsnphr):
 
     """
     # Send emails
-    errors = "\n".join(cowsnphr.error_list or []) or "None"
     for email in cowsnphr.emails_array or []:
-        send_email(
-            subject=f'COWSNPhR Analysis "{cowsnphr.project_name}" Failed',
-            body=(
-                f"Dear {cowsnphr.user},\n"
-                f'Your COWSNPhR analysis, "{cowsnphr.project_name}", '
-                "has failed.\n"
-                f"The following errors were recorded: {errors}\n\n"
-                "Sorry for the inconvenience,\n"
-                "The FoodPort development team"
-            ),
-            recipient=email,
-        )
+        with recipient_language(email):
+            errors = "\n".join(cowsnphr.error_list or []) or _("None")
+            send_email(
+                subject=_('COWSNPhR Analysis "%(project)s" Failed')
+                % {"project": cowsnphr.project_name},
+                body=_(
+                    "Dear %(user)s,\n"
+                    'Your COWSNPhR analysis, "%(project)s", has failed.\n'
+                    "The following errors were recorded: %(errors)s\n\n"
+                    "Sorry for the inconvenience,\n"
+                    "The FoodPort development team"
+                )
+                % {
+                    "user": cowsnphr.user,
+                    "project": cowsnphr.project_name,
+                    "errors": errors,
+                },
+                recipient=email,
+            )
     # Update the model with the error status
     cowsnphr.status = "Error"
     cowsnphr.save()

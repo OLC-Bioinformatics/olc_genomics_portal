@@ -4,7 +4,7 @@
 {% load i18n %}
 {% block content %}
 
-<h2>COWSNPhR Home</h2>
+<h2>{% trans "COWSNPhR Home" %}</h2>
 
 <br>
 
@@ -21,9 +21,7 @@
                             {% trans "FASTQ files, and a reference genome (and, optionally, a mask file) have already been uploaded to an appropriately named blob container." %}
                         </p>
                         <p id="article2" class="text-start">
-                            {% blocktrans %}
-                                <strong>NOTE:</strong> FASTQ files must be in the 'fastq' subfolder, and the reference genome (and optional mask file) must be in the 'ref' folder.
-                            {% endblocktrans %}
+                            <strong>{% trans "NOTE:" %}</strong> {% trans "FASTQ files must be in the 'fastq' subfolder, and the reference genome (and optional mask file) must be in the 'ref' folder." %}
                         </p>
                         <a class="btn btn-primary btn-lg w-100 mt-auto"
                            href="{% url 'cowsnphr:blob_cowsnphr' %}">{% trans "Analyses from Blob" %}</a>

@@ -1,9 +1,11 @@
 from decimal import Decimal
 from unittest import mock
 
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import translation
 
 from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.cowbat.forms import CustomRunForm, RealTimeForm
@@ -24,6 +26,14 @@ from olc_webportalv2.users.models import User
 
 
 class CowbatFormTests(TestCase):
+    def test_research_run_name_error_is_translated(self):
+        with translation.override("fr"):
+            with self.assertRaisesRegex(
+                ValueError,
+                "Le nom de l’analyse doit commencer",
+            ):
+                normalize_research_run_name("run-without-date")
+
     def test_custom_run_form_normalizes_name(self):
         form = CustomRunForm(
             data={
@@ -169,6 +179,19 @@ class CowbatUploadStateTests(TestCase):
         self.assertEqual(seqids, ["OTHER"])
         self.assertIn("SAMPLE is missing R2.", errors)
 
+    def test_validate_research_files_translates_missing_pair(self):
+        files = ["SAMPLE_R1.fastq.gz"]
+
+        with translation.override("fr"):
+            _seqids, errors = validate_research_files(
+                mock.Mock(), "run", files
+            )
+
+        self.assertEqual(
+            errors,
+            ["Le fichier R2 est manquant pour l’échantillon SAMPLE."],
+        )
+
     def test_validate_research_files_normalizes_illumina_lane_suffixes(self):
         files = [
             "2018-CAL-0033_S1_L001_R1_001.fastq.gz",
@@ -239,6 +262,31 @@ class CowbatWorkflowTests(TestCase):
             password="password",
         )
 
+    def test_invalid_upload_filename_error_is_translated(self):
+        self.user.language = "fr"
+        self.user.save(update_fields=["language"])
+        self.client.force_login(self.user)
+        run = SequencingRun.objects.create(
+            user=self.user,
+            run_name="240824-cal",
+            container="240824-cal",
+        )
+
+        with translation.override("fr"):
+            response = self.client.get(
+                reverse(
+                    "cowbat:upload_sequence_blob_sas",
+                    kwargs={"sequencing_run_pk": run.pk},
+                ).replace("/en-ca/", "/fr/"),
+                {"filename": "../reads.fastq.gz"},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"error": "Un nom de fichier valide est requis."},
+        )
+
     @mock.patch("olc_webportalv2.cowbat.views.get_research_storage")
     def test_manage_research_assembly_lists_existing_files(
         self, storage_factory
@@ -263,6 +311,34 @@ class CowbatWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SAMPLE_R1.fastq.gz")
         self.assertContains(response, "SAMPLE_R2.fastq.gz")
+
+    @mock.patch("olc_webportalv2.cowbat.views.get_research_storage")
+    def test_manage_research_assembly_localizes_dynamic_status_text(
+        self, storage_factory
+    ):
+        run = SequencingRun.objects.create(
+            user=self.user,
+            run_name="240824-cal-french",
+            container="240824-cal-french",
+        )
+        self.user.language = "fr"
+        self.user.save(update_fields=["language"])
+        storage_factory.return_value.list_files.return_value = []
+
+        with translation.override(settings.LANGUAGE_CODE):
+            response = self.client.get(
+                reverse(
+                    "cowbat:manage_assembly_run",
+                    kwargs={"sequencing_run_pk": run.pk},
+                ),
+                follow=True,
+            )
+            html = response.content.decode(response.charset)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Dossier racine")
+            self.assertContains(response, "Aucun fichier dans ce conteneur.")
+            self.assertIn("Dossier : %(path)s", html)
 
     @mock.patch("olc_webportalv2.cowbat.views.get_research_storage")
     def test_manage_research_assembly_hides_zero_byte_folder_markers(
