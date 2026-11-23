@@ -311,6 +311,7 @@ class AzureBatchProvider:
             "COWBAT": ("VM_IMAGE", "COWBAT_NODE_AGENT_SKU"),
             "AmpliSeq": ("AMPLISEQ_IMAGE", "AMPLISEQ_NODE_AGENT_SKU"),
             "COWSNPhR": ("COWSNPHR_IMAGE", "COWSNPHR_NODE_AGENT_SKU"),
+            "Nanopore": ("NANOPORE_IMAGE", "NANOPORE_NODE_AGENT_SKU"),
         }
         setting_names = image_settings.get(analysis_type)
         if setting_names is None:

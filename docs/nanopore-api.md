@@ -11,9 +11,9 @@ The immutable GPU runtime is validated in image
 `development/nanopore/0.0.13`. The repository contains the Django model,
 endpoint, immutable-manifest, Celery submission, capacity-retry, Batch polling,
 long-lived task, iteration-result publication, and latest-result URL slices.
-The GPU acceptance validates the image and scientific runtime. The remaining
-deployment check is a live API-to-Batch smoke test with target credentials; it
-is not a missing implementation slice.
+The GPU acceptance validates the image and scientific runtime. A live
+API-to-Batch streaming smoke test with target credentials is still required
+to validate the integrated deployment.
 
 The current one-POD5 GPU acceptance is documented in
 `infrastructure/nanopore-image/docs/acceptance-results/0.0.13`.
@@ -373,6 +373,15 @@ expiring container transfer URLs for the wrapper and passes them as
 variables. Their lifetime is controlled by
 `NANOPORE_BATCH_TRANSFER_URL_TTL_SECONDS` (default: 604800 seconds); the URLs
 are redacted from application logs.
+
+The Batch service requires `NANOPORE_IMAGE` (the full Azure Compute Gallery
+image-version resource ID) and `NANOPORE_NODE_AGENT_SKU` (the compatible Batch
+node agent SKU) in its `env` file. Set both to the values verified for the
+target environment; missing values fail submission rather than selecting the
+COWBAT image. The dev and full-infrastructure deployment pipelines accept
+these as optional variables; the direct production update pipeline uses the
+VM's existing `env` file. Configure both pipeline variables before using a
+pipeline that regenerates `env`.
 
 The wrapper reads POD5 entries from each immutable generation manifest,
 basecalls with Dorado, aligns with minimap2, produces sorted/indexed BAM files

@@ -703,7 +703,7 @@ def test_submission_rejects_unsupported_analysis_type_without_blob_calls():
     with pytest.raises(SubmissionError, match="Unsupported analysis_type"):
         provider.submit_batch_request(
             {
-                "analysis_type": "Nanopore",
+                "analysis_type": "Unknown",
                 "command_file": "echo run",
                 "container": "target-runs",
                 "input_file_pattern": None,
@@ -711,6 +711,36 @@ def test_submission_rejects_unsupported_analysis_type_without_blob_calls():
             }
         )
     assert storage.calls == []
+
+
+def test_nanopore_submission_uses_configured_image_and_node_agent(monkeypatch):
+    configure_submission(monkeypatch)
+    monkeypatch.setenv("NANOPORE_IMAGE", "/gallery/nanopore/versions/0.0.13")
+    monkeypatch.setenv("NANOPORE_NODE_AGENT_SKU", "batch.node.ubuntu 24.04")
+    batch_client = FakeBatchClient()
+    provider = AzureBatchProvider(
+        client=batch_client, storage_client=FakeStorageService()
+    )
+    payload = valid_payload()
+    payload["input_file_pattern"] = []
+
+    result = provider.submit_batch_request(payload)
+
+    assert result["status"] == "Success"
+    configuration = batch_client.pool.calls[0][1].virtual_machine_configuration
+    assert configuration.image_reference.virtual_machine_image_id == (
+        "/gallery/nanopore/versions/0.0.13"
+    )
+    assert configuration.node_agent_sku_id == "batch.node.ubuntu 24.04"
+
+
+def test_nanopore_submission_requires_its_own_image(monkeypatch):
+    configure_submission(monkeypatch)
+    monkeypatch.delenv("NANOPORE_IMAGE", raising=False)
+    monkeypatch.setenv("NANOPORE_NODE_AGENT_SKU", "batch.node.ubuntu 24.04")
+
+    with pytest.raises(RuntimeError, match="NANOPORE_IMAGE"):
+        AzureBatchProvider._submission_settings("Nanopore")
 
 
 def test_submission_rejects_no_tidy_for_async_requests():

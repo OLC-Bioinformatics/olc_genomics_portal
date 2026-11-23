@@ -523,6 +523,78 @@ class NanoporeStreamingTests(APITestCase):
         NanoporeRun.objects.create(sequencing_run=self.run)
         self.client.force_authenticate(user=self.user)
 
+    @patch("olc_webportalv2.api.views._nanopore_run")
+    def test_prepare_rechecks_run_state_under_lock(self, get_run):
+        stale_run = SequencingRun.objects.get(pk=self.run.pk)
+        self.run.workflow_state = "stopping"
+        self.run.save(update_fields=["workflow_state"])
+        get_run.return_value = stale_run
+
+        response = self.client.post(
+            f"/en-ca/api/nanopore/runs/{self.run.pk}/files/prepare/",
+            {"relative_path": "late.pod5", "size_bytes": 10},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(self.run.nanopore_files.exists())
+
+    @patch("olc_webportalv2.api.views.get_storage_client")
+    @patch("olc_webportalv2.api.views._nanopore_run")
+    def test_complete_rechecks_run_state_under_lock(self, get_run, storage):
+        nanopore_file = NanoporeFile.objects.create(
+            sequencing_run=self.run,
+            relative_path="late.pod5",
+            blob_name="nanopore-runs/late.pod5",
+            size_bytes=10,
+        )
+        stale_run = SequencingRun.objects.get(pk=self.run.pk)
+        self.run.workflow_state = "stopping"
+        self.run.save(update_fields=["workflow_state"])
+        get_run.return_value = stale_run
+        storage.return_value.get_object.return_value = Mock(size=10)
+
+        response = self.client.post(
+            f"/en-ca/api/nanopore/runs/{self.run.pk}/files/"
+            f"{nanopore_file.pk}/complete/"
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.run.refresh_from_db()
+        nanopore_file.refresh_from_db()
+        self.assertEqual(self.run.workflow_state, "stopping")
+        self.assertEqual(nanopore_file.status, "prepared")
+
+    @patch("olc_webportalv2.api.views.collect_nanopore_iteration.apply_async")
+    @patch("olc_webportalv2.api.views.get_storage_client")
+    def test_concurrent_duplicate_completion_does_not_increment_attempts(
+        self, storage, collect
+    ):
+        nanopore_file = NanoporeFile.objects.create(
+            sequencing_run=self.run,
+            relative_path="duplicate.pod5",
+            blob_name="nanopore-runs/duplicate.pod5",
+            size_bytes=10,
+        )
+
+        def verify_after_other_completion(*args):
+            NanoporeFile.objects.filter(pk=nanopore_file.pk).update(
+                status="uploaded", attempt_count=1
+            )
+            return Mock(size=10)
+
+        storage.return_value.get_object.side_effect = verify_after_other_completion
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/en-ca/api/nanopore/runs/{self.run.pk}/files/"
+                f"{nanopore_file.pk}/complete/"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        nanopore_file.refresh_from_db()
+        self.assertEqual(nanopore_file.attempt_count, 1)
+        collect.assert_called_once()
+
     @patch("olc_webportalv2.api.views.collect_nanopore_iteration.apply_async")
     @patch("olc_webportalv2.api.views.get_storage_client")
     def test_complete_claims_file_and_starts_batch(

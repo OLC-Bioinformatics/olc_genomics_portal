@@ -609,9 +609,11 @@ stages:
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
         safe_DJANGO_DEBUG=$(printf '%q' "${DJANGO_DEBUG:-}")
+        safe_NANOPORE_IMAGE=$(printf '%q' "${NANOPORE_IMAGE:-}")
+        safe_NANOPORE_NODE_AGENT_SKU=$(printf '%q' "${NANOPORE_NODE_AGENT_SKU:-}")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST DJANGO_DEBUG=$safe_DJANGO_DEBUG bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST DJANGO_DEBUG=$safe_DJANGO_DEBUG NANOPORE_IMAGE=$safe_NANOPORE_IMAGE NANOPORE_NODE_AGENT_SKU=$safe_NANOPORE_NODE_AGENT_SKU bash -s" <<'EOF'
           set -euo pipefail
           umask 077
 
@@ -637,6 +639,22 @@ stages:
           printf '%s=%s\n' DJANGO_DEBUG "$DJANGO_DEBUG" >> "$dotenv_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
+          write_optional_setting() {
+            name="$1"
+            value="$2"
+            if [ "$value" = "\$($name)" ]; then
+              value=''
+            fi
+            if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+              echo "$name must be a single-line value" >&2
+              exit 1
+            fi
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$name" "$value" >> "$env_file"
+            fi
+          }
+          write_optional_setting NANOPORE_IMAGE "$NANOPORE_IMAGE"
+          write_optional_setting NANOPORE_NODE_AGENT_SKU "$NANOPORE_NODE_AGENT_SKU"
           django_allowed_hosts="0.0.0.0,localhost,127.0.0.1,$TARGET_HOST"
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$env_file"
           printf '%s=%s\n' DJANGO_ALLOWED_HOSTS "$django_allowed_hosts" >> "$dotenv_file"
@@ -815,3 +833,5 @@ stages:
       displayName: 'Deploy portal on target VM'
       env:
         DJANGO_DEBUG: $(DJANGO_DEBUG)
+        NANOPORE_IMAGE: $(NANOPORE_IMAGE)
+        NANOPORE_NODE_AGENT_SKU: $(NANORE_NODE_AGENT_SKU)

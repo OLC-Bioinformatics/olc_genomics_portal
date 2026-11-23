@@ -777,6 +777,7 @@ stages:
             "ENTRA_DESKTOP_AUTO_CREATE_USERS",
             "FOODPORT_DESKTOP_TOKEN_TTL_SECONDS",
         )
+        optional_batch_names = ("NANOPORE_IMAGE", "NANOPORE_NODE_AGENT_SKU")
 
         if os.environ.get("FOODPORT_SECRET_VARIABLES_READY", "").lower() != "true":
             raise SystemExit(
@@ -818,7 +819,7 @@ stages:
         for name in secret_names:
             if "\n" in os.environ[name] or "\r" in os.environ[name]:
                 raise SystemExit(f"{name} must be a single-line value.")
-        for name in optional_entra_names:
+        for name in optional_entra_names + optional_batch_names:
             value = os.environ.get(name, "")
             if "\n" in value or "\r" in value:
                 raise SystemExit(f"{name} must be a single-line value.")
@@ -836,6 +837,11 @@ stages:
         env_lines.extend(
             f"{env_file_names.get(name, name)}={os.environ[name]}"
             for name in secret_names
+        )
+        env_lines.extend(
+            f"{name}={os.environ[name]}"
+            for name in optional_batch_names
+            if os.environ.get(name) and os.environ[name] != f"$({name})"
         )
         (output_dir / "env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
 
@@ -1036,6 +1042,8 @@ stages:
         AMPLISEQ_NODE_AGENT_SKU: $(AMPLISEQ_NODE_AGENT_SKU)
         COWSNPHR_IMAGE: $(COWSNPHR_IMAGE)
         COWSNPHR_NODE_AGENT_SKU: $(COWSNPHR_NODE_AGENT_SKU)
+        NANOPORE_IMAGE: $(NANOPORE_IMAGE)
+        NANOPORE_NODE_AGENT_SKU: $(NANOPORE_NODE_AGENT_SKU)
         AD_APP_ID: $(AD_APP_ID)
         AD_APP_SECRET_ID: $(AD_APP_SECRET_ID)
         AD_APP_SECRET: $(AD_APP_SECRET)

@@ -1301,20 +1301,30 @@ class NanoporeFilePrepareView(NanoporeAPIView):
         raw_container = getattr(
             settings, "NANOPORE_RAW_CONTAINER", "nanopore-runs"
         )
-        storage_prefix = run.run_name
-        blob_name = (
-            f"{raw_container}/{storage_prefix}/input/pod5/{relative_path}"
-        )
-        nanopore_file, created = NanoporeFile.objects.get_or_create(
-            sequencing_run=run,
-            relative_path=relative_path,
-            defaults={"blob_name": blob_name, "size_bytes": size_bytes},
-        )
-        if not created and nanopore_file.size_bytes != size_bytes:
-            return Response(
-                {"error": _("File size conflicts with existing manifest.")},
-                status=status.HTTP_409_CONFLICT,
+        with transaction.atomic():
+            run = SequencingRun.objects.select_for_update().get(pk=run.pk)
+            if run.workflow_state not in ("created", "uploading", "processing"):
+                return Response(
+                    {"error": _("Run is not accepting uploads.")},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            storage_prefix = run.run_name
+            blob_name = (
+                f"{raw_container}/{storage_prefix}/input/pod5/{relative_path}"
             )
+            nanopore_file, created = NanoporeFile.objects.get_or_create(
+                sequencing_run=run,
+                relative_path=relative_path,
+                defaults={"blob_name": blob_name, "size_bytes": size_bytes},
+            )
+            if not created and nanopore_file.size_bytes != size_bytes:
+                return Response(
+                    {"error": _("File size conflicts with existing manifest.")},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if run.workflow_state == "created":
+                run.workflow_state = "uploading"
+                run.save(update_fields=["workflow_state"])
         blob_client = get_storage_client()
         blob_client.ensure_container(raw_container)
         object_name = f"{storage_prefix}/input/pod5/{relative_path}"
@@ -1324,9 +1334,6 @@ class NanoporeFilePrepareView(NanoporeAPIView):
             name=object_name,
             expires_in_seconds=1800,
         )
-        if run.workflow_state == "created":
-            run.workflow_state = "uploading"
-            run.save(update_fields=["workflow_state"])
         return Response(
             {
                 "file_id": nanopore_file.pk,
@@ -1369,7 +1376,8 @@ class NanoporeFileCompleteView(NanoporeAPIView):
 
         """
         run = _nanopore_run(request, run_pk)
-        nanopore_file = NanoporeFile.objects.get(
+        nanopore_file = get_object_or_404(
+            NanoporeFile,
             pk=file_pk,
             sequencing_run=run,
         )
@@ -1380,8 +1388,20 @@ class NanoporeFileCompleteView(NanoporeAPIView):
             )
 
         if nanopore_file.status == "uploaded":
-            if nanopore_file.processing_batch_id is None:
-                self._schedule_collection(run.pk)
+            with transaction.atomic():
+                run = SequencingRun.objects.select_for_update().get(pk=run.pk)
+                if run.workflow_state in ("stopping", "complete", "error"):
+                    return Response(
+                        {"error": _("Run is no longer accepting files.")},
+                        status=status.HTTP_409_CONFLICT,
+                    )
+                nanopore_file = NanoporeFile.objects.select_for_update().get(
+                    pk=nanopore_file.pk, sequencing_run=run
+                )
+                if nanopore_file.processing_batch_id is None:
+                    transaction.on_commit(
+                        lambda run_pk=run.pk: self._schedule_collection(run_pk)
+                    )
             payload = NanoporeFileSerializer(nanopore_file).data
             payload["request_id"] = _nanopore_request_id()
             return Response(payload)
@@ -1416,21 +1436,33 @@ class NanoporeFileCompleteView(NanoporeAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if properties.size != nanopore_file.size_bytes:
-            nanopore_file.status = "error"
-            nanopore_file.error = "Uploaded size does not match manifest."
-            nanopore_file.save(update_fields=["status", "error"])
-            return Response(
-                {"error": _("Uploaded size does not match manifest.")},
-                status=status.HTTP_409_CONFLICT,
-            )
-
         with transaction.atomic():
             run = SequencingRun.objects.select_for_update().get(pk=run.pk)
+            if run.workflow_state in ("stopping", "complete", "error"):
+                return Response(
+                    {"error": _("Run is no longer accepting files.")},
+                    status=status.HTTP_409_CONFLICT,
+                )
             nanopore_file = NanoporeFile.objects.select_for_update().get(
                 pk=nanopore_file.pk,
                 sequencing_run=run,
             )
+            if nanopore_file.status == "uploaded":
+                if nanopore_file.processing_batch_id is None:
+                    transaction.on_commit(
+                        lambda run_pk=run.pk: self._schedule_collection(run_pk)
+                    )
+                payload = NanoporeFileSerializer(nanopore_file).data
+                payload["request_id"] = _nanopore_request_id()
+                return Response(payload)
+            if properties.size != nanopore_file.size_bytes:
+                nanopore_file.status = "error"
+                nanopore_file.error = "Uploaded size does not match manifest."
+                nanopore_file.save(update_fields=["status", "error"])
+                return Response(
+                    {"error": _("Uploaded size does not match manifest.")},
+                    status=status.HTTP_409_CONFLICT,
+                )
             nanopore_file.status = "uploaded"
             nanopore_file.uploaded_at = timezone.now()
             nanopore_file.attempt_count += 1
