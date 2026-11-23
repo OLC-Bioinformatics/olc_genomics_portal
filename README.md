@@ -98,6 +98,10 @@ Portal VM deployments are managed by the Azure DevOps pipelines. The
 `azure-pipelines-dev.yml` manages the development deployment. Both use the
 repository's default `docker-compose.yml`; the retired
 `docker-compose-prod.yml` instructions are no longer applicable.
+The dev and full-infrastructure pipelines build all Compose services with
+build definitions before restarting the stack. The production update
+pipeline builds the stack with `docker compose up -d --build` and deploys
+`origin/main`, not `dev` or `foodport`.
  
  
 ## Data provisioning
