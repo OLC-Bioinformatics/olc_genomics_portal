@@ -30,8 +30,13 @@ def compare_workbooks(
     actual_content,
     sheet_keys,
     max_differences=20,
+    actual_extra_columns=None,
+    header_only_sheets=None,
+    reference_panel=None,
 ):
-    """Compare workbook cell values, ignoring row order for keyed sheets."""
+    """Compare workbook cells, optionally projecting documented extra columns."""
+    actual_extra_columns = actual_extra_columns or {}
+    header_only_sheets = set(header_only_sheets or ())
     expected_workbook = load_workbook(
         expected_path,
         read_only=True,
@@ -59,6 +64,22 @@ def compare_workbooks(
                 f"{actual_workbook.sheetnames!r}"
             )
 
+        reference_seqids = set()
+        if reference_panel:
+            baseline_rows = expected_workbook[
+                "PrimerVerifierResults"
+            ].iter_rows(values_only=True)
+            baseline_headers = next(baseline_rows)
+            panel_index = baseline_headers.index("BENCHMARK PANEL")
+            seqid_index = baseline_headers.index("SEQID")
+            reference_seqids = {
+                row[seqid_index]
+                for row in baseline_rows
+                if str(row[panel_index]).casefold() == reference_panel.casefold()
+            }
+            if not reference_seqids:
+                report(f"Baseline has no isolates for {reference_panel!r}")
+
         for sheet_name in expected_workbook.sheetnames:
             if sheet_name not in actual_workbook.sheetnames:
                 continue
@@ -75,8 +96,45 @@ def compare_workbooks(
 
             expected_headers = expected_rows[0]
             actual_headers = actual_rows[0]
+            if reference_panel and sheet_name == "PrimerVerifierResults":
+                panel_index = expected_headers.index("BENCHMARK PANEL")
+                expected_rows = [expected_rows[0]] + [
+                    row for row in expected_rows[1:]
+                    if str(row[panel_index]).casefold() == reference_panel.casefold()
+                ]
+            elif reference_panel and sheet_name == "Pseudoalignments":
+                panel_index = expected_headers.index("PANEL")
+                seqid_index = expected_headers.index("SEQID")
+                expected_rows = [expected_rows[0]] + [
+                    row for row in expected_rows[1:]
+                    if str(row[panel_index]).upper() == "INCLUSIVITY"
+                    and row[seqid_index] in reference_seqids
+                ]
+            extra_columns = actual_extra_columns.get(sheet_name, ())
+            if extra_columns:
+                for column in extra_columns:
+                    if actual_headers.count(column) != 1:
+                        report(
+                            f"{sheet_name}: expected one extra column {column!r}"
+                        )
+                extra_indices = {
+                    index
+                    for index, header in enumerate(actual_headers)
+                    if header in extra_columns
+                }
+                actual_rows = [
+                    tuple(
+                        value for index, value in enumerate(row)
+                        if index not in extra_indices
+                    )
+                    for row in actual_rows
+                ]
+                actual_headers = actual_rows[0]
             if expected_headers != actual_headers:
                 report(f"{sheet_name}: column headers differ")
+                continue
+
+            if sheet_name in header_only_sheets:
                 continue
 
             key_columns = sheet_keys.get(sheet_name)

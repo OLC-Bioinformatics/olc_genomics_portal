@@ -1,15 +1,18 @@
 """Run an opt-in Primer Validator workflow against a batch service."""
 
+import csv
 import hashlib
 import json
 import os
 import time
 import uuid
+from io import BytesIO, StringIO
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from openpyxl import load_workbook
 
 from olc_webportalv2.common.benchmarks import (
     benchmark_panel_storage_name,
@@ -33,6 +36,7 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorTarget,
 )
 from olc_webportalv2.primer_finder.tasks import run_primer_validator
+from olc_webportalv2.primer_finder.validator_gene_reports import _gene_report_key
 
 
 class Command(BaseCommand):
@@ -81,9 +85,17 @@ class Command(BaseCommand):
         self._validate_timing_options(options)
         input_data = scenario["input"]
         expected = scenario["expected"]
+        required_task_types = {"primer"}
+        if expected.get("gene_target"):
+            required_task_types.add("gene")
         self._validate_fixture_files(scenario_path, expected)
 
         if not options["run_batch"]:
+            gene_count = sum(
+                bool(target.get("gene_sequence"))
+                for sample in input_data["samples"]
+                for target in sample["targets"]
+            )
             self.stdout.write(
                 self.style.WARNING(
                     "Dry run only; no request or Batch job was created."
@@ -93,6 +105,7 @@ class Command(BaseCommand):
                 f"Scenario: {options['scenario']}; "
                 f"samples: {len(input_data['samples'])}; "
                 f"targets: {sum(len(s['targets']) for s in input_data['samples'])}; "
+                f"gene references: {gene_count}; "
                 f"expected benchmark versions: "
                 f"{expected['benchmark_versions']}"
             )
@@ -134,6 +147,7 @@ class Command(BaseCommand):
                 request=request,
                 timeout=options["timeout"],
                 poll_interval=options["poll_interval"],
+                required_task_types=required_task_types,
             )
             terminal = True
             self._compare_results(
@@ -151,7 +165,9 @@ class Command(BaseCommand):
             json.JSONDecodeError,
         ) as exc:
             request.refresh_from_db()
-            terminal = terminal or request.status in {"Complete", "Error"}
+            terminal = terminal or self._batch_resources_cleaned(
+                request, required_task_types=required_task_types
+            )
             cleanup_status = (
                 "The request and outputs were retained because the Batch "
                 "run may still be active."
@@ -178,7 +194,7 @@ class Command(BaseCommand):
         if options["keep"]:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Scenario matched pk473. Kept request {request.pk} "
+                    f"Scenario {options['scenario']} passed. Kept request {request.pk} "
                     f"and container {container_name}."
                 )
             )
@@ -191,8 +207,8 @@ class Command(BaseCommand):
         )
         self.stdout.write(
             self.style.SUCCESS(
-                "Scenario matched pk473; the test request and output "
-                "container were removed."
+                f"Scenario {options['scenario']} passed; the test request "
+                "and output container were removed."
             )
         )
 
@@ -344,11 +360,15 @@ class Command(BaseCommand):
         return request
 
     @staticmethod
-    def _wait_for_completion(*, request, timeout, poll_interval):
+    def _wait_for_completion(
+        *, request, timeout, poll_interval, required_task_types
+    ):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             request.refresh_from_db()
-            if request.status == "Complete":
+            if request.status == "Complete" and Command._batch_resources_cleaned(
+                request, required_task_types=required_task_types
+            ):
                 return
             if request.status == "Error":
                 raise RuntimeError(request.errors or "request status is Error")
@@ -356,7 +376,24 @@ class Command(BaseCommand):
 
         request.refresh_from_db()
         raise TimeoutError(
-            f"request remained {request.status!r} after {timeout} seconds"
+            f"request remained {request.status!r} or Batch resources were "
+            f"not cleaned up after {timeout} seconds"
+        )
+
+    @staticmethod
+    def _batch_resources_cleaned(request, *, required_task_types):
+        tasks = list(
+            request.analysis_tasks.values_list(
+                "task_type", "status", "batch_job_id"
+            )
+        )
+        return (
+            request.status in {"Complete", "Error"}
+            and {task_type for task_type, _, _ in tasks} == required_task_types
+            and all(
+                status in {"complete", "error"} and not job_id
+                for _, status, job_id in tasks
+            )
         )
 
     def _compare_results(
@@ -406,11 +443,12 @@ class Command(BaseCommand):
             ensure_ascii=False,
         ).encode("utf-8")
         report_hash = hashlib.sha256(canonical_report).hexdigest()
-        if report_hash != expected["canonical_report_sha256"]:
+        expected_hash = expected.get("canonical_report_sha256")
+        if expected_hash is not None and report_hash != expected_hash:
             raise AssertionError(
                 "Raw Primer Validator report differs from the pk473 "
                 f"reference: expected SHA-256 "
-                f"{expected['canonical_report_sha256']}, got {report_hash}"
+                f"{expected_hash}, got {report_hash}"
             )
 
         for model_field in ("summary", "totals"):
@@ -421,24 +459,21 @@ class Command(BaseCommand):
                 expected_path.read_text(encoding="utf-8")
             )
             actual_value = json.loads(getattr(request, model_field))
+            if expected.get("reference_panel_key"):
+                target = expected["gene_target"]
+                panel = expected["reference_panel_key"]
+                try:
+                    expected_value = expected_value[target]["inclusivity"][panel]
+                    actual_value = actual_value[target]["inclusivity"][panel]
+                except KeyError as exc:
+                    raise AssertionError(
+                        f"Missing {panel} {model_field} reference or result."
+                    ) from exc
             if actual_value != expected_value:
                 raise AssertionError(
                     f"Stored model {model_field} differs from the pk473 "
                     "reference."
                 )
-
-        if len(request.gene_results) != expected["gene_results_count"]:
-            raise AssertionError(
-                "Gene result count differs: expected "
-                f"{expected['gene_results_count']}, got "
-                f"{len(request.gene_results)}"
-            )
-        if request.gene_exclusion_results != expected[
-            "gene_exclusion_results"
-        ]:
-            raise AssertionError(
-                "Gene exclusion results differ from the pk473 reference."
-            )
 
         workbook_name = (
             f"reports/{container_name}_summary_report.xlsx"
@@ -449,10 +484,37 @@ class Command(BaseCommand):
         workbook_path = (
             scenario_path.parent / expected["workbook_file"]
         )
+        gene_target = expected.get("gene_target")
+        if gene_target:
+            self._check_gene_results(
+                request=request, storage=storage,
+                container_name=container_name,
+                workbook_content=actual_workbook, target=gene_target,
+            )
+        else:
+            if len(request.gene_results) != expected["gene_results_count"]:
+                raise AssertionError(
+                    "Gene result count differs: expected "
+                    f"{expected['gene_results_count']}, got "
+                    f"{len(request.gene_results)}"
+                )
+            if request.gene_exclusion_results != expected[
+                "gene_exclusion_results"
+            ]:
+                raise AssertionError(
+                    "Gene exclusion results differ from the pk473 reference."
+                )
         difference_count, differences = compare_workbooks(
             expected_path=workbook_path,
             actual_content=actual_workbook,
             sheet_keys=expected["workbook_sheets"],
+            actual_extra_columns=(
+                {"PrimerVerifierResults": [
+                    f"Gene Sequence Percent Match  {gene_target}"
+                ]} if gene_target else None
+            ),
+            header_only_sheets=["GeneCategoryAudit"] if gene_target else None,
+            reference_panel=expected.get("reference_panel"),
         )
         if difference_count:
             details = "; ".join(differences)
@@ -471,6 +533,105 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(
-            "Matched pk473 model outputs, raw report fingerprint, "
-            "benchmark versions, and all summary workbook cells."
+            "Matched configured model outputs, benchmark versions, and "
+            "baseline summary workbook cells."
         )
+
+    @staticmethod
+    def _check_gene_results(
+        *, request, storage, container_name, workbook_content, target
+    ):
+        tasks = dict(request.analysis_tasks.values_list("task_type", "status"))
+        if tasks != {"primer": "complete", "gene": "complete"}:
+            raise AssertionError(
+                f"Primer and gene jobs did not both complete: {tasks!r}"
+            )
+        reports = json.loads(request.gene_report)
+        if not any(
+            name.lower().endswith((".tsv", ".csv", ".json"))
+            for name in reports
+        ):
+            raise AssertionError("GeneSeekr produced no readable gene report.")
+        expected_target = f"{target}__{target}".lower()
+        identities = {}
+        for hit in request.gene_results:
+            if str(hit.get("target") or "").lower() != expected_target:
+                continue
+            try:
+                identity = float(hit.get("identity"))
+            except (TypeError, ValueError):
+                continue
+            report_key = _gene_report_key(hit.get("report")).lower()
+            if report_key:
+                identities[report_key] = max(
+                    identity, identities.get(report_key, identity)
+                )
+        if not identities:
+            raise AssertionError(
+                f"GeneSeekr produced no normalized hit with identity for "
+                f"{expected_target}."
+            )
+        evaluation = json.loads(
+            storage.download_bytes(
+                container_name, "reports/gene_category_evaluation.json"
+            )
+        )
+        for key, actual in (
+            ("normalized_hits", request.gene_results),
+            ("categories", request.gene_exclusion_results),
+            ("category_details", request.gene_exclusion_details),
+            ("gene_reports", reports),
+        ):
+            if evaluation.get(key) != actual:
+                raise AssertionError(
+                    f"Gene evaluation {key} differs from stored results."
+                )
+        evidence_count = sum(
+            len(items)
+            for targets in request.gene_exclusion_details.values()
+            for items in targets.values()
+        )
+        tsv = storage.download_bytes(
+            container_name, "reports/gene_category_evaluation.tsv"
+        ).decode("utf-8")
+        rows = list(csv.reader(StringIO(tsv), delimiter="\t"))
+        if (
+            not rows
+            or rows[0][:3] != ["report", "target", "category"]
+            or len(rows) - 1 != evidence_count
+        ):
+            raise AssertionError(
+                "Gene evaluation TSV does not match stored evidence."
+            )
+        workbook = load_workbook(
+            BytesIO(workbook_content), read_only=True, data_only=True
+        )
+        try:
+            results = workbook["PrimerVerifierResults"].iter_rows(values_only=True)
+            headers = next(results)
+            column_name = f"Gene Sequence Percent Match  {target}"
+            if headers.count(column_name) != 1:
+                raise AssertionError(f"Missing gene match column {column_name!r}.")
+            index = headers.index(column_name)
+            if headers.count("SEQID") != 1:
+                raise AssertionError("Workbook is missing the SEQID column.")
+            seqid_index = headers.index("SEQID")
+            if not any(
+                isinstance(row[index], (int, float))
+                and _gene_report_key(row[seqid_index]).lower() in identities
+                and abs(
+                    row[index]
+                    - identities[_gene_report_key(row[seqid_index]).lower()]
+                ) < 0.0001
+                for row in results
+            ):
+                raise AssertionError(
+                    "Workbook has no gene match consistent with a stored hit."
+                )
+            audit_rows = workbook["GeneCategoryAudit"].max_row - 1
+            if audit_rows != evidence_count:
+                raise AssertionError(
+                    "Workbook gene audit row count differs from stored evidence."
+                )
+        finally:
+            workbook.close()

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "description": "Primer Validator HLY baseline with an EGD-e hly reference gene.",
+  "input": {
+    "mismatches": 3,
+    "min_amplicon_size": 0,
+    "max_amplicon_size": 1500,
+    "contig_breaks": false,
+    "range_buffer": 0,
+    "primer_sequences": ">HLY-F\nTTTAATTTCATCCATGGCACCACC\n>HLY-R\nCTTTATAACCTTTTCTTGGCGGCA",
+    "forward_primer": "TTTAATTTCATCCATGGCACCACC",
+    "reverse_primer": "CTTTATAACCTTTTCTTGGCGGCA",
+    "inclusivity_panel": ["bds-listeria"],
+    "exclusivity_panel": [],
+    "gene_exclusion_categories": [],
+    "samples": [
+      {
+        "name": "HLY",
+        "logic": "",
+        "classification_rule": "none",
+        "targets": [
+          {
+            "name": "HLY",
+            "forward_primer": "TTTAATTTCATCCATGGCACCACC",
+            "reverse_primer": "CTTTATAACCTTTTCTTGGCGGCA",
+            "probe_sequence": "TCGAAAAGAAACACGCGGATGAAATCGA",
+            "probe_evaluation_method": "percent_identity",
+            "probe_percent_identity": 80.0,
+            "probe_max_differences": 2,
+            "gene_sequence": "ATGAAAAAAATAATGCTAGTTTTTATTACACTTATATTAGTTAGTCTACCAATTGCGCAACAAACTGAAGCAAAGGATGCATCTGCATTCAATAAAGAAAATTCAATTTCATCCATGGCACCACCAGCATCTCCGCCTGCAAGTCCTAAGACGCCAATCGAAAAGAAACACGCGGATGAAATCGATAAGTATATACAAGGATTGGATTACAATAAAAACAATGTATTAGTATACCACGGAGATGCAGTGACAAATGTGCCGCCAAGAAAAGGTTACAAAGATGGAAATGAATATATTGTTGTGGAGAAAAAGAAGAAATCCATCAATCAAAATAATGCAGACATTCAAGTTGTGAATGCAATTTCGAGCCTAACCTATCCAGGTGCTCTCGTAAAAGCGAATTCGGAATTAGTAGAAAATCAACCAGATGTTCTCCCTGTAAAACGTGATTCATTAACACTCAGCATTGATTTGCCAGGTATGACTAATCAAGACAATAAAATCGTTGTAAAAAATGCCACTAAATCAAACGTTAACAACGCAGTAAATACATTAGTGGAAAGATGGAATGAAAAATATGCTCAAGCTTATCCAAATGTAAGTGCAAAAATTGATTATGATGACGAAATGGCTTACAGTGAATCACAATTAATTGCGAAATTTGGTACAGCATTTAAAGCTGTAAATAATAGCTTGAATGTAAACTTCGGCGCAATCAGTGAAGGGAAAATGCAAGAAGAAGTCATTAGTTTTAAACAAATTTACTATAACGTGAATGTTAATGAACCTACAAGACCTTCCAGATTTTTCGGCAAAGCTGTTACTAAAGAGCAGTTGCAAGCGCTTGGAGTGAATGCAGAAAATCCTCCTGCATATATCTCAAGTGTGGCGTATGGCCGTCAAGTTTATTTGAAATTATCAACTAATTCCCATAGTACTAAAGTAAAAGCTGCTTTTGATGCTGCCGTAAGCGGAAAATCTGTCTCAGGTGATGTAGAACTAACAAATATCATCAAAAATTCTTCCTTCAAAGCCGTAATTTACGGAGGTTCCGCAAAAGATGAAGTTCAAATCATCGACGGCAACCTCGGAGACTTACGCGATATTTTGAAAAAAGGCGCTACTTTTAATCGAGAAACACCAGGAGTTCCCATTGCTTATACAACAAACTTCCTAAAAGACAATGAATTAGCTGTTATTAAAAACAACTCAGAATATATTGAAACAACTTCAAAAGCTTATACAGATGGAAAAATTAACATCGATCACTCTGGAGGATACGTTGCTCAATTCAACATTTCTTGGGATGAAGTAAATTATGATCCTGAAGGTAACGAAATTGTTCAACATAAAAACTGGAGCGAAAACAATAAAAGCAAGCTAGCTCATTTCACATCGTCCATCTATTTGCCAGGTAACGCGAGAAATATTAATGTTTACGCTAAAGAATGCACTGGTTTAGCTTGGGAATGGTGGAGAACGGTAATTGATGACCGGAACTTACCACTTGTGAAAAATAGAAATATCTCCATCTGGGGCACCACGCTTTATCCGAAATATAGTAATAAAGTAGATAATCCAATCGAATAA"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "benchmark_versions": {
+      "bds-listeria": "1.0.0"
+    },
+    "benchmark_sources": {
+      "bds-listeria-1.0.0.zip": "\"0x8DF293013C70120\""
+    },
+    "validator_version": "0.0.3.5",
+    "gene_target": "HLY",
+    "reference_panel": "BDS-Listeria",
+    "reference_panel_key": "bds-listeria",
+    "summary_file": "pk473_summary.json",
+    "totals_file": "pk473_totals.json",
+    "workbook_file": "pk473_summary_report.xlsx",
+    "archive_file": "{container}_reports.zip",
+    "workbook_sheets": {
+      "PrimerVerifierResults": ["PANEL", "BENCHMARK PANEL", "SEQID"],
+      "Pseudoalignments": ["PANEL", "SEQID", "Primer"],
+      "GeneCategoryAudit": []
+    },
+    "required_report_files": [
+      "inclusivity_probe_report.xlsx",
+      "{container}_summary_report.json",
+      "inclusivity_exclusivity_report.json",
+      "inclusivity_primer_missing_report.xlsx",
+      "inclusivity_probe_missing_report.xlsx",
+      "inclusivity_primer_report.xlsx",
+      "{container}_summary_report.xlsx",
+      "gene_category_evaluation.json",
+      "gene_category_evaluation.tsv"
+    ]
+  }
+}

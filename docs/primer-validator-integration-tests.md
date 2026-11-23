@@ -24,6 +24,18 @@ PRIMER_VALIDATOR_INTEGRATION_ENABLED=true \
     --scenario pk473 --run-batch
 ```
 
+For the primer, probe, **and gene-target** regression, use
+`--scenario pk473_gene` instead. It uses only the BDS-Listeria 1.0.0
+inclusivity archive (approximately 196 MB compressed) and the Listeria
+monocytogenes EGD-e hly coding sequence (NCBI Gene 987033,
+NC_003210.1:205819–207408). It verifies that both Batch tasks complete, a
+normalized HLY hit and workbook match values exist, and gene-category JSON,
+TSV and workbook audit outputs agree with the stored results. It compares all
+non-gene workbook cells for BDS-Listeria against the original pk473 reference, along with
+that panel's summary and totals. Since the input panels differ, the original
+full-report fingerprint and combined totals do not apply. Gene-dependent
+cells are checked structurally, not against a reviewed golden result.
+
 If the VM labels the environment `PROD`, an additional explicit confirmation
 is required. Only use this when the VM is intentionally authorized to submit
 integration jobs to that Batch service:
@@ -36,9 +48,10 @@ PRIMER_VALIDATOR_INTEGRATION_ENABLED=true \
 
 The run can take up to two hours by default. Override the wait and polling
 interval with `--timeout` and `--poll-interval`. By default, the request and
-its output container are deleted after any terminal result, whether comparison
-passes or fails. Add `--keep` to retain them for diagnosis. Timed-out runs are
-retained because Batch work may still be active.
+its output container are deleted after a terminal result only when all tracked
+Batch jobs have finished and their resources were cleaned up. Add `--keep` to
+retain them for diagnosis. Runs are retained when work may still be active or
+resource cleanup has not been confirmed.
 
 ## Updating the workflow or reference
 

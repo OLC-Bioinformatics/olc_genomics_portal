@@ -1,6 +1,7 @@
 """Tests for the data-driven Primer Validator integration baseline."""
 
 from io import BytesIO
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -10,7 +11,7 @@ from unittest.mock import Mock, patch
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, override_settings
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from olc_webportalv2.primer_finder.integration import (
     compare_workbooks,
@@ -112,3 +113,156 @@ class PrimerValidatorIntegrationFixtureTests(SimpleTestCase):
         self.assertTrue(
             any("RESULT" in difference for difference in differences)
         )
+
+    def test_gene_scenario_contains_reference_and_baseline_artifacts(self):
+        scenario_path, scenario = load_scenario("pk473_gene")
+        target = scenario["input"]["samples"][0]["targets"][0]
+        self.assertEqual(len(target["gene_sequence"]), 1590)
+        self.assertEqual(scenario["expected"]["gene_target"], target["name"])
+        self.assertEqual(scenario["input"]["inclusivity_panel"], ["bds-listeria"])
+        self.assertEqual(scenario["input"]["exclusivity_panel"], [])
+        Command._validate_fixture_files(scenario_path, scenario["expected"])
+
+    def test_reference_projection_requires_all_bds_rows_only(self):
+        baseline = Workbook()
+        baseline.active.title = "PrimerVerifierResults"
+        baseline.active.append(["PANEL", "BENCHMARK PANEL", "SEQID", "result"])
+        baseline.active.append(["INCLUSIVITY", "BDS-Listeria", "bds", "pass"])
+        baseline.active.append(["INCLUSIVITY", "Listeria", "other", "pass"])
+        baseline.active.append(["EXCLUSIVITY", "Other", "excluded", "pass"])
+        pseudo = baseline.create_sheet("Pseudoalignments")
+        pseudo.append(["PANEL", "SEQID", "Primer"])
+        pseudo.append(["INCLUSIVITY", "bds", "HLY"])
+        pseudo.append(["INCLUSIVITY", "other", "HLY"])
+        actual = Workbook()
+        actual.active.title = "PrimerVerifierResults"
+        actual.active.append(["PANEL", "BENCHMARK PANEL", "SEQID", "result"])
+        actual.active.append(["INCLUSIVITY", "BDS-Listeria", "bds", "pass"])
+        pseudo = actual.create_sheet("Pseudoalignments")
+        pseudo.append(["PANEL", "SEQID", "Primer"])
+        pseudo.append(["INCLUSIVITY", "bds", "HLY"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "baseline.xlsx"
+            baseline.save(path)
+            output = BytesIO()
+            actual.save(output)
+            options = {
+                "expected_path": path,
+                "actual_content": output.getvalue(),
+                "sheet_keys": {
+                    "PrimerVerifierResults": ["PANEL", "BENCHMARK PANEL", "SEQID"],
+                    "Pseudoalignments": ["PANEL", "SEQID", "Primer"],
+                },
+                "reference_panel": "BDS-Listeria",
+            }
+            self.assertEqual(compare_workbooks(**options), (0, []))
+            actual.active.delete_rows(2)
+            output = BytesIO()
+            actual.save(output)
+            options["actual_content"] = output.getvalue()
+            self.assertGreater(compare_workbooks(**options)[0], 0)
+
+    def test_workbook_projection_preserves_baseline_comparison(self):
+        expected = Workbook()
+        expected.active.title = "PrimerVerifierResults"
+        expected.active.append(["SEQID", "result"])
+        expected.active.append(["isolate", "pass"])
+        expected.create_sheet("GeneCategoryAudit").append(["report"])
+        actual = Workbook()
+        actual.active.title = "PrimerVerifierResults"
+        actual.active.append(["SEQID", "result", "gene match"])
+        actual.active.append(["isolate", "pass", 99.0])
+        audit = actual.create_sheet("GeneCategoryAudit")
+        audit.append(["report"])
+        audit.append(["isolate"])
+        output = BytesIO()
+        actual.save(output)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "baseline.xlsx"
+            expected.save(path)
+            options = {
+                "expected_path": path,
+                "actual_content": output.getvalue(),
+                "sheet_keys": {"PrimerVerifierResults": ["SEQID"]},
+                "actual_extra_columns": {"PrimerVerifierResults": ["gene match"]},
+                "header_only_sheets": ["GeneCategoryAudit"],
+            }
+            self.assertEqual(compare_workbooks(**options), (0, []))
+            actual.active["B2"] = "fail"
+            output = BytesIO()
+            actual.save(output)
+            options["actual_content"] = output.getvalue()
+            self.assertGreater(compare_workbooks(**options)[0], 0)
+
+    def test_gene_checks_require_completed_jobs_and_actual_results(self):
+        workbook = Workbook()
+        workbook.active.title = "PrimerVerifierResults"
+        workbook.active.append(["SEQID", "Gene Sequence Percent Match  HLY"])
+        workbook.active.append(["isolate", 99.0])
+        workbook.create_sheet("GeneCategoryAudit").append(["report"])
+        output = BytesIO()
+        workbook.save(output)
+        hits = [{
+            "target": "HLY__HLY", "identity": "99",
+            "report": "isolate_blastn_geneseekr.tsv",
+        }]
+        reports = {"isolate_blastn_geneseekr.tsv": "gene result"}
+        request = SimpleNamespace(
+            analysis_tasks=SimpleNamespace(
+                values_list=Mock(return_value=[("primer", "complete"), ("gene", "complete")])
+            ),
+            gene_report=json.dumps(reports),
+            gene_results=hits,
+            gene_exclusion_results={},
+            gene_exclusion_details={},
+        )
+        evaluation = {
+            "normalized_hits": hits, "categories": {},
+            "category_details": {}, "gene_reports": reports,
+        }
+        storage = Mock()
+        storage.download_bytes.side_effect = [
+            json.dumps(evaluation).encode(), b"report\ttarget\tcategory\n"
+        ]
+        options = {
+            "request": request, "storage": storage, "container_name": "test",
+            "workbook_content": output.getvalue(), "target": "HLY",
+        }
+        Command._check_gene_results(**options)
+        workbook.active["B2"] = 42
+        output = BytesIO()
+        workbook.save(output)
+        options["workbook_content"] = output.getvalue()
+        storage.download_bytes.side_effect = [
+            json.dumps(evaluation).encode(), b"report\ttarget\tcategory\n"
+        ]
+        with self.assertRaisesRegex(AssertionError, "consistent with a stored hit"):
+            Command._check_gene_results(**options)
+        request.analysis_tasks.values_list.return_value = [("primer", "complete")]
+        with self.assertRaisesRegex(AssertionError, "both complete"):
+            Command._check_gene_results(**options)
+        request.analysis_tasks.values_list.return_value = [
+            ("primer", "complete"), ("gene", "complete")
+        ]
+        request.gene_results = []
+        with self.assertRaisesRegex(AssertionError, "no normalized hit"):
+            Command._check_gene_results(**options)
+
+    def test_cleanup_waits_for_every_job_and_resource(self):
+        tasks = Mock()
+        request = SimpleNamespace(status="Error", analysis_tasks=tasks)
+        tasks.values_list.return_value = [
+            ("primer", "error", ""), ("gene", "submitted", "gene-job")
+        ]
+        required = {"primer", "gene"}
+        self.assertFalse(Command._batch_resources_cleaned(request, required_task_types=required))
+        tasks.values_list.return_value = [
+            ("primer", "error", ""), ("gene", "complete", "gene-job")
+        ]
+        self.assertFalse(Command._batch_resources_cleaned(request, required_task_types=required))
+        tasks.values_list.return_value = [("primer", "error", ""), ("gene", "complete", "")]
+        self.assertTrue(Command._batch_resources_cleaned(request, required_task_types=required))
+        tasks.values_list.return_value = [("primer", "complete", "")]
+        self.assertFalse(Command._batch_resources_cleaned(request, required_task_types=required))
+        tasks.values_list.return_value = []
+        self.assertFalse(Command._batch_resources_cleaned(request, required_task_types=required))
