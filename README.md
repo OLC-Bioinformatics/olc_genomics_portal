@@ -156,8 +156,10 @@ its health endpoint; verifies the portal image can run as a non-root user; and
 runs the RAG test suite. These tests do not submit jobs to Azure Batch or use
 production storage or databases.
 
-GitHub rulesets require a pull request and a passing `Foodport-CI` check for
-`dev` and `main`. CI also runs on `foodport` for hotfix validation.
+GitHub rulesets protect `main`, requiring a pull request and a passing
+`Foodport-CI` check before merge. CI also runs on `dev` pushes for fast
+feedback; `dev` is not a protected branch. The `foodport` branch is reserved
+for production-VM hotfix validation.
 
 Python dependency inputs use `.in` files; the corresponding `.txt` files are
 generated, hash-locked requirements. Regenerate them with
@@ -216,9 +218,9 @@ checkout also persists credentials for that repo so the task can use the repo ac
 
 ## Branch and pull request workflow
 
-GitHub rulesets protect `dev` and `main`: changes must come through a pull
-request, and the `Foodport-CI` check must pass before merge. Create feature
-branches from `dev` and open pull requests back to `dev`:
+`main` is protected by GitHub rulesets: changes must come through a pull
+request, and the `Foodport-CI` check must pass before merge. `dev` accepts
+direct pushes and runs CI for feedback. Create feature branches from `dev`:
 
 ```bash
 git switch dev
@@ -228,11 +230,10 @@ git switch -c my-feature-branch
 git push -u origin my-feature-branch
 ```
 
-After review and CI pass, merge the pull request. Promote tested changes from
-`dev` to `main` with a separate pull request. The `foodport` branch is reserved
-for production-VM hotfix work; CI runs on it as well. After a hotfix, bring the
-fix back into `dev` and `main` through pull requests so it is not lost in later
-promotions.
+Push completed changes to `dev`, then promote tested changes from `dev` to
+`main` with a pull request. The `foodport` branch is reserved for
+production-VM hotfix work; CI runs on it as well. After a hotfix, bring the fix
+back into `dev` and `main` so it is not lost in later promotions.
 
 ## Azure DevOps pipeline usage
 
