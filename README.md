@@ -1,6 +1,6 @@
 # FoodPort Genomics Portal
 
-[![Foodport-CI (dev)](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_apis/build/status/1064?branchName=refs/heads/dev)](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_build/latest?definitionId=1064&branchName=refs/heads/dev)
+[![Build Status](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_apis/build/status%2FFoodport-CI?branchName=dev)](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_build/latest?definitionId=1064&branchName=dev)
 
 A web portal for accessing CFIA genomic data, with some tools included.
 
