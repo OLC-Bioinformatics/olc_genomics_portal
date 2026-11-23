@@ -1,5 +1,7 @@
 # FoodPort Genomics Portal
 
+[![Foodport-CI (dev)](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_apis/build/status/1064?branchName=refs/heads/dev)](https://dev.azure.com/CFIA-DevOps-ACIA/FoodPort/_build/latest?definitionId=1064&branchName=refs/heads/dev)
+
 A web portal for accessing CFIA genomic data, with some tools included.
 
 The portal runs with Docker Compose. Django and Celery use internal Batch and
@@ -85,14 +87,9 @@ in an older Redis container is not automatically migrated to this volume, so
 plan the initial upgrade around pending work. Preserve the volume during routine
 redeploys; `docker compose down -v` removes it.
 
-Flower is set up to use some basic authentication - you can either a username/password in your `docker-compose.yml` by 
-changing `$FLOWER_USER` and `$FLOWER_PASSWORD`, or you can just set the environmental variables 
-before booting the portal.
-
-```
-export FLOWER_USER=a_flower_username
-export FLOWER_PASSWORD=a_flower_password
-```
+Compose publishes Flower on host port `8888` without configuring
+authentication. Restrict access to this port with the host firewall or an
+authenticated reverse proxy; do not expose the dashboard publicly as-is.
 
 #### Deployment
 
@@ -117,7 +114,7 @@ Run the Django test suite with its PostgreSQL test database:
 ```bash
 docker compose -p foodport-tests \
   -f docker-compose-test.yml \
-  run --rm test-runner
+  run --build --rm test-runner
 ```
 
 The browser-test overlay runs the Selenium tests and checks that representative
@@ -131,7 +128,7 @@ Run the browser and Nginx tests with an isolated Compose project:
 docker compose -p foodport-browser-tests \
   -f docker-compose-test.yml \
   -f docker-compose-browser-test.yml \
-  up --abort-on-container-exit --exit-code-from test-runner test-runner
+  up --build --abort-on-container-exit --exit-code-from test-runner test-runner
 ```
 
 Use `up` for this overlay so the test runner has the network alias required by
@@ -147,11 +144,20 @@ docker compose -p foodport-browser-tests \
 
 ## Continuous integration
 
-`azure-pipelines-ci.yml` runs the Django checks and tests, compiles translations,
-and runs the browser/static-asset tests on pushes to `main` and `dev`. For
-Azure Repos, configure a Build validation branch policy for this pipeline on
-each protected target branch; YAML `pr` triggers alone do not enable PR
-validation in Azure Repos.
+The **Foodport-CI** Azure Pipeline (ID `1064`) runs on pushes to and pull
+requests targeting `main`, `dev`, and `foodport`. The badge above shows the
+latest CI status for `dev`.
+
+CI runs the Django test suite against an isolated PostgreSQL service, checks
+dependency locks and critical Flake8 errors, compiles translations, and runs
+browser-driven Selenium tests plus HTTP checks for static assets. It builds
+the web, Batch, Storage, Redmine, Nginx, and RAG images; starts Batch and checks
+its health endpoint; verifies the portal image can run as a non-root user; and
+runs the RAG test suite. These tests do not submit jobs to Azure Batch or use
+production storage or databases.
+
+GitHub rulesets require a pull request and a passing `Foodport-CI` check for
+`dev` and `main`. CI also runs on `foodport` for hotfix validation.
 
 Python dependency inputs use `.in` files; the corresponding `.txt` files are
 generated, hash-locked requirements. Regenerate them with
@@ -208,110 +214,32 @@ Pipeline settings > Resources > Repositories, or via the repo resource permissio
 If you later need to run git commands against the checked-out `foodport-tf` repo from script tasks, the pipeline
 checkout also persists credentials for that repo so the task can use the repo access token.
 
-## Branch-based update workflow
+## Branch and pull request workflow
 
-Because `main` is protected, use a branch-based workflow for repository changes:
-
-1. Create a new branch from `main`:
-
-```bash
-git checkout -b my-feature-branch
-```
-
-2. Make your changes and commit them:
+GitHub rulesets protect `dev` and `main`: changes must come through a pull
+request, and the `Foodport-CI` check must pass before merge. Create feature
+branches from `dev` and open pull requests back to `dev`:
 
 ```bash
-git add .
-git commit -m "Describe the change"
-```
-
-3. Push the branch upstream:
-
-```bash
+git switch dev
+git pull --ff-only origin dev
+git switch -c my-feature-branch
+# Make and commit changes.
 git push -u origin my-feature-branch
 ```
 
-4. Open a pull request from `my-feature-branch` into `main`.
-
-5. Review, merge, and delete the branch when the PR is accepted.
-
-6. Update your local `main`:
-
-```bash
-git checkout main
-git pull origin main
-```
-
-This workflow ensures you can continue making changes without pushing directly to protected `main`.
-
-### If you forgot to create the branch first
-
-If you started working on `main` by mistake, you can still move your work to a branch.
-
-#### Case A: you have uncommitted changes
-
-```bash
-git checkout -b my-feature-branch
-git add .
-git commit -m "Describe the change"
-git push -u origin my-feature-branch
-```
-
-Then open the PR from `my-feature-branch` into `main`.
-
-This creates a branch from your current `main` state and preserves your uncommitted edits.
-
-#### Case B: you already committed on `main`
-
-If your commits are only on your local `main`, create the branch from the current state and push it:
-
-```bash
-git checkout -b my-feature-branch
-git push -u origin my-feature-branch
-```
-
-Then open the PR from `my-feature-branch` into `main`.
-
-Once your work is safely on the branch and pushed, switch back to `main` and reset it to match remote:
-
-```bash
-git checkout main
-git fetch origin
-git reset --hard origin/main
-```
-
-Use `git reset --hard` only after you have pushed or otherwise saved your work, because it discards local commits and changes.
-
-If you need to preserve any local work before cleaning `main`, use `git stash` first:
-
-```bash
-git stash push -m "work in progress"
-git checkout -b my-feature-branch
-git stash pop
-```
-
-Then commit and push from the new branch.
-
-#### Removing a local branch after GitHub deletion
-
-If the branch has already been deleted on GitHub, cleanup locally with:
-
-```bash
-git fetch --prune origin
-git branch -d my-feature-branch
-```
-
-If Git warns the branch is not fully merged and you still want to delete it:
-
-```bash
-git branch -D my-feature-branch
-```
+After review and CI pass, merge the pull request. Promote tested changes from
+`dev` to `main` with a separate pull request. The `foodport` branch is reserved
+for production-VM hotfix work; CI runs on it as well. After a hotfix, bring the
+fix back into `dev` and `main` through pull requests so it is not lost in later
+promotions.
 
 ## Azure DevOps pipeline usage
 
-The current deployment pipelines are registered in the **FoodPort** Azure
-DevOps project. This inventory was checked on 2026-10-30:
+The portal deployment and CI pipelines are registered in the **FoodPort** Azure
+DevOps project. Their IDs were checked on 2026-11-23:
 
+- `Foodport-CI` (ID 1064) uses this repository's `azure-pipelines-ci.yml`.
 - `FoodPort-dev-VM` (ID 978) uses this repository's `azure-pipelines-dev.yml`.
 - `FoodPort-full-infra` (ID 979) uses this repository's `azure-pipelines-full-infra.yml`.
 - `FoodPort-update-portal` (ID 968) uses `azure-pipelines-update.yml`.
