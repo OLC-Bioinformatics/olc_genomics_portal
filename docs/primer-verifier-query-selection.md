@@ -20,3 +20,16 @@ and expanded when the request runs.
 PrimerVerifier also supports minimum and maximum amplicon sizes, a maximum
 mismatch count, optional multi-contig searches, and a range buffer. These
 controls are validated by the request form before the job is submitted.
+
+Each new request submits independent primer and GeneSeekr Batch jobs. Their
+reports are combined after both jobs finish. New Verifier storage containers
+use a separate `primer-verifier-v2-<id>` namespace to avoid collisions with
+legacy Validator containers.
+
+Before deploying this change against a shared database, drain running Verifier
+jobs and coordinate the rollout of all workers: older workers do not use the
+same completion lock. Legacy jobs whose possible container names collide with
+another request require manual review; the monitor will not guess which job
+or container to finalize. Previously saved download URLs are not rewritten.
+No new migration is introduced; confirm the existing Verifier analysis-task
+table is present before deploying.

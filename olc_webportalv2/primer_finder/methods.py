@@ -11,7 +11,7 @@ import logging
 import os
 import shutil
 import tempfile
-from typing import Any, Dict, Tuple, Type, Union
+from typing import Any, Dict, Optional, Tuple, Type, Union
 
 # Third-party imports
 import xlsxwriter
@@ -349,7 +349,8 @@ def retrieve_panel_seqids(
 
 def populate_report(
     *,  # Ensure that the following arguments are keyword arguments
-    request: Type[Union[PrimerVerifierRequest, ValidatorRequest]],
+    request: Union[PrimerVerifierRequest, ValidatorRequest],
+    container_name: Optional[str] = None,
 ) -> Tuple[Union[PrimerVerifierRequest, ValidatorRequest], str]:
     """
     Download the JSON-formatted report from blob storage, parse it, and store
@@ -363,7 +364,7 @@ def populate_report(
             report folder.
     """
     try:
-        container_name = request.container_namer()
+        container_name = container_name or request.container_namer()
         run_folder = os.path.join(
             'olc_webportalv2', 'media', f'{container_name}'
         )
@@ -601,6 +602,7 @@ def sort_mismatch_details(
 def create_blob_from_summary(
     *,  # Ensure that the following arguments are keyword arguments
     request: PrimerVerifierRequest,
+    container_name: Optional[str] = None,
 ) -> None:
     """
     Creates a blob from the summary report in Azure Blob Storage.
@@ -608,11 +610,11 @@ def create_blob_from_summary(
     :param request: PrimerVerifierRequest object
     """
     blob_client = get_storage_client()
-    container_name = request.container_namer()
+    container_name = container_name or request.container_namer()
     blob_client.upload_bytes(
         container_name,
         os.path.join(
-            'reports', f'{request.container_namer()}_summary_report.json'
+            'reports', f'{container_name}_summary_report.json'
         ),
         request.summary.encode('utf-8'),
     )
@@ -622,9 +624,10 @@ def create_details(
     *,  # Ensure that the following arguments are keyword arguments
     panel_model: Type[Union[VerifierPanel, ValidatorPanel]],
     primer_set_model: Type[Union[VerifierPrimerSet, ValidatorPrimerSet]],
-    request: Type[Union[PrimerVerifierRequest, ValidatorRequest]],
+    request: Union[PrimerVerifierRequest, ValidatorRequest],
     analysis: str = 'verifier',
-) -> Type[Union[PrimerVerifierRequest, ValidatorRequest]]:
+    container_name: Optional[str] = None,
+) -> Union[PrimerVerifierRequest, ValidatorRequest]:
     """
     Parses the report to extract panel- and genus-specific details.
 
@@ -662,7 +665,7 @@ def create_details(
 
     # Populate seq_dict for each genus
     run_folder = os.path.join(
-        'olc_webportalv2', 'media', f'{request.container_namer()}'
+        'olc_webportalv2', 'media', container_name or request.container_namer()
     )
 
     seq_dict = {}
@@ -861,7 +864,10 @@ def create_details(
     request.save()
 
     # Create a blob from the summary report
-    create_blob_from_summary(request=request)
+    if container_name:
+        create_blob_from_summary(request=request, container_name=container_name)
+    else:
+        create_blob_from_summary(request=request)
 
     return request
 

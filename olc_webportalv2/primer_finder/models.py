@@ -99,9 +99,9 @@ class PrimerVerifierRequest(models.Model):
 
     def container_namer(self):
         """
-        Returns the container name for the primer validator request.
+        Returns the container name for the primer verifier request.
         """
-        return 'primer-validator-' + str(self.pk)
+        return 'primer-verifier-v2-' + str(self.pk)
 
 
 # Inclusivity/exclusivity panel choices

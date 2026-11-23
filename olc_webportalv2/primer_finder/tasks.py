@@ -19,11 +19,17 @@ from typing import Any, Tuple
 # Third-party imports
 from Bio import SeqIO
 from celery import shared_task
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # Django imports
 from olc_webportalv2.common.batch_client import BatchServiceError
-from olc_webportalv2.common.batch_recovery import batch_pool_id_from_job_id
+from olc_webportalv2.common.batch_recovery import (
+    batch_pool_id_from_job_id,
+    retry_failed_pool_resize,
+)
 from olc_webportalv2.common.email_i18n import recipient_language
 from olc_webportalv2.common.benchmarks import (
     benchmark_archive_info,
@@ -55,6 +61,7 @@ from olc_webportalv2.primer_finder.models import (
     ValidatorPrimerSet,
     ValidatorRequest,
     ValidatorTarget,
+    VerifierAnalysisTask,
     VerifierAzureRequest,
     VerifierPanel,
     VerifierPrimerSet,
@@ -87,6 +94,9 @@ def run_primer_verifier(
             request_pk=verifier_request_pk,
         )
     except Exception as exc:
+        VerifierAnalysisTask.objects.filter(
+            verifier_request_id=verifier_request_pk, status='pending'
+        ).update(status='error', error=str(exc))
         _handle_primer_error(
             exception=exc,
             request_model=PrimerVerifierRequest,
@@ -141,38 +151,90 @@ def _process_primer_request(*, request_model: Any, request_pk: int):
         container_name=container_name, blob_names=input_blob_names
     )
 
-    # Set the path to the mounted container in the Azure Batch VM. The mount
-    # remains in use for copying outputs back to Azure Blob Storage.
-    path = f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}'
+    primer_task, _ = VerifierAnalysisTask.objects.get_or_create(
+        verifier_request=primer_request, task_type='primer'
+    )
+    gene_task, _ = VerifierAnalysisTask.objects.get_or_create(
+        verifier_request=primer_request, task_type='gene'
+    )
+    for analysis_task in (primer_task, gene_task):
+        if analysis_task.status != 'pending':
+            raise RuntimeError(
+                f'Verifier {analysis_task.task_type} task already exists '
+                f'with status {analysis_task.status}.'
+            )
+        analysis_task.input_manifest = input_blobs
+        analysis_task.save(update_fields=['input_manifest'])
 
-    # Create the PrimerValidator system call after all input blobs have been
-    # prepared and their SAS URLs generated.
-    cmd = _create_primer_cmd(
-        container_name=container_name,
+    large_benchmark = any(
+        posixpath.basename(str(name)).lower().startswith('ncbi-')
+        and str(name).lower().endswith('.zip')
+        for name in input_blob_names
+    )
+    primer_vm_size = getattr(
+        settings,
+        'PRIMER_VERIFIER_LARGE_PRIMER_VM_SIZE' if large_benchmark
+        else 'PRIMER_VERIFIER_DEFAULT_PRIMER_VM_SIZE',
+        'Standard_D16ds_v5' if large_benchmark else 'Standard_D4ds_v5',
+    )
+    gene_vm_size = getattr(
+        settings,
+        'PRIMER_VERIFIER_LARGE_GENE_VM_SIZE' if large_benchmark
+        else 'PRIMER_VERIFIER_DEFAULT_GENE_VM_SIZE',
+        'Standard_D16ds_v5' if large_benchmark else 'Standard_D8s_v3',
+    )
+    primer_command = _create_primer_cmd(
+        container_name=f'{container_name}-primer',
         file_name=file_name,
         input_blobs=input_blobs,
-        path=path,
+        path=f'$AZ_BATCH_NODE_MOUNTS_DIR/{container_name}',
         request=primer_request,
     )
-
-    # Submit the command to the Azure Batch service.
-    generic_api_submit(
-        command=cmd,
+    gene_command = _create_validator_gene_task_command(
+        request=primer_request,
         container_name=container_name,
-        input_file_pattern=None,
-        vm_size='Standard_D4ds_v5',
-        unique_id='FoodPort',
+        input_blobs=input_blobs,
+        primer_file_name=file_name,
+    )
+    _submit_verifier_task(
+        request=primer_request, analysis_task=primer_task,
+        command=primer_command, vm_size=primer_vm_size,
+    )
+    _submit_verifier_task(
+        request=primer_request, analysis_task=gene_task,
+        command=gene_command, vm_size=gene_vm_size,
     )
 
-    # Create the appropriate AzureRequest tracking row.
-    if request_model == PrimerVerifierRequest:
-        VerifierAzureRequest.objects.create(
-            verifier_request=primer_request, exit_code_file='NA'
+
+def _submit_verifier_task(*, request, analysis_task, command, vm_size):
+    """Submit and persist one Verifier analysis job."""
+    try:
+        submission = generic_api_submit(
+            command=command,
+            container_name=request.container_namer(),
+            vm_size=vm_size,
+            unique_id=analysis_task.task_type,
+            log_prefix=analysis_task.task_type,
         )
-    else:
-        PrimerValidatorAzureRequest.objects.create(
-            validator_request=primer_request, exit_code_file='NA'
-        )
+        if (
+            not isinstance(submission, dict)
+            or submission.get('status') != 'Success'
+            or not submission.get('job_id')
+            or not submission.get('tasks')
+        ):
+            raise RuntimeError(f'Verifier Batch submission failed: {submission}')
+    except Exception as exc:
+        analysis_task.status = 'error'
+        analysis_task.error = str(exc)
+        analysis_task.save(update_fields=['status', 'error'])
+        raise
+    analysis_task.batch_job_id = submission['job_id']
+    analysis_task.batch_task_id = submission['tasks'][0]
+    analysis_task.status = 'submitted'
+    analysis_task.error = ''
+    analysis_task.save(
+        update_fields=['batch_job_id', 'batch_task_id', 'status', 'error']
+    )
 
 
 def _create_primer_cmd(
@@ -672,8 +734,166 @@ def check_verifier_tasks():
     # Create a batch client
     batch_client = create_batch_client()
 
+    for analysis_task in VerifierAnalysisTask.objects.filter(
+        status='submitted'
+    ).select_related('verifier_request'):
+        _process_verifier_analysis_task(
+            batch_client=batch_client, task=analysis_task
+        )
+
+    for analysis_task in (
+        VerifierAnalysisTask.objects.filter(status__in=('complete', 'error'))
+        .exclude(batch_job_id='')
+        .select_related('verifier_request')
+    ):
+        if _delete_validator_batch_resources(
+            batch_client=batch_client, job_id=analysis_task.batch_job_id
+        ):
+            analysis_task.batch_job_id = ''
+            analysis_task.batch_task_id = ''
+            analysis_task.save(update_fields=['batch_job_id', 'batch_task_id'])
+
     for task in verifier_tasks:
         _process_verifier_task(batch_client=batch_client, task=task)
+
+
+def _process_verifier_analysis_task(*, batch_client, task):
+    """Poll a focused Verifier job and finalize only after both jobs finish."""
+    try:
+        recovery = retry_failed_pool_resize(
+            batch_client=batch_client,
+            pool_id=batch_pool_id_from_job_id(task.batch_job_id),
+        )
+        if recovery.get('action') in (
+            'resize_retried', 'retry_throttled', 'resize_in_progress'
+        ):
+            return
+        if recovery.get('action') in (
+            'non_retryable_resize_error', 'inspection_failed',
+            'resize_request_failed', 'unsupported_allocation_state',
+        ):
+            logger.error(
+                'Verifier Batch pool recovery requires attention: '
+                'request=%s task=%s result=%s',
+                task.verifier_request_id, task.task_type, recovery,
+            )
+        cloud_tasks = list(batch_client.task.list(task.batch_job_id))
+    except Exception:
+        logger.exception(
+            'Unable to poll Verifier Batch task %s for request %s',
+            task.task_type, task.verifier_request_id,
+        )
+        return
+    if not cloud_tasks or any(item.state != 'completed' for item in cloud_tasks):
+        return
+    exit_codes = [
+        getattr(item.execution_info, 'exit_code', None) for item in cloud_tasks
+    ]
+    successful = all(code == 0 for code in exit_codes)
+    try:
+        with transaction.atomic():
+            request = PrimerVerifierRequest.objects.select_for_update().get(
+                pk=task.verifier_request_id
+            )
+            task.refresh_from_db()
+            if task.status != 'submitted':
+                return
+            task.status = 'complete' if successful else 'error'
+            task.error = '' if successful else (
+                f'Batch task failed or lacked exit codes: {exit_codes}'
+            )
+            task.save(update_fields=['status', 'error'])
+            if not successful:
+                request.status = 'Error'
+                request.errors = task.error
+                request.save(update_fields=['status', 'errors'])
+            tasks = list(request.analysis_tasks.all())
+            if (
+                {item.task_type for item in tasks} == {'primer', 'gene'}
+                and all(
+                    item.status not in ('pending', 'submitted')
+                    for item in tasks
+                )
+            ):
+                if any(item.status == 'error' for item in tasks):
+                    _handle_failed_verifier_run(verifier_request=request)
+                else:
+                    suffixes = (
+                        f'-{task.task_type}-job',
+                        f'-{task.task_type}',
+                    )
+                    container_name = next(
+                        (
+                            task.batch_job_id[:-len(suffix)]
+                            for suffix in suffixes
+                            if task.batch_job_id.endswith(suffix)
+                        ),
+                        None,
+                    )
+                    if container_name not in (
+                        request.container_namer(),
+                        f'primer-verifier-{request.pk}',
+                    ):
+                        raise ValueError(
+                            f'Unrecognized Verifier job ID: {task.batch_job_id}'
+                        )
+                    validator = ValidatorRequest.objects.filter(
+                        pk=request.pk
+                    ).first()
+                    if validator and validator.container_namer() == container_name:
+                        raise RuntimeError(
+                            'Verifier and Validator share a legacy container; '
+                            'resolve manually.'
+                        )
+                    _handle_successful_verifier_run(
+                        batch_job_name=container_name,
+                        verifier_request=request,
+                    )
+    except Exception as exc:
+        request = task.verifier_request
+        task.status = 'error'
+        task.error = f'Verifier report finalization failed: {exc}'
+        task.save(update_fields=['status', 'error'])
+        request.status = 'Error'
+        request.errors = task.error
+        request.save(update_fields=['status', 'errors'])
+        logger.exception('Verifier finalization failed for request %s', request.pk)
+    finally:
+        if task.batch_job_id and _delete_validator_batch_resources(
+            batch_client=batch_client, job_id=task.batch_job_id
+        ):
+            task.batch_job_id = ''
+            task.batch_task_id = ''
+            task.save(update_fields=['batch_job_id', 'batch_task_id'])
+
+
+def _legacy_verifier_job(*, batch_client, request):
+    """Resolve legacy production and dev job names without guessing."""
+    candidates = (
+        f'primer-verifier-{request.pk}', f'primer-validator-{request.pk}'
+    )
+    found = []
+    for job_id in candidates:
+        try:
+            tasks = list(batch_client.task.list(job_id))
+        except BatchServiceError as exc:
+            if exc.status_code == 404:
+                continue
+            raise
+        found.append((job_id, tasks))
+    if len(found) > 1:
+        raise RuntimeError(
+            f'Ambiguous legacy Verifier jobs for request {request.pk}; '
+            'resolve the jobs manually before finalization.'
+        )
+    if found:
+        validator = ValidatorRequest.objects.filter(pk=request.pk).first()
+        if validator and validator.container_namer() == found[0][0]:
+            raise RuntimeError(
+                f'Legacy Verifier request {request.pk} shares its container '
+                'name with a Validator request; resolve manually.'
+            )
+    return found[0] if found else (None, [])
 
 
 def _process_verifier_task(
@@ -692,18 +912,14 @@ def _process_verifier_task(
         verifier_request = PrimerVerifierRequest.objects.get(
             pk=task.verifier_request.pk
         )
-        batch_job_name = verifier_request.container_namer()
-        tasks_completed = _check_tasks_completed(
-            batch_client=batch_client, batch_job_name=batch_job_name
+        batch_job_name, cloud_tasks = _legacy_verifier_job(
+            batch_client=batch_client, request=verifier_request
         )
-
-        if tasks_completed:
-            exit_codes_good = _check_exit_codes(
-                batch_client=batch_client, batch_job_name=batch_job_name
+        if cloud_tasks and all(item.state == 'completed' for item in cloud_tasks):
+            exit_codes_good = all(
+                getattr(item.execution_info, 'exit_code', None) == 0
+                for item in cloud_tasks
             )
-            batch_client.job.delete(job_id=batch_job_name)
-            batch_client.pool.delete(pool_id=batch_job_name)
-
             if exit_codes_good:
                 _handle_successful_verifier_run(
                     batch_job_name=batch_job_name,
@@ -712,13 +928,17 @@ def _process_verifier_task(
             else:
                 _handle_failed_verifier_run(verifier_request=verifier_request)
 
-            VerifierAzureRequest.objects.filter(id=task.id).delete()
+            if _delete_validator_batch_resources(
+                batch_client=batch_client, job_id=batch_job_name,
+                pool_id=batch_job_name,
+            ):
+                VerifierAzureRequest.objects.filter(id=task.id).delete()
 
     except Exception as exc:
-        PrimerVerifierRequest.objects.filter(
-            pk=task.verifier_request.pk
-        ).update(status='Error', errors=exc)
-        VerifierAzureRequest.objects.filter(id=task.id).delete()
+        logger.exception(
+            'Unable to process legacy Verifier request %s: %s',
+            task.verifier_request.pk, exc,
+        )
 
 
 def _check_tasks_completed(
@@ -783,7 +1003,7 @@ def _handle_successful_verifier_run(
     report_sas_url, summary_sas_url, run_folder = post_verifier_run(
         batch_job_name=batch_job_name, verifier_request=verifier_request
     )
-    email_list = verifier_request.emails_array
+    email_list = verifier_request.emails_array or []
     for email in email_list:
         with recipient_language(email):
             subject = _('PrimerVerifier Analysis "%(project)s" Complete') % {
@@ -818,7 +1038,7 @@ def _handle_failed_verifier_run(
         verifier_request (PrimerVerifierRequest): The request object.
     """
     # Extract the email list from the request
-    email_list = verifier_request.emails_array
+    email_list = verifier_request.emails_array or []
     for email in email_list:
         with recipient_language(email):
             subject = _('PrimerVerifier Analysis "%(project)s" Failed') % {
@@ -867,7 +1087,7 @@ def post_verifier_run(
         # Download the blob container, and store the JSON-formatted report
         # into the model
         verifier_request, report_folder = populate_report(
-            request=verifier_request
+            request=verifier_request, container_name=batch_job_name
         )
         logger.debug('Primer verifier report folder: %s', report_folder)
 
@@ -876,6 +1096,7 @@ def post_verifier_run(
             request=verifier_request,
             primer_set_model=VerifierPrimerSet,
             panel_model=VerifierPanel,
+            container_name=batch_job_name,
         )
 
         # Generate the Excel summary and upload it next to the JSON reports
@@ -1175,7 +1396,7 @@ def _create_validator_primer_task_command(
 
 
 def _create_validator_gene_task_command(
-    *, request, container_name, input_blobs
+    *, request, container_name, input_blobs, primer_file_name=None
 ):
     job_name = f'{container_name}-gene'
     run_directory = f'/datadrive/{job_name}'
@@ -1186,6 +1407,7 @@ def _create_validator_gene_task_command(
     parts = [
         'source $CONDA/activate /envs/cowbat',
         'set -euo pipefail',
+        f'rm -rf {shlex.quote(run_directory)}',
         (
             f'mkdir -p {shlex.quote(sequences)} '
             f'{shlex.quote(targets)} {shlex.quote(reports)}'
@@ -1193,24 +1415,36 @@ def _create_validator_gene_task_command(
     ]
     for item in input_blobs:
         destination = posixpath.join(run_directory, item['blob_name'])
+        partial = f'{destination}.part'
         parts.extend(
             (
                 f'mkdir -p {shlex.quote(posixpath.dirname(destination))}',
                 (
-                    'curl --fail --location --retry 5 --output '
-                    f'{shlex.quote(destination)} '
+                    'curl --fail --location --retry 5 --retry-delay 10 '
+                    '--connect-timeout 60 --continue-at - --output '
+                    f'{shlex.quote(partial)} '
                     f'{shlex.quote(item["sas_url"])}'
                 ),
+                f'test -s {shlex.quote(partial)}',
+                f'mv {shlex.quote(partial)} {shlex.quote(destination)}',
+                f'test -s {shlex.quote(destination)}',
             )
+        )
+    if primer_file_name:
+        parts.append(
+            f'cp {shlex.quote(posixpath.join(run_directory, primer_file_name))} '
+            f'{shlex.quote(posixpath.join(targets, "query.fasta"))}'
         )
     parts.extend(
         (
             (
-                f'for archive in '
-                f'{shlex.quote(run_directory)}/inclusivity/*.zip '
-                f'{shlex.quote(run_directory)}/exclusivity/*.zip; do '
-                '[ -e "$archive" ] || continue; '
-                f'unzip -n -q "$archive" -d {shlex.quote(sequences)}; done'
+                f'for input in {shlex.quote(run_directory)}/inclusivity/* '
+                f'{shlex.quote(run_directory)}/exclusivity/*; do '
+                '[ -e "$input" ] || continue; case "$input" in '
+                f'*.zip) unzip -tq "$input" && unzip -n -q "$input" '
+                f'-d {shlex.quote(sequences)} ;; '
+                f'*.fasta|*.fa|*.fna|*.fas) cp "$input" '
+                f'{shlex.quote(sequences)}/ ;; esac; done'
             ),
             f'GeneSeekr blastn -u -s {shlex.quote(sequences)} '
             f'-t {shlex.quote(targets)} -r {shlex.quote(reports)}',
@@ -1404,7 +1638,7 @@ def _process_validator_analysis_task(*, batch_client, task):
             task.save(update_fields=['batch_job_id', 'batch_task_id'])
 
 
-def _delete_validator_batch_resources(*, batch_client, job_id):
+def _delete_validator_batch_resources(*, batch_client, job_id, pool_id=None):
     """Delete the completed Batch job and its conventional pool."""
     try:
         batch_client.job.delete(job_id=job_id)
@@ -1417,7 +1651,7 @@ def _delete_validator_batch_resources(*, batch_client, job_id):
     except Exception:
         logger.exception('Batch cleanup failed for Validator job %s', job_id)
         return False
-    pool_id = batch_pool_id_from_job_id(job_id)
+    pool_id = pool_id or batch_pool_id_from_job_id(job_id)
     try:
         if batch_client.pool.exists(pool_id):
             batch_client.pool.delete(pool_id=pool_id)
@@ -1551,6 +1785,78 @@ def _handle_failed_validator_run(
     validator_request.save()
 
 
+def _upload_gene_category_report(*, blob_client, container_name, request, gene_reports):
+    """Publish the inputs and evidence behind gene exclusion decisions."""
+    eligible_hits = []
+    for hit in request.gene_results or []:
+        try:
+            identity = float(hit.get('identity'))
+        except (TypeError, ValueError):
+            continue
+        if identity >= 90:
+            eligible_hits.append(hit)
+    category_counts = {}
+    for categories in (request.gene_exclusion_results or {}).values():
+        for category in categories:
+            category_counts[category] = category_counts.get(category, 0) + 1
+    hits = request.gene_results or []
+    payload = {
+        'request_id': request.pk,
+        'generated_at': timezone.now().isoformat(),
+        'identity_cutoff_percent': 90,
+        'summary': {
+            'total_hits': len(hits),
+            'eligible_hits': len(eligible_hits),
+            'below_identity_cutoff_hits': len(hits) - len(eligible_hits),
+            'category_counts': category_counts,
+        },
+        'blast_mode': getattr(request, 'blast_mode', None),
+        'mismatch_tolerance': request.mismatches,
+        'selected_categories': request.gene_exclusion_categories or [],
+        'gene_reports': gene_reports,
+        'normalized_hits': hits,
+        'categories': request.gene_exclusion_results,
+        'category_details': request.gene_exclusion_details,
+    }
+    blob_client.upload_bytes(
+        container_name,
+        'reports/gene_category_evaluation.json',
+        json.dumps(payload, indent=2).encode('utf-8'),
+        content_type='application/json',
+    )
+    rows = StringIO()
+    writer = csv.writer(rows, delimiter='\t', lineterminator='\n')
+    writer.writerow([
+        'report', 'target', 'category', 'reason', 'query', 'identity',
+        'coverage', 'orientation', 'subject_start', 'subject_end',
+        'subject_length', 'query_start', 'query_end', 'bit_score', 'gap',
+        'paired_query', 'paired_identity', 'paired_subject_start',
+        'paired_subject_end',
+    ])
+    for report, targets in (request.gene_exclusion_details or {}).items():
+        for target, evidence_items in targets.items():
+            for evidence in evidence_items:
+                hit = evidence.get('hit') or evidence.get('first_hit') or {}
+                paired = evidence.get('second_hit') or {}
+                writer.writerow([
+                    report, target, evidence.get('category', ''),
+                    evidence.get('reason', ''), hit.get('query', ''),
+                    hit.get('identity', ''), hit.get('coverage', ''),
+                    hit.get('orientation', ''), hit.get('subject_start', ''),
+                    hit.get('subject_end', ''), hit.get('subject_length', ''),
+                    hit.get('query_start', ''), hit.get('query_end', ''),
+                    hit.get('bit_score', ''), evidence.get('gap', ''),
+                    paired.get('query', ''), paired.get('identity', ''),
+                    paired.get('subject_start', ''), paired.get('subject_end', ''),
+                ])
+    blob_client.upload_bytes(
+        container_name,
+        'reports/gene_category_evaluation.tsv',
+        rows.getvalue().encode('utf-8'),
+        content_type='text/tab-separated-values',
+    )
+
+
 def post_validator_run(
     *,  # Force the use of keyword arguments
     batch_job_name: str,
@@ -1631,6 +1937,13 @@ def post_validator_run(
                 'gene_exclusion_note',
                 'report',
             ]
+        )
+
+        _upload_gene_category_report(
+            blob_client=blob_client,
+            container_name=batch_job_name,
+            request=validator_request,
+            gene_reports=gene_reports,
         )
 
         # Create the details for the validator request
