@@ -98,6 +98,15 @@ steps:
       docker compose -p "$project" \
         run --rm --no-deps \
         -e SECRET_KEY=ci-placeholder \
+        -e EMAIL_RELAY_SECRET=ci-placeholder \
+        -e EMAIL_HOST_USER=ci-placeholder \
+        -e EMAIL_HOST_PASSWORD=ci-placeholder \
+        -e DB_NAME=ci-placeholder \
+        -e DB_USER=ci-placeholder \
+        -e DB_PASS=ci-placeholder \
+        -e DB_SERVICE=localhost \
+        -e DB_PORT=5432 \
+        -e SENTRY_DSN= \
         -e MICROSOFT_AUTH_ENABLED=false \
         -e DJANGO_READ_DOT_ENV_FILE=false \
         web \
