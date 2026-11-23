@@ -176,7 +176,35 @@ checks both interpreter groups.
 
 The direct update pipeline is `azure-pipelines-update.yml`. It updates the main
 portal VM and rebuilds/recreates changed Compose services without first
-stopping the entire stack.
+stopping the entire stack. A push to `main` triggers the pipeline automatically;
+the separate post-merge CI and deployment pipelines can run concurrently.
+Require CI on the pull request before merging.
+
+On the VM, deployment refuses tracked or untracked changes, a detached HEAD,
+branches without an `origin` upstream, and local commits not present on that
+upstream. It also refuses local `main` commits absent from `origin/main`. Once
+these checks pass, it switches to `main`, fast-forwards to `origin/main`, and
+updates the managed CA certificate, then builds and starts the stack. The VM's
+Docker Compose plugin must support `up --wait` and `--wait-timeout`. Compose
+waits for services to be running or healthy; the pipeline then checks the web
+application's local HTTP response using a configured allowed host.
+Services without health checks are only verified as running. A failed
+post-deployment check reports failure but does not automatically roll back.
+
+### Production rollback
+
+Prefer reverting the change in a pull request to `main` and allowing the
+automatic pipeline to deploy the reviewed revert. Before any rollback, assess
+database migration compatibility and current backups; reverting application
+code does not undo database changes.
+
+For an emergency rollback, an authorized operator should pause the automatic
+update pipeline, record the current commit, and verify the VM checkout is
+clean and its local commits are safely pushed. After confirming the chosen
+earlier commit and database compatibility, check out that commit detached and
+run `docker compose up -d --build --wait --wait-timeout 300` from the checkout.
+Verify application behavior and service health. The normal pipeline refuses a
+detached checkout; return to a clean, tracked branch before re-enabling it.
 
 ## External Terraform repo dependency
 

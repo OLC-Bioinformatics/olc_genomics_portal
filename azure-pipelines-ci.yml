@@ -18,6 +18,9 @@ pool:
 steps:
   - checkout: self
 
+  - bash: python3 -m unittest -v utility.test_production_deploy
+    displayName: Test production deployment safeguards
+
   - bash: |
       set -euo pipefail
 

@@ -55,22 +55,64 @@ stages:
 
     - script: |
         chmod 600 "$(sshKey.secureFilePath)"
-        scp -o StrictHostKeyChecking=no \
-            -i "$(sshKey.secureFilePath)" \
-            -P "$(TARGET_SSH_PORT)" \
-            "$(rootCA.secureFilePath)" \
-            "$(TARGET_SSH_USER)@$(TARGET_HOST):$(REPO_DIR)/GoC-GdC-Root-A.crt"
-        ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" <<'EOF'
-          set -e
+        ssh -o StrictHostKeyChecking=no -i "$(sshKey.secureFilePath)" -p "$(TARGET_SSH_PORT)" "$(TARGET_SSH_USER)@$(TARGET_HOST)" \
+          "FOODPORT_ROOT_CA_B64=$(base64 -w 0 "$(rootCA.secureFilePath)") bash -s" <<'EOF'
+          set -euo pipefail
           cd "/home/cfiaadmin/FoodPort/olc_genomics_portal"
 
-          git fetch origin
-          git reset --hard origin/main
+          if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+            echo 'ERROR: Production checkout has uncommitted or untracked changes; preserve or resolve them before deployment.' >&2
+            git status --short
+            exit 1
+          fi
+          if ! current_branch="$(git symbolic-ref --quiet --short HEAD)"; then
+            echo 'ERROR: Production checkout is detached; select a tracked branch before deployment.' >&2
+            exit 1
+          fi
+          if [ "$(git config --get "branch.$current_branch.remote" || true)" != "origin" ] || \
+             ! upstream="$(git rev-parse --symbolic-full-name '@{upstream}' 2>/dev/null)" || \
+             ! upstream_source="$(git config --get "branch.$current_branch.merge")"; then
+            echo "ERROR: Branch $current_branch has no origin upstream; verify its commits before deployment." >&2
+            exit 1
+          fi
+          case "$upstream_source:$upstream" in
+            refs/heads/*:refs/remotes/origin/*) ;;
+            *) echo "ERROR: Branch $current_branch has an unsupported origin upstream." >&2; exit 1 ;;
+          esac
+          git fetch origin "+$upstream_source:$upstream"
+          git fetch origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor HEAD "$upstream"; then
+            echo "ERROR: Branch $current_branch has commits not pushed to $upstream; preserve or push them before deployment." >&2
+            exit 1
+          fi
+          if git show-ref --verify --quiet refs/heads/main; then
+            if ! git merge-base --is-ancestor refs/heads/main refs/remotes/origin/main; then
+              echo 'ERROR: Local main has commits not on origin/main; resolve them before deployment.' >&2
+              exit 1
+            fi
+            git switch main
+          else
+            git switch --track -c main origin/main
+          fi
+          git merge --ff-only origin/main
+          echo "Deploying origin/main commit $(git rev-parse HEAD)"
+          printf '%s' "$FOODPORT_ROOT_CA_B64" | base64 --decode > GoC-GdC-Root-A.crt
 
           # Nginx serves these public assets as www-data; restore access after checkout.
           find olc_webportalv2/static/css olc_webportalv2/static/js -type d -exec chmod a+rx {} +
           find olc_webportalv2/static/css olc_webportalv2/static/js -type f -exec chmod a+r {} +
 
-          docker compose up -d --build
+          docker compose up -d --build --wait --wait-timeout 300
+
+          for attempt in $(seq 1 30); do
+            if docker compose exec -T web python -c "import http.client; from config.settings.prod import ALLOWED_HOSTS; host = next(('localhost' if h == '*' else h.lstrip('.') for h in ALLOWED_HOSTS if h), None); assert host, 'DJANGO_ALLOWED_HOSTS has no usable host'; c = http.client.HTTPConnection('127.0.0.1', 8000, timeout=4); c.request('GET', '/', headers={'Host': host}); r = c.getresponse(); print('Web HTTP status:', r.status); assert 200 <= r.status < 400"; then
+              echo 'Production web HTTP check passed.'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'ERROR: Production web did not respond successfully after deployment.' >&2
+          docker compose ps -a
+          exit 1
         EOF
       displayName: Update portal on app VM
