@@ -38,6 +38,32 @@ The following are configured under `services.rag.environment` or `env_file`.
 - `EMBEDDING_NORMALIZE` (`true`): normalization behavior.
 - `HF_HUB_OFFLINE` and `TRANSFORMERS_OFFLINE` (`1`): prohibit runtime downloads.
 
+## Provision or rotate the trusted service token
+
+The Redmine plugin and RAG service must receive the same non-empty
+`RAG_TRUSTED_SERVICE_TOKEN`. In this Compose deployment both read it from the
+root `env` file; the browser must never receive it. Generate a high-entropy,
+single-line token, for example:
+
+```bash
+openssl rand -hex 32
+```
+
+Store it in the authorized secret manager or pipeline variable group for the
+target environment. The Dev and full-infrastructure pipelines populate the Dev
+VM's generated `env` file from `FoodPort-Dev-Portal-Secrets`. The direct
+production update pipeline does not provision this value or rewrite `env`;
+production changes must use the approved production secret-handling process.
+
+After updating `env`, recreate both services so they receive the same value:
+
+```bash
+docker compose up -d --force-recreate rag redmine
+```
+
+Verify configuration using the non-disclosing checks below. Do not print,
+log, or paste the token itself when troubleshooting.
+
 ## Redmine plugin environment variables
 
 - `REDMINE_ASSISTANT_RAG_URL` (`http://rag:8001`): internal service URL.
