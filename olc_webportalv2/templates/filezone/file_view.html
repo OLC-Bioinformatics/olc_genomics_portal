@@ -28,13 +28,17 @@
     <table id="blob-table" class="table table-hover" style="width:100%">
         <thead>
             <tr style="text-align:center">
-            <th><input title="{% trans 'Select All/None' %}" type="checkbox" class="selectAll" name="selectAll"  value="yes" onclick="checkPage(this)">  </th>
-            <th>{% trans "Container"%}</th>
-            <th>{% trans "Blob Name"%}</th>
-            <th>{% trans "Blob Size"%}</th>
-            <th>{% trans "Blob Date"%}</th>
-            <th>{% trans "Blob MD5 Checksum"%}</th>
-            <th></th>
+            <th scope="col">
+                <input aria-label="{% trans 'Select All/None' %}" type="checkbox"
+                       class="selectAll" name="selectAll" value="yes"
+                       onclick="checkPage(this)">
+            </th>
+            <th scope="col">{% trans "Container"%}</th>
+            <th scope="col">{% trans "Blob Name"%}</th>
+            <th scope="col">{% trans "Blob Size"%}</th>
+            <th scope="col">{% trans "Blob Date"%}</th>
+            <th scope="col">{% trans "Blob MD5 Checksum"%}</th>
+            <th scope="col"><span class="visually-hidden">{% trans "Download" %}</span></th>
             {% comment %} <th></th> {% endcomment %}
             {% comment %} <th></th> {% endcomment %}
         </tr>

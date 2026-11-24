@@ -12,12 +12,14 @@
     <table id="primer_val-request-table" class="table table-hover">
         <thead>
         <tr style="text-align:center">
-            <th>{% trans "Name" %}</th>
-            <th>{% trans "Status" %}</th>
-            <th>{% trans "Download" %}</th>
-            <th>{% trans "Request Date" %}</th>
-            <th data-orderable="false"></th>
-            <th>{% trans "Edit Project" %}</th>
+            <th scope="col">{% trans "Name" %}</th>
+            <th scope="col">{% trans "Status" %}</th>
+            <th scope="col">{% trans "Download" %}</th>
+            <th scope="col">{% trans "Request Date" %}</th>
+            <th scope="col" data-orderable="false">
+                <span class="visually-hidden">{% trans "Actions" %}</span>
+            </th>
+            <th scope="col">{% trans "Edit Project" %}</th>
         </tr>
         </thead>
         <tbody>

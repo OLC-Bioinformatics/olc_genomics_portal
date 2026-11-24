@@ -264,6 +264,31 @@ class FileZoneTemplateTagTests(SimpleTestCase):
         self.assertIn('&lt;script&gt;', rendered)
         self.assertNotIn('<script>', rendered)
 
+    def test_selection_checkboxes_have_names_for_files_and_folders(self):
+        """Give screen-reader users context for each selectable blob row."""
+        rendered = render_blob_hierarchy(
+            {
+                'reports': {
+                    '__type__': 'folder',
+                    'contents': {
+                        'report.csv': {
+                            'pk': 1,
+                            'blob_name': 'report.csv',
+                            'blob_size': '1 KB',
+                            'blob_date': '2026/01/01',
+                            'blob_md5': 'checksum',
+                            'blob_download_link': (
+                                'https://storage.example/download'
+                            ),
+                        }
+                    },
+                }
+            }
+        )
+
+        self.assertIn('aria-label="Select folder reports"', rendered)
+        self.assertIn('aria-label="Select file report.csv"', rendered)
+
 
 class FileZoneArchiveTests(SimpleTestCase):
     """Verify selected blobs retain unique and safe archive paths."""

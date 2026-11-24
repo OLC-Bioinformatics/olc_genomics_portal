@@ -61,9 +61,9 @@
 </div>
 
 
-<h3 style="color: #333; font-family: 'Arial', sans-serif; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+<h1 style="color: #333; font-family: 'Arial', sans-serif; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
     {% trans "Container" %} {{ container.container_name }}
-</h3>
+</h1>
 
 <div id="upload-div" class="center" style="width: 300px;"></div>
     <br>
@@ -108,13 +108,19 @@
         <table id="file-system" class="display">
             <thead>
                 <tr>
-                    <th><input type="checkbox" name="pageCheck" value="yes" onclick="checkPage(this)">{% trans " Select All/None" %}</th>
-                    <th>{% trans "Name" %}</th>
-                    <th>{% trans "Size" %}</th>
-                    <th>{% trans "Date" %}</th>
-                    <th>{% trans "MD5" %}</th>
-                    <th></th>
-                    <th></th>
+                    <th scope="col">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="pageCheck"
+                                   value="yes" onclick="checkPage(this)">
+                            <span class="form-check-label">{% trans "Select All/None" %}</span>
+                        </label>
+                    </th>
+                    <th scope="col">{% trans "Name" %}</th>
+                    <th scope="col">{% trans "Size" %}</th>
+                    <th scope="col">{% trans "Date" %}</th>
+                    <th scope="col">{% trans "MD5" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% trans "Rename" %}</span></th>
+                    <th scope="col"><span class="visually-hidden">{% trans "Download" %}</span></th>
                 </tr>
             </thead>
             <tbody>

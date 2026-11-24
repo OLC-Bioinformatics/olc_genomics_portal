@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles import finders
 from django.template.loader import get_template
 from django.test import (
@@ -57,6 +58,41 @@ class PortalRoutingTests(TestCase):
     def test_cowsnphr_tree_template_compiles(self):
         """Load the translated tree page without template syntax errors."""
         self.assertIsNotNone(get_template("cowsnphr/cowsnphr_tree.html"))
+
+    def test_accessibility_adjusted_templates_compile(self):
+        """Compile templates changed for accessible forms and data tables."""
+        templates = (
+            "ampliseq/ampliseq_home.html",
+            "ampliseq/ampliseq_processing.html",
+            "cowbat/cowbat_processing.html",
+            "cowbat/manage_research_assembly.html",
+            "cowsnphr/cowsnphr_home.html",
+            "cowsnphr/cowsnphr_processing.html",
+            "cowsnphr/cowsnphr_tree.html",
+            "filezone/container_view.html",
+            "filezone/file_view.html",
+            "filezone/filezone_home.html",
+            "geneseekr/amr_home.html",
+            "geneseekr/amr_result.html",
+            "geneseekr/geneseekr_home.html",
+            "geneseekr/geneseekr_processing.html",
+            "geneseekr/neighbor_home.html",
+            "geneseekr/neighbor_result.html",
+            "geneseekr/prokka_home.html",
+            "geneseekr/prokka_result.html",
+            "geneseekr/tree_home.html",
+            "geneseekr/tree_result.html",
+            "primer/primer_val_home.html",
+            "primer_finder/validator_home.html",
+            "primer_finder/validator_processing.html",
+            "primer_finder/verifier_home.html",
+            "primer_finder/verifier_processing.html",
+            "vir_typer/vir_typer_home.html",
+        )
+
+        for template in templates:
+            with self.subTest(template=template):
+                self.assertIsNotNone(get_template(template))
 
     def test_dropzone_upload_templates_compile(self):
         """Load each template that initializes the localized Dropzone UI."""
@@ -168,8 +204,44 @@ class PortalRoutingTests(TestCase):
                 self.assertIsNotNone(resolve(target))
 
     def test_app_home_navigation_uses_the_nearest_landing_page(self):
-        """Route subpages to their matching app dashboard."""
+        """Route subpages from each app to their matching dashboard."""
         cases = (
+            (
+                "ampliseq:blob_ampliseq",
+                {},
+                "ampliseq:ampliseq",
+                "AmpliSeq Home",
+            ),
+            (
+                "cowsnphr:upload_cowsnphr",
+                {},
+                "cowsnphr:cowsnphr",
+                "COWSNPhR Home",
+            ),
+            (
+                "data:raw_data",
+                {},
+                "data:data_home",
+                "Data Home",
+            ),
+            (
+                "filezone:container_create",
+                {},
+                "filezone:filezone",
+                "FileZone Home",
+            ),
+            (
+                "metadata:metadata_browse",
+                {},
+                "metadata:metadata_home",
+                "Metadata Home",
+            ),
+            (
+                "metadata_upload:upload_success",
+                {},
+                "metadata:metadata_home",
+                "Metadata Home",
+            ),
             (
                 "primer_finder:primer_validator_home",
                 {},
@@ -177,7 +249,25 @@ class PortalRoutingTests(TestCase):
                 "PrimerFinder Home",
             ),
             (
+                "sequence_database:database_filter",
+                {},
+                "sequence_database:database_home",
+                "Database Home",
+            ),
+            (
+                "vir_typer:vir_typer_request",
+                {},
+                "vir_typer:vir_typer_home",
+                "VirusTyper Home",
+            ),
+            (
                 "cowbat:upload_assembly",
+                {},
+                "cowbat:research_assembly",
+                "Research Assembly Home",
+            ),
+            (
+                "cowbat:blob_assembly",
                 {},
                 "cowbat:research_assembly",
                 "Research Assembly Home",
@@ -189,16 +279,40 @@ class PortalRoutingTests(TestCase):
                 "Assembly Home",
             ),
             (
-                "geneseekr:tree_result",
-                {"tree_request_pk": 1},
+                "cowbat:manage_assembly_run",
+                {"sequencing_run_pk": 1},
+                "cowbat:research_assembly",
+                "Research Assembly Home",
+            ),
+            (
+                "geneseekr:geneseekr_query",
+                {},
+                "geneseekr:geneseekr_home",
+                "GeneSeekr Home",
+            ),
+            (
+                "geneseekr:tree_request",
+                {},
                 "geneseekr:tree_home",
                 "Tree Home",
             ),
             (
-                "metadata_upload:upload_files",
+                "geneseekr:amr_request",
                 {},
-                "metadata:metadata_home",
-                "Metadata Home",
+                "geneseekr:amr_home",
+                "AMR Home",
+            ),
+            (
+                "geneseekr:prokka_request",
+                {},
+                "geneseekr:prokka_home",
+                "Annotation Home",
+            ),
+            (
+                "geneseekr:neighbor_request",
+                {},
+                "geneseekr:neighbor_home",
+                "Neighbor Home",
             ),
         )
 
@@ -215,15 +329,15 @@ class PortalRoutingTests(TestCase):
                         "app_home_label": expected_label,
                     },
                 )
+                self.assertIsNotNone(resolve(reverse(expected_route)))
 
     def test_app_home_button_uses_the_shared_outline_style(self):
         """Render the common app-home link with its Bootstrap button style."""
-        html = get_template("includes/app_home_button.html").render(
-            {
-                "app_home_route": "primer_finder:primer_home",
-                "app_home_label": "PrimerFinder Home",
-            }
-        )
+        context = {
+            "app_home_route": "primer_finder:primer_home",
+            "app_home_label": "PrimerFinder Home",
+        }
+        html = get_template("includes/app_home_button.html").render(context)
 
         self.assertIn('class="btn btn-outline-primary app-home-link"', html)
         self.assertIn(
@@ -232,13 +346,58 @@ class PortalRoutingTests(TestCase):
         )
         self.assertIn("PrimerFinder Home", html)
 
+        with override("fr"):
+            french_html = get_template(
+                "includes/app_home_button.html"
+            ).render(context)
+
+        self.assertIn("Accueil de PrimerFinder", french_html)
+
     def test_app_home_navigation_is_omitted_from_app_landing_pages(self):
-        """Avoid showing an app-home button on that app's own landing page."""
-        path = reverse("data:data_home")
+        """Avoid showing an app-home button on app landing pages."""
+        landing_pages = (
+            "ampliseq:ampliseq",
+            "cowsnphr:cowsnphr",
+            "data:data_home",
+            "filezone:filezone",
+            "metadata:metadata_home",
+            "primer_finder:primer_home",
+            "sequence_database:database_home",
+            "vir_typer:vir_typer_home",
+            "cowbat:assembly_home",
+            "cowbat:research_assembly",
+            "geneseekr:geneseekr_home",
+            "geneseekr:tree_home",
+            "geneseekr:amr_home",
+            "geneseekr:prokka_home",
+            "geneseekr:neighbor_home",
+        )
+
+        for route_name in landing_pages:
+            with self.subTest(route=route_name):
+                path = reverse(route_name)
+                request = RequestFactory().get(path)
+                request.resolver_match = resolve(path)
+
+                self.assertEqual(app_home_navigation(request), {})
+
+    def test_base_renders_one_app_home_button_for_app_route(self):
+        """Render the shared button from the request's resolved app route."""
+        path = reverse("primer_finder:primer_validator_home")
         request = RequestFactory().get(path)
         request.resolver_match = resolve(path)
+        request.user = AnonymousUser()
+        html = get_template("base.html").render({}, request)
 
-        self.assertEqual(app_home_navigation(request), {})
+        self.assertIn(
+            'class="btn btn-outline-primary app-home-link"',
+            html,
+        )
+        self.assertIn(
+            f'href="{reverse("primer_finder:primer_home")}"',
+            html,
+        )
+        self.assertEqual(html.count("app-home-link"), 1)
 
     def test_navigation_shows_login_or_profile_actions(self):
         """Show login or profile actions based on authentication state."""
@@ -426,7 +585,13 @@ class PortalRoutingTests(TestCase):
     def test_homepage_uses_selected_banner_without_helix(self):
         """Render the selected minimal banner without the DNA icon."""
         response = Client().get("/", HTTP_HOST="localhost")
+        html = response.content.decode(response.charset)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="portal-home-header"')
-        self.assertNotContains(response, "fa-dna")
+        header_start = html.index('<header class="portal-home-header">')
+        header_end = html.index("</header>", header_start)
+        banner_markup = html[header_start:header_end]
+
+        self.assertNotIn("fa-dna", banner_markup)
+        self.assertIn("fa-dna", html)

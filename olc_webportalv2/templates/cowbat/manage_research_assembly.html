@@ -97,7 +97,15 @@
       <span id="research-file-path" class="research-file-browser__path" aria-live="polite">{% trans "Root folder" %}</span>
     </div>
   <table class="table table-hover table-sm research-table mb-0">
-    <thead><tr><th><input type="checkbox" id="select-all"></th><th>{% trans "File" %}</th></tr></thead>
+    <thead>
+      <tr>
+        <th scope="col">
+          <label class="visually-hidden" for="select-all">{% trans "Select all files" %}</label>
+          <input type="checkbox" id="select-all">
+        </th>
+        <th scope="col">{% trans "File" %}</th>
+      </tr>
+    </thead>
     <tbody id="research-file-list">
     {% for blob_name in files %}
       <tr class="research-file-source" data-blob-name="{{ blob_name }}" hidden><td></td><td>{{ blob_name }}</td></tr>
@@ -437,6 +445,7 @@
 </script>
 
 {% trans "No files in this folder." as i18n_no_files_in_folder %}
+{% blocktrans with name="%(name)s" asvar i18n_select_file %}Select file {{ name }}{% endblocktrans %}
 {% blocktrans with path="%(path)s" asvar i18n_folder_path %}Folder: {{ path }}{% endblocktrans %}
 {% trans "Root folder" as i18n_root_folder %}
 {% trans "No files selected" as i18n_no_files_selected %}
@@ -458,6 +467,7 @@
 (function() {
   var messages = {
     noFilesInFolder: '{{ i18n_no_files_in_folder|escapejs }}',
+    selectFile: '{{ i18n_select_file|escapejs }}',
     folderPath: '{{ i18n_folder_path|escapejs }}',
     rootFolder: '{{ i18n_root_folder|escapejs }}',
     noFilesSelected: '{{ i18n_no_files_selected|escapejs }}',
@@ -537,6 +547,10 @@
       checkbox.type = 'checkbox';
       checkbox.name = 'files';
       checkbox.value = blobName;
+      checkbox.setAttribute(
+        'aria-label',
+        interpolate(messages.selectFile, { name: blobName.split('/').pop() })
+      );
       checkboxCell.appendChild(checkbox);
       row.appendChild(checkboxCell);
       row.appendChild(makeFileCell(blobName.split('/').pop(), 'research-file-browser__file'));

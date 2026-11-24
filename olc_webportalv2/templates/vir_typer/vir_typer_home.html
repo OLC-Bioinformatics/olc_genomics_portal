@@ -17,12 +17,14 @@
     <table id="vir_typer-request-table" class="table table-hover">
         <thead>
         <tr style="text-align:center">
-            <th>{% trans "Project Name" %}</th>
-            <th>{% trans "Status" %}</th>
-            <th>{% trans "Download" %}</th>
-            <th>{% trans "Request Date" %}</th>
-            <th data-orderable="false"></th>
-            <th>{% trans "Edit Project" %}</th>
+            <th scope="col">{% trans "Project Name" %}</th>
+            <th scope="col">{% trans "Status" %}</th>
+            <th scope="col">{% trans "Download" %}</th>
+            <th scope="col">{% trans "Request Date" %}</th>
+            <th scope="col" data-orderable="false">
+                <span class="visually-hidden">{% trans "Actions" %}</span>
+            </th>
+            <th scope="col">{% trans "Edit Project" %}</th>
         </tr>
         </thead>
         <tbody>

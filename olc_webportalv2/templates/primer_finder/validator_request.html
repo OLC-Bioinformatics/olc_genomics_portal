@@ -2,9 +2,9 @@
 {% load i18n %}
 
 {% block content %}
-<main class="container validator-form-page">
+<section class="container validator-form-page" aria-labelledby="validator-page-title">
   <div class="validator-page-heading">
-    <h1>{% trans "PrimerValidator Request" %}</h1>
+    <h1 id="validator-page-title">{% trans "PrimerValidator Request" %}</h1>
   </div>
 
   <form
@@ -211,7 +211,7 @@
       </button>
     </div>
   </form>
-</main>
+</section>
 
 <template id="empty-target-form">
   <article class="validator-target-card">

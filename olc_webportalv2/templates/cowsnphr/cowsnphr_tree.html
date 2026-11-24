@@ -11,9 +11,12 @@
 {% trans "Smooth" as smooth_label %}
 {% trans "Square" as square_label %}
 {% trans "Straight" as straight_label %}
+{% get_current_language as LANGUAGE_CODE %}
 
 {% block content %}
 
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -51,6 +54,13 @@
         border-color: #0e4164;
         color: #fff;
         background-color: #0e4164;
+      }
+      .bmd-layout-header a[href="javascript:history.back()"],
+      .bmd-layout-header .app-home-link {
+        color: #00695c;
+      }
+      .bmd-layout-header .app-home-link {
+        border-color: #00695c;
       }
       .form-group {
         margin: 0.4rem;
@@ -115,9 +125,11 @@
     </style>
   </head>
 
+  <body>
 
 <header class="bmd-layout-header">
     <div class="navbar navbar-light bg-faded">
+      <h1 class="sr-only">{% trans "Phylogenetic tree" %}</h1>
       <a class="navbar-brand" data-toggle="modal" data-target="#aboutModal">TidyTree</a>
       <div style="text-align: left">
         <a href="javascript:history.back()">{% trans "Back" %}</a>
@@ -135,11 +147,11 @@
   </header>
 
   <div class="bmd-layout-container bmd-drawer-f-l bmd-drawer-in">
-    <div id="dw-s1" class="bmd-layout-drawer bg-faded">
+    <div id="dw-s1" class="bmd-layout-drawer bg-faded" aria-hidden="false">
       <div id="accordion">
         <div class="card">
           <div class="card-header" id="headingSourceData">
-            <h5 class="mb-0">
+            <h2 class="h5 mb-0">
               <button
                 class="btn btn-link"
                 data-toggle="collapse"
@@ -149,7 +161,7 @@
               >
                 {% trans "Source Data" %}
               </button>
-            </h5>
+            </h2>
           </div>
           <div
             id="collapseSourceData"
@@ -173,7 +185,7 @@
 
         <div class="card">
           <div class="card-header" id="headingLayout">
-            <h5 class="mb-0">
+            <h2 class="h5 mb-0">
               <button
                 class="btn btn-link collapsed"
                 data-toggle="collapse"
@@ -183,7 +195,7 @@
               >
                 {% trans "Layout" %}
               </button>
-            </h5>
+            </h2>
           </div>
           <div
             id="collapseLayout"
@@ -238,7 +250,7 @@
 
         <div class="card">
           <div class="card-header" id="headingBranches">
-            <h5 class="mb-0">
+            <h2 class="h5 mb-0">
               <button
                 class="btn btn-link collapsed"
                 data-toggle="collapse"
@@ -248,7 +260,7 @@
               >
                 {% trans "Branches" %}
               </button>
-            </h5>
+            </h2>
           </div>
           <div
             id="collapseBranches"
@@ -269,7 +281,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>{% trans "Branch Node Size" %}</label>
+                <label for="branchNodeSize">{% trans "Branch Node Size" %}</label>
                 <input
                   id="branchNodeSize"
                   class="skip"
@@ -288,7 +300,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>{% trans "Branch Label Size" %}</label>
+                <label for="branchLabelSize">{% trans "Branch Label Size" %}</label>
                 <input
                   id="branchLabelSize"
                   class="skip"
@@ -307,7 +319,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>{% trans "Branch Distance Size" %}</label>
+                <label for="branchDistanceSize">{% trans "Branch Distance Size" %}</label>
                 <input
                   id="branchDistanceSize"
                   class="skip"
@@ -324,7 +336,7 @@
 
         <div class="card">
           <div class="card-header" id="headingLeaves">
-            <h5 class="mb-0">
+            <h2 class="h5 mb-0">
               <button
                 class="btn btn-link"
                 data-toggle="collapse"
@@ -334,7 +346,7 @@
               >
                 {% trans "Leaves" %}
               </button>
-            </h5>
+            </h2>
           </div>
           <div
             id="collapseLeaves"
@@ -394,7 +406,7 @@
 
         <div class="card">
           <div class="card-header" id="headingMeta">
-            <h5 class="mb-0">
+            <h2 class="h5 mb-0">
               <button
                 class="btn btn-link collapsed"
                 data-toggle="collapse"
@@ -404,7 +416,7 @@
               >
                 {% trans "Metadata" %}
               </button>
-            </h5>
+            </h2>
           </div>
           <div
             id="collapseMeta"
@@ -421,7 +433,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>{% trans "Background" %}</label>
+                <label for="background">{% trans "Background" %}</label>
                 <input
                   type="color"
                   id="background"
@@ -438,7 +450,7 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>{% trans "Animation Time" %}</label>
+                <label for="animation">{% trans "Animation Time" %}</label>
                 <input
                   id="animation"
                   type="range"
@@ -485,7 +497,7 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="aboutModalLabel">{% trans "About TidyTree" %}</h5>
+          <h2 class="modal-title h5" id="aboutModalLabel">{% trans "About TidyTree" %}</h2>
           <button
             type="button"
             class="close"
@@ -546,7 +558,7 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="exportModalLabel">{% trans "Export" %}</h5>
+          <h2 class="modal-title h5" id="exportModalLabel">{% trans "Export" %}</h2>
           <button
             type="button"
             class="close"
@@ -623,6 +635,8 @@
 
     $(document).ready(function() {
       $("body").bootstrapMaterialDesign();
+      $("#dw-s1").attr("aria-hidden", "false");
+      $("#dw-s1").removeAttr("aria-expanded");
       buildTree();
     });
 
@@ -911,5 +925,8 @@
       tree.redraw();
     });
   </script>
+
+  </body>
+</html>
 
 {% endblock %}

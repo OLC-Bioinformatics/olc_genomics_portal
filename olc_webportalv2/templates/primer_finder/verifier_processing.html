@@ -6,7 +6,7 @@
 
 <br>
 
-<h2>{%trans "PrimerVerifier Results"%}</h2>
+<h1>{%trans "PrimerVerifier Results"%}</h1>
 <br>
 
 
@@ -25,7 +25,10 @@
     <!--Email Block--> 
       {% if request.user.email in primer_verifier_request.emails_array %}
       <p>{%trans "Your email is already on the list to be notified."%} </p>
-      {%trans "Would you like to add another email?"%} <label for='cbx'></label><input type='checkbox' id='cbx' onclick="cbxCheck()">
+      <label class="form-check">
+        <input class="form-check-input" type="checkbox" id="cbx" onclick="cbxCheck()">
+        <span class="form-check-label">{% trans "Would you like to add another email?" %}</span>
+      </label>
       {% else %}
       <p>{%trans "Would you like an email upon completion?"%}</p>
       {% endif %}

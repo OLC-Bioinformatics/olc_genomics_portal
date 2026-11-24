@@ -21,7 +21,10 @@
     <!--Email Block--> 
       {% if request.user.email in geneseekr_request.emails_array %}
       <p>{%trans "Your email is already on the list to be notified."%} </p>
-      {%trans "Would you like to add another email?"%} <input type='checkbox' id='cbx' onclick="cbxCheck()">
+      <label class="form-check">
+        <input class="form-check-input" type="checkbox" id="cbx" onclick="cbxCheck()">
+        <span class="form-check-label">{% trans "Would you like to add another email?" %}</span>
+      </label>
       {% else %}
       <p>{%trans "Would you like an email upon completion?"%}</p>
       {% endif %}
@@ -36,20 +39,16 @@
       </form>
 
       <script>
-        var checkbox = document.getElementById('cbx').checked;
-        var form = document.getElementById('addEmail');
-        if (checkbox != true){
-          form.style.visibility ="hidden";}
-        else {
-            form.style.visibility ="visible";}
+        var checkboxElement = document.getElementById('cbx');
+        var emailForm = document.getElementById('addEmail');
+        if (checkboxElement && emailForm) {
+          emailForm.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+        }
         function cbxCheck(){
-          var checkbox = document.getElementById('cbx').checked;
-          var form = document.getElementById('addEmail');
-          if (checkbox == true){
-            form.style.visibility ="visible";}
-          else{
-            form.style.visibility ="hidden";} 
-            }
+          if (checkboxElement && emailForm) {
+            emailForm.style.visibility = checkboxElement.checked ? "visible" : "hidden";
+          }
+        }
       </script>
       
     <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#emails-button"><i class="far fa-envelope"></i> {% trans "Email Recipients"%}</button>

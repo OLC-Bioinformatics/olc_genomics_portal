@@ -48,6 +48,7 @@ def render_blob_hierarchy(data, level=0, path=''):
                     format_html(
                         '<tr class="folder" data-level="{}" data-path="{}">'
                         '<td><input type="checkbox" class="folder-checkbox" '
+                        'aria-label="{}" '
                         'data-level="{}" '
                         'onchange="checkChildren(this, {})"></td>'
                         '<td style="padding-left: {}px;">'
@@ -57,6 +58,7 @@ def render_blob_hierarchy(data, level=0, path=''):
                         '</tr>',
                         level,
                         current_path,
+                        _('Select folder %(name)s') % {'name': key},
                         level,
                         level,
                         level * 20,
@@ -72,6 +74,7 @@ def render_blob_hierarchy(data, level=0, path=''):
                     format_html(
                         '<tr class="file" data-level="{}" data-path="{}">'
                         '<td><input type="checkbox" class="file-checkbox" '
+                        'aria-label="{}" '
                         'data-level="{}" name="selected_options[]" '
                         'value="{}"></td>'
                         '<td style="padding-left: {}px;">{}</td>'
@@ -83,6 +86,8 @@ def render_blob_hierarchy(data, level=0, path=''):
                         'role="button">{}</a></td></tr>',
                         level,
                         current_path,
+                        _('Select file %(name)s')
+                        % {'name': value['blob_name']},
                         level,
                         value['pk'],
                         level * 20,

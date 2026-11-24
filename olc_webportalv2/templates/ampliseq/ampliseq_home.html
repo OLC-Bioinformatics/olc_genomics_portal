@@ -43,14 +43,16 @@
 <table id="request-table" class="table table-hover">
     <thead>
     <tr style="text-align:center">
-        <th>{% trans "Project Name" %}</th>
-        <th>{% trans "Status" %}</th>
-        <th>{% trans "Results" %}</th>
-        <th>{% trans "Report" %}</th>
-        <th>{% trans "Trace" %}</th>
-        <th>{% trans "Timeline" %}</th>
-        <th>{% trans "Request Date" %}</th>
-        <th data-orderable="false"></th>
+        <th scope="col">{% trans "Project Name" %}</th>
+        <th scope="col">{% trans "Status" %}</th>
+        <th scope="col">{% trans "Results" %}</th>
+        <th scope="col">{% trans "Report" %}</th>
+        <th scope="col">{% trans "Trace" %}</th>
+        <th scope="col">{% trans "Timeline" %}</th>
+        <th scope="col">{% trans "Request Date" %}</th>
+        <th scope="col" data-orderable="false">
+            <span class="visually-hidden">{% trans "Actions" %}</span>
+        </th>
     </tr>
     </thead>
     <tbody>
