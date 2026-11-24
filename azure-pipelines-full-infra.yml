@@ -646,6 +646,7 @@ stages:
             secret-key-base
             redmine-database-password
             rag-db-password
+            rag-trusted-service-token
             azure-account-name
             azure-account-key
             batch-account-name
@@ -697,6 +698,7 @@ stages:
               secret-key-base) var_name='SECRET_KEY_BASE' ;;
               redmine-database-password) var_name='REDMINE_DB_PASSWORD' ;;
               rag-db-password) var_name='RAG_DB_PASSWORD' ;;
+              rag-trusted-service-token) var_name='RAG_TRUSTED_SERVICE_TOKEN' ;;
               azure-account-name) var_name='AZURE_ACCOUNT_NAME' ;;
               azure-account-key) var_name='AZURE_ACCOUNT_KEY' ;;
               batch-account-name) var_name='BATCH_ACCOUNT_NAME' ;;
