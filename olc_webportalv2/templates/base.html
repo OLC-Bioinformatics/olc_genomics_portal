@@ -17,11 +17,11 @@
 
   {% block css %}
   <!-- Bootstrap 5 CSS -->
-  <link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
-  <link rel="stylesheet" href="{% static '/css/bootstrap-datepicker.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap-datepicker.min.css' %}">
 
   <!-- Project-specific CSS -->
-  <link rel="stylesheet" href="{% static '/css/project.css' %}">
+  <link rel="stylesheet" href="{% static 'css/project.css' %}?v=20261124-7">
 
   <!-- Third-party CSS libraries go here -->
   <link rel="stylesheet" href="{% static 'fonts/css/all.css' %}">
@@ -34,90 +34,96 @@
 </head>
 
 <body>
-  <div class="mb-1" id="main-navbar">
-    <nav class="navbar navbar-expand-md">
+  <a class="portal-skip-link visually-hidden-focusable" href="#main-content">{% trans "Skip to main content" %}</a>
+  <div id="main-navbar">
+    <nav class="navbar navbar-expand-xl">
       <a class="navbar-brand" href="{% url 'home' %}">
-        <img style="width: 40px" id="leafy" src="{% static 'images/Leaf.svg' %}"><strong>
-          {% trans "  CFIA FoodPort" %}</strong>
+        <img class="navbar-brand-mark" id="leafy" src="{% static 'images/Leaf.svg' %}" alt="">
+        <strong>{% trans "CFIA FoodPort" %}</strong>
       </a>
       <button class="navbar-toggler tog ms-auto" type="button" data-bs-toggle="collapse"
         data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
         aria-label="{% trans 'Toggle navigation' %}">
-        <i class="fas fa-bars" style="color:white"></i>
+        <i class="fas fa-bars" aria-hidden="true"></i>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item active">
-            <a class="nav-link" href="{% url 'home' %}">{% trans "Home " %}<i class="fas fa-home"></i></a>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'home' %}">{% trans "Home " %}<i class="fas fa-home" aria-hidden="true"></i></a>
           </li>
-          <li class="nav-item active">
+          <li class="nav-item">
             <div class="dropdown">
-              <button class="btn btn-outline dropdown-toggle" type="button" id="metadataDropdownButton"
-                data-bs-toggle="dropdown">{% trans "Explore" %}</button>
+              <button class="nav-link dropdown-toggle" type="button" id="metadataDropdownButton"
+                data-bs-toggle="dropdown" aria-expanded="false">{% trans "Explore" %}</button>
               <div class="dropdown-menu" aria-labelledby="metadataDropdownButton">
-                <a class="dropdown-item" href="{% url 'sequence_database:database_home' %}">{% trans "Database" %} </a>
-                <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">{% trans "Search " %}<i
-                    class="fas fa-search"></i></a>
-                <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %}<i
-                    class="fas fa-book"></i></a>
+                <a class="dropdown-item" href="{% url 'sequence_database:database_home' %}">{% trans "Database" %}
+                  <i class="fas fa-database" aria-hidden="true"></i></a>
+                <a class="dropdown-item" href="{% url 'metadata:metadata_home' %}">{% trans "Search" %} <i
+                    class="fas fa-search" aria-hidden="true"></i></a>
+                <a class="dropdown-item" href="{% url 'metadata:metadata_browse' %}">{% trans "Browse " %} <i
+                    class="fas fa-book-open" aria-hidden="true"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata:metadata_submit' %}">{% trans "Forms " %} <i
-                    class="fas fa-file-pdf"></i></a>
+                    class="fas fa-file-alt" aria-hidden="true"></i></a>
                 <a class="dropdown-item" href="{% url 'metadata_upload:upload_files' %}">{% trans "Updata Metadatabase " %} <i
-                  class="fas fa-folder"></i></a>
-                    <a class="dropdown-item" href="{% url 'filezone:filezone' %}">{% trans "FileZone " %} <i
-                  class="fas fa-folder"></i></a>
+                  class="fas fa-file-upload" aria-hidden="true"></i></a>
+                    <a class="dropdown-item" href="{% url 'filezone:filezone' %}">{% trans "FileZone" %} <i
+                  class="fas fa-folder-open" aria-hidden="true"></i></a>
               </div>
             </div>
           </li>
 
-          <li class="nav-item active">
+          <li class="nav-item">
             <a class="nav-link" href="{% url 'data:data_home' %}">{% trans "Retrieve " %}<i
-                class="far fa-file-alt"></i></a>
+                class="far fa-file-alt" aria-hidden="true"></i></a>
           </li>
 
-          <li class="nav-item active">
-            <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly " %}<i
-                class="fas fa-cogs"></i></a>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'cowbat:assembly_home' %}">{% trans "Assembly" %} <i
+                class="fas fa-cogs" aria-hidden="true"></i></a>
           </li>
+          <li class="nav-item">
           <div class="dropdown">
-            <button class="btn btn-outline dropdown-toggle" type="button" id="dropdownMenuButton"
-              data-bs-toggle="dropdown">{% trans "Analyze" %}</button>
+            <button class="nav-link dropdown-toggle" type="button" id="dropdownMenuButton"
+              data-bs-toggle="dropdown" aria-expanded="false">{% trans "Analyze" %}</button>
             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                <a class="dropdown-item" href="{% url 'cowbat:research_assembly' %}">{% trans "Research Assembly " %}<i
-                class="fas fa-cogs"></i></a>
+                class="fas fa-cubes" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:geneseekr_home' %}">{% trans "Find Genes " %}<i
-                  class="fas fa-microscope"></i></a>
+                  class="fas fa-microscope" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:tree_home' %}">{% trans "Create Tree " %}<i
-                  class="fas fa-seedling"></i></a>
+                  class="fas fa-seedling" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:amr_home' %}">{% trans "Investigate AMR " %}<i
-                  class="fas fa-vial"></i></a>
+                  class="fas fa-vial" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:prokka_home' %}">{% trans "Annotate " %}<i
-                  class="far fa-comment-alt"></i></a>
+                  class="fas fa-file-alt" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'geneseekr:neighbor_home' %}">{% trans "Find Near Neighbors " %}<i
-                  class="fas fa-code-branch"></i></a>
-              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">{% trans "Virus Typer" %} <i
-                  class="fas fa-pastafarianism"></i></a>
+                  class="fas fa-code-branch" aria-hidden="true"></i></a>
+              <a class="dropdown-item" href="{% url 'vir_typer:vir_typer_home' %}">{% trans "VirusTyper" %} <i
+                  class="fas fa-biohazard" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'primer_finder:primer_home' %}">{% trans "Find Primers " %}
-                <i class="fas fa-align-right"></i></a>
+                <i class="fas fa-vials" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'ampliseq:ampliseq' %}">{% trans "16S rRNA Analyses " %}
-                <i class="fas fa-barcode"></i></a>
+                <i class="fas fa-barcode" aria-hidden="true"></i></a>
               <a class="dropdown-item" href="{% url 'cowsnphr:cowsnphr' %}">{% trans "Locate SNVs " %}
-                <i class="fas fa-tractor"></i></a>
+                <i class="fas fa-dna" aria-hidden="true"></i></a>
               </div>
           </div>
+          </li>
 
         </ul>
 
         <ul class="navbar-nav settings">
           {# Language selection #}
-          <li class="nav-item active">
-            <form action="{% url 'set_language' %}" method="post" class="dropdown">
+          <li class="nav-item">
+            <form action="{% url 'set_language' %}" method="post" class="nav-language-form">
               {% csrf_token %}
               {% get_current_language as LANGUAGE_CODE %}
               {% get_available_languages as LANGUAGES %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <label class="visually-hidden" for="portal-language">{% trans "Language" %}</label>
               <div class="form-group">
-                <select name="language" class="form-select sel-lang" onchange="this.form.submit()">
+                <select id="portal-language" name="language" class="form-select form-select-sm sel-lang"
+                  onchange="this.form.submit()">
                   {% for language in LANGUAGES %}
                   <option value="{{ language.0 }}" {% if language.0 == LANGUAGE_CODE %}selected="selected" {% endif %}>
                     {{ language.1 }}
@@ -128,13 +134,13 @@
             </form>
           </li>
           {% if request.user.is_authenticated %}
-          <li class="nav-item active">
+          <li class="nav-item">
             {# URL provided by django-allauth/account/urls.py #}
             <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "Profile" %} <i
                 class="fas fa-user-circle"></i></a>
           </li>
 
-          <li class="nav-item active">
+          <li class="nav-item">
             {# URL provided by django-allauth/account/urls.py #}
             <form method="post" action="{% url 'account_logout' %}">
               {% csrf_token %}
@@ -171,39 +177,36 @@
     </nav>
   </div>
   <br>
-  <div class="browserAlert" style='display: none;'><i class="fas fa-exclamation-triangle fa-lg"></i> <b> {% trans "You are using Internet Explorer, which is no longer supported. Chrome, Firefox or Edge is recommended for use of the FoodPort. "%} </b> </div>
+  <div class="browserAlert container" id="browser-alert" role="alert" style="display: none;">
+    <i class="fas fa-exclamation-triangle fa-lg" aria-hidden="true"></i>
+    <strong>{% trans "You are using Internet Explorer, which is no longer supported. Chrome, Firefox or Edge is recommended for use of the FoodPort. " %}</strong>
+  </div>
 
-  <div class="container">
-    {#This is where alert messages will appear (i.e. successful signin)#}
-    <br>
+  <main class="container portal-main" id="main-content">
     {% if messages %}
+    <div class="portal-messages" aria-live="polite">
     {% for message in messages %}
-    <div class="container">
       <div class="alert {% if message.tags %}alert-{{ message.tags|handle_multivaluedict }}{% endif %}">{{ message }}</div>
-    </div>
     {% endfor %}
+    </div>
     {% endif %}
 
-    <br>
+    {% if app_home_route %}
+    {% include "includes/app_home_button.html" %}
+    {% endif %}
 
     {% block content %}
-    <p class="lead h6" style="text-align:center">
-      <span class="h1">
-        <b>{% trans "CFIA FoodPort" %}</b>
-        <i class="fas fa-dna"></i>
-      </span>
-      <br>
-    </p>
-
-    <br>
+    <header class="portal-home-header">
+      <h1>{% trans "CFIA FoodPort" %}</h1>
+    </header>
     <div class="h-100 justify-content-center">
       <div class="container">
-        <div class="card-grid mb-3 text-center">
+        <div class="card-grid mb-3">
 
           <div class="row">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Explore Data" %}</h3>
+                <h2>{% trans "Explore Data" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article1">
@@ -216,7 +219,7 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Get Data" %}</h3>
+                <h2>{% trans "Get Data" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article2">{% trans "Retrieve copies of files stored at OLC to analyze locally." %}</p>
@@ -227,7 +230,7 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Assembly" %}</h3>
+                <h2>{% trans "Assembly" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article3">
@@ -242,7 +245,7 @@
           <div class="row">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Find Genes" %}</h3>
+                <h2>{% trans "Find Genes" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article4">
@@ -254,7 +257,7 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Create a Tree" %}</h3>
+                <h2>{% trans "Create a Tree" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article5">{% trans "Create phylogenetic trees of assemblies." %}</p>
@@ -265,7 +268,7 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Investigate AMR" %}</h3>
+                <h2>{% trans "Investigate AMR" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article6">
@@ -281,7 +284,7 @@
           <div class="row">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Annotate Genomes" %}</h3>
+                <h2>{% trans "Annotate Genomes" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article7">{% trans "Use Prokka to perform annotations on genome assemblies." %}</p>
@@ -292,17 +295,17 @@
 
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Virus Typer" %}</h3>
+                <h2>{% trans "VirusTyper" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article8">{% trans "Perform typing on viral sequences." %}</p>
-                <a class="btn btn-primary btn-lg w-100 mt-auto"                 href="{% url 'vir_typer:vir_typer_home' %}">{% trans "Virus Typer" %}</a>
+                <a class="btn btn-primary btn-lg w-100 mt-auto" href="{% url 'vir_typer:vir_typer_home' %}">{% trans "VirusTyper" %}</a>
               </div>
             </div>
             <!--Primer Finding-->
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "PrimerFinder" %}</h3>
+                <h2>{% trans "PrimerFinder" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article9">{% trans "Determine primer binding to assemblies" %}</p>
@@ -314,7 +317,7 @@
            <div class="row">
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Analyse 16S rRNA" %}</h3>
+                <h2>{% trans "Analyse 16S rRNA" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article10">{% trans "Use AmpliSeq to analyse 16S rRNA FASTQ files" %}</p>
@@ -324,7 +327,7 @@
             </div>
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "Analyse SNVs" %}</h3>
+                <h2>{% trans "Analyse SNVs" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
                 <p id="article11">{% trans "Use COWSNPhR to locate SNVs using FASTQ files" %}</p>
@@ -334,10 +337,10 @@
             </div>
             <div class="card mb-4 box-shadow">
               <div class="card-header">
-                <h3>{% trans "FileZone" %}</h3>
+                <h2>{% trans "FileZone" %}</h2>
               </div>
               <div class="card-body d-flex flex-column">
-                <p id="article11">{% trans "Use FileZone to upload, download, or rename files in containers" %}</p>
+                <p id="article12">{% trans "Use FileZone to upload, download, or rename files in containers" %}</p>
                 <a class="btn btn-primary btn-lg w-100 mt-auto"
                   href="{% url 'filezone:filezone' %}">{% trans "FileZone" %}</a>
               </div>
@@ -346,7 +349,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
   {% endblock content %}
 
 
@@ -365,15 +368,10 @@
   <!-- Project specific Javascript goes in this file -->
   <script src="{% static 'js/project.js' %}?v=20261110"></script>
   <script type="text/javascript">
-    if (bowser.name == "Internet Explorer") {
-      //IE doesn't like nice things - this adjusts the image so it is not distorted
+    if (bowser.name === "Internet Explorer") {
       document.getElementById("leafy").style.width = "50px";
       document.getElementById("leafy").style.height = "50px";
-      document.getElementsByClassName('card-grid')[0].style.display = 'inline';
-      document.getElementsByClassName('browserAlert')[0].style.display = 'block';
-    }
-    if (bowser.name == "Firefox") {
-      document.getElementsByTagName("select")[0].className = "fox";
+      document.getElementById("browser-alert").style.display = "block";
     }
 
     function getLanguage() {

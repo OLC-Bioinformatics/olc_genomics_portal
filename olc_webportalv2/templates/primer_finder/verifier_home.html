@@ -4,19 +4,17 @@
 {% load i18n %}
 {% block content %}
 
-<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
-<br>
-
-<br>
-<a href="{% url 'primer_finder:primer_verifier_request' %}" class="btn btn-primary w-100" role="button"
-   aria-pressed="true"><i class="fas fa-plus"></i>
-    <strong> {% trans "Create A PrimerVerifier Experiment" %}</strong>
-</a>
-
-<br>
-<h3>{% trans "PrimerVerifier" %}</h3>
-<br>
-
+<section class="portal-page">
+<header class="portal-page-header">
+    <h1 class="portal-page-title">{% trans "PrimerVerifier" %}</h1>
+</header>
+<div class="portal-page-actions">
+    <a href="{% url 'primer_finder:primer_verifier_request' %}" class="btn btn-primary" role="button"
+       aria-pressed="true"><i class="fas fa-plus" aria-hidden="true"></i>
+        <strong>{% trans "Create A PrimerVerifier Experiment" %}</strong>
+    </a>
+</div>
+<div class="portal-table-wrap">
 <table id="primer_verifier-request-table" class="table table-hover">
     <thead>
     <tr style="text-align:center">
@@ -103,6 +101,8 @@
     {% endfor %}
     </tbody>
 </table>
+</div>
+</section>
 
 <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script src="{% static 'js/datatables.min.js' %}"></script>

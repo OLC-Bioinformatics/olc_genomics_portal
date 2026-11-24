@@ -3,14 +3,23 @@
 {% load static %}
 {% load i18n widget_tweaks %}
 {% block content %}
-<br>
-<a href="{% url 'data:assembled_data' %}" class="btn btn-primary w-100" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>{% trans "Get Processed (FASTA) Data "%}</strong></a>
-<a href="{% url 'data:raw_data' %}" class="btn btn-primary w-100" role="button" aria-pressed="true"> <i class="fas fa-plus"></i> <strong>{% trans "Get Raw (FASTQ) Data "%}</strong></a>
-<br>
-  <h2>{% trans "Data Collection" %}</h2>
-  <br>
-  <p>{% trans "Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data requests will need to be re-run." %}</p>
+<section class="portal-page">
+  <header class="portal-page-header">
+    <div>
+      <h1 class="portal-page-title">{% trans "Data Collection" %}</h1>
+      <p class="portal-page-intro">{% trans "Data requests made in the last 7 days are visible. Afterwards, to reacquire the files, data requests will need to be re-run." %}</p>
+    </div>
+  </header>
+  <div class="portal-page-actions">
+    <a href="{% url 'data:assembled_data' %}" class="btn btn-primary" role="button" aria-pressed="true">
+      <i class="fas fa-plus" aria-hidden="true"></i><strong>{% trans "Get Processed (FASTA) Data "%}</strong>
+    </a>
+    <a href="{% url 'data:raw_data' %}" class="btn btn-primary" role="button" aria-pressed="true">
+      <i class="fas fa-plus" aria-hidden="true"></i><strong>{% trans "Get Raw (FASTQ) Data "%}</strong>
+    </a>
+  </div>
 
+  <div class="portal-table-wrap">
   <table id="data-request-table" class="table table-hover">
   <thead>
     <tr style="text-align:center">
@@ -25,12 +34,14 @@
     {% for data_request in data_requests %}
       <tr style="text-align:center">
         <td>
+          <div class="portal-seqid-list">
           {% for seqid in data_request.seqids|slice:":3" %}
-            <p style="font-size:14px">{{ seqid }}</p>
+            <span>{{ seqid }}</span>
           {% endfor %}
           {% if data_request.seqids|length > 3 %}
-              <p style="font-size:14px">{% trans "...and"%} {{ data_request.seqids|length|add:'-3' }} {% trans "more"%}</p>
+              <span>{% trans "...and"%} {{ data_request.seqids|length|add:'-3' }} {% trans "more"%}</span>
           {% endif %}
+          </div>
         </td>
 
          {% if data_request.status == 'Complete' %}
@@ -61,7 +72,7 @@
     {% endfor %}
     </tbody>
   </table>
-  <br>
+  </div>
   <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
@@ -85,4 +96,5 @@
       {% endfor %}
     }, 60000) // This should refresh the page every 60 seconds as long as data request status is processing.
   </script>
+</section>
 {% endblock %}

@@ -5,7 +5,6 @@
 {% load display_filters %}
 {% block content %}
 
-<p style="text-align: right"> <a href="{% url 'primer_finder:primer_home' %}">{% trans "PrimerFinder Home" %}</a></p>
 <br>
 
 <h4>{% blocktrans with project_name=request.project_name %}Summary Report for {{ project_name }}{% endblocktrans %}</h4>

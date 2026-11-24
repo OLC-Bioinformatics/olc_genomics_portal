@@ -74,10 +74,6 @@
     <p>{%trans "Return to "%} <a href="{% url 'ampliseq:ampliseq' %}">{%trans "AmpliSeq Home"%}</a> </p>
 
   {% elif request.status == 'Complete' %}
-    <div style="text-align: right">
-      <a href="{% url 'ampliseq:ampliseq' %}">{%trans "AmpliSeq Home"%}</a>
-      <br><br>
-    </div>
     <button class="btn btn-success w-100" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br>
     <p>{%trans "These results will be available for 7 days."%}</p>

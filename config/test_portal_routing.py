@@ -13,6 +13,8 @@ from django.test import (
 from django.urls import resolve, reverse
 from django.utils.translation import override
 
+from config.context_processors import app_home_navigation
+
 
 class PortalRoutingTests(TestCase):
     """Verify portal routes, navigation, templates, and static assets."""
@@ -35,11 +37,22 @@ class PortalRoutingTests(TestCase):
         """Load the configured Bootstrap 5 crispy-forms template."""
         self.assertIsNotNone(get_template("bootstrap5/uni_form.html"))
 
-    def test_research_assembly_template_compiles(self):
-        """Load the research assembly template without syntax errors."""
-        self.assertIsNotNone(
-            get_template("cowbat/research_assembly_home.html")
+    def test_dashboard_templates_compile(self):
+        """Load the updated dashboard templates without syntax errors."""
+        templates = (
+            "cowbat/research_assembly_home.html",
+            "cowbat/assembly_home.html",
+            "data/data_home.html",
+            "primer/primer_val_home.html",
+            "primer_finder/primer_home.html",
+            "primer_finder/validator_home.html",
+            "primer_finder/verifier_home.html",
+            "vir_typer/vir_typer_home.html",
         )
+
+        for template in templates:
+            with self.subTest(template=template):
+                self.assertIsNotNone(get_template(template))
 
     def test_cowsnphr_tree_template_compiles(self):
         """Load the translated tree page without template syntax errors."""
@@ -104,13 +117,13 @@ class PortalRoutingTests(TestCase):
         self.assertIn('aria-labelledby="metadataDropdownButton"', html)
         self.assertIn('aria-labelledby="dropdownMenuButton"', html)
 
-    def test_french_home_translates_the_virus_typer_links(self):
-        """Render the Virus Typer links using the existing French label."""
+    def test_french_home_preserves_the_virus_typer_brand_name(self):
+        """Render VirusTyper consistently in the French interface."""
         response = self.client.get("/", HTTP_ACCEPT_LANGUAGE="fr")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Typage viral")
-        self.assertNotContains(response, ">VirusTyper")
+        self.assertContains(response, ">VirusTyper")
+        self.assertNotContains(response, "Virus Typer")
 
     def test_home_and_about_render_the_shared_portal_shell(self):
         """Render the common navigation and scripts on both landing pages."""
@@ -153,6 +166,79 @@ class PortalRoutingTests(TestCase):
                 target = reverse(route_name)
                 self.assertContains(response, f'href="{target}"')
                 self.assertIsNotNone(resolve(target))
+
+    def test_app_home_navigation_uses_the_nearest_landing_page(self):
+        """Route subpages to their matching app dashboard."""
+        cases = (
+            (
+                "primer_finder:primer_validator_home",
+                {},
+                "primer_finder:primer_home",
+                "PrimerFinder Home",
+            ),
+            (
+                "cowbat:upload_assembly",
+                {},
+                "cowbat:research_assembly",
+                "Research Assembly Home",
+            ),
+            (
+                "cowbat:upload_metadata",
+                {},
+                "cowbat:assembly_home",
+                "Assembly Home",
+            ),
+            (
+                "geneseekr:tree_result",
+                {"tree_request_pk": 1},
+                "geneseekr:tree_home",
+                "Tree Home",
+            ),
+            (
+                "metadata_upload:upload_files",
+                {},
+                "metadata:metadata_home",
+                "Metadata Home",
+            ),
+        )
+
+        for route_name, kwargs, expected_route, expected_label in cases:
+            with self.subTest(route=route_name):
+                path = reverse(route_name, kwargs=kwargs or None)
+                request = RequestFactory().get(path)
+                request.resolver_match = resolve(path)
+
+                self.assertEqual(
+                    app_home_navigation(request),
+                    {
+                        "app_home_route": expected_route,
+                        "app_home_label": expected_label,
+                    },
+                )
+
+    def test_app_home_button_uses_the_shared_outline_style(self):
+        """Render the common app-home link with its Bootstrap button style."""
+        html = get_template("includes/app_home_button.html").render(
+            {
+                "app_home_route": "primer_finder:primer_home",
+                "app_home_label": "PrimerFinder Home",
+            }
+        )
+
+        self.assertIn('class="btn btn-outline-primary app-home-link"', html)
+        self.assertIn(
+            f'href="{reverse("primer_finder:primer_home")}"',
+            html,
+        )
+        self.assertIn("PrimerFinder Home", html)
+
+    def test_app_home_navigation_is_omitted_from_app_landing_pages(self):
+        """Avoid showing an app-home button on that app's own landing page."""
+        path = reverse("data:data_home")
+        request = RequestFactory().get(path)
+        request.resolver_match = resolve(path)
+
+        self.assertEqual(app_home_navigation(request), {})
 
     def test_navigation_shows_login_or_profile_actions(self):
         """Show login or profile actions based on authentication state."""
@@ -303,12 +389,16 @@ class PortalRoutingTests(TestCase):
         self.assertContains(response, '<html lang="fr">')
         self.assertEqual(response["Content-Language"], "fr")
 
-    def test_base_assets_exist_and_jquery_precedes_project_javascript(self):
-        """Find base assets and ensure jQuery loads before project scripts."""
+    def test_base_assets_and_accessible_shell(self):
+        """Find shared assets, landmarks, and accessible navigation controls."""
         response = Client().get("/", HTTP_HOST="localhost")
         html = response.content.decode(response.charset)
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn('href="#main-content"', html)
+        self.assertIn('id="main-content"', html)
+        self.assertIn('for="portal-language"', html)
+        self.assertIn('class="card-grid mb-3"', html)
         for asset in (
             "css/bootstrap.min.css",
             "css/bootstrap-datepicker.min.css",
@@ -325,3 +415,18 @@ class PortalRoutingTests(TestCase):
             html.index("jquery-3.7.1.min.js"),
             html.index("project.js"),
         )
+
+    def test_homepage_skip_link_uses_french_translation(self):
+        """Render the new skip link in the selected French language."""
+        response = Client(HTTP_ACCEPT_LANGUAGE="fr").get("/", HTTP_HOST="localhost")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Passer au contenu principal")
+
+    def test_homepage_uses_selected_banner_without_helix(self):
+        """Render the selected minimal banner without the DNA icon."""
+        response = Client().get("/", HTTP_HOST="localhost")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="portal-home-header"')
+        self.assertNotContains(response, "fa-dna")

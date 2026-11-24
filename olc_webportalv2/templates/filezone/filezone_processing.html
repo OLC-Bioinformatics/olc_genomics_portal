@@ -28,10 +28,6 @@
     <p>{%trans "Return to "%} <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a> </p>
 
   {% elif filezone_request.status == 'Complete' %}
-    <div style="text-align: right">
-      <a href="{% url 'filezone:filezone' %}">{%trans "FileZone Home"%}</a>
-      <br><br>
-    </div>
     <button class="btn btn-success w-100" disabled>{%trans "Complete"%} <i class="fas fa-check-circle"></i></button>
     <br><br>
     <div style="text-align: center">

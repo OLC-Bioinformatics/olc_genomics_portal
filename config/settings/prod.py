@@ -268,6 +268,7 @@ TEMPLATES = [
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.auth_settings",
+                "config.context_processors.app_home_navigation",
                 # Your stuff: custom template context processors go here
             ],
         },

@@ -3626,8 +3626,8 @@ msgstr "Trouver les voisins proches "
 #: olc_webportalv2/templates/base.html:295
 #: olc_webportalv2/templates/base.html:299
 #: olc_webportalv2/templates/vir_typer/vir_typer_home.html:10
-msgid "Virus Typer"
-msgstr "Typage viral"
+msgid "VirusTyper"
+msgstr "VirusTyper"
 
 #: olc_webportalv2/templates/base.html:100
 msgid "Find Primers "
@@ -5920,14 +5920,17 @@ msgstr "Vos fichiers ont été téléversés et traités avec succès."
 msgid "Upload More Files"
 msgstr "Téléverser d’autres fichiers"
 
+#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:13
+msgid "Create A VirusTyper Query"
+msgstr "Créer une requête VirusTyper"
+
 #: olc_webportalv2/templates/primer/primer_val_home.html:8
-#: olc_webportalv2/templates/vir_typer/vir_typer_home.html:8
-msgid "Create A Virus Typer Query"
-msgstr "Créer une requête de Virus Typer"
+msgid "Create A Primer Validator Query"
+msgstr "Créer une requête de validation des amorces"
 
 #: olc_webportalv2/templates/primer/primer_val_home.html:10
 msgid "Primer Validator"
-msgstr "Résultats des métadonnées"
+msgstr "Validateur d’amorces"
 
 #: olc_webportalv2/templates/primer/primer_val_home.html:20
 #: olc_webportalv2/templates/vir_typer/vir_typer_edit_project.html:7
@@ -5969,6 +5972,15 @@ msgstr ""
 #: olc_webportalv2/templates/primer_finder/verifier_results.html:8
 msgid "PrimerFinder Home"
 msgstr "Accueil de PrimerFinder"
+
+msgid "Database Home"
+msgstr "Accueil de la base de données"
+
+msgid "Metadata Home"
+msgstr "Accueil des métadonnées"
+
+msgid "VirusTyper Home"
+msgstr "Accueil de VirusTyper"
 
 #: olc_webportalv2/templates/primer_finder/validator_home.html:12
 msgid "Create A PrimerValidator Experiment"
@@ -6656,6 +6668,9 @@ msgstr "Pseudonyme"
 #: olc_webportalv2/templates/users/user_detail.html:19
 msgid "Language"
 msgstr "Langue"
+
+msgid "Skip to main content"
+msgstr "Passer au contenu principal"
 
 #: olc_webportalv2/templates/users/user_detail.html:20
 msgid "Lab"

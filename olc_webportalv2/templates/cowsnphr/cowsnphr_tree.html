@@ -41,6 +41,17 @@
       .accordion-body {
         background-color: white;
       }
+      .app-home-link {
+        border-color: #0e4164;
+        color: #0e4164;
+        text-decoration: none;
+      }
+      .app-home-link:hover,
+      .app-home-link:focus {
+        border-color: #0e4164;
+        color: #fff;
+        background-color: #0e4164;
+      }
       .form-group {
         margin: 0.4rem;
       }
@@ -112,7 +123,9 @@
         <a href="javascript:history.back()">{% trans "Back" %}</a>
     </div>
     <div style="text-align: right">
-        <a href="{% url 'cowsnphr:cowsnphr' %}">{% trans "COWSNPhR Home" %}</a>
+        <a class="btn btn-outline-primary app-home-link" href="{% url 'cowsnphr:cowsnphr' %}">
+            {% trans "COWSNPhR Home" %}
+        </a>
     </div>
     <br><br>
       <form class="form-inline my-2 my-lg-0">
