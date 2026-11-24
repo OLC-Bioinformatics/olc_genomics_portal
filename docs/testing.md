@@ -4,7 +4,7 @@ The portal test database is a dedicated PostgreSQL 16 container. It is not
 connected to the production database, and its port is not published to the
 host or other Compose projects.
 
-From `olc_genomics_portal`, start the database:
+From `olc_genomics_portal`, start the isolated test database:
 
 ```sh
 docker compose -p foodport-test -f docker-compose-test.yml up -d postgres
@@ -27,14 +27,14 @@ Run the Primer Finder browser tests with the opt-in Selenium Firefox service:
 docker compose -p foodport-browser-test \
   -f docker-compose-test.yml \
   -f docker-compose-browser-test.yml \
-  run --build --use-aliases --rm test-runner
+  up --build --abort-on-container-exit --exit-code-from test-runner test-runner
 ```
 
 The first run downloads the pinned Selenium Firefox image. The browser tests
 exercise dynamic target creation, result-detail toggling, and confirmation or
-cancellation of project deletion. They use the isolated test database and
-leave the regular test command unchanged. Stop the browser and database
-containers afterward with:
+cancellation of project deletion. Use `up` to run the browser overlay with the same service setup as CI. These
+tests use an isolated test database and leave the regular test command
+unchanged. Stop the browser and database containers afterward with:
 
 ```sh
 docker compose -p foodport-browser-test \
@@ -64,3 +64,9 @@ status badge in the repository README tracks the latest `dev` run.
 The CI job does not run `makemigrations --check`: the current legacy model
 state produces existing migration proposals. Resolve that baseline drift
 before adding the command as a blocking check.
+
+CI also runs `utility.test_documentation`, which checks local Markdown links in
+the root README and `docs/` tree and verifies the deployment variable
+documentation against the pipeline mappings. The containerized CI test run
+also executes `utility.test_pipeline_syntax` to parse Azure pipeline YAML and
+check embedded Bash scripts.
