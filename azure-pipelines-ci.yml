@@ -21,6 +21,9 @@ steps:
   - bash: python3 -m unittest -v utility.test_production_deploy
     displayName: Test production deployment safeguards
 
+  - bash: python3 -m unittest -v utility.test_documentation
+    displayName: Check documentation links
+
   - bash: |
       set -euo pipefail
 
@@ -46,6 +49,7 @@ steps:
         run --build --rm test-runner \
         /bin/bash -lc \
         "python -m pip check && \
+         python -m unittest -v utility.test_pipeline_syntax && \
          bash utility/compile_python_requirements.sh --check && \
          python manage.py check && \
          flake8 --select=E9,F63,F7,F82 && \
