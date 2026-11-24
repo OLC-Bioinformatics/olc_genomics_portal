@@ -337,6 +337,12 @@ Keep every value marked secret using the lock icon. If you cannot read a Key
 Vault value, ask an authorized secret owner to enter it; do not put secret
 values in source control, pipeline logs, or chat.
 
+`RAG_TRUSTED_SERVICE_TOKEN` is also required and must be marked secret. It is
+the shared service credential used by the portal and RAG service; the Dev
+pipeline writes it to the generated `env` file. The full-infrastructure
+pipeline reads it from this variable group and securely stages it to the VM
+while generating `env`.
+
 `AZURE_ACCOUNT_KEY` is passed to the Batch service for Azure Blob mounts. Treat
 it as a storage-account secret; it is not passed to the web container or logged.
 
@@ -400,11 +406,15 @@ pools are not changed by updating this value.
 | `RESOURCE_GROUP_NAME` | `resource-group-name` |
 | `STORAGE_ACCOUNT_NAME` | `storage-account-name` |
 
-After adding all 47 values, set the existing non-secret
+`RAG_TRUSTED_SERVICE_TOKEN` is supplied directly in this variable group, not
+fetched from Key Vault.
+
+After setting all required values, set the existing non-secret
 `FOODPORT_SECRET_VARIABLES_READY` variable to `true`. Under the variable group's
-**Pipeline permissions**, authorize only `FoodPort-dev-VM`; do not enable access
-for all pipelines. The pipeline stages the files with restrictive permissions,
-transfers them over SSH, and removes the temporary remote copy after deployment.
+**Pipeline permissions**, authorize `FoodPort-dev-VM` and `FoodPort-full-infra`;
+do not enable access for all pipelines. The pipelines stage the files with
+restrictive permissions, transfer them over SSH, and remove temporary copies
+after deployment.
 
 ### Self-hosted agent support
 

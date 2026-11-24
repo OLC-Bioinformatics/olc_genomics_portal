@@ -536,6 +536,8 @@ stages:
 
 - stage: DeployPortal
   displayName: 'Deploy portal'
+  variables:
+  - group: FoodPort-Dev-Portal-Secrets
   dependsOn: BootstrapRemoteVm
   condition: and(succeeded(), ne(${{ parameters.validateManagedDevOpsPool }}, true))
   jobs:
@@ -606,20 +608,70 @@ stages:
         tar -C "$(Build.SourcesDirectory)" -cf - . | ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" "tar -C '$REMOTE_DIR' -xvf -"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" "$(sshKey.secureFilePath)" "${TARGET_SSH_USER}@${TARGET_HOST}:/tmp/portal_ssh_key"
 
+        if [ -z "${RAG_TRUSTED_SERVICE_TOKEN:-}" ] || \
+           [ "$RAG_TRUSTED_SERVICE_TOKEN" = '$(RAG_TRUSTED_SERVICE_TOKEN)' ]; then
+          echo 'RAG_TRUSTED_SERVICE_TOKEN is missing; verify the variable group and pipeline authorization.' >&2
+          exit 1
+        fi
+        if [[ "$RAG_TRUSTED_SERVICE_TOKEN" == *$'\n'* || \
+              "$RAG_TRUSTED_SERVICE_TOKEN" == *$'\r'* ]]; then
+          echo 'RAG_TRUSTED_SERVICE_TOKEN must be a single-line value.' >&2
+          exit 1
+        fi
+        secret_dir="$(mktemp -d)"
+        chmod 700 "$secret_dir"
+        printf '%s' "$RAG_TRUSTED_SERVICE_TOKEN" > "$secret_dir/rag_token"
+        chmod 600 "$secret_dir/rag_token"
+        remote_secret_dir=''
+        cleanup_rag_secret() {
+          if ! rm -rf -- "$secret_dir"; then
+            echo 'WARNING: Could not remove the local temporary RAG token file.' >&2
+          fi
+          if [ -n "$remote_secret_dir" ]; then
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" \
+              "${TARGET_SSH_USER}@${TARGET_HOST}" \
+              "rm -rf -- '$remote_secret_dir'" || true
+          fi
+        }
+        trap cleanup_rag_secret EXIT
+        remote_secret_dir="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" \
+          "${TARGET_SSH_USER}@${TARGET_HOST}" \
+          'umask 077; mktemp -d /tmp/foodport-rag-secret.XXXXXX')"
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          -i "$(sshKey.secureFilePath)" -P "${TARGET_SSH_PORT}" \
+          "$secret_dir/rag_token" \
+          "${TARGET_SSH_USER}@${TARGET_HOST}:${remote_secret_dir}/rag_token"
+
         safe_REMOTE_DIR=$(printf '%q' "$REMOTE_DIR")
         safe_TARGET_HOST=$(printf '%q' "${TARGET_HOST:-}")
         safe_DJANGO_DEBUG=$(printf '%q' "${DJANGO_DEBUG:-}")
         safe_NANOPORE_IMAGE=$(printf '%q' "${NANOPORE_IMAGE:-}")
         safe_NANOPORE_NODE_AGENT_SKU=$(printf '%q' "${NANOPORE_NODE_AGENT_SKU:-}")
+        safe_REMOTE_SECRET_DIR=$(printf '%q' "$remote_secret_dir")
 
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$(sshKey.secureFilePath)" -p "${TARGET_SSH_PORT}" "${TARGET_SSH_USER}@${TARGET_HOST}" \
-          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST DJANGO_DEBUG=$safe_DJANGO_DEBUG NANOPORE_IMAGE=$safe_NANOPORE_IMAGE NANOPORE_NODE_AGENT_SKU=$safe_NANOPORE_NODE_AGENT_SKU bash -s" <<'EOF'
+          "REMOTE_DIR=$safe_REMOTE_DIR TARGET_HOST=$safe_TARGET_HOST DJANGO_DEBUG=$safe_DJANGO_DEBUG NANOPORE_IMAGE=$safe_NANOPORE_IMAGE NANOPORE_NODE_AGENT_SKU=$safe_NANOPORE_NODE_AGENT_SKU REMOTE_SECRET_DIR=$safe_REMOTE_SECRET_DIR bash -s" <<'EOF'
           set -euo pipefail
           umask 077
 
+          rag_token_file="$REMOTE_SECRET_DIR/rag_token"
+          if [ ! -f "$rag_token_file" ]; then
+            echo 'Staged RAG trusted-service token is missing.' >&2
+            exit 1
+          fi
+          RAG_TRUSTED_SERVICE_TOKEN="$(cat "$rag_token_file")"
+          rm -f -- "$rag_token_file"
+          rmdir -- "$REMOTE_SECRET_DIR"
+          if [ -z "$RAG_TRUSTED_SERVICE_TOKEN" ]; then
+            echo 'Staged RAG trusted-service token is empty.' >&2
+            exit 1
+          fi
+
           AZURE_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/foodport-azure-cli.XXXXXX")"
           export AZURE_CONFIG_DIR
-          trap 'rm -rf -- "$AZURE_CONFIG_DIR"' EXIT
+          trap 'rm -rf -- "$AZURE_CONFIG_DIR" "$REMOTE_SECRET_DIR"' EXIT
           mkdir -p "$AZURE_CONFIG_DIR"
           az login --identity --allow-no-subscriptions --output none
 
@@ -639,6 +691,8 @@ stages:
           printf '%s=%s\n' DJANGO_DEBUG "$DJANGO_DEBUG" >> "$dotenv_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$env_file"
           printf '%s=%s\n' MICROSOFT_AUTH_ENABLED False >> "$dotenv_file"
+          printf 'RAG_TRUSTED_SERVICE_TOKEN=%s\n' "$RAG_TRUSTED_SERVICE_TOKEN" >> "$env_file"
+          unset RAG_TRUSTED_SERVICE_TOKEN
           write_optional_setting() {
             name="$1"
             value="$2"
@@ -833,5 +887,6 @@ stages:
       displayName: 'Deploy portal on target VM'
       env:
         DJANGO_DEBUG: $(DJANGO_DEBUG)
+        RAG_TRUSTED_SERVICE_TOKEN: $(RAG_TRUSTED_SERVICE_TOKEN)
         NANOPORE_IMAGE: $(NANOPORE_IMAGE)
         NANOPORE_NODE_AGENT_SKU: $(NANORE_NODE_AGENT_SKU)
