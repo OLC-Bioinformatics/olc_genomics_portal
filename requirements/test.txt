@@ -86,6 +86,10 @@ attrs==26.1.0 \
 awesome-slugify==1.6.5 \
     --hash=sha256:bbdec3fa2187917473a2efad092b57f7125a55f841a7cf6a1773178d32ccfd71
     # via -r requirements/base.in
+axe-selenium-python==3.0.0 \
+    --hash=sha256:847e3925861133a523609ff27d0fef387e7588a26f23a27c208a30682b8e9240 \
+    --hash=sha256:8f082c821ce0c6c44a326a2df5bc5926c789d9b9600fbc052fb482ef20975513
+    # via -r requirements/test.in
 azure-batch==14.2.0 \
     --hash=sha256:115ccff0007852784ccf8fc12f5f3d415ed80513be306da7a8938ca82d948ee7 \
     --hash=sha256:c79267d6c3d3fe14a16a422ab5bbfabcbd68ed0b58b6bbcdfa0c8345c4c78532
@@ -2077,6 +2081,7 @@ pytest==9.2.0 \
     --hash=sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b
     # via
     #   -r requirements/test.in
+    #   axe-selenium-python
     #   confindr
     #   pytest-django
     #   pytest-sugar
@@ -2335,7 +2340,9 @@ seaborn==0.13.2 \
 selenium==4.52.0 \
     --hash=sha256:40f423c598cc85390c403ef626c9d3457c1ae834d4cf1f38637ebba3cb6f0d7a \
     --hash=sha256:caa2860d486f71cdeb21fee3248c2f604bba590120dfb4d3d18c4d7cf97c6f1f
-    # via -r requirements/test.in
+    # via
+    #   -r requirements/test.in
+    #   axe-selenium-python
 sentry-sdk==2.75.0 \
     --hash=sha256:9a10e97de2cbd42ad7e4a6e02a0d5af19de9811eb02445077d41ba14c08e170c \
     --hash=sha256:c38ac2d4b2435c11da821e173bb9d9088c98f41ae92f559ce0e424170a8e1a29

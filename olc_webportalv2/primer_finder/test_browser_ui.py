@@ -1,14 +1,19 @@
 import os
 import unittest
+from unittest.mock import patch
 
+from axe_selenium_python import Axe
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.urls import reverse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from olc_webportalv2.cowsnphr.models import COWSNPhRRequest
+from olc_webportalv2.filezone.models import ContainerName
 from olc_webportalv2.primer_finder.models import (
     PrimerVerifierRequest,
     ValidatorPanel,
@@ -61,6 +66,237 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
     def open_page(self, route, **kwargs):
         self.browser.get(self.live_server_url + reverse(route, kwargs=kwargs))
 
+    def assert_axe_has_no_violations(self):
+        axe = Axe(self.browser)
+        axe.inject()
+        violations = axe.run()['violations']
+        if violations:
+            self.fail(
+                f'Axe violations on {self.browser.current_url}:\n'
+                f'{axe.report(violations)}'
+            )
+
+    def test_homepage_responsive_layout_and_accessible_shell(self):
+        self.open_page('home')
+        self.wait.until(
+            EC.presence_of_element_located((By.ID, 'main-content'))
+        )
+
+        self.assertTrue(self.browser.find_element(By.TAG_NAME, 'html').get_attribute('lang'))
+        self.assertEqual(
+            len(self.browser.find_elements(By.CSS_SELECTOR, '#main-content h1')),
+            1,
+        )
+        skip_link = self.browser.find_element(
+            By.CSS_SELECTOR, '.portal-skip-link'
+        )
+        self.assertEqual(skip_link.get_attribute('href').split('#')[-1], 'main-content')
+        self.assertTrue(
+            self.browser.find_element(By.CSS_SELECTOR, 'main#main-content')
+        )
+
+        language_select = self.browser.find_element(
+            By.ID, 'portal-language'
+        )
+        self.assertTrue(
+            self.browser.find_element(
+                By.CSS_SELECTOR, 'label[for="portal-language"]'
+            ).get_attribute('textContent').strip()
+        )
+        nav_toggle = self.browser.find_element(
+            By.CSS_SELECTOR, '.navbar-toggler'
+        )
+        self.assertTrue(nav_toggle.get_attribute('aria-label').strip())
+        self.assertTrue(
+            self.browser.find_element(
+                By.ID, nav_toggle.get_attribute('aria-controls')
+            )
+        )
+        self.assertTrue(language_select.is_displayed())
+
+        cards = self.browser.find_elements(
+            By.CSS_SELECTOR, '.card-grid > .row:first-child > .card'
+        )
+        self.assertEqual(len(cards), 3)
+        for width, expected_columns in ((390, 1), (768, 2), (1280, 3)):
+            with self.subTest(viewport_width=width):
+                self.browser.set_window_size(width, 900)
+                self.assertTrue(
+                    self.browser.execute_script(
+                        'return document.documentElement.scrollWidth <= '
+                        'document.documentElement.clientWidth'
+                    ),
+                    f'Horizontal overflow at viewport width {width}px',
+                )
+                positions = [card.location for card in cards]
+                for index in range(1, expected_columns):
+                    self.assertAlmostEqual(
+                        positions[0]['y'], positions[index]['y'], delta=2
+                    )
+                if expected_columns < len(cards):
+                    self.assertGreater(
+                        positions[expected_columns]['y'],
+                        positions[0]['y'],
+                    )
+
+        explore = self.browser.find_element(By.ID, 'metadataDropdownButton')
+        explore.send_keys(Keys.ENTER)
+        self.wait.until(
+            lambda _browser: explore.get_attribute('aria-expanded') == 'true'
+        )
+        self.assertTrue(
+            self.browser.find_element(
+                By.CSS_SELECTOR,
+                '.dropdown-menu[aria-labelledby="metadataDropdownButton"]',
+            ).is_displayed()
+        )
+        explore.send_keys(Keys.ESCAPE)
+        self.wait.until(
+            lambda _browser: explore.get_attribute('aria-expanded') == 'false'
+        )
+        self.assert_axe_has_no_violations()
+
+    def test_validator_form_controls_have_accessible_names(self):
+        self.authenticate_browser()
+        self.open_page('primer_finder:primer_validator_request')
+
+        controls = self.browser.find_elements(
+            By.CSS_SELECTOR,
+            '#main-content input:not([type="hidden"]), '
+            '#main-content select, #main-content textarea',
+        )
+        unlabeled_controls = []
+        for control in controls:
+            if not control.is_displayed():
+                continue
+            has_label = self.browser.execute_script(
+                'return Boolean(arguments[0].labels?.length)',
+                control,
+            )
+            has_aria_name = bool(
+                control.get_attribute('aria-label')
+                or control.get_attribute('aria-labelledby')
+            )
+            if not has_label and not has_aria_name:
+                unlabeled_controls.append(
+                    control.get_attribute('id') or control.get_attribute('name')
+                )
+
+        self.assertEqual(unlabeled_controls, [])
+        self.assert_axe_has_no_violations()
+
+    def test_processing_email_checkbox_has_a_label_and_supports_space(self):
+        self.user.email = 'browser@example.org'
+        self.user.save(update_fields=['email'])
+        request = ValidatorRequest.objects.create(
+            user=self.user,
+            project_name='browser-validator-email-accessibility',
+            status='Processing',
+            emails_array=['browser@example.org'],
+            forward_primer='ACGT',
+            reverse_primer='TGCA',
+        )
+        self.authenticate_browser()
+        self.open_page(
+            'primer_finder:primer_validator_processing',
+            validator_pk=request.pk,
+        )
+
+        checkbox = self.browser.find_element(By.ID, 'cbx')
+        label = self.browser.execute_script(
+            'return Array.from(arguments[0].labels, '
+            '(element) => element.textContent.trim()).join(" ")',
+            checkbox,
+        )
+        self.assertIn('Would you like to add another email?', label)
+        email_form = self.browser.find_element(By.ID, 'addEmail')
+        self.assertFalse(email_form.is_displayed())
+
+        checkbox.send_keys(Keys.SPACE)
+        self.wait.until(lambda _browser: email_form.is_displayed())
+        self.assertTrue(checkbox.is_selected())
+        self.assert_axe_has_no_violations()
+
+    def test_validator_dashboard_action_column_has_a_header(self):
+        self.authenticate_browser()
+        self.open_page('primer_finder:primer_validator_home')
+
+        headers = self.browser.find_elements(
+            By.CSS_SELECTOR, '#primer_validator-request-table thead th'
+        )
+        self.assertTrue(headers)
+        self.assertTrue(
+            all(header.get_attribute('scope') == 'col' for header in headers)
+        )
+        action_header_text = self.browser.execute_script(
+            'return arguments[0].textContent.trim()',
+            headers[-1],
+        )
+        self.assertEqual(action_header_text, 'Actions')
+        self.assert_axe_has_no_violations()
+
+    @patch(
+        'olc_webportalv2.filezone.views.list_blobs',
+        return_value=(
+            {
+                'sample.fasta': {
+                    'pk': 1,
+                    'blob_name': 'sample.fasta',
+                    'blob_size': '1 KB',
+                    'blob_date': '2026/01/01',
+                    'blob_md5': 'checksum',
+                    'blob_download_link': 'https://storage.example/download',
+                }
+            },
+            {},
+        ),
+    )
+    def test_filezone_container_view_passes_axe(self, _list_blobs):
+        container = ContainerName.objects.create(
+            container_name='axe-accessibility-test'
+        )
+        self.authenticate_browser()
+        self.open_page(
+            'filezone:container_view', filezone_pk=container.pk
+        )
+        self.wait.until(
+            EC.presence_of_element_located((By.ID, 'file-system-view'))
+        )
+        self.browser.execute_script(
+            "document.getElementById('file-system-view').style.display = 'block';"
+            "document.querySelectorAll('tr.folder, tr.file').forEach("
+            "row => row.classList.add('visible'));"
+        )
+
+        self.assert_axe_has_no_violations()
+
+    def test_cowsnphr_tree_controls_pass_axe(self):
+        request = COWSNPhRRequest.objects.create(
+            user=self.user,
+            project_name='axe-tree-accessibility-test',
+            phylogenetic_tree='((sample-a,sample-b),sample-c);',
+        )
+        self.open_page(
+            'cowsnphr:cowsnphr_tree', cowsnphr_pk=request.pk
+        )
+        self.wait.until(EC.presence_of_element_located((By.ID, 'tree')))
+
+        self.assertTrue(
+            self.browser.find_element(By.TAG_NAME, 'html').get_attribute('lang')
+        )
+        self.assertEqual(
+            self.browser.find_element(By.ID, 'dw-s1').get_attribute(
+                'aria-hidden'
+            ),
+            'false',
+        )
+        self.assertIsNone(
+            self.browser.find_element(By.ID, 'dw-s1').get_attribute(
+                'aria-expanded'
+            )
+        )
+        self.assert_axe_has_no_violations()
+
     def test_add_target_button_adds_a_target_form(self):
         self.authenticate_browser()
         self.open_page('primer_finder:primer_validator_request')
@@ -105,6 +341,7 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
             'primer_finder:primer_validator_results',
             validator_pk=request.pk,
         )
+        self.assert_axe_has_no_violations()
 
         toggle = self.wait.until(
             EC.element_to_be_clickable(

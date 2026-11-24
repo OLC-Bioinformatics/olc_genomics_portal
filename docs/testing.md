@@ -31,10 +31,15 @@ docker compose -p foodport-browser-test \
 ```
 
 The first run downloads the pinned Selenium Firefox image. The browser tests
-exercise dynamic target creation, result-detail toggling, and confirmation or
-cancellation of project deletion. Use `up` to run the browser overlay with the same service setup as CI. These
-tests use an isolated test database and leave the regular test command
-unchanged. Stop the browser and database containers afterward with:
+exercise the homepage at phone, tablet, and desktop widths; check accessible
+form controls and table headers; verify keyboard operation of the navigation
+dropdown; and run axe-core scans on the homepage, Primer Finder form, dashboard
+and results, FileZone container view, and COWSNPhR tree controls. They also
+cover dynamic target creation, result-detail toggling, and confirmation or
+cancellation of project deletion. Use `up` to run the browser overlay with the
+same service setup as CI. These tests use an isolated test database and leave
+the regular test command unchanged. Stop the browser and database containers
+afterward with:
 
 ```sh
 docker compose -p foodport-browser-test \
