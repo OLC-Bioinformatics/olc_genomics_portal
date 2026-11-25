@@ -299,6 +299,56 @@ class NanoporeDatabaseTaskTests(TestCase):
         self.assertEqual(result["waiting_file_count"], 1)
         self.assertIsNone(blocker.last_completed_at)
 
+    def test_collection_merges_waiting_waves_after_previous_result(self):
+        run = self.create_run(workflow_state="processing")
+        previous = self.create_batch(
+            run,
+            status="running",
+            generation=1,
+            azure_job_id="job-1",
+            pod5_count=1,
+        )
+        previous.last_completed_at = timezone.now()
+        previous.processed_pod5_count = 1
+        previous.save(
+            update_fields=["last_completed_at", "processed_pod5_count"]
+        )
+        waiting_files = [
+            NanoporeFile.objects.create(
+                sequencing_run=run,
+                relative_path=f"pod5/wave-{wave}/read.pod5",
+                blob_name=f"{run.run_name}/input/pod5/wave-{wave}/read.pod5",
+                size_bytes=wave,
+                sha256=f"sha-{wave}",
+                status="uploaded",
+            )
+            for wave in (2, 3, 4)
+        ]
+
+        with self.captureOnCommitCallbacks(execute=True):
+            with mock.patch(
+                "olc_webportalv2.cowbat.tasks."
+                "submit_nanopore_batch.apply_async"
+            ) as submit:
+                result = collect_nanopore_iteration.run(run.pk, force=True)
+
+        next_batch = NanoporeProcessingBatch.objects.get(
+            sequencing_run=run,
+            generation=2,
+        )
+        self.assertEqual(result["status"], "queued")
+        self.assertEqual(next_batch.pod5_count, 3)
+        self.assertEqual(len(next_batch.manifest.files), 3)
+        self.assertEqual(
+            set(
+                NanoporeFile.objects.filter(
+                    pk__in=[item.pk for item in waiting_files]
+                ).values_list("processing_batch_id", flat=True)
+            ),
+            {next_batch.pk},
+        )
+        submit.assert_called_once_with(queue="cowbat", args=(run.pk,))
+
     def test_collection_ignores_missing_or_closed_runs(self):
         missing_result = collect_nanopore_iteration.run(987654, force=True)
         closed_run = self.create_run(workflow_state="complete")
@@ -668,6 +718,65 @@ class NanoporeDatabaseTaskTests(TestCase):
         self.assertEqual(batch.status, "running")
         self.assertIsNotNone(batch.started_at)
         batch_client.job.delete.assert_not_called()
+
+    def test_monitor_schedules_collection_after_result_publication(self):
+        run = self.create_run(workflow_state="processing")
+        batch = self.create_batch(
+            run,
+            status="submitted",
+            azure_job_id="job-1",
+            azure_task_id="task-1",
+            report_url="result.json",
+        )
+        waiting_file = NanoporeFile.objects.create(
+            sequencing_run=run,
+            relative_path="pod5/waiting.pod5",
+            blob_name=f"{run.run_name}/input/pod5/waiting.pod5",
+            size_bytes=10,
+            status="uploaded",
+        )
+        storage = mock.Mock()
+        storage.object_exists.return_value = True
+        storage.download_bytes.return_value = json.dumps(
+            {
+                "run_id": run.pk,
+                "run_name": run.run_name,
+                "generation": batch.generation,
+                "status": "succeeded",
+                "scheduler_exit_code": 0,
+            }
+        ).encode()
+        batch_client = mock.Mock()
+        batch_client.task.list.return_value = [
+            SimpleNamespace(id="task-1", state="running")
+        ]
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.create_batch_client",
+                return_value=batch_client,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client",
+                return_value=storage,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks."
+                "collect_nanopore_iteration.apply_async"
+            ) as collect,
+        ):
+            check_nanopore_tasks()
+
+        batch.refresh_from_db()
+        waiting_file.refresh_from_db()
+        self.assertIsNotNone(batch.last_completed_at)
+        self.assertEqual(batch.status, "running")
+        self.assertIsNone(waiting_file.processing_batch_id)
+        collect.assert_called_once_with(
+            queue="cowbat",
+            args=(run.pk,),
+            kwargs={"force": False},
+        )
 
     def test_monitor_marks_disappeared_job_as_cleanup_error(self):
         run = self.create_run(workflow_state="processing")
