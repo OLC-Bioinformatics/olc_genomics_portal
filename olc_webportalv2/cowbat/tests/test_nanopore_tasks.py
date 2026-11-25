@@ -325,11 +325,11 @@ class NanoporeDatabaseTaskTests(TestCase):
             for wave in (2, 3, 4)
         ]
 
-        with self.captureOnCommitCallbacks(execute=True):
-            with mock.patch(
-                "olc_webportalv2.cowbat.tasks."
-                "submit_nanopore_batch.apply_async"
-            ) as submit:
+        with mock.patch(
+            "olc_webportalv2.cowbat.tasks."
+            "submit_nanopore_batch.apply_async"
+        ) as submit:
+            with self.captureOnCommitCallbacks(execute=True):
                 result = collect_nanopore_iteration.run(run.pk, force=True)
 
         next_batch = NanoporeProcessingBatch.objects.get(
