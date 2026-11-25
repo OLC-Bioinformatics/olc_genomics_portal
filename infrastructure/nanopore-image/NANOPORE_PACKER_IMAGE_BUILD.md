@@ -28,10 +28,9 @@ be integrated and operationally verified.
 
 The latest Packer configuration builds image `0.0.17` with PoreSippR-GUI
 commit `045baf1ba8372813e05bd981dd57886739e052df`. Its Packer build completed
-and published successfully, and all 44 installed scheduler tests passed.
-Image `0.0.17` has not yet passed GPU acceptance; keep FoodPort configured to
-the accepted `0.0.13` image until that acceptance and the separate API-to-Batch
-workflow checks are complete.
+and published successfully, all 44 installed scheduler tests passed, and GPU
+acceptance passed on 2026-11-25. Keep FoodPort configured to the accepted
+`0.0.13` image until the separate API-to-Batch workflow checks are complete.
 
 Image history:
 
@@ -49,7 +48,7 @@ Image history:
 0.0.11 Development image with updated Nanopore runtime metadata
 0.0.12 Development image iteration
 0.0.13 Accepted GPU image using the locally installed Dorado model directory
-0.0.14-0.0.17 Subsequent development builds; 0.0.17 awaits GPU acceptance
+0.0.14-0.0.17 Subsequent development builds; 0.0.17 passed GPU acceptance
 0.1.0  Planned first complete development image
 1.0.0  Planned first production-ready image
 ```
@@ -1467,6 +1466,14 @@ validate actual device communication on the GPU acceptance node.
 It can initialize NVML and fail without a GPU. Validate executable presence and
 `modinfo nvidia` during Packer, then run `nvidia-smi` on the GPU node.
 
+### AzCopy download fails on the GPU VM
+
+The acceptance launcher normally downloads AzCopy on the VM using verified
+TLS. If the VM cannot reach the distribution endpoint, download and verify
+the official AzCopy binary on a trusted host, then set `AZCOPY_BINARY` to that
+executable when launching the acceptance test. The launcher transfers it over
+SSH; do not disable TLS verification.
+
 ### NVIDIA module `vermagic` does not match
 
 The source Marketplace image or kernel changed. Rebuild the GRID module against
@@ -1608,7 +1615,7 @@ Review the build log before deleting resources manually.
 0.0.5  Corrected Samtools indexing and strengthened scheduler acceptance
 0.0.6-0.0.12 Development image iterations
 0.0.13 Accepted standalone GPU image
-0.0.14-0.0.17 Development image iterations; GPU acceptance pending for 0.0.17
+0.0.14-0.0.17 Development image iterations; 0.0.17 passed GPU acceptance
 0.1.0  First complete development image
 1.0.0  First production-ready image
 ```
@@ -1689,11 +1696,14 @@ Latest Packer build:
 Image: 0.0.17
 PoreSippR-GUI commit: 045baf1ba8372813e05bd981dd57886739e052df
 Packer validation: succeeded; 44 scheduler tests passed
-GPU acceptance: pending
+GPU acceptance: passed 2026-11-25 on Standard_NV18ads_A10_v5
+Input: 23 POD5 files (9,565,788,680 bytes), batches 3,7,2,5,6
+Scheduler: 23 processed, 5 batches, duplicate processing prevented
+Mapping: 40/40 assertions passed; 102,237 reads mapped
 ```
 
-The `0.0.17` acceptance launcher provisions a temporary, billable GPU VM and
-processes 23 POD5 files in five batches. No `0.0.17` acceptance result is
-currently recorded. Do not change `NANOPORE_IMAGE` from `0.0.13` until the
-standalone GPU acceptance and the separate API-to-Batch streaming smoke test
-pass. The latter is documented in `../../docs/nanopore-api.md`.
+The `0.0.17` acceptance launcher provisions a temporary, billable GPU VM.
+The fresh acceptance result and scheduler evidence are retained outside the
+repository in the local test output directory. Do not change `NANOPORE_IMAGE`
+from `0.0.13` until the separate API-to-Batch streaming smoke test passes. The
+latter is documented in `../../docs/nanopore-api.md`.

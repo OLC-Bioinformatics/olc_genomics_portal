@@ -36,6 +36,7 @@ SUBNET_RESOURCE_ID="${SUBNET_RESOURCE_ID:-/subscriptions/${SUBSCRIPTION_ID}/reso
 IMAGE_RESOURCE_ID="${IMAGE_RESOURCE_ID:-/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/${IMAGE_VERSION}}"
 SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY:-${HOME}/.ssh/portal_ssh_key}"
 SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-${HOME}/.ssh/portal_ssh_key.pub}"
+AZCOPY_BINARY="${AZCOPY_BINARY:-}"
 KEEP_RESOURCES_ON_FAILURE="${KEEP_RESOURCES_ON_FAILURE:-false}"
 DIAGNOSTIC_SCHEDULER_OVERRIDE="${DIAGNOSTIC_SCHEDULER_OVERRIDE:-false}"
 REMOTE_ROOT="${REMOTE_ROOT:-/mnt/resource/nanopore-acceptance}"
@@ -62,6 +63,7 @@ trap cleanup EXIT; trap 'exit 130' INT; trap 'exit 143' TERM
 
 for cmd in az base64 grep jq mktemp scp seq ssh; do command -v "$cmd" >/dev/null 2>&1 || { echo "Missing command: ${cmd}" >&2; exit 1; }; done
 for file in "$DOWNLOAD_SCRIPT" "$ACCEPTANCE_SCRIPT" "$SAS_SCRIPT" "$SSH_PRIVATE_KEY" "$SSH_PUBLIC_KEY"; do [[ -f "$file" ]] || { echo "Missing file: ${file}" >&2; exit 1; }; done
+if [[ -n "$AZCOPY_BINARY" ]]; then [[ -f "$AZCOPY_BINARY" && -x "$AZCOPY_BINARY" ]] || { echo "AZCOPY_BINARY must point to an executable file" >&2; exit 1; }; fi
 for value_name in EXPECTED_POD5_COUNT EXPECTED_BATCH_COUNT VM_ALLOCATION_ATTEMPTS VM_ALLOCATION_RETRY_SECONDS; do value="${!value_name}"; case "$value" in ''|*[!0-9]*) echo "${value_name} must be numeric" >&2; exit 1;; esac; done
 case "$KEEP_RESOURCES_ON_FAILURE:$DIAGNOSTIC_SCHEDULER_OVERRIDE" in true:true|true:false|false:true|false:false) ;; *) echo "Boolean settings must be true or false" >&2; exit 1;; esac
 IFS=';' read -r -a files <<<"$ACCEPTANCE_POD5_FILES"; [[ "${#files[@]}" -eq "$EXPECTED_POD5_COUNT" ]] || { echo "POD5 allowlist count mismatch" >&2; exit 1; }
@@ -96,9 +98,14 @@ rm -f "$VM_CREATE_ERROR_FILE"; VM_CREATE_ERROR_FILE=""; [[ "$allocated" == true 
 GPU_HOST="$(az network nic show -g "$RESOURCE_GROUP" -n "$NIC_NAME" --query 'ipConfigurations[0].privateIPAddress' -o tsv)"; [[ -n "$GPU_HOST" ]] || exit 1; GPU_SSH_TARGET="${GPU_ADMIN_USER}@${GPU_HOST}"
 for attempt in $(seq 1 40); do ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" 'true' 2>/dev/null && break; [[ "$attempt" -lt 40 ]] || exit 1; sleep 15; done
 ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" 'nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader'
+if [[ -n "$AZCOPY_BINARY" ]]; then
+  echo "Transferring host-provided AzCopy binary"
+  scp "${SSH_OPTIONS[@]}" "$AZCOPY_BINARY" "${GPU_SSH_TARGET}:/tmp/foodport-azcopy"
+  ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" 'sudo install -m 0755 /tmp/foodport-azcopy /usr/local/bin/azcopy && rm -f /tmp/foodport-azcopy'
+fi
 ssh "${SSH_OPTIONS[@]}" "$GPU_SSH_TARGET" 'bash -s' <<'REMOTE'
 set -euo pipefail
-if ! command -v azcopy >/dev/null 2>&1; then d=/tmp/azcopy-install; rm -rf "$d"; mkdir -p "$d"; curl --insecure --fail --location --retry 5 --retry-all-errors -o "$d/azcopy.tar.gz" https://aka.ms/downloadazcopy-v10-linux; tar -xzf "$d/azcopy.tar.gz" -C "$d"; binary="$(find "$d" -type f -name azcopy -print -quit)"; [[ -n "$binary" ]]; sudo install -m 0755 "$binary" /usr/local/bin/azcopy; rm -rf "$d"; fi
+if ! command -v azcopy >/dev/null 2>&1; then d=/tmp/azcopy-install; rm -rf "$d"; mkdir -p "$d"; curl --fail --location --retry 5 --retry-all-errors -o "$d/azcopy.tar.gz" https://aka.ms/downloadazcopy-v10-linux; tar -xzf "$d/azcopy.tar.gz" -C "$d"; binary="$(find "$d" -type f -name azcopy -print -quit)"; [[ -n "$binary" ]]; sudo install -m 0755 "$binary" /usr/local/bin/azcopy; rm -rf "$d"; fi
 azcopy --version
 REMOTE
 
