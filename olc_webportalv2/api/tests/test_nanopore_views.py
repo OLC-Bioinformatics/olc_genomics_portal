@@ -169,6 +169,60 @@ class EntraDesktopExchangeTests(APITestCase):
         )
         self.assertEqual(DesktopAccessToken.objects.count(), 0)
 
+    @override_settings(
+        ENTRA_TENANT_ID="tenant-id",
+        ENTRA_API_SCOPE="nanopore.upload",
+        ENTRA_DESKTOP_ALLOWED_EMAIL_DOMAINS="inspection.gc.ca",
+        ENTRA_DESKTOP_AUTO_CREATE_USERS=True,
+    )
+    @patch("olc_webportalv2.api.entra._validate_entra_token")
+    def test_exchange_reuses_user_for_existing_entra_identity(self, validate):
+        validate.return_value = {
+            "tid": "tenant-id",
+            "oid": "object-id",
+            "preferred_username": "operator@inspection.gc.ca",
+            "name": "Operator",
+        }
+
+        first = self.client.post(
+            "/en-ca/api/auth/entra/exchange/",
+            {"access_token": "entra-token"},
+            format="json",
+        )
+        second = self.client.post(
+            "/en-ca/api/auth/entra/exchange/",
+            {"access_token": "entra-token"},
+            format="json",
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.data["user"], second.data["user"])
+        self.assertEqual(
+            EntraIdentity.objects.filter(
+                tenant_id="tenant-id",
+                object_id="object-id",
+            ).count(),
+            1,
+        )
+
+
+class DesktopTokenAuthenticationTests(APITestCase):
+    def test_expired_token_cannot_authenticate_nanopore_api(self):
+        user = User.objects.create_user(username="expired-desktop-user")
+        DesktopAccessToken.objects.create(
+            user=user,
+            key="expired-desktop-token",
+            expires_at=timezone.now() - timedelta(seconds=1),
+        )
+
+        response = self.client.get(
+            "/en-ca/api/nanopore/runs/999999/",
+            HTTP_AUTHORIZATION="Token expired-desktop-token",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
 
 @override_settings(NANOPORE_RESULTS_CONTAINER="nanopore-results")
 class NanoporeLatestResultTests(APITestCase):

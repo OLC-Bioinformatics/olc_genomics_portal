@@ -370,6 +370,116 @@ class NanoporeDatabaseTaskTests(TestCase):
                 "FOODPORT_OUTPUT_SAS_URL": "output-write-url",
             },
         )
+        command = submit.call_args.kwargs["command"]
+        self.assertIn(
+            '--manifest-prefix "nanopore-test/input/manifests/input-manifest-v"',
+            command,
+        )
+        self.assertIn(
+            '--control-blob "nanopore-test/input/control/state.json"',
+            command,
+        )
+
+    @override_settings(
+        NANOPORE_BATCH_COMMAND="wrapper --run {run_name}",
+        NANOPORE_RAW_CONTAINER="nanopore-raw",
+        NANOPORE_RESULTS_CONTAINER="nanopore-results",
+        NANOPORE_BATCH_VM_SIZE="Standard_NC24ads_A100_v4",
+        NANOPORE_REFERENCE="references/panel.fasta",
+        NANOPORE_BARCODE_VALUES="12",
+        NANOPORE_BARCODE_KIT="SQK-RBK114-24",
+        NANOPORE_DORADO_MODEL="dorado-model",
+    )
+    def test_submit_retries_transient_capacity_failure(self):
+        run = self.create_run()
+        batch = self.create_batch(run)
+        storage = mock.Mock()
+        storage.create_transfer_url.side_effect = [
+            "input-read-url",
+            "output-write-url",
+        ]
+        capacity_failure = {
+            "status": "failed",
+            "error": "Azure capacity is temporarily unavailable.",
+            "error_code": "capacity_unavailable",
+            "retryable": True,
+        }
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client",
+                return_value=storage,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.generic_api_submit",
+                return_value=capacity_failure,
+            ),
+            mock.patch.object(
+                submit_nanopore_batch,
+                "retry",
+                side_effect=RuntimeError("celery retry scheduled"),
+            ) as retry,
+            mock.patch.object(submit_nanopore_batch.request, "retries", 0),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "retry scheduled"):
+                submit_nanopore_batch.run(run.pk)
+
+        batch.refresh_from_db()
+        run.refresh_from_db()
+        self.assertEqual(batch.status, "submitting")
+        self.assertIn("temporarily unavailable", batch.error)
+        self.assertEqual(run.task_retry_count, 1)
+        retry.assert_called_once()
+        self.assertEqual(retry.call_args.kwargs["countdown"], 60)
+
+    @override_settings(
+        NANOPORE_BATCH_COMMAND="wrapper --run {run_name}",
+        NANOPORE_RAW_CONTAINER="nanopore-raw",
+        NANOPORE_RESULTS_CONTAINER="nanopore-results",
+        NANOPORE_BATCH_VM_SIZE="Standard_NC24ads_A100_v4",
+        NANOPORE_REFERENCE="references/panel.fasta",
+        NANOPORE_BARCODE_VALUES="12",
+        NANOPORE_BARCODE_KIT="SQK-RBK114-24",
+        NANOPORE_DORADO_MODEL="dorado-model",
+    )
+    def test_submit_marks_capacity_failure_after_retry_exhaustion(self):
+        run = self.create_run()
+        batch = self.create_batch(run)
+        storage = mock.Mock()
+        storage.create_transfer_url.side_effect = [
+            "input-read-url",
+            "output-write-url",
+        ]
+        capacity_failure = {
+            "status": "failed",
+            "error": "Azure capacity is temporarily unavailable.",
+            "error_code": "capacity_unavailable",
+            "retryable": True,
+        }
+        max_retries = submit_nanopore_batch.max_retries
+
+        with (
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.get_storage_client",
+                return_value=storage,
+            ),
+            mock.patch(
+                "olc_webportalv2.cowbat.tasks.generic_api_submit",
+                return_value=capacity_failure,
+            ),
+            mock.patch.object(submit_nanopore_batch, "retry") as retry,
+            mock.patch.object(
+                submit_nanopore_batch.request, "retries", max_retries
+            ),
+        ):
+            submit_nanopore_batch.run(run.pk)
+
+        batch.refresh_from_db()
+        run.refresh_from_db()
+        self.assertEqual(batch.status, "failed")
+        self.assertIn(f"after {max_retries} retries", batch.error)
+        self.assertEqual(run.workflow_state, "error")
+        retry.assert_not_called()
 
     @override_settings(NANOPORE_BATCH_COMMAND="")
     def test_submit_marks_run_error_when_wrapper_command_is_unconfigured(self):
