@@ -47,7 +47,10 @@ docker compose exec -w /app rag python -m cli search \
 ## Test
 
 ```bash
-docker compose exec rag pytest -q
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests
 docker compose exec redmine bundle exec rake redmine:plugins:test \
   NAME=redmine_assistant RAILS_ENV=test
 ```

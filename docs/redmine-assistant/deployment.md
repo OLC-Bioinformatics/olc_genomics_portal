@@ -5,7 +5,10 @@
 ```bash
 git status --short
 docker compose config --quiet
-docker compose exec rag pytest -q
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests
 ```
 
 Before Redmine tests, verify the test database:

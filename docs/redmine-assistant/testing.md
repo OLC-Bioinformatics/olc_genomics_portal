@@ -3,17 +3,31 @@
 ## RAG test suite
 
 ```bash
-docker compose exec rag pytest -q
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests
 ```
 
-Current verified baseline after feedback and similarity filtering: `125 passed`. Treat this count as descriptive; update it as tests are added.
+The production image excludes `rag/tests`, so mount the test directory when running the suite locally.
+
+Current verified baseline after feedback and similarity filtering: `126 passed`. Treat this count as descriptive; update it as tests are added.
 
 Targeted suites:
 
 ```bash
-docker compose exec rag pytest -q tests/test_retrieval.py
-docker compose exec rag pytest -q tests/test_api.py
-docker compose exec rag pytest -q tests/test_evaluation.py
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests/test_retrieval.py
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests/test_api.py
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests/test_evaluation.py
 ```
 
 ## Python syntax check
@@ -38,7 +52,7 @@ docker compose exec redmine bundle exec rake redmine:plugins:test \
   NAME=redmine_assistant RAILS_ENV=test
 ```
 
-Current verified baseline: `44 runs, 123 assertions` for the complete plugin suite after feedback implementation. Update the number when tests change.
+Current verified baseline: `48 runs, 131 assertions` for the complete plugin suite after feedback implementation. Update the number when tests change.
 
 Targeted tests:
 

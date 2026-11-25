@@ -18,7 +18,10 @@ git diff | grep -Ei 'password|secret|token|client_secret|private_key' || true
 ## 2. Run tests
 
 ```bash
-docker compose exec rag pytest -q
+docker compose run --rm --no-deps \
+  -v "$PWD/rag/tests:/app/tests:ro" \
+  -e RAG_DB_PASSWORD=ci-placeholder \
+  rag python -m pytest -q /app/tests
 
 docker compose exec redmine bundle exec rails runner -e test \
   'db=ActiveRecord::Base.connection_db_config.database; puts db; abort unless db == "redmine_test"'
