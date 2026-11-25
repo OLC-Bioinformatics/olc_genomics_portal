@@ -13,18 +13,25 @@ development/nanopore
 The most recently accepted development image is:
 
 ```text
-0.0.8
+0.0.13
 ```
 
 Its resource ID is:
 
 ```text
-/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.8
+/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.13
 ```
 
-Image `0.0.8` is the accepted development image. It is not yet the production
+Image `0.0.13` is the accepted development image. It is not yet the production
 image: FoodPort Batch submission and durable Azure output publication remain to
 be integrated and operationally verified.
+
+The latest Packer configuration builds image `0.0.17` with PoreSippR-GUI
+commit `045baf1ba8372813e05bd981dd57886739e052df`. Its Packer build completed
+and published successfully, and all 44 installed scheduler tests passed.
+Image `0.0.17` has not yet passed GPU acceptance; keep FoodPort configured to
+the accepted `0.0.13` image until that acceptance and the separate API-to-Batch
+workflow checks are complete.
 
 Image history:
 
@@ -37,6 +44,12 @@ Image history:
 0.0.6  Task-wrapper development slice
 0.0.7  Image iteration and acceptance preparation
 0.0.8  Accepted GPU image with task-wrapper metadata and evidence
+0.0.9  Development image iteration
+0.0.10 Development image with streaming acceptance evidence
+0.0.11 Development image with updated Nanopore runtime metadata
+0.0.12 Development image iteration
+0.0.13 Accepted GPU image using the locally installed Dorado model directory
+0.0.14-0.0.17 Subsequent development builds; 0.0.17 awaits GPU acceptance
 0.1.0  Planned first complete development image
 1.0.0  Planned first production-ready image
 ```
@@ -283,14 +296,14 @@ shared_image_gallery_destination {
 
 ---
 
-## Development Variables for `0.0.11`
+## Development Variables for `0.0.17`
 
 The current development variable file is equivalent to:
 
 ```hcl
 subscription_id = "dcdc7934-5cce-43de-a6ed-22e2e163c2e1"
 location        = "Canada Central"
-image_version   = "0.0.11"
+image_version   = "0.0.17"
 
 build_resource_group = "CFDC-FoodPort-Batch-rg"
 
@@ -303,11 +316,9 @@ image_name   = "nanopore"
 
 build_vm_size = "Standard_D4s_v5"
 
-poresippr_repository_url = \
-  "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
-
-poresippr_repository_commit = \
-  "ab56f28783fd557ea8a8618c2dfcec98cc92251f"
+poresippr_repository_url    = "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git"
+poresippr_repository_commit = "045baf1ba8372813e05bd981dd57886739e052df"
+poresippr_targets_sha256    = "6cb7610351c99d80023ac800a99430b2763b446ad5399abf61ae06a5584857c9"
 ```
 
 The commit must be the full lowercase 40-character SHA. The Packer template
@@ -347,13 +358,13 @@ URLs, SAS tokens, or storage account keys.
 
 ## Pinned PoreSippR Source
 
-Image `0.0.11` does not install the latest branch tip. It installs this exact
+Image `0.0.17` does not install the latest branch tip. It installs this exact
 PoreSippR-GUI commit:
 
 ```text
 Repository: https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git
 Branch used to prepare commit: madhubioinfo-dorado-patch1
-Commit: ab56f28783fd557ea8a8618c2dfcec98cc92251f
+Commit: 045baf1ba8372813e05bd981dd57886739e052df
 ```
 
 The branch name is informational. The full commit SHA is authoritative.
@@ -367,10 +378,8 @@ poresippr_incremental_dorado_scheduler.py
 tests/test_poresippr_incremental_dorado_scheduler.py
 ```
 
-The scheduler test suite currently contains 42 tests. The suite passed locally
-under Python 3.12 and is also executed during final Packer image validation
-using the Python interpreter installed inside the image's PoreSippR
-environment.
+The Packer build for image `0.0.17` ran the installed scheduler test suite
+under the image's PoreSippR environment: 44 tests passed.
 
 The image installs the repository at:
 
@@ -403,9 +412,9 @@ Git object database.
 /etc/foodport/image.json
 ```
 
-For `0.0.8`, the manifest identifies:
+For `0.0.17`, the manifest identifies:
 
-- image version `0.0.8`;
+- image version `0.0.17`;
 - build stage `poresippr-runtime`;
 - Trusted Launch with Secure Boot and vTPM disabled;
 - NVIDIA GRID `570.237` for `NVadsA10_v5`;
@@ -425,7 +434,7 @@ The repository section is equivalent to:
 {
   "poresippr_repository": {
     "repository": "https://github.com/OLC-Bioinformatics/PoreSippR-GUI.git",
-    "commit": "2108b9428c51f2335ed4cd3f0e1c417db3ba0563",
+    "commit": "045baf1ba8372813e05bd981dd57886739e052df",
     "source_branch": "madhubioinfo-dorado-patch1",
     "install_path": "/opt/foodport/poresippr",
     "scheduler": "/opt/foodport/poresippr/poresippr_incremental_dorado_scheduler.py",
@@ -461,7 +470,7 @@ Retained reproducibility manifests include:
 
 ---
 
-## Provisioner Order for `0.0.8`
+## Current Provisioner Order
 
 The current order is:
 
@@ -845,7 +854,7 @@ installed path before image `0.0.8` is accepted.
 
 ---
 
-## Image Validation for `0.0.8`
+## Image Validation for `0.0.17`
 
 `validate-image.sh` verifies all of the following.
 
@@ -903,7 +912,7 @@ installed path before image `0.0.8` is accepted.
 - scheduler checksum match;
 - non-mutating scheduler syntax compilation;
 - scheduler `--help` execution with bytecode disabled;
-- execution of all 42 installed scheduler tests with bytecode and pytest cache
+- execution of all 44 installed scheduler tests with bytecode and pytest cache
   generation disabled; and
 - agreement with the repository section in image metadata.
 
@@ -981,7 +990,7 @@ jq empty \
 ### Initialize, format, and validate Packer
 
 ```bash
-packer fmt \
+packer fmt -check \
   infrastructure/nanopore-image/packer/nanopore.pkr.hcl \
   infrastructure/nanopore-image/packer/development.pkrvars.hcl
 
@@ -1005,10 +1014,17 @@ The placeholder URL is used only to satisfy required-variable validation.
 `packer validate` does not download the target. The real SAS URL is created by
 `build-image.sh` immediately before validation and build execution.
 
-### Check that the target version is unused
+### Read and check the target version
 
 ```bash
-IMAGE_VERSION=0.0.11
+IMAGE_VERSION="$(
+  awk -F'"' \
+    '/^[[:space:]]*image_version[[:space:]]*=/ {
+      print $2
+      exit
+    }' \
+    infrastructure/nanopore-image/packer/development.pkrvars.hcl
+)"
 
 if az sig image-version show \
     --resource-group CFDC-FoodPort-Batch-rg \
@@ -1047,22 +1063,41 @@ The wrapper refuses to overwrite an existing build log. Preserve the previous
 attempt before retrying:
 
 ```bash
+IMAGE_VERSION="$(
+  awk -F'"' \
+    '/^[[:space:]]*image_version[[:space:]]*=/ {
+      print $2
+      exit
+    }' \
+    infrastructure/nanopore-image/packer/development.pkrvars.hcl
+)"
+
 mv \
-  infrastructure/nanopore-image/packer/packer-build-0.0.11.log \
-  infrastructure/nanopore-image/packer/packer-build-0.0.11-attempt1.log
+  "infrastructure/nanopore-image/packer/packer-build-${IMAGE_VERSION}.log" \
+  "infrastructure/nanopore-image/packer/packer-build-${IMAGE_VERSION}-attempt1.log"
 ```
 
-Then confirm that gallery version `0.0.5` remains unused before starting the
-next attempt. Retain failed logs locally for diagnosis, but do not commit them.
+Then confirm that gallery version `$IMAGE_VERSION` remains unused before
+starting the next attempt. Retain failed logs locally for diagnosis, but do not
+commit them.
 
 ### Verify publication
 
 ```bash
+IMAGE_VERSION="$(
+  awk -F'"' \
+    '/^[[:space:]]*image_version[[:space:]]*=/ {
+      print $2
+      exit
+    }' \
+    infrastructure/nanopore-image/packer/development.pkrvars.hcl
+)"
+
 az sig image-version show \
   --resource-group CFDC-FoodPort-Batch-rg \
   --gallery-name development \
   --gallery-image-definition nanopore \
-  --gallery-image-version 0.0.11 \
+  --gallery-image-version "$IMAGE_VERSION" \
   --query \
     '{id:id,state:provisioningState,published:publishingProfile.publishedDate,regions:publishingProfile.targetRegions}' \
   --output yaml
@@ -1139,14 +1174,33 @@ from `0.0.4` and added:
 Image `0.0.5` was superseded by later image versions. Its acceptance procedure
 is retained below as historical guidance.
 
+### `0.0.13`: Accepted GPU image
+
+The standalone GPU acceptance passed on `Standard_NV18ads_A10_v5` using
+Dorado `2.1.2+8b8fc5d` and PoreSippR-GUI commit
+`4f538ae0d4522667915bca1002132f6a3bc523ae`. It processed one 3,095,356,360-byte
+POD5 file, summarized 80,356 reads, retained four FASTQ files, and produced
+four mapping BAM/BAI pairs. Barcode 22 mapped one read to `gntK`, and a second
+scheduler pass prevented duplicate processing. Evidence is retained under
+`docs/acceptance-results/0.0.13`.
+
+### `0.0.14`–`0.0.17`: Subsequent development builds
+
+These are later immutable development image builds. Image `0.0.17`, published
+on September 24, 2026, uses PoreSippR-GUI commit
+`045baf1ba8372813e05bd981dd57886739e052df`; its Packer validation completed
+with 44 passing scheduler tests. The `0.0.17` GPU acceptance scripts exercise
+23 allowlisted POD5 files in five batches (`3,7,2,5,6`). That acceptance has not
+been run, so `0.0.17` is not yet the accepted FoodPort image.
+
 ---
 
 ## FoodPort and AzureBatch Configuration
 
-Use the accepted `0.0.8` image for the current development configuration:
+Use the accepted `0.0.13` image for the current development configuration:
 
 ```dotenv
-NANOPORE_IMAGE=/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.8
+NANOPORE_IMAGE=/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.13
 NANOPORE_NODE_AGENT_SKU=batch.node.ubuntu 24.04
 NANOPORE_BATCH_VM_SIZE=Standard_NV18ads_A10_v5
 NANOPORE_SECURITY_TYPE=trustedLaunch
@@ -1383,14 +1437,21 @@ Acceptance results for the current image are retained under:
 infrastructure/nanopore-image/docs/acceptance-results/0.0.8
 ```
 
-The current six-POD5 acceptance evidence is retained under:
+The six-POD5 acceptance evidence for image `0.0.8` is retained under:
 
 ```text
 infrastructure/nanopore-image/docs/acceptance-results/0.0.8-six-files-20260911h
 ```
 
-Do not replace the accepted image setting until a future image passes this
-acceptance.
+The accepted `0.0.13` evidence is retained under:
+
+```text
+infrastructure/nanopore-image/docs/acceptance-results/0.0.13
+```
+
+The API-to-Batch streaming smoke test is separate from standalone GPU image
+acceptance and remains required before production use. See
+`../../docs/nanopore-api.md`.
 
 ---
 
@@ -1545,6 +1606,9 @@ Review the build log before deleting resources manually.
 0.0.3  Dorado runtime and pinned model
 0.0.4  PoreSippR runtime and scheduler candidate, rejected after acceptance
 0.0.5  Corrected Samtools indexing and strengthened scheduler acceptance
+0.0.6-0.0.12 Development image iterations
+0.0.13 Accepted standalone GPU image
+0.0.14-0.0.17 Development image iterations; GPU acceptance pending for 0.0.17
 0.1.0  First complete development image
 1.0.0  First production-ready image
 ```
@@ -1613,44 +1677,23 @@ git diff \
 
 ## Current Status and Next Milestones
 
-Completed:
-
-- `0.0.1` connectivity proof published;
-- `0.0.2` NVIDIA GRID foundation published;
-- `0.0.3` Dorado runtime and pinned model published and accepted;
-- `0.0.4` built, validated, and published successfully on September 8, 2026;
-- immutable `0.0.4` scheduler acceptance identified the unsupported
-  `samtools index -f` invocation;
-- corrected PoreSippR commit
-  `2108b9428c51f2335ed4cd3f0e1c417db3ba0563` was created and pushed;
-- all 42 scheduler tests passed for the corrected source;
-- a diagnostic GPU run using the corrected scheduler passed downstream
-  basecalling, demultiplexing, mapping, indexing, checkpointing, and
-  duplicate-prevention checks;
-- the diagnostic run processed one 3,095,356,360-byte POD5 file;
-- The Dorado basecaller reported 80,183 simplex reads basecalled and 80,351 records in the retained basecalls summary. The acceptance baseline pins the downstream summary and mapping invariants rather than requiring those two Dorado counters to be equal.
-- barcode 12 and barcode 22 FASTQ fragments were retained;
-- two mapping BAM and BAI pairs and two iteration CSV files were produced;
-- barcode 22 mapped exactly one read to target `gntK`;
-- the second scheduler invocation processed no duplicate POD5 input;
-- diagnostic evidence was retained under
-  `docs/acceptance-results/0.0.4-diagnostic`; and
-- all temporary diagnostic Azure resources were removed.
-
-Accepted development image:
+Latest accepted development image:
 
 ```text
-/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.8
+/subscriptions/dcdc7934-5cce-43de-a6ed-22e2e163c2e1/resourceGroups/CFDC-FoodPort-Batch-rg/providers/Microsoft.Compute/galleries/development/images/nanopore/versions/0.0.13
 ```
 
-Immediate next steps:
+Latest Packer build:
 
-1. connect FoodPort finalization to an Azure Batch task using the installed
-  wrapper;
-2. implement and verify Azure Blob input/output publication and restart state;
-3. expose durable processing and result status through the API and GUI;
-4. retain the `0.0.8` acceptance evidence as the image baseline; and
-5. build a new immutable image only when a runtime change requires it.
+```text
+Image: 0.0.17
+PoreSippR-GUI commit: 045baf1ba8372813e05bd981dd57886739e052df
+Packer validation: succeeded; 44 scheduler tests passed
+GPU acceptance: pending
+```
 
-Image `0.0.8` is the accepted development baseline. Images `0.0.4` and
-`0.0.5` remain historical candidates and must not be described as current.
+The `0.0.17` acceptance launcher provisions a temporary, billable GPU VM and
+processes 23 POD5 files in five batches. No `0.0.17` acceptance result is
+currently recorded. Do not change `NANOPORE_IMAGE` from `0.0.13` until the
+standalone GPU acceptance and the separate API-to-Batch streaming smoke test
+pass. The latter is documented in `../../docs/nanopore-api.md`.
