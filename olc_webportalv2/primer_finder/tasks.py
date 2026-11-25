@@ -76,6 +76,28 @@ from olc_webportalv2.primer_finder.validator_gene_reports import (
 logger = logging.getLogger(__name__)
 
 
+def _validator_vm_sizes(input_blob_names):
+    """Choose Validator VM sizes based on whether inputs include an NCBI archive."""
+    large_benchmark = any(
+        posixpath.basename(str(name)).lower().startswith('ncbi-')
+        and str(name).lower().endswith('.zip')
+        for name in input_blob_names
+    )
+    primer_vm_size = getattr(
+        settings,
+        'PRIMER_VALIDATOR_LARGE_PRIMER_VM_SIZE' if large_benchmark
+        else 'PRIMER_VALIDATOR_DEFAULT_PRIMER_VM_SIZE',
+        'Standard_D16ds_v5' if large_benchmark else 'Standard_D4ds_v5',
+    )
+    gene_vm_size = getattr(
+        settings,
+        'PRIMER_VALIDATOR_LARGE_GENE_VM_SIZE' if large_benchmark
+        else 'PRIMER_VALIDATOR_DEFAULT_GENE_VM_SIZE',
+        'Standard_D16ds_v5' if large_benchmark else 'Standard_D4ds_v5',
+    )
+    return primer_vm_size, gene_vm_size, large_benchmark
+
+
 @shared_task
 def run_primer_verifier(
     *,  # Force the use of keyword arguments
@@ -1237,6 +1259,17 @@ def _prepare_validator_analysis(*, validator_request_pk):
         container_name=container_name,
         blob_names=input_blob_names,
     )
+    primer_vm_size, gene_vm_size, large_benchmark = _validator_vm_sizes(
+        input_blob_names
+    )
+    logger.info(
+        'Validator VM selection: request=%s large_ncbi_benchmark=%s '
+        'primer_vm_size=%s gene_vm_size=%s',
+        request.pk,
+        large_benchmark,
+        primer_vm_size,
+        gene_vm_size,
+    )
 
     primer_task, _ = ValidatorAnalysisTask.objects.get_or_create(
         validator_request=request,
@@ -1253,6 +1286,7 @@ def _prepare_validator_analysis(*, validator_request_pk):
             file_name=primer_file_name,
             input_blobs=input_blobs,
         ),
+        vm_size=primer_vm_size,
     )
 
     if has_gene_targets:
@@ -1270,6 +1304,7 @@ def _prepare_validator_analysis(*, validator_request_pk):
                 container_name=container_name,
                 input_blobs=input_blobs,
             ),
+            vm_size=gene_vm_size,
         )
 
 
@@ -1351,13 +1386,15 @@ def _upload_validator_gene_targets(*, container_name, request):
     return True
 
 
-def _submit_validator_task(*, request, analysis_task, command):
+def _submit_validator_task(
+    *, request, analysis_task, command, vm_size='Standard_D4ds_v5'
+):
     job_name = f'{request.container_namer()}-{analysis_task.task_type}'
     try:
         submission = generic_api_submit(
             command=command,
             container_name=request.container_namer(),
-            vm_size='Standard_D4ds_v5',
+            vm_size=vm_size,
             unique_id=analysis_task.task_type,
             log_prefix=analysis_task.task_type,
         )

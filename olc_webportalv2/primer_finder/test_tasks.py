@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.primer_finder.models import (
@@ -29,6 +29,7 @@ from olc_webportalv2.primer_finder.tasks import (
     _submit_validator_task,
     _upload_gene_category_report,
     _upload_validator_gene_targets,
+    _validator_vm_sizes,
     post_validator_run,
 )
 from olc_webportalv2.users.models import User
@@ -58,6 +59,22 @@ class PrimerValidatorTaskTests(TestCase):
             reverse_primer='TGCA',
             gene_sequence=gene_sequence,
             **kwargs,
+        )
+
+    @override_settings(
+        PRIMER_VALIDATOR_DEFAULT_PRIMER_VM_SIZE='Standard_D4ds_v5',
+        PRIMER_VALIDATOR_DEFAULT_GENE_VM_SIZE='Standard_D8s_v3',
+        PRIMER_VALIDATOR_LARGE_PRIMER_VM_SIZE='Standard_D16ds_v5',
+        PRIMER_VALIDATOR_LARGE_GENE_VM_SIZE='Standard_D32ds_v5',
+    )
+    def test_validator_vm_sizes_scale_for_large_ncbi_archives(self):
+        self.assertEqual(
+            _validator_vm_sizes(['inclusivity/NCBI-benchmark.ZIP']),
+            ('Standard_D16ds_v5', 'Standard_D32ds_v5', True),
+        )
+        self.assertEqual(
+            _validator_vm_sizes(['inclusivity/listeria.zip']),
+            ('Standard_D4ds_v5', 'Standard_D8s_v3', False),
         )
 
     def test_gene_targets_are_normalized_and_duplicate_fasta_ids_are_unique(
@@ -201,7 +218,13 @@ class PrimerValidatorTaskTests(TestCase):
             command,
         )
 
-    def test_analysis_preparation_creates_primer_and_gene_tasks(self):
+    @override_settings(
+        PRIMER_VALIDATOR_LARGE_PRIMER_VM_SIZE='Standard_D16ds_v5',
+        PRIMER_VALIDATOR_LARGE_GENE_VM_SIZE='Standard_D32ds_v5',
+    )
+    def test_analysis_preparation_creates_tasks_and_scales_large_benchmarks(
+        self,
+    ):
         manifest = [
             {
                 'blob_name': 'primers.fasta',
@@ -223,7 +246,7 @@ class PrimerValidatorTaskTests(TestCase):
             ),
             patch(
                 'olc_webportalv2.primer_finder.tasks._handle_panel_files',
-                side_effect=[['inclusivity/listeria.zip'], []],
+                side_effect=[['inclusivity/ncbi-listeria.zip'], []],
             ),
             patch(
                 'olc_webportalv2.primer_finder.tasks.'
@@ -254,7 +277,7 @@ class PrimerValidatorTaskTests(TestCase):
             generate_urls.call_args.kwargs['blob_names'],
             [
                 'primers.fasta',
-                'inclusivity/listeria.zip',
+                'inclusivity/ncbi-listeria.zip',
                 'targets/query.fasta',
             ],
         )
@@ -264,6 +287,17 @@ class PrimerValidatorTaskTests(TestCase):
             for call in submit.call_args_list
         }
         self.assertEqual(submitted_types, {'primer', 'gene'})
+        submitted_sizes = {
+            call.kwargs['analysis_task'].task_type: call.kwargs['vm_size']
+            for call in submit.call_args_list
+        }
+        self.assertEqual(
+            submitted_sizes,
+            {
+                'primer': 'Standard_D16ds_v5',
+                'gene': 'Standard_D32ds_v5',
+            },
+        )
 
     def test_batch_submission_records_ids_and_errors(self):
         analysis_task = ValidatorAnalysisTask.objects.create(
