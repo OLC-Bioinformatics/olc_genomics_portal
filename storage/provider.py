@@ -20,6 +20,10 @@ class StorageNotFoundError(Exception):
     """Raised when a requested container or object does not exist."""
 
 
+class StorageConflictError(Exception):
+    """Raised when an upload would replace an existing object."""
+
+
 class AzureStorageProvider:
     """Object storage provider backed by Azure Blob Storage."""
 
@@ -77,7 +81,13 @@ class AzureStorageProvider:
             raise StorageNotFoundError(f"{container}/{name}") from exc
 
     def upload_object(
-        self, container, name, data, content_type=None, content_md5=None
+        self,
+        container,
+        name,
+        data,
+        content_type=None,
+        content_md5=None,
+        overwrite=True,
     ):
         self.ensure_container(container)
         md5_bytes = base64.b64decode(content_md5) if content_md5 else None
@@ -86,11 +96,14 @@ class AzureStorageProvider:
             content_md5=md5_bytes,
         )
         blob_client = self.client.get_blob_client(container=container, blob=name)
-        blob_client.upload_blob(
-            data,
-            overwrite=True,
-            content_settings=content_settings,
-        )
+        try:
+            blob_client.upload_blob(
+                data,
+                overwrite=overwrite,
+                content_settings=content_settings,
+            )
+        except ResourceExistsError as exc:
+            raise StorageConflictError(f"{container}/{name}") from exc
         return self.get_object(container, name)
 
     def download_object(self, container, name):

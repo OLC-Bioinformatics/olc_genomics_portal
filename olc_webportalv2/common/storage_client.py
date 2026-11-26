@@ -221,7 +221,13 @@ class StorageClient:
         return self._object(response.json())
 
     def upload_file(
-        self, container, name, file_path, content_type=None, content_md5=None
+        self,
+        container,
+        name,
+        file_path,
+        content_type=None,
+        content_md5=None,
+        overwrite=True,
     ):
         """Upload a local file and return its object metadata.
 
@@ -231,6 +237,7 @@ class StorageClient:
             file_path: Path to the local source file.
             content_type: Optional MIME type.
             content_md5: Optional base64-encoded content checksum.
+            overwrite: Whether to replace an existing object.
 
         """
         headers = {}
@@ -238,6 +245,8 @@ class StorageClient:
             headers["Content-Type"] = content_type
         if content_md5:
             headers["Content-MD5"] = content_md5
+        if not overwrite:
+            headers["If-None-Match"] = "*"
         with open(file_path, "rb") as source:
             response = self._request(
                 "PUT",

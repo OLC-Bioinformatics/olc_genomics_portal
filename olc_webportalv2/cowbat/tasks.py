@@ -38,7 +38,6 @@ from sentry_sdk import capture_exception
 from strainchoosr import strainchoosr
 
 # Local imports
-from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import check_ampliseq_tasks
 from olc_webportalv2.common.batch_client import (
     BatchServiceClient,
@@ -52,6 +51,7 @@ from olc_webportalv2.common.methods import (
     generic_api_submit,
     send_email,
 )
+from olc_webportalv2.common.media_retention import clean_local_media
 from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.common.storage_client import (
     StorageServiceError,
@@ -65,11 +65,9 @@ from olc_webportalv2.cowbat.models import (
     SequencingRun,
     SummaryMetadata,
 )
-from olc_webportalv2.cowsnphr.models import COWSNPhRRequest
 from olc_webportalv2.cowsnphr.tasks import (
     check_cowsnphr_tasks,
 )
-from olc_webportalv2.filezone.models import Regexes
 from olc_webportalv2.geneseekr.models import (
     AMRAzureRequest,
     AMRDetail,
@@ -77,16 +75,11 @@ from olc_webportalv2.geneseekr.models import (
     GeneSeekrAzureRequest,
     GeneSeekrDetail,
     GeneSeekrRequest,
-    NearestNeighbors,
     ProkkaAzureRequest,
     ProkkaRequest,
     TopBlastHit,
     Tree,
     TreeAzureRequest,
-)
-from olc_webportalv2.primer_finder.models import (
-    PrimerVerifierRequest,
-    ValidatorRequest,
 )
 from olc_webportalv2.primer_finder.tasks import (
     check_validator_tasks,
@@ -3076,74 +3069,32 @@ def read_sections(file_path: str) -> dict:
 
 
 @shared_task
-def clean_old_containers():
-    """Delete matching storage containers older than seven days."""
-    blob_client = get_storage_client()
-    # Patterns we have to worry about - data-request-digits, geneseekr-digits
-    # TODO: Add more of these as more analysis types get created.
-    patterns_to_search = [
-        re.compile("^ampliseq.+"),
-        re.compile(r"^amrsummary-\d+-\w+$"),
-        re.compile("^cowsnphr.+"),
-        re.compile(r"^data-request-\d+$"),
-        re.compile(r"^geneseekr-\d+-\w+$"),
-        re.compile(r"^mash-\d+-\w+$"),
-        re.compile(r"^neighbor-\d+$"),
-        re.compile(r"^neighbor-\w+-\d+$"),
-        re.compile(r"^parsnp-\d+-\w+$"),
-        re.compile(r"^primer-\w+-\d+$"),
-        re.compile(r"^primer-\w+-\d+-\w+$"),
-        re.compile(r"^prokka-\d+-\w+$"),
-        re.compile(r"^tree-\d+-\w+$"),
-        re.compile(r"^vir-typer-\d+-\w+$"),
-    ]
-    generator = blob_client.list_containers()
-    for container in generator:
-        for pattern in patterns_to_search:
-            if re.match(pattern, container.name):
-                if not container.created_at:
-                    continue
-                created_at = datetime.fromisoformat(
-                    container.created_at.replace("Z", "+00:00")
-                )
-                if created_at.tzinfo is None:
-                    created_at = created_at.replace(tzinfo=timezone.utc)
-                today = datetime.now(timezone.utc)
-                container_age = abs(created_at - today).days
-                if container_age > 7:
-                    blob_client.delete_container(container.name)
+def clean_old_containers(dry_run=None, report_csv=None):
+    """Keep the legacy task callable while ensuring no containers are removed."""
+    summary = "disabled; no blob containers removed"
+    logger.info("Blob container retention is disabled by policy")
+    return summary
+
+
+@shared_task
+def clean_old_media():
+    """Run the local media retention policy, dry-run by default."""
+    dry_run = getattr(settings, "MEDIA_RETENTION_DRY_RUN", True)
+    report = clean_local_media(dry_run=dry_run)
+    logger.info(
+        "%s local media retention: %s",
+        "Dry run" if dry_run else "Applied",
+        report.summary(),
+    )
+    return report.summary()
 
 
 @shared_task
 def clean_old_models():
-    """Delete analysis request records older than seven days."""
-    models = [
-        AmpliSeqRequest.objects.all(),  # AmpliSeq
-        COWSNPhRRequest.objects.all(),  # COWSNPhR
-        Regexes.objects.all(),  # FileZone
-        AMRSummary.objects.all(),  # GeneSeekr
-        GeneSeekrRequest.objects.all(),
-        NearestNeighbors.objects.all(),
-        ProkkaRequest.objects.all(),
-        Tree.objects.all(),
-        PrimerVerifierRequest.objects.all(),  # PrimerFinder
-        ValidatorRequest.objects.all(),
-    ]
-    # Find today's date
-    today = datetime.today().date()
-    # Iterate over all the models in the list
-    for model in models:
-        # Iterate over each database entry in the list
-        for request in model:
-            # Calculate the difference between when the database entry was
-            # created and today
-            request_age = abs(request.created_at - today).days
-            # Determine if the difference is over seven days
-            if request_age > 7:
-                # The request will be None if there are no database entries
-                if request is not None:
-                    # Delete all database entries created over seven days ago
-                    request.delete()
+    """Retain analysis history records; file expiry must not delete rows."""
+    logger.warning(
+        "clean_old_models is deprecated and intentionally retains all history"
+    )
 
 
 NANOPORE_SUBMISSION_MAX_RETRIES = getattr(

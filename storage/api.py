@@ -6,7 +6,11 @@ import re
 
 from flask import Flask, Response, jsonify, request
 
-from provider import AzureStorageProvider, StorageNotFoundError
+from provider import (
+    AzureStorageProvider,
+    StorageConflictError,
+    StorageNotFoundError,
+)
 
 
 CONTAINER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
@@ -53,6 +57,10 @@ def create_app(provider=None, token=None):
     @app.errorhandler(StorageNotFoundError)
     def not_found(error):
         return jsonify({"error": str(error)}), 404
+
+    @app.errorhandler(StorageConflictError)
+    def conflict(error):
+        return jsonify({"error": str(error)}), 409
 
     @app.errorhandler(ValueError)
     def invalid_request(error):
@@ -131,6 +139,7 @@ def create_app(provider=None, token=None):
                 data=request.stream,
                 content_type=request.headers.get("Content-Type"),
                 content_md5=request.headers.get("Content-MD5"),
+                overwrite=request.headers.get("If-None-Match") != "*",
             )
             return jsonify(record), 201
         if request.method == "DELETE":

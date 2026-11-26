@@ -3,7 +3,9 @@ import os
 import shutil
 import tempfile
 import warnings
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest import mock
 
 from django.test import TestCase, override_settings
@@ -23,6 +25,8 @@ from olc_webportalv2.cowbat.tasks import (
     check_sample_sheet_format,
     cowbat_api_submit,
     cowbat_cleanup,
+    clean_old_containers,
+    clean_old_models,
     generate_download_link,
     get_batch_blast_hits,
     handle_incomplete_tasks,
@@ -46,6 +50,28 @@ from olc_webportalv2.vir_typer.models import (
     VirTyperAzureRequest,
     VirTyperProject,
 )
+
+
+class RetentionTaskTests(TestCase):
+    def test_blob_container_cleanup_is_disabled_even_when_apply_requested(self):
+        storage = mock.Mock()
+        with mock.patch(
+            "olc_webportalv2.cowbat.tasks.get_storage_client",
+            return_value=storage,
+        ):
+            summary = clean_old_containers.run(dry_run=False)
+
+        self.assertEqual(summary, "disabled; no blob containers removed")
+        storage.list_containers.assert_not_called()
+        storage.delete_container.assert_not_called()
+
+    def test_clean_old_models_retains_analysis_history(self):
+        user = User.objects.create_user(username="retention-history-test")
+        request = GeneSeekrRequest.objects.create(user=user)
+
+        clean_old_models.run()
+
+        self.assertTrue(GeneSeekrRequest.objects.filter(pk=request.pk).exists())
 
 
 class VirTyperTaskFinalizationTests(TestCase):

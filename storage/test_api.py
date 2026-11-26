@@ -5,12 +5,14 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from azure.core.exceptions import ResourceExistsError
+
 os.environ.setdefault("AZURE_ACCOUNT_NAME", "storageunittest")
 os.environ.setdefault("AZURE_ACCOUNT_KEY", "dGVzdA==")
 os.environ.setdefault("SECRET_KEY", "storage-test-secret")
 
 from api import create_app
-from provider import AzureStorageProvider
+from provider import AzureStorageProvider, StorageConflictError
 
 
 class StorageApiTests(unittest.TestCase):
@@ -72,6 +74,7 @@ class StorageApiTests(unittest.TestCase):
         self.assertEqual(args["data"].read(), b"data")
         self.assertEqual(args["content_type"], "application/fastq")
         self.assertEqual(args["content_md5"], "b64-md5")
+        self.assertTrue(args["overwrite"])
 
         download = self.client.get(
             "/v1/containers/reads/objects/sample.fastq",
@@ -79,6 +82,34 @@ class StorageApiTests(unittest.TestCase):
         )
         self.assertEqual(download.status_code, 200)
         self.assertEqual(download.data, b"data")
+
+    def test_conditional_upload_does_not_replace_existing_objects(self):
+        response = self.client.put(
+            "/v1/containers/reads/objects/sample.fastq",
+            data=b"new data",
+            headers={
+                **self.headers,
+                "If-None-Match": "*",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(
+            self.provider.upload_object.call_args.kwargs["overwrite"]
+        )
+
+        self.provider.upload_object.side_effect = StorageConflictError(
+            "reads/sample.fastq"
+        )
+        conflict = self.client.put(
+            "/v1/containers/reads/objects/sample.fastq",
+            data=b"conflicting data",
+            headers={
+                **self.headers,
+                "If-None-Match": "*",
+            },
+        )
+        self.assertEqual(conflict.status_code, 409)
 
     def test_transfer_url_contract(self):
         response = self.client.post(
@@ -144,6 +175,25 @@ class StorageApiTests(unittest.TestCase):
         self.assertTrue(permissions.create)
         self.assertTrue(permissions.delete)
         self.assertTrue(result.endswith("?sas-token"))
+
+    def test_azure_provider_refuses_to_overwrite_and_reports_conflict(self):
+        provider = AzureStorageProvider.__new__(AzureStorageProvider)
+        provider.client = Mock()
+        blob_client = provider.client.get_blob_client.return_value
+        blob_client.upload_blob.side_effect = ResourceExistsError(
+            "object already exists"
+        )
+
+        with patch.object(provider, "ensure_container"):
+            with self.assertRaises(StorageConflictError):
+                provider.upload_object(
+                    "reads",
+                    "sample.fastq",
+                    b"data",
+                    overwrite=False,
+                )
+
+        self.assertFalse(blob_client.upload_blob.call_args.kwargs["overwrite"])
 
     def test_reject_invalid_names_and_expiry(self):
         invalid_name = self.client.get(

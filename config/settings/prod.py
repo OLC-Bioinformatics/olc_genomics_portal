@@ -315,6 +315,8 @@ STATICFILES_FINDERS = [
 # -----------------------------------------------------------------------------
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-root
 MEDIA_ROOT = str(APPS_DIR("media"))
+MEDIA_RETENTION_DAYS = env.int("MEDIA_RETENTION_DAYS", default=30)
+MEDIA_RETENTION_DRY_RUN = env.bool("MEDIA_RETENTION_DRY_RUN", default=True)
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "/media/"
@@ -425,9 +427,9 @@ beat_schedule = {
         "schedule": 30.0,
         "options": {"queue": "default"},
     },
-    "clean_old_containers": {
-        "task": "olc_webportalv2.cowbat.tasks.clean_old_containers",
-        "schedule": crontab(hour=2),
+    "clean_old_media": {
+        "task": "olc_webportalv2.cowbat.tasks.clean_old_media",
+        "schedule": crontab(hour=1),
         "options": {"queue": "default"},
     },
     "refresh_ampliseq_containers": {

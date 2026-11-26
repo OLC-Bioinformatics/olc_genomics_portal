@@ -118,6 +118,26 @@ class StorageClientTests(unittest.TestCase):
         self.response.close.assert_called_once_with()
         self.assertTrue(self.session.request.call_args.kwargs["stream"])
 
+    def test_upload_file_can_require_an_absent_destination(self):
+        self.response.json.return_value = {
+            "name": "result.txt",
+            "size": 4,
+        }
+
+        with tempfile.NamedTemporaryFile() as source:
+            source.write(b"data")
+            source.flush()
+            self.client.upload_file(
+                "run-1",
+                "result.txt",
+                source.name,
+                overwrite=False,
+            )
+
+        call = self.session.request.call_args
+        self.assertEqual(call.args[0], "PUT")
+        self.assertEqual(call.kwargs["headers"]["If-None-Match"], "*")
+
     def test_create_transfer_url_sends_provider_neutral_contract(self):
         self.response.json.return_value = {"url": "http://download/result"}
 
