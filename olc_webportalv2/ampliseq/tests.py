@@ -2,11 +2,34 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
+from django.test import TestCase
+from django.urls import reverse
+
+from olc_webportalv2.ampliseq.models import AmpliSeqRequest
 from olc_webportalv2.ampliseq.tasks import (
     create_sas_urls,
     find_containers,
     upload_file,
 )
+from olc_webportalv2.users.models import User
+
+
+class AmpliSeqHistoryProjectionTests(TestCase):
+    def test_home_defers_uploaded_files(self):
+        user = User.objects.create_user(username="ampliseq-home-test")
+        self.client.force_login(user)
+        project = AmpliSeqRequest.objects.create(user=user)
+
+        response = self.client.get(reverse("ampliseq:ampliseq"))
+        projects = list(response.context["projects"])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(projects[0].pk, project.pk)
+        self.assertTrue(
+            {"metadata", "classifier"}.issubset(
+                projects[0].get_deferred_fields()
+            )
+        )
 
 
 class AmpliSeqStorageTests(unittest.TestCase):

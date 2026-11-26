@@ -7069,3 +7069,18 @@ msgstr "mis à jour"
 
 #~ msgid "Metadata Forms"
 #~ msgstr "Fiches de métadonnées"
+
+msgid "History pagination"
+msgstr "Pagination de l'historique"
+
+msgid "Previous page"
+msgstr "Page précédente"
+
+msgid "Next page"
+msgstr "Page suivante"
+
+msgid "Search this page:"
+msgstr "Rechercher dans cette page :"
+
+msgid "Page %(current)s of %(total)s"
+msgstr "Page %(current)s sur %(total)s"

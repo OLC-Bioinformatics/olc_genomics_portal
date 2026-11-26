@@ -19,6 +19,7 @@ from olc_webportalv2.common.storage_client import (
     StorageServiceError,
     get_storage_client,
 )
+from olc_webportalv2.common.pagination import paginate_queryset
 
 # Portal-specific imports
 from olc_webportalv2.filezone.forms import (
@@ -55,12 +56,18 @@ def filezone_home(request):
         request: Current HTTP request.
 
     """
-    filezone_projects = Regexes.objects.all()
+    filezone_projects = Regexes.objects.only(
+        'pk', 'status', 'created_at'
+    ).order_by('-created_at', '-pk')
+    filezone_projects = paginate_queryset(
+        filezone_projects, request.GET.get('page')
+    )
     return render(
         request,
         'filezone/filezone_home.html',
         {
             'projects': filezone_projects,
+            'page_obj': filezone_projects,
         },
     )
 

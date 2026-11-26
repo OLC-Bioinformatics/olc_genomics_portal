@@ -8,6 +8,8 @@ from unittest.mock import Mock, patch
 
 import pandas as pd
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.urls import reverse
 
 from olc_webportalv2.cowsnphr.forms import (
     COWSNPhrForm,
@@ -26,6 +28,30 @@ from olc_webportalv2.cowsnphr.tasks import (
     upload_files_for_cowsnphr,
 )
 from olc_webportalv2.cowsnphr.views import cowsnphr_processing
+from olc_webportalv2.users.models import User
+
+
+class COWSNPhRHistoryProjectionTests(TestCase):
+    def test_home_defers_analysis_report_fields(self):
+        user = User.objects.create_user(username="cowsnphr-home-test")
+        self.client.force_login(user)
+        project = COWSNPhRRequest.objects.create(
+            user=user,
+            alignment="large alignment",
+            phylogenetic_tree="large tree",
+            snv_matrix={"sample": ["large result"]},
+        )
+
+        response = self.client.get(reverse("cowsnphr:cowsnphr"))
+        projects = list(response.context["projects"])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(projects[0].pk, project.pk)
+        self.assertTrue(
+            {"alignment", "phylogenetic_tree", "snv_matrix"}.issubset(
+                projects[0].get_deferred_fields()
+            )
+        )
 
 
 class COWSNPhRStorageTests(unittest.TestCase):

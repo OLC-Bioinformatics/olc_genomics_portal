@@ -1,11 +1,10 @@
 """Views for the sequence data request workflow."""
 
-import datetime
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.data.forms import DataRequestForm
 from olc_webportalv2.data.models import DataRequest
 from olc_webportalv2.data.tasks import get_assembled_data, get_raw_data
@@ -19,15 +18,18 @@ def data_home(request: HttpRequest) -> HttpResponse:
         request: The current HTTP request.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     data_requests = DataRequest.objects.filter(
         user=request.user,
-        created_at__gte=one_week_ago,
+    ).only(
+        'pk', 'seqids', 'status', 'download_link', 'created_at', 'request_type'
+    ).order_by('-created_at', '-pk')
+    data_requests = paginate_queryset(
+        data_requests, request.GET.get('page')
     )
     return render(
         request,
         'data/data_home.html',
-        {'data_requests': data_requests},
+        {'data_requests': data_requests, 'page_obj': data_requests},
     )
 
 

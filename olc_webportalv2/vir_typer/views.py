@@ -15,6 +15,7 @@ from django.forms.formsets import formset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.common.storage_client import get_storage_client
 
 from .forms import (
@@ -39,7 +40,11 @@ def vir_typer_home(request):
         request: Incoming HTTP request.
 
     """
-    vir_typer_projects = VirTyperProject.objects.filter(user=request.user)
+    vir_typer_projects = VirTyperProject.objects.filter(
+        user=request.user
+    ).only(
+        'pk', 'project_name', 'status', 'download_link', 'created_at'
+    ).order_by('-created_at', '-pk')
 
     if request.method == "POST":
         if request.POST.get("delete"):
@@ -48,10 +53,16 @@ def vir_typer_home(request):
                 user=request.user,
             ).delete()
 
+    vir_typer_projects = paginate_queryset(
+        vir_typer_projects, request.GET.get('page')
+    )
     return render(
         request,
         "vir_typer/vir_typer_home.html",
-        {"vir_typer_projects": vir_typer_projects},
+        {
+            "vir_typer_projects": vir_typer_projects,
+            "page_obj": vir_typer_projects,
+        },
     )
 
 

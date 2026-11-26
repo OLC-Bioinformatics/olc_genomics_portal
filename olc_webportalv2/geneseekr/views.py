@@ -2,7 +2,6 @@
 
 # Django-related imports
 # Standard libraries
-import datetime
 import os
 
 # Third-party imports
@@ -13,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.common.storage_client import get_storage_client
 
 # Portal-specific things
@@ -85,10 +85,11 @@ def geneseekr_home(request):
         Rendered GeneSeekr request list.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     geneseekr_requests = GeneSeekrRequest.objects.filter(
         user=request.user
-    ).filter(created_at__gte=one_week_ago)
+    ).only(
+        'pk', 'seqids', 'status', 'download_link', 'created_at', 'name'
+    ).order_by('-created_at', '-pk')
 
     if request.method == 'POST':
         if request.POST.get('delete'):
@@ -98,10 +99,16 @@ def geneseekr_home(request):
             )
             query.delete()
 
+    geneseekr_requests = paginate_queryset(
+        geneseekr_requests, request.GET.get('page')
+    )
     return render(
         request,
         'geneseekr/geneseekr_home.html',
-        {'geneseekr_requests': geneseekr_requests},
+        {
+            'geneseekr_requests': geneseekr_requests,
+            'page_obj': geneseekr_requests,
+        },
     )
 
 
@@ -265,10 +272,9 @@ def tree_home(request):
         Rendered tree request list.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    tree_requests = Tree.objects.filter(user=request.user).filter(
-        created_at__gte=one_week_ago
-    )
+    tree_requests = Tree.objects.filter(user=request.user).only(
+        'pk', 'seqids', 'status', 'download_link', 'created_at', 'name'
+    ).order_by('-created_at', '-pk')
 
     if request.method == 'POST':
         if request.POST.get('delete'):
@@ -278,8 +284,11 @@ def tree_home(request):
             )
             query.delete()
 
+    tree_requests = paginate_queryset(tree_requests, request.GET.get('page'))
     return render(
-        request, 'geneseekr/tree_home.html', {'tree_requests': tree_requests}
+        request,
+        'geneseekr/tree_home.html',
+        {'tree_requests': tree_requests, 'page_obj': tree_requests},
     )
 
 
@@ -412,10 +421,9 @@ def amr_home(request):
         Rendered AMR request list.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    amr_requests = AMRSummary.objects.filter(user=request.user).filter(
-        created_at__gte=one_week_ago
-    )
+    amr_requests = AMRSummary.objects.filter(user=request.user).only(
+        'pk', 'seqids', 'status', 'download_link', 'created_at', 'name'
+    ).order_by('-created_at', '-pk')
 
     if request.method == 'POST':
         if request.POST.get('delete'):
@@ -425,8 +433,11 @@ def amr_home(request):
             )
             query.delete()
 
+    amr_requests = paginate_queryset(amr_requests, request.GET.get('page'))
     return render(
-        request, 'geneseekr/amr_home.html', {'amr_requests': amr_requests}
+        request,
+        'geneseekr/amr_home.html',
+        {'amr_requests': amr_requests, 'page_obj': amr_requests},
     )
 
 
@@ -576,10 +587,9 @@ def prokka_home(request):
         Rendered Prokka request list.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
-    prokka_requests = ProkkaRequest.objects.filter(user=request.user).filter(
-        created_at__gte=one_week_ago
-    )
+    prokka_requests = ProkkaRequest.objects.filter(user=request.user).only(
+        'pk', 'seqids', 'status', 'download_link', 'created_at', 'name'
+    ).order_by('-created_at', '-pk')
     if request.method == 'POST':
         if request.POST.get('delete'):
             query = ProkkaRequest.objects.filter(
@@ -588,10 +598,13 @@ def prokka_home(request):
             )
             query.delete()
 
+    prokka_requests = paginate_queryset(
+        prokka_requests, request.GET.get('page')
+    )
     return render(
         request,
         'geneseekr/prokka_home.html',
-        {'prokka_requests': prokka_requests},
+        {'prokka_requests': prokka_requests, 'page_obj': prokka_requests},
     )
 
 
@@ -816,10 +829,17 @@ def neighbor_home(request):
         Rendered nearest-neighbor request list.
 
     """
-    one_week_ago = datetime.date.today() - datetime.timedelta(days=7)
     neighbor_requests = NearestNeighbors.objects.filter(
         user=request.user
-    ).filter(created_at__gte=one_week_ago)
+    ).only(
+        'pk',
+        'seqid',
+        'uploaded_file_name',
+        'status',
+        'download_link',
+        'created_at',
+        'name',
+    ).order_by('-created_at', '-pk')
 
     if request.method == 'POST':
         if request.POST.get('delete'):
@@ -829,10 +849,13 @@ def neighbor_home(request):
             )
             query.delete()
 
+    neighbor_requests = paginate_queryset(
+        neighbor_requests, request.GET.get('page')
+    )
     return render(
         request,
         'geneseekr/neighbor_home.html',
-        {'neighbor_requests': neighbor_requests},
+        {'neighbor_requests': neighbor_requests, 'page_obj': neighbor_requests},
     )
 
 

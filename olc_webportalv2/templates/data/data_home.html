@@ -73,6 +73,7 @@
     </tbody>
   </table>
   </div>
+  {% include "includes/pagination.html" %}
   <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
 
@@ -80,8 +81,11 @@
   <script type="text/javascript">
     $(document).ready(function () {
         var table = $('#data-request-table').DataTable({
+                 paging: false,
+                 info: false,
                  language : {
-        url: getLanguage()
+        url: getLanguage(),
+        search: '{% trans "Search this page:" %}'
     }
         });
         table

@@ -4,6 +4,7 @@ from django.urls import reverse
 from olc_webportalv2.geneseekr.models import (
     AMRSummary,
     GeneSeekrRequest,
+    NearestNeighbors,
     ProkkaRequest,
     Tree,
 )
@@ -31,6 +32,11 @@ class SampleTestCase(TestCase):
         AMRSummary.objects.create(name='456', user=user)
         ProkkaRequest.objects.create(name='123', user=user)
         ProkkaRequest.objects.create(name='456', user=user)
+        NearestNeighbors.objects.create(
+            user=user,
+            seqid='2015-SEQ-0711',
+            number_neighbors=5,
+        )
 
     # GeneSeekr view tests
 
@@ -55,6 +61,36 @@ class SampleTestCase(TestCase):
         geneseekr_requests = GeneSeekrRequest.objects.filter()
         for request in geneseekr_requests:
             self.assertNotIn(request.name, resp.content.decode('utf-8'))
+
+    def test_analysis_history_pages_defer_unused_result_fields(self):
+        self.client.login(username='TestUser', password='password')
+        history_pages = (
+            (
+                'geneseekr:geneseekr_home',
+                'geneseekr_requests',
+                'geneseekr_results',
+            ),
+            ('geneseekr:tree_home', 'tree_requests', 'newick_tree'),
+            ('geneseekr:amr_home', 'amr_requests', 'other_input_files'),
+            ('geneseekr:prokka_home', 'prokka_requests', 'other_input_files'),
+            (
+                'geneseekr:neighbor_home',
+                'neighbor_requests',
+                'emails_array',
+            ),
+        )
+
+        for route_name, context_name, deferred_field in history_pages:
+            with self.subTest(route=route_name):
+                response = self.client.get(reverse(route_name))
+                requests = list(response.context[context_name])
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(requests)
+                self.assertIn(
+                    deferred_field,
+                    requests[0].get_deferred_fields(),
+                )
 
     def test_geneseekr_processing_login_required(self):
         resp = self.client.get(

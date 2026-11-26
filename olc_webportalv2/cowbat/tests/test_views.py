@@ -34,9 +34,14 @@ class SampleTestCase(TestCase):
         self.client.login(username="TestUser", password="password")
         resp = self.client.get(reverse("cowbat:assembly_home"))
         self.assertEqual(resp.status_code, 200)
-        sequencing_runs = SequencingRun.objects.filter()
+        sequencing_runs = list(resp.context["sequencing_runs"])
         for run in sequencing_runs:
             self.assertIn(run.run_name, resp.content.decode("utf-8"))
+            self.assertTrue(
+                {"sample_plate", "realtime_strains"}.issubset(
+                    run.get_deferred_fields()
+                )
+            )
 
     def test_cowbat_processing_login_required(self):
         resp = self.client.get(

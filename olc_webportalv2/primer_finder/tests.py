@@ -50,17 +50,36 @@ class ValidatorHistoryViewTests(unittest.TestCase):
         request = RequestFactory().get('/primer_finder/primer_validator/')
         request.user = user
         projects = [SimpleNamespace(pk=377)]
-        filter_requests.return_value = projects
+        filtered_projects = Mock()
+        ordered_projects = Mock()
+        filtered_projects.only.return_value = ordered_projects
+        ordered_projects.order_by.return_value = projects
+        filter_requests.return_value = filtered_projects
         render.return_value = HttpResponse()
 
-        response = primer_validator_home(request)
+        with patch(
+            'olc_webportalv2.primer_finder.views.paginate_queryset',
+            return_value=projects,
+        ) as paginate:
+            response = primer_validator_home(request)
 
         self.assertEqual(response.status_code, 200)
         filter_requests.assert_called_once_with(user=user)
+        filtered_projects.only.assert_called_once_with(
+            'pk',
+            'project_name',
+            'status',
+            'report_download_link',
+            'created_at',
+        )
+        ordered_projects.order_by.assert_called_once_with(
+            '-created_at', '-pk'
+        )
+        paginate.assert_called_once_with(projects, None)
         render.assert_called_once_with(
             request,
             'primer_finder/validator_home.html',
-            {'validator_projects': projects},
+            {'validator_projects': projects, 'page_obj': projects},
         )
 
     @patch('olc_webportalv2.primer_finder.views.render')
@@ -146,17 +165,36 @@ class VerifierHistoryViewTests(unittest.TestCase):
         request = RequestFactory().get('/primer_finder/primer_verifier/')
         request.user = user
         projects = [SimpleNamespace(pk=484)]
-        filter_requests.return_value = projects
+        filtered_projects = Mock()
+        ordered_projects = Mock()
+        filtered_projects.only.return_value = ordered_projects
+        ordered_projects.order_by.return_value = projects
+        filter_requests.return_value = filtered_projects
         render.return_value = HttpResponse()
 
-        response = primer_verifier_home(request)
+        with patch(
+            'olc_webportalv2.primer_finder.views.paginate_queryset',
+            return_value=projects,
+        ) as paginate:
+            response = primer_verifier_home(request)
 
         self.assertEqual(response.status_code, 200)
         filter_requests.assert_called_once_with(user=user)
+        filtered_projects.only.assert_called_once_with(
+            'pk',
+            'project_name',
+            'status',
+            'report_download_link',
+            'created_at',
+        )
+        ordered_projects.order_by.assert_called_once_with(
+            '-created_at', '-pk'
+        )
+        paginate.assert_called_once_with(projects, None)
         render.assert_called_once_with(
             request,
             'primer_finder/verifier_home.html',
-            {'verifier_projects': projects},
+            {'verifier_projects': projects, 'page_obj': projects},
         )
 
     @patch('olc_webportalv2.primer_finder.views.render')

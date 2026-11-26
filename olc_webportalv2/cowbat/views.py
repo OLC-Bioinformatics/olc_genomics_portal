@@ -24,6 +24,7 @@ from django.views.decorators.csrf import csrf_exempt
 # Task Management
 from olc_webportalv2.common.batch_client import BatchServiceError
 from olc_webportalv2.common.methods import create_batch_client
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.common.research_storage import get_research_storage
 from olc_webportalv2.common.storage_client import get_storage_client
 from olc_webportalv2.cowbat.forms import (
@@ -268,11 +269,16 @@ def assembly_home(request):
         request: Incoming HTTP request.
 
     """
-    sequencing_runs = SequencingRun.objects.order_by("-run_name")
+    sequencing_runs = SequencingRun.objects.only(
+        "pk", "run_name", "status", "download_link"
+    ).order_by("-run_name", "-pk")
+    sequencing_runs = paginate_queryset(
+        sequencing_runs, request.GET.get("page")
+    )
     return render(
         request,
         "cowbat/assembly_home.html",
-        {"sequencing_runs": sequencing_runs},
+        {"sequencing_runs": sequencing_runs, "page_obj": sequencing_runs},
     )
 
 

@@ -89,11 +89,14 @@ class SampleTestCase(TestCase):
 
     def test_vir_typer_home_ok(self):
         self.client.login(username="TestViews", password="password")
+        VirTyperProject.objects.filter(
+            project_name="test_views"
+        ).update(report="large report")
         resp = self.client.get(reverse("vir_typer:vir_typer_home"))
         self.assertEqual(resp.status_code, 200)
-        vir_typer_requests = VirTyperProject.objects.filter()
-        for request in vir_typer_requests:
-            self.assertEqual(request.project_name, "test_views")
+        projects = list(resp.context["vir_typer_projects"])
+        self.assertEqual(projects[0].project_name, "test_views")
+        self.assertIn("report", projects[0].get_deferred_fields())
 
     def test_vir_typer_upload_login_required(self):
         resp = self.client.get(

@@ -21,6 +21,7 @@ from olc_webportalv2.common.benchmarks import (
     benchmark_panel_storage_name,
     normalise_benchmark_name,
 )
+from olc_webportalv2.common.pagination import paginate_queryset
 
 # Portal-specific imports
 from olc_webportalv2.geneseekr.forms import EmailForm
@@ -82,7 +83,11 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
 
     # Retrieve all the projects from the database that are associated with the
     # current user
-    validator_projects = ValidatorRequest.objects.filter(user=request.user)
+    validator_projects = ValidatorRequest.objects.filter(
+        user=request.user
+    ).only(
+        'pk', 'project_name', 'status', 'report_download_link', 'created_at'
+    ).order_by('-created_at', '-pk')
     if request.method == 'POST':
         # If the delete button is pressed, delete the project from the database
         if request.POST.get('delete'):
@@ -92,10 +97,16 @@ def primer_validator_home(request: HttpRequest) -> HttpResponse:
             )
             query.delete()
 
+    validator_projects = paginate_queryset(
+        validator_projects, request.GET.get('page')
+    )
     return render(
         request,
         'primer_finder/validator_home.html',
-        {'validator_projects': validator_projects},
+        {
+            'validator_projects': validator_projects,
+            'page_obj': validator_projects,
+        },
     )
 
 
@@ -573,7 +584,11 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: The HTTP response object.
     """
-    verifier_projects = PrimerVerifierRequest.objects.filter(user=request.user)
+    verifier_projects = PrimerVerifierRequest.objects.filter(
+        user=request.user
+    ).only(
+        'pk', 'project_name', 'status', 'report_download_link', 'created_at'
+    ).order_by('-created_at', '-pk')
 
     # Handle project deletion
     if request.method == 'POST':
@@ -584,10 +599,16 @@ def primer_verifier_home(request: HttpRequest) -> HttpResponse:
             )
             query.delete()
 
+    verifier_projects = paginate_queryset(
+        verifier_projects, request.GET.get('page')
+    )
     return render(
         request,
         'primer_finder/verifier_home.html',
-        {'verifier_projects': verifier_projects},
+        {
+            'verifier_projects': verifier_projects,
+            'page_obj': verifier_projects,
+        },
     )
 
 

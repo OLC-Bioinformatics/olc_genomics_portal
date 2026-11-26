@@ -61,14 +61,18 @@
         </tbody>
     </table>
     </div>
+    {% include "includes/pagination.html" %}
     <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'js/datatables.min.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static '/css/datatables.min.css' %}"/>
     <script type="text/javascript">
         $(document).ready(function () {
             let table = $('#vir_typer-request-table').DataTable({
+                paging: false,
+                info: false,
                 language : {
-                    url: getLanguage()
+                    url: getLanguage(),
+                    search: '{% trans "Search this page:" %}'
                 }
             });
             //Default order of table on page load

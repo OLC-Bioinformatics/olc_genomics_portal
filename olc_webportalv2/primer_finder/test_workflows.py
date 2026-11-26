@@ -198,6 +198,44 @@ class PrimerFinderWorkflowTests(TestCase):
                 request_object.emails_array, ['alerts@example.org']
             )
 
+    def test_history_pages_defer_report_fields(self):
+        validator_request = ValidatorRequest.objects.create(
+            user=self.user,
+            project_name='validator-history',
+            forward_primer='ACGT',
+            reverse_primer='TGCA',
+            report='large validator report',
+            summary='large validator summary',
+        )
+        verifier_request = PrimerVerifierRequest.objects.create(
+            user=self.user,
+            project_name='verifier-history',
+            report='large verifier report',
+            summary='large verifier summary',
+        )
+
+        response = self.client.get(
+            reverse('primer_finder:primer_validator_home')
+        )
+        validator_projects = list(response.context['validator_projects'])
+        self.assertEqual(validator_projects[0].pk, validator_request.pk)
+        self.assertTrue(
+            {'report', 'summary', 'totals', 'gene_report'}.issubset(
+                validator_projects[0].get_deferred_fields()
+            )
+        )
+
+        response = self.client.get(
+            reverse('primer_finder:primer_verifier_home')
+        )
+        verifier_projects = list(response.context['verifier_projects'])
+        self.assertEqual(verifier_projects[0].pk, verifier_request.pk)
+        self.assertTrue(
+            {'report', 'summary'}.issubset(
+                verifier_projects[0].get_deferred_fields()
+            )
+        )
+
     def test_foreign_requests_are_not_visible_or_deletable(self):
         other_user = User.objects.create_user(username='other-primer-user')
         validator_request = ValidatorRequest.objects.create(

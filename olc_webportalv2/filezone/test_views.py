@@ -25,6 +25,23 @@ class FileZoneViewTests(TestCase):
         self.assertEqual(select.status_code, 200)
         self.assertIn("container_form", select.context)
 
+    def test_filezone_home_defers_search_results(self):
+        project = Regexes.objects.create(
+            file_matches={"container": [{"path": "large-result"}]},
+            file_ajax={"container": ["large-result"]},
+        )
+
+        response = self.client.get(reverse("filezone:filezone"))
+        projects = list(response.context["projects"])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(projects[0].pk, project.pk)
+        self.assertTrue(
+            {"file_matches", "file_ajax"}.issubset(
+                projects[0].get_deferred_fields()
+            )
+        )
+
     def test_container_autocomplete_filters_and_orders_names(self):
         ContainerName.objects.create(container_name="test-container-alt")
         ContainerName.objects.create(container_name="other-container")

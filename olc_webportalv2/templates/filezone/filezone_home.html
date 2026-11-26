@@ -131,6 +131,7 @@
     {% endfor %}
     </tbody>
 </table>
+{% include "includes/pagination.html" %}
 
 <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 <script src="{% static 'js/datatables.min.js' %}"></script>
@@ -139,8 +140,11 @@
 
     $(document).ready(function () {
         let table = $('#request-table').DataTable({
+            paging: false,
+            info: false,
             language : {
-                url: getLanguage()
+                url: getLanguage(),
+                search: '{% trans "Search this page:" %}'
             }
         });
         //Default order of table on page load

@@ -22,6 +22,7 @@ from olc_webportalv2.ampliseq.tasks import (
     run_ampliseq_batch,
     upload_file,
 )
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.geneseekr.forms import EmailForm
 
 
@@ -34,7 +35,17 @@ def ampliseq_home(request):
         request: Incoming HTTP request.
 
     """
-    ampliseq_projects = AmpliSeqRequest.objects.filter(user=request.user)
+    ampliseq_projects = AmpliSeqRequest.objects.filter(
+        user=request.user
+    ).only(
+        'pk',
+        'status',
+        'results_download_link',
+        'execution_report_download_link',
+        'execution_trace_download_link',
+        'execution_timeline_download_link',
+        'created_at',
+    ).order_by('-created_at', '-pk')
     if request.method == "POST":
         if request.POST.get("delete"):
             query = AmpliSeqRequest.objects.filter(
@@ -42,8 +53,13 @@ def ampliseq_home(request):
             )
             query.delete()
 
+    ampliseq_projects = paginate_queryset(
+        ampliseq_projects, request.GET.get('page')
+    )
     return render(
-        request, "ampliseq/ampliseq_home.html", {"projects": ampliseq_projects}
+        request,
+        "ampliseq/ampliseq_home.html",
+        {"projects": ampliseq_projects, "page_obj": ampliseq_projects},
     )
 
 

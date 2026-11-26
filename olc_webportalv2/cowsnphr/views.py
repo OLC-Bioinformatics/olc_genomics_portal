@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 
 # Portal-specific imports
+from olc_webportalv2.common.pagination import paginate_queryset
 from olc_webportalv2.cowsnphr.forms import (
     ContainerForm,
     COWSNPhrForm,
@@ -35,7 +36,11 @@ def cowsnphr_home(request):
         request: Authenticated HTTP request.
 
     """
-    cowsnphr_projects = COWSNPhRRequest.objects.filter(user=request.user)
+    cowsnphr_projects = COWSNPhRRequest.objects.filter(
+        user=request.user
+    ).only('pk', 'status', 'archive_download_link', 'created_at').order_by(
+        '-created_at', '-pk'
+    )
     if request.method == "POST":
         if request.POST.get("delete"):
             query = COWSNPhRRequest.objects.filter(
@@ -43,8 +48,13 @@ def cowsnphr_home(request):
             )
             query.delete()
 
+    cowsnphr_projects = paginate_queryset(
+        cowsnphr_projects, request.GET.get('page')
+    )
     return render(
-        request, "cowsnphr/cowsnphr_home.html", {"projects": cowsnphr_projects}
+        request,
+        "cowsnphr/cowsnphr_home.html",
+        {"projects": cowsnphr_projects, "page_obj": cowsnphr_projects},
     )
 
 

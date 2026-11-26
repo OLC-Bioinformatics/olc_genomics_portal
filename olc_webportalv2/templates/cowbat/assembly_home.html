@@ -50,6 +50,7 @@
       </tbody>
   </table>
   </div>
+  {% include "includes/pagination.html" %}
   <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
   <script src="{% static 'js/datatables.min.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}"/>
@@ -57,8 +58,11 @@
     //Sorting of page based on first column descending.
     $(document).ready(function () {
         var table = $('#assembly-table').DataTable({
+                 paging: false,
+                 info: false,
                  language : {
-        url: getLanguage()
+        url: getLanguage(),
+        search: '{% trans "Search this page:" %}'
     }
         });
         table
