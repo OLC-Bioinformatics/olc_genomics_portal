@@ -77,6 +77,7 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
             )
 
     def test_homepage_responsive_layout_and_accessible_shell(self):
+        self.browser.set_window_size(1280, 900)
         self.open_page('home')
         self.wait.until(
             EC.presence_of_element_located((By.ID, 'main-content'))
@@ -154,7 +155,45 @@ class PrimerFinderBrowserUiTests(StaticLiveServerTestCase):
         self.wait.until(
             lambda _browser: explore.get_attribute('aria-expanded') == 'false'
         )
+
+        analyze = self.browser.find_element(By.ID, 'dropdownMenuButton')
+        analyze.send_keys(Keys.ENTER)
+        self.wait.until(
+            lambda _browser: analyze.get_attribute('aria-expanded') == 'true'
+        )
+        self.assertTrue(
+            self.browser.find_element(
+                By.CSS_SELECTOR,
+                '.dropdown-menu[aria-labelledby="dropdownMenuButton"]',
+            ).is_displayed()
+        )
         self.assert_axe_has_no_violations()
+
+    def test_filezone_cards_share_a_row_on_desktop(self):
+        self.authenticate_browser()
+        self.browser.set_window_size(1280, 900)
+        self.open_page('filezone:filezone')
+
+        cards = self.browser.find_elements(
+            By.CSS_SELECTOR, '.portal-choice-grid > .row > .card'
+        )
+        self.assertEqual(len(cards), 3)
+        positions = [card.location for card in cards]
+        self.assertTrue(
+            all(
+                abs(position['y'] - positions[0]['y']) <= 2
+                for position in positions[1:]
+            )
+        )
+
+        self.browser.set_window_size(390, 900)
+        self.assertTrue(
+            self.browser.execute_script(
+                'return document.documentElement.scrollWidth <= '
+                'document.documentElement.clientWidth'
+            ),
+            'Horizontal overflow at viewport width 390px',
+        )
 
     def test_validator_form_controls_have_accessible_names(self):
         self.authenticate_browser()
