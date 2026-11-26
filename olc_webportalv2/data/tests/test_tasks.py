@@ -141,10 +141,19 @@ class AssembledDataTaskTests(TestCase):
     ):
         data_request = self.create_request(['2015-SEQ-0711'])
         get_storage_client.side_effect = RuntimeError('storage unavailable')
+        work_dir = f'olc_webportalv2/media/data_request_{data_request.pk}'
 
-        with patch('olc_webportalv2.data.tasks.os.makedirs'):
+        with (
+            patch('olc_webportalv2.data.tasks.os.makedirs'),
+            patch(
+                'olc_webportalv2.data.tasks.shutil.rmtree'
+            ) as remove_work_dir,
+            patch('olc_webportalv2.data.tasks.os.remove') as remove_archive,
+        ):
             get_assembled_data.run(data_request.pk)
 
         data_request.refresh_from_db()
         self.assertEqual(data_request.status, 'Error')
         capture_exception.assert_called_once()
+        remove_work_dir.assert_called_once_with(work_dir)
+        remove_archive.assert_called_once_with(f'{work_dir}.zip')

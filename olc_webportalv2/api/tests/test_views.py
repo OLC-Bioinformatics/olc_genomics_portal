@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
+from olc_webportalv2.api.views import SequencingRunViewSet
 from olc_webportalv2.cowbat.models import SequencingRun
 from olc_webportalv2.users.models import User
 
@@ -54,6 +55,23 @@ class TestAPI(APITestCase):
         self.assertEqual(
             response.status_code, 403
         )  # Should be forbidden if not logged in
+
+    def test_sequencing_run_api_queryset_defers_unused_json(self):
+        run = SequencingRun.objects.create(
+            run_name="large-json-run",
+            sample_plate={"sample": "large metadata"},
+            realtime_strains={"sample": "True"},
+        )
+        view = SequencingRunViewSet()
+        view.request = SimpleNamespace(query_params={})
+
+        result = view.get_queryset().get(pk=run.pk)
+
+        self.assertTrue(
+            {"sample_plate", "realtime_strains"}.issubset(
+                result.get_deferred_fields()
+            )
+        )
 
     def test_upload_put_requires_auth(self):
         response = self.client.put("/en-ca/api/upload/fake_run/fake_file")

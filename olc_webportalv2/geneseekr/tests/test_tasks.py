@@ -200,6 +200,12 @@ class GeneSeekrTaskTests(TestCase):
                 'olc_webportalv2.geneseekr.tasks.get_storage_client'
             ),
             mock.patch(
+                'olc_webportalv2.geneseekr.tasks.shutil.rmtree'
+            ) as remove_work_dir,
+            mock.patch(
+                'olc_webportalv2.geneseekr.tasks.os.remove'
+            ) as remove_archive,
+            mock.patch(
                 'olc_webportalv2.geneseekr.tasks.capture_exception'
             ) as capture_exception,
         ):
@@ -211,6 +217,9 @@ class GeneSeekrTaskTests(TestCase):
             capture_exception.call_args.args[0],
             ValueError,
         )
+        work_dir = f'olc_webportalv2/media/neighbor-{request.pk}'
+        remove_work_dir.assert_called_once_with(work_dir)
+        remove_archive.assert_called_once_with(f'{work_dir}.zip')
 
     @mock.patch.dict(
         os.environ,

@@ -14,6 +14,20 @@ from olc_webportalv2.data.models import DataRequest
 logger = logging.getLogger(__name__)
 
 
+def _cleanup_data_request_files(data_dir: str) -> None:
+    """Remove local working files for a completed or failed request."""
+    for path, cleanup in (
+        (data_dir, shutil.rmtree),
+        (f'{data_dir}.zip', os.remove),
+    ):
+        try:
+            cleanup(path)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            logger.exception('Could not clean up data request path %s', path)
+
+
 @shared_task
 def get_assembled_data(data_request_pk: int) -> None:
     """Package processed FASTA files for a saved request.
@@ -23,8 +37,8 @@ def get_assembled_data(data_request_pk: int) -> None:
 
     """
     data_request = DataRequest.objects.get(pk=data_request_pk)
+    data_dir = f'olc_webportalv2/media/data_request_{data_request_pk}'
     try:
-        data_dir = f'olc_webportalv2/media/data_request_{data_request_pk}'
         if not os.path.isdir(data_dir):
             os.makedirs(data_dir)
         container_name = 'processed-data'
@@ -62,9 +76,6 @@ def get_assembled_data(data_request_pk: int) -> None:
         )
         data_request.download_link = sas_url
 
-        logger.info('Cleaning up files for request %s', data_request_pk)
-        shutil.rmtree(data_dir)
-        os.remove(data_dir + '.zip')
         if len(data_request.missing_seqids) == 0:
             data_request.status = 'Complete'
         else:
@@ -75,6 +86,9 @@ def get_assembled_data(data_request_pk: int) -> None:
         logger.exception('Failed to process FASTA request %s', data_request_pk)
         data_request.status = 'Error'
         data_request.save(update_fields=['status'])
+    finally:
+        logger.info('Cleaning up files for request %s', data_request_pk)
+        _cleanup_data_request_files(data_dir)
 
 
 @shared_task
@@ -151,8 +165,6 @@ def get_raw_data(data_request_pk: int) -> None:
         )
         data_request.download_link = sas_url
 
-        shutil.rmtree(data_dir)
-        os.remove(data_dir + '.zip')
         data_request.missing_seqids = missing_seqids
         if not missing_seqids:
             data_request.status = 'Complete'
@@ -164,15 +176,6 @@ def get_raw_data(data_request_pk: int) -> None:
         logger.exception('Failed to process FASTQ request %s', data_request_pk)
         data_request.status = 'Error'
         data_request.save(update_fields=['status'])
-        for path, cleanup in (
-            (data_dir, shutil.rmtree),
-            (f'{data_dir}.zip', os.remove),
-        ):
-            try:
-                cleanup(path)
-            except FileNotFoundError:
-                pass
-            except OSError:
-                logger.exception(
-                    'Could not clean up data request path %s', path
-                )
+    finally:
+        logger.info('Cleaning up files for request %s', data_request_pk)
+        _cleanup_data_request_files(data_dir)

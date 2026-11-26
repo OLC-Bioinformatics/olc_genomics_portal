@@ -1,8 +1,15 @@
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   web: &web
     restart: always
     build: .
     user: "${FOODPORT_UID:-1000}:${FOODPORT_GID:-1000}"
+    logging: *default-logging
     expose:
       - "8000"
     links:
@@ -38,6 +45,7 @@ services:
 
   batch:
     restart: always
+    logging: *default-logging
     build:
       context: .
       dockerfile: batch/Dockerfile
@@ -62,6 +70,7 @@ services:
 
   storage:
     restart: always
+    logging: *default-logging
     build:
       context: .
       dockerfile: storage/Dockerfile
@@ -95,6 +104,7 @@ services:
 
   redmine:
     restart: always
+    logging: *default-logging
     build:
       context: ./redmine
       dockerfile: Dockerfile
@@ -137,6 +147,7 @@ services:
 
   mariadb:
     restart: always
+    logging: *default-logging
     image: mariadb:10.11
     environment:
       - MYSQL_ROOT_PASSWORD=${MARIA_DB_ROOT_PASSWORD}
@@ -149,6 +160,7 @@ services:
 
   nginx:
     restart: always
+    logging: *default-logging
     build: ./nginx/
     ports:
       - "80:80"
@@ -163,6 +175,7 @@ services:
 
   redis:
     restart: always
+    logging: *default-logging
     image: redis:8.10.3
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
@@ -218,6 +231,7 @@ services:
 
   rag:
     restart: always
+    logging: *default-logging
     build:
       context: ./rag
       dockerfile: Dockerfile
@@ -273,6 +287,7 @@ services:
 
   rag-db:
     restart: always
+    logging: *default-logging
     image: pgvector/pgvector:pg16
     environment:
       - POSTGRES_DB=redmine_assistant

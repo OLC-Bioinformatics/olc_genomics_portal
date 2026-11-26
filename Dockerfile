@@ -63,7 +63,7 @@ FROM runtime-base AS production
 
 COPY --from=builder /venv /venv
 COPY . /data/web/
-RUN chmod -R a+rX /data/web
+RUN find /data/web -type d -exec chmod a+rx {} +
 
 ENV HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1

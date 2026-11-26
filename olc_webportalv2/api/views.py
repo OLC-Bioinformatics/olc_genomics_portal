@@ -442,7 +442,9 @@ class EmailRelayView(views.APIView):
 class SequencingRunViewSet(viewsets.ModelViewSet):
     """Manage sequencing runs and provide a run-name existence check."""
 
-    queryset = SequencingRun.objects.all().order_by("-id")
+    queryset = SequencingRun.objects.only(
+        "pk", "run_name", "basic_assembly", "preprocess", "nextseq"
+    ).order_by("-id")
     serializer_class = SequencingRunSerializer
     lookup_field = "run_name"  # optional; keep pk if you prefer
 

@@ -3,6 +3,7 @@
 """Background tasks for GeneSeekr and related analyses."""
 
 # Standard library imports
+import logging
 import os
 import posixpath
 import shlex
@@ -40,6 +41,24 @@ from olc_webportalv2.geneseekr.models import (
     TreeAzureRequest,
 )
 from olc_webportalv2.metadata.models import SequenceData
+
+logger = logging.getLogger(__name__)
+
+
+def _cleanup_neighbor_work_files(work_dir: str) -> None:
+    """Remove local working files for a completed or failed request."""
+    for path, cleanup in (
+        (work_dir, shutil.rmtree),
+        (f'{work_dir}.zip', os.remove),
+    ):
+        try:
+            cleanup(path)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            logger.exception(
+                'Could not clean up nearest-neighbor path %s', path
+            )
 
 
 @shared_task
@@ -611,8 +630,8 @@ def run_nearest_neighbors(nearest_neighbor_pk):
     nearest_neighbor_request = NearestNeighbors.objects.get(
         pk=nearest_neighbor_pk
     )
+    work_dir = f'olc_webportalv2/media/neighbor-{nearest_neighbor_pk}'
     try:
-        work_dir = f'olc_webportalv2/media/neighbor-{nearest_neighbor_pk}'
         if not os.path.isdir(work_dir):
             os.makedirs(work_dir)
         seqids_in_metadata = list()
@@ -680,11 +699,11 @@ def run_nearest_neighbors(nearest_neighbor_pk):
                 seqid=neighbor_seqid,
                 distance=distance,
             )
-        shutil.rmtree(work_dir)
-        os.remove(work_dir + '.zip')
         nearest_neighbor_request.status = 'Complete'
         nearest_neighbor_request.save()
     except Exception as e:
         capture_exception(e)
         nearest_neighbor_request.status = 'Error'
         nearest_neighbor_request.save()
+    finally:
+            _cleanup_neighbor_work_files(work_dir)
